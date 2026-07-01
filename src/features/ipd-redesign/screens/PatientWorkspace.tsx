@@ -8,18 +8,28 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
-    ClipboardList, ClipboardCheck,
+    ClipboardList, ClipboardCheck, Activity, Droplets, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { ClinicalOrderPanel } from '../components/ClinicalOrderPanel';
 import { MarPanel } from '../components/MarPanel';
+import { VitalsPanel } from '../components/VitalsPanel';
+import { IntakeOutputPanel } from '../components/IntakeOutputPanel';
+import { GlucoseChartPanel } from '../components/GlucoseChartPanel';
+import { NursingAssessmentPanel } from '../components/NursingAssessmentPanel';
+import { NursingCarePlanPanel } from '../components/NursingCarePlanPanel';
+import { RestraintPanel } from '../components/RestraintPanel';
+import { RoundNotePanel } from '../components/RoundNotePanel';
+import { ShiftHandoverPanel } from '../components/ShiftHandoverPanel';
+import { ConsentPanel } from '../components/ConsentPanel';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-type Section = 'overview' | 'cpoe' | 'mar';
+type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
+type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
 const CPOE_TABS: { key: CpoeTab; label: string; icon: React.ElementType }[] = [
     { key: 'medications', label: 'Medications', icon: Pill },
@@ -29,6 +39,14 @@ const CPOE_TABS: { key: CpoeTab; label: string; icon: React.ElementType }[] = [
     { key: 'radiology', label: 'Radiology', icon: Scan },
 ];
 
+const NURSING_TABS: { key: NursingTab; label: string; icon: React.ElementType }[] = [
+    { key: 'vitals', label: 'Vitals', icon: Activity },
+    { key: 'intakeOutput', label: 'I/O & Glucose', icon: Droplets },
+    { key: 'assessment', label: 'Assessment', icon: ShieldAlert },
+    { key: 'carePlan', label: 'Care Plan', icon: ListChecks },
+    { key: 'restraint', label: 'Restraint', icon: ShieldOff },
+];
+
 interface Props {
     admission: ActiveAdmissionItem;
     onBack: () => void;
@@ -36,13 +54,14 @@ interface Props {
 }
 
 /**
- * Real per-admission workspace — bed, CPOE orders, and discharge all in one place, replacing the
- * old separate bed/discharge dialog and the standalone medication-orders screen. A two-level side
- * nav (Overview / CPOE with its 5 order-type children / MAR) keeps the workspace organized as more
- * top-level sections (MAR, later Vitals/Notes/Billing) get added — see patient_workspace_navigation
- * memory. Each order-type view renders the shared ClinicalOrderPanel (components/ClinicalOrderPanel)
- * rather than duplicating order-list/new-order/discontinue UI per type. Read-only for bed/order
- * actions once the admission is no longer in an Active status.
+ * Real per-admission workspace — bed, CPOE orders, MAR, nursing documentation, and discharge all
+ * in one place. Two-level side nav: Overview (leaf) / CPOE (parent, 5 order-type children) / MAR
+ * (leaf) / Nursing (parent, Vitals+I-O&Glucose+Assessment+Care Plan+Restraint children) / Round
+ * Notes (leaf) / SBAR Handover (leaf) / Consent (leaf) — see patient_workspace_navigation memory
+ * for the IA rule this follows (new top-level clinical sections get their own sidebar item; only
+ * genuinely-same-concept things nest under an existing parent). Each order-type view renders the
+ * shared ClinicalOrderPanel rather than duplicating order-list/new-order/discontinue UI per type.
+ * Read-only for bed/order/nursing actions once the admission is no longer in an Active status.
  */
 export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged }) => {
     const { toast } = useToast();
@@ -50,6 +69,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     const [activeSection, setActiveSection] = useState<Section>('overview');
     const [activeCpoeTab, setActiveCpoeTab] = useState<CpoeTab>('medications');
     const [dietNursingSubTab, setDietNursingSubTab] = useState<'diet' | 'nursing'>('diet');
+    const [activeNursingTab, setActiveNursingTab] = useState<NursingTab>('vitals');
     const isActive = ACTIVE_STATUSES.includes(current.statusCode);
 
     const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
@@ -189,6 +209,31 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     <button type="button" onClick={() => setActiveSection('mar')} className={navItemClass(activeSection === 'mar')}>
                         <ClipboardCheck className="h-4 w-4" /> MAR
                     </button>
+
+                    <button type="button" onClick={() => setActiveSection('nursing')} className={navItemClass(activeSection === 'nursing')}>
+                        <HeartPulse className="h-4 w-4" /> Nursing
+                    </button>
+                    {activeSection === 'nursing' && (
+                        <div className="pl-2 space-y-0.5">
+                            {NURSING_TABS.map(({ key, label, icon: Icon }) => (
+                                <button key={key} type="button" onClick={() => setActiveNursingTab(key)} className={subNavItemClass(activeNursingTab === key)}>
+                                    <Icon className="h-3.5 w-3.5" /> {label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <button type="button" onClick={() => setActiveSection('roundNotes')} className={navItemClass(activeSection === 'roundNotes')}>
+                        <FileText className="h-4 w-4" /> Round Notes
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('sbarHandover')} className={navItemClass(activeSection === 'sbarHandover')}>
+                        <MessageSquareText className="h-4 w-4" /> SBAR Handover
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('consent')} className={navItemClass(activeSection === 'consent')}>
+                        <FileCheck2 className="h-4 w-4" /> Consent
+                    </button>
                 </aside>
 
                 <div className="flex-1 min-w-0 space-y-5">
@@ -284,20 +329,24 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         />
                     )}
 
-                    {/* Consent capture (ConsentRecord, TemplateTypeCode=PROCEDURE) is a separate, already-
-                        existing system — deliberately not linked here yet to avoid scope creep; a natural
-                        future step would prompt for consent when a procedure order is placed. */}
                     {activeSection === 'cpoe' && activeCpoeTab === 'procedures' && (
-                        <ClinicalOrderPanel
-                            admissionId={current.admissionId}
-                            isActive={isActive}
-                            orderType="PROCEDURE"
-                            itemPickerCategoryCodes={['PROCEDURE']}
-                            itemLabel="Procedure"
-                            noItemsText="No procedure orders yet."
-                            showUrgency
-                            showScheduledAt
-                        />
+                        <div className="space-y-3">
+                            <div className="flex justify-end">
+                                <Button variant="outline" size="sm" className="h-9" onClick={() => setActiveSection('consent')}>
+                                    <FileCheck2 className="h-3.5 w-3.5 mr-1.5" /> Capture consent
+                                </Button>
+                            </div>
+                            <ClinicalOrderPanel
+                                admissionId={current.admissionId}
+                                isActive={isActive}
+                                orderType="PROCEDURE"
+                                itemPickerCategoryCodes={['PROCEDURE']}
+                                itemLabel="Procedure"
+                                noItemsText="No procedure orders yet."
+                                showUrgency
+                                showScheduledAt
+                            />
+                        </div>
                     )}
 
                     {activeSection === 'cpoe' && activeCpoeTab === 'dietNursing' && (
@@ -353,6 +402,37 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     {activeSection === 'mar' && (
                         <MarPanel admissionId={current.admissionId} isActive={isActive} patientName={current.patientName} />
+                    )}
+
+                    {activeSection === 'nursing' && activeNursingTab === 'vitals' && (
+                        <VitalsPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'intakeOutput' && (
+                        <div className="space-y-5">
+                            <IntakeOutputPanel admissionId={current.admissionId} isActive={isActive} />
+                            <GlucoseChartPanel admissionId={current.admissionId} isActive={isActive} />
+                        </div>
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'assessment' && (
+                        <NursingAssessmentPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'carePlan' && (
+                        <NursingCarePlanPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'restraint' && (
+                        <RestraintPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'roundNotes' && (
+                        <RoundNotePanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'sbarHandover' && (
+                        <ShiftHandoverPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'consent' && (
+                        <ConsentPanel admissionId={current.admissionId} isActive={isActive} prefilterTypeCode="PROCEDURE" />
                     )}
                 </div>
             </div>
