@@ -218,7 +218,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       path: '/appointment-dashboard',
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'ipd-redesign', name: 'IPD (new)', icon: Hotel, path: '/ipd-redesign' },
+    { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-redesign' },
   ];
 
   // Filter navigation items based on user role

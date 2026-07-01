@@ -52,7 +52,7 @@ interface Props {
 }
 
 /**
- * IPD Command Center — the admitted-patient list only (the live bed board is its own screen,
+ * IPD dashboard — the admitted-patient list only (the live bed board is its own screen,
  * BedBoardScreen). Backed by GET /admission/active; also fetches GET /bed/board (not rendered)
  * just to populate the free-bed picker inside the assign/transfer dialog.
  */
@@ -136,7 +136,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, refresh
                         <Hotel className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900">IPD Command Center</h1>
+                        <h1 className="text-2xl font-black text-slate-900">IPD</h1>
                         <p className="text-sm text-slate-500 mt-0.5">Active admissions — assign a bed, transfer, or discharge.</p>
                     </div>
                 </div>
