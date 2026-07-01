@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -6,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { BedDouble, RefreshCw, LogOut, ArrowLeftRight, Loader2, ArrowLeft, X, Check } from 'lucide-react';
+import { BedDouble, ArrowLeft, LogOut, ArrowLeftRight, Loader2, X, Check } from 'lucide-react';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 
 const FREE_TONE: Record<string, string> = {
@@ -17,6 +18,27 @@ const FREE_TONE: Record<string, string> = {
 };
 const OCCUPIED_TONE = 'border-rose-200 bg-rose-50 text-rose-700';
 
+const BED_POLL_MS = 20000;
+const FLASH_MS = 1800;
+
+// Small pulsing dot — the "this is live" signal next to the heading.
+const LiveDot: React.FC<{ className?: string }> = ({ className }) => (
+    <span className={cn('relative inline-flex h-2 w-2', className)}>
+        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+    </span>
+);
+
+const bedGridVariants = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.02 } },
+};
+const bedCardVariants = {
+    hidden: { opacity: 0, scale: 0.85, y: 6 },
+    show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' as const } },
+    exit: { opacity: 0, scale: 0.9, transition: { duration: 0.15 } },
+};
+
 type ActionMode = 'menu' | 'transfer' | 'discharge' | null;
 
 interface Props {
@@ -24,10 +46,13 @@ interface Props {
 }
 
 /**
- * Live bed board — real GET /bed/board data (occupied and free beds both show; occupancy is
- * derived from the ACTIVE BedAssignment, not BedMaster.StatusCode alone). Assigning a bed to an
- * unassigned admission happens at admit time (see AdmitPatientSheet); this screen covers what
- * happens to an already-occupied bed: transfer, release, or discharge.
+ * Live bed board — real GET /bed/board data, occupied and free beds both shown. Occupancy is
+ * derived from the ACTIVE BedAssignment (admissionId present), not BedMaster.StatusCode alone —
+ * that field is a separate housekeeping flag no handler touches yet. Assigning a bed to an
+ * unassigned admission happens on the dashboard's admissions list (or at admit time); this screen
+ * covers what happens to an already-occupied bed: transfer, release, or discharge. Polls silently
+ * every 20s and flashes whichever bed's occupancy actually changed, so it reads as "live" rather
+ * than a static table.
  */
 export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
     const { toast } = useToast();
@@ -40,15 +65,43 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
     const [notes, setNotes] = useState('');
     const [busy, setBusy] = useState(false);
 
+    const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
+    const prevOccupancyRef = useRef<Map<string, boolean>>(new Map());
+
+    const applyItems = (bedItems: BedBoardItem[]) => {
+        const prev = prevOccupancyRef.current;
+        const changed = new Set<string>();
+        for (const b of bedItems) {
+            const wasOccupied = prev.get(b.bedId);
+            const isOccupied = !!b.admissionId;
+            if (wasOccupied !== undefined && wasOccupied !== isOccupied) changed.add(b.bedId);
+        }
+        prevOccupancyRef.current = new Map(bedItems.map(b => [b.bedId, !!b.admissionId]));
+        setItems(bedItems);
+        if (changed.size > 0) {
+            setFlashIds(changed);
+            setTimeout(() => setFlashIds(new Set()), FLASH_MS);
+        }
+    };
+
     const load = () => {
         setLoading(true);
         bedBoardApi.getBoard()
-            .then(setItems)
+            .then(applyItems)
             .catch(() => toast({ title: 'Could not load the bed board', variant: 'destructive' }))
             .finally(() => setLoading(false));
     };
 
     useEffect(() => { load(); }, []);
+
+    // Silent background refresh — paused while an action dialog is open.
+    useEffect(() => {
+        if (selected) return;
+        const id = setInterval(() => {
+            bedBoardApi.getBoard().then(applyItems).catch(() => { /* silent */ });
+        }, BED_POLL_MS);
+        return () => clearInterval(id);
+    }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const wards = useMemo(() => Array.from(new Set(items.map(i => i.wardName || i.wardCode || 'Other'))), [items]);
 
@@ -69,7 +122,7 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
     );
 
     const openBed = (b: BedBoardItem) => {
-        if (!b.admissionId) return; // free beds are informational only in this screen
+        if (!b.admissionId) return; // free beds are informational only — assign from the admissions list
         setSelected(b);
         setActionMode('menu');
         setNewBedId('');
@@ -101,19 +154,19 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                         <BedDouble className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-black text-slate-900">Bed Board</h1>
-                        <p className="text-xs text-slate-500">Live occupancy · transfer, release & discharge.</p>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-xl font-black text-slate-900">Bed Board</h1>
+                            <span className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-600 uppercase tracking-wider">
+                                <LiveDot /> Live
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-500">Every bed, live · transfer, release & discharge.</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <select value={wardFilter} onChange={e => setWardFilter(e.target.value)} className="h-9 text-xs border border-slate-200 rounded-md px-2 bg-white">
-                        <option value="ALL">All wards</option>
-                        {wards.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
-                        <RefreshCw className={cn('h-4 w-4 mr-1.5', loading && 'animate-spin')} /> Refresh
-                    </Button>
-                </div>
+                <select value={wardFilter} onChange={e => setWardFilter(e.target.value)} className="h-9 text-xs border border-slate-200 rounded-md px-2 bg-white">
+                    <option value="ALL">All wards</option>
+                    {wards.map(w => <option key={w} value={w}>{w}</option>)}
+                </select>
             </div>
 
             {loading && items.length === 0 ? (
@@ -125,37 +178,52 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                     {Object.entries(grouped).map(([ward, beds]) => {
                         const occ = beds.filter(b => !!b.admissionId).length;
                         return (
-                            <div key={ward} className="rounded-xl border border-slate-200 bg-white p-4">
+                            <motion.div key={ward} layout className="rounded-xl border border-slate-200 bg-white p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="font-bold text-slate-900">{ward}</p>
                                     <Badge variant="outline" className="text-[10px] font-bold bg-slate-50">{occ}/{beds.length} occupied</Badge>
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {beds.map(b => {
-                                        const occupied = !!b.admissionId;
-                                        const tone = occupied ? OCCUPIED_TONE : (FREE_TONE[b.statusCode ?? 'AVAILABLE'] ?? FREE_TONE.AVAILABLE);
-                                        return (
-                                            <button key={b.bedId} type="button" onClick={() => openBed(b)}
-                                                disabled={!occupied}
-                                                className={cn('w-36 rounded-lg border-2 p-2 text-left transition-all', tone,
-                                                    occupied ? 'hover:shadow-md cursor-pointer' : 'cursor-default opacity-90')}>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-mono text-[10px] font-bold">{b.bedCode}</span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider">{occupied ? 'OCCUPIED' : (b.statusCode ?? 'AVAILABLE')}</span>
-                                                </div>
-                                                {occupied ? (
-                                                    <div className="mt-1">
-                                                        <p className="text-xs font-bold truncate">{b.patientName || '—'}</p>
-                                                        <p className="text-[10px] opacity-80 truncate">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
+                                <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="flex flex-wrap gap-2">
+                                    <AnimatePresence initial={false}>
+                                        {beds.map(b => {
+                                            const occupied = !!b.admissionId;
+                                            const tone = occupied ? OCCUPIED_TONE : (FREE_TONE[b.statusCode ?? 'AVAILABLE'] ?? FREE_TONE.AVAILABLE);
+                                            const flashing = flashIds.has(b.bedId);
+                                            return (
+                                                <motion.button
+                                                    key={b.bedId}
+                                                    type="button"
+                                                    layout
+                                                    variants={bedCardVariants}
+                                                    initial="hidden"
+                                                    animate={flashing ? { opacity: 1, scale: [1, 1.1, 1], y: 0 } : 'show'}
+                                                    exit="exit"
+                                                    transition={flashing ? { duration: 0.5, ease: 'easeOut' } : undefined}
+                                                    whileHover={occupied ? { scale: 1.04 } : undefined}
+                                                    whileTap={occupied ? { scale: 0.96 } : undefined}
+                                                    onClick={() => openBed(b)}
+                                                    disabled={!occupied}
+                                                    className={cn('w-36 rounded-lg border-2 p-2 text-left', tone,
+                                                        occupied ? 'hover:shadow-md cursor-pointer' : 'cursor-default opacity-90',
+                                                        flashing && (occupied ? 'ring-4 ring-rose-300' : 'ring-4 ring-emerald-300'))}>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-mono text-[10px] font-bold">{b.bedCode}</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">{occupied ? 'OCCUPIED' : (b.statusCode ?? 'AVAILABLE')}</span>
                                                     </div>
-                                                ) : (
-                                                    <p className="text-[10px] mt-1 opacity-70">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                                    {occupied ? (
+                                                        <div className="mt-1">
+                                                            <p className="text-xs font-bold truncate">{b.patientName || '—'}</p>
+                                                            <p className="text-[10px] opacity-80 truncate">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[10px] mt-1 opacity-70">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
+                                                    )}
+                                                </motion.button>
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                </motion.div>
+                            </motion.div>
                         );
                     })}
                 </div>

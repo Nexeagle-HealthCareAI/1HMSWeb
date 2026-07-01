@@ -143,6 +143,31 @@ export interface AdmitPatientResponse {
     bedAssignmentId?: string | null;
 }
 
+// ─── Active admissions (real data — every currently-open admission for the hospital) ─
+export interface ActiveAdmissionItem {
+    admissionId: string;
+    admissionNo: string;
+    admissionType?: string | null;
+    statusCode: string;
+    payerType: string;
+    admittedAt: string;
+    admissionReason?: string | null;
+    diagnosis?: string | null;
+    patientId?: string | null;
+    patientName?: string | null;
+    patientAge?: number | null;
+    patientSex?: string | null;
+    bedCode?: string | null;      // null => no bed assigned yet
+    wardName?: string | null;
+    encounterId?: string | null;
+}
+
+interface GetActiveAdmissionsResponse {
+    success?: boolean;
+    message?: string;
+    items?: ActiveAdmissionItem[];
+}
+
 // ─── Duplicate detection ────────────────────────────────────────────────────────
 export type DuplicateConfidence = 'NEAR_CERTAIN' | 'PROBABLE' | 'POSSIBLE';
 
@@ -183,6 +208,11 @@ export const admissionApi = {
         ipdApiClient.get<GetPatientAdmissionsResponse>('/admission/patient', {
             params: { hospitalId: hospitalIdOrThrow(hospitalId), patientId },
         }),
+
+    getActiveAdmissions: (hospitalId?: string): Promise<ActiveAdmissionItem[]> =>
+        ipdApiClient
+            .get<GetActiveAdmissionsResponse>('/admission/active', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .then(r => r.items ?? []),
 
     admit: (payload: AdmitPatientPayload, hospitalId?: string): Promise<AdmitPatientResponse> =>
         ipdApiClient.post<AdmitPatientResponse>('/admission', {

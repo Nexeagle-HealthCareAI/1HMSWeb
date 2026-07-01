@@ -1,63 +1,134 @@
-import React, { useMemo, useState } from 'react';
-import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight, LayoutGrid } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Hotel, Plus, BedDouble, ClipboardList, Wallet, ArrowLeftRight, LogOut, Check, Loader2, Search, RefreshCw, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { useIpdStore } from '../store';
-import type { BedStatus } from '../types';
+import { useToast } from '@/hooks/use-toast';
+import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
+import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 
-const BED_TONE: Record<BedStatus, string> = {
-    AVAILABLE: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-    OCCUPIED: 'bg-rose-50 border-rose-200 text-rose-700',
-    CLEANING: 'bg-amber-50 border-amber-200 text-amber-700',
-    RESERVED: 'bg-sky-50 border-sky-200 text-sky-700',
-    BLOCKED: 'bg-slate-100 border-slate-200 text-slate-500',
+type ActionMode = 'menu' | 'assign' | 'transfer' | 'discharge' | null;
+type DateFilterMode = 'TODAY' | 'ALL' | 'RANGE';
+
+// Backend timestamps come back naive (no timezone suffix) since the DB stores UTC without an
+// offset — treat those as UTC before converting to IST, otherwise the browser's Date parser
+// reads them as local time and the displayed time is wrong outside IST-local browsers.
+const toIstDate = (iso: string): Date => {
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
+    return new Date(hasTz ? iso : `${iso}Z`);
 };
 
+// "24Dec.2026" — day + abbreviated month + period + year, no spaces.
+const formatIstDate = (iso?: string | null): string => {
+    if (!iso) return '';
+    const d = toIstDate(iso);
+    if (isNaN(d.getTime())) return '';
+    const day = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit' });
+    const month = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short' });
+    const year = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric' });
+    return `${day}${month}.${year}`;
+};
+
+const formatIstDateTime = (iso?: string | null): string => {
+    if (!iso) return '';
+    const datePart = formatIstDate(iso);
+    const d = toIstDate(iso);
+    const time = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${datePart}, ${time}`;
+};
+
+// YYYY-MM-DD in IST — matches the value of a native <input type="date"> for direct comparison.
+const istDateKey = (iso: string): string => toIstDate(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+const todayIstKey = (): string => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
 interface Props {
-    onOpenAdmission: (admissionId: string) => void;
     onAdmit: () => void;
     onOpenBedBoard: () => void;
+    refreshSignal: number;
 }
 
-export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpenBedBoard }) => {
-    const wards = useIpdStore(s => s.wards);
-    const beds = useIpdStore(s => s.beds);
-    const admissionViews = useIpdStore(s => s.admissionViews);
-    const admissionView = useIpdStore(s => s.admissionView);
+/**
+ * IPD Command Center — the admitted-patient list only (the live bed board is its own screen,
+ * BedBoardScreen). Backed by GET /admission/active; also fetches GET /bed/board (not rendered)
+ * just to populate the free-bed picker inside the assign/transfer dialog.
+ */
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, refreshSignal }) => {
+    const { toast } = useToast();
+    const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
+    const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [wardFilter, setWardFilter] = useState<string>('ALL');
+    const [dateFilter, setDateFilter] = useState<DateFilterMode>('ALL');
+    const [rangeFrom, setRangeFrom] = useState('');
+    const [rangeTo, setRangeTo] = useState('');
 
-    const views = admissionViews();
+    const [selected, setSelected] = useState<ActiveAdmissionItem | null>(null);
+    const [actionMode, setActionMode] = useState<ActionMode>(null);
+    const [pickedBedId, setPickedBedId] = useState('');
+    const [notes, setNotes] = useState('');
+    const [busy, setBusy] = useState(false);
 
-    const kpis = useMemo(() => {
-        const totalBeds = beds.length;
-        const occupied = beds.filter(b => b.status === 'OCCUPIED').length;
-        const available = beds.filter(b => b.status === 'AVAILABLE').length;
-        const totalDue = views.reduce((t, v) => t + Math.max(0, v.balance), 0);
-        return {
-            occupancyPct: Math.round((occupied / totalBeds) * 100),
-            occupied, available, totalBeds,
-            admittedCount: views.length,
-            totalDue,
-        };
-    }, [beds, views]);
+    const load = () => {
+        setLoading(true);
+        Promise.all([admissionApi.getActiveAdmissions(), bedBoardApi.getBoard()])
+            .then(([admissionItems, beds]) => {
+                setAdmissions(admissionItems);
+                setFreeBeds(beds.filter(b => b.isActive && !b.admissionId));
+            })
+            .catch(() => toast({ title: 'Could not load active admissions', variant: 'destructive' }))
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => { load(); }, [refreshSignal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const kpis = useMemo(() => ({
+        admittedCount: admissions.length,
+        unassigned: admissions.filter(a => !a.bedCode).length,
+        nonCash: admissions.filter(a => a.payerType !== 'CASH').length,
+    }), [admissions]);
 
     const filteredAdmissions = useMemo(() => {
         const q = search.trim().toLowerCase();
-        return views.filter(v => {
-            if (wardFilter !== 'ALL' && v.wardId !== wardFilter) return false;
+        return admissions.filter(a => {
+            if (dateFilter === 'TODAY' && istDateKey(a.admittedAt) !== todayIstKey()) return false;
+            if (dateFilter === 'RANGE') {
+                const key = istDateKey(a.admittedAt);
+                if (rangeFrom && key < rangeFrom) return false;
+                if (rangeTo && key > rangeTo) return false;
+            }
             if (!q) return true;
-            return v.patient.name.toLowerCase().includes(q)
-                || v.patient.uhid.toLowerCase().includes(q)
-                || v.admissionNo.toLowerCase().includes(q)
-                || v.bed.bedCode.toLowerCase().includes(q);
+            return (a.patientName ?? '').toLowerCase().includes(q)
+                || (a.patientId ?? '').toLowerCase().includes(q)
+                || a.admissionNo.toLowerCase().includes(q)
+                || (a.bedCode ?? '').toLowerCase().includes(q);
         });
-    }, [views, search, wardFilter]);
+    }, [admissions, search, dateFilter, rangeFrom, rangeTo]);
+
+    const openAdmission = (a: ActiveAdmissionItem) => {
+        setSelected(a); setActionMode('menu'); setPickedBedId(''); setNotes('');
+    };
+    const closeDialog = () => { setSelected(null); setActionMode(null); };
+
+    const runAction = async (fn: () => Promise<unknown>, successMessage: string) => {
+        setBusy(true);
+        try {
+            await fn();
+            toast({ title: successMessage });
+            closeDialog();
+            load();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setBusy(false);
+        }
+    };
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-3">
@@ -66,10 +137,13 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
                     </div>
                     <div>
                         <h1 className="text-2xl font-black text-slate-900">IPD Command Center</h1>
-                        <p className="text-sm text-slate-500 mt-0.5">Bed board · active admissions · occupancy & dues at a glance.</p>
+                        <p className="text-sm text-slate-500 mt-0.5">Active admissions — assign a bed, transfer, or discharge.</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" className="h-10" onClick={load} disabled={loading}>
+                        <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} /> Refresh
+                    </Button>
                     <Button onClick={onOpenBedBoard} variant="outline" className="h-10 font-semibold">
                         <LayoutGrid className="h-4 w-4 mr-2" /> Live Bed Board
                     </Button>
@@ -79,81 +153,38 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
                 </div>
             </div>
 
-            {/* KPI tiles */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <KpiTile label="Occupancy" value={`${kpis.occupancyPct}%`} icon={<Activity className="h-4 w-4" />} tone="indigo" sub={`${kpis.occupied}/${kpis.totalBeds} beds`} />
-                <KpiTile label="Available" value={kpis.available} icon={<BedDouble className="h-4 w-4" />} tone="emerald" />
+            {/* KPI tiles — derived purely from the admissions list, no bed-board display needed */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <KpiTile label="Admitted" value={kpis.admittedCount} icon={<Hotel className="h-4 w-4" />} tone="sky" />
-                <KpiTile label="Outstanding" value={`₹${kpis.totalDue.toLocaleString('en-IN')}`} icon={<IndianRupee className="h-4 w-4" />} tone="rose" />
-                <KpiTile label="Discharges today" value={views.filter(v => v.status === 'DISCHARGE_INITIATED').length} icon={<TrendingUp className="h-4 w-4" />} tone="amber" />
+                <KpiTile label="Unassigned" value={kpis.unassigned} icon={<ClipboardList className="h-4 w-4" />} tone="amber" />
+                <KpiTile label="Non-cash payer" value={kpis.nonCash} icon={<Wallet className="h-4 w-4" />} tone="rose" />
             </div>
-
-            {/* Bed board (demo data below — use "Live Bed Board" above for the real, backend-wired board) */}
-            <section className="space-y-3">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Bed Board (demo)</h2>
-                <div className="space-y-4">
-                    {wards.map(ward => {
-                        const wardBeds = beds.filter(b => b.wardId === ward.wardId);
-                        const occ = wardBeds.filter(b => b.status === 'OCCUPIED').length;
-                        return (
-                            <div key={ward.wardId} className="rounded-xl border border-slate-200 bg-white p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div>
-                                        <p className="font-bold text-slate-900">{ward.wardName}</p>
-                                        <p className="text-[11px] text-slate-500">{ward.wardCode} · Floor {ward.floor} · ₹{ward.dailyRate.toLocaleString('en-IN')}/day</p>
-                                    </div>
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50">{occ}/{wardBeds.length} occupied</Badge>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {wardBeds.map(bed => {
-                                        const av = bed.admissionId ? admissionView(bed.admissionId) : undefined;
-                                        return (
-                                            <button
-                                                key={bed.bedId}
-                                                type="button"
-                                                disabled={!bed.admissionId}
-                                                onClick={() => bed.admissionId && onOpenAdmission(bed.admissionId)}
-                                                className={cn(
-                                                    'w-32 rounded-lg border-2 p-2 text-left transition-all',
-                                                    BED_TONE[bed.status],
-                                                    bed.admissionId ? 'hover:shadow-md cursor-pointer' : 'cursor-default opacity-90'
-                                                )}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-mono text-[10px] font-bold">{bed.bedCode}</span>
-                                                    <span className="text-[11px] font-bold uppercase tracking-wider">{bed.status}</span>
-                                                </div>
-                                                {av ? (
-                                                    <div className="mt-1">
-                                                        <p className="text-xs font-bold truncate">{av.patient.name}</p>
-                                                        <p className="text-[10px] opacity-80 truncate">{av.patient.age}{av.patient.sex} · {av.lengthOfStayDays}d</p>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-[10px] mt-1 opacity-70">—</p>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
 
             {/* Active admissions list */}
             <section className="space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Active Admissions</h2>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100">
+                            {(['TODAY', 'ALL', 'RANGE'] as DateFilterMode[]).map(m => (
+                                <button key={m} type="button" onClick={() => setDateFilter(m)}
+                                    className={cn('h-7 px-3 rounded-md text-[11px] font-bold transition-all',
+                                        dateFilter === m ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    {m === 'TODAY' ? 'Today' : m === 'ALL' ? 'All' : 'Range'}
+                                </button>
+                            ))}
+                        </div>
+                        {dateFilter === 'RANGE' && (
+                            <div className="flex items-center gap-1.5">
+                                <Input type="date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-9 text-xs w-36 bg-white" />
+                                <span className="text-slate-400 text-xs">to</span>
+                                <Input type="date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-9 text-xs w-36 bg-white" />
+                            </div>
+                        )}
                         <div className="relative">
                             <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, UHID, bed…" className="h-9 text-sm pl-8 w-60 bg-white" />
+                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, UHID, admission #, bed…" className="h-9 text-sm pl-8 w-64 bg-white" />
                         </div>
-                        <select value={wardFilter} onChange={e => setWardFilter(e.target.value)} className="h-9 text-xs border border-slate-200 rounded-md px-2 bg-white">
-                            <option value="ALL">All wards</option>
-                            {wards.map(w => <option key={w.wardId} value={w.wardId}>{w.wardName}</option>)}
-                        </select>
                     </div>
                 </div>
 
@@ -163,46 +194,116 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
                             <tr>
                                 <th className="text-left px-3 py-2.5 font-bold">Patient</th>
                                 <th className="text-left px-3 py-2.5 font-bold">Admission #</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Ward / Bed</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Doctor</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Diagnosis</th>
-                                <th className="text-right px-3 py-2.5 font-bold">LOS</th>
-                                <th className="text-right px-3 py-2.5 font-bold">Balance</th>
+                                <th className="text-left px-3 py-2.5 font-bold">Type / Payer</th>
+                                <th className="text-left px-3 py-2.5 font-bold">Bed</th>
+                                <th className="text-left px-3 py-2.5 font-bold">Admitted</th>
                                 <th className="text-left px-3 py-2.5 font-bold">Status</th>
-                                <th className="w-px"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAdmissions.map(v => (
-                                <tr key={v.admissionId} className="border-t border-slate-100 hover:bg-brand-50/40 cursor-pointer" onClick={() => onOpenAdmission(v.admissionId)}>
+                            {filteredAdmissions.map(a => (
+                                <tr key={a.admissionId} className="border-t border-slate-100 hover:bg-brand-50/40 cursor-pointer" onClick={() => openAdmission(a)}>
                                     <td className="px-3 py-2">
-                                        <p className="font-semibold text-slate-900">{v.patient.name}</p>
-                                        <p className="text-[11px] text-slate-500">{v.patient.uhid} · {v.patient.age}{v.patient.sex}{v.patient.allergies?.length ? ' · ⚠ allergy' : ''}</p>
+                                        <p className="font-semibold text-slate-900">{a.patientName || '—'}</p>
+                                        <p className="text-[11px] text-slate-500">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
                                     </td>
-                                    <td className="px-3 py-2 font-mono text-xs text-brand-700 font-bold">{v.admissionNo}</td>
-                                    <td className="px-3 py-2 text-xs text-slate-700">{v.ward.wardCode} · {v.bed.bedCode}</td>
-                                    <td className="px-3 py-2 text-xs text-slate-700">{v.attendingDoctor}</td>
-                                    <td className="px-3 py-2 text-xs text-slate-600 max-w-[220px] truncate" title={v.provisionalDiagnosis}>{v.finalDiagnosis ?? v.provisionalDiagnosis}</td>
-                                    <td className="px-3 py-2 text-right text-xs font-bold text-slate-700">{v.lengthOfStayDays}d</td>
-                                    <td className={cn('px-3 py-2 text-right text-xs font-bold', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>
-                                        ₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}
+                                    <td className="px-3 py-2 font-mono text-xs text-brand-700 font-bold">{a.admissionNo}</td>
+                                    <td className="px-3 py-2 text-xs text-slate-700">{a.admissionType ?? '—'} · {a.payerType}</td>
+                                    <td className="px-3 py-2 text-xs text-slate-700">
+                                        {a.bedCode ? <>{a.wardName ? `${a.wardName} · ` : ''}{a.bedCode}</> : <span className="text-amber-600 font-semibold">Unassigned</span>}
                                     </td>
+                                    <td className="px-3 py-2 text-xs text-slate-600 whitespace-nowrap">{formatIstDateTime(a.admittedAt)}</td>
                                     <td className="px-3 py-2">
-                                        <Badge variant="outline" className={cn('text-[10px] font-bold',
-                                            v.status === 'DISCHARGE_INITIATED' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
-                                            {v.status === 'DISCHARGE_INITIATED' ? 'DISCHARGING' : 'ADMITTED'}
-                                        </Badge>
+                                        <Badge variant="outline" className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border-emerald-200">{a.statusCode}</Badge>
                                     </td>
-                                    <td className="px-2 py-2 text-right"><ChevronRight className="h-4 w-4 text-slate-300" /></td>
                                 </tr>
                             ))}
-                            {filteredAdmissions.length === 0 && (
-                                <tr><td colSpan={9} className="px-3 py-10 text-center text-sm text-slate-400">No admissions match your filters.</td></tr>
+                            {!loading && filteredAdmissions.length === 0 && (
+                                <tr><td colSpan={6} className="px-3 py-10 text-center text-sm text-slate-400">No admissions match your filters.</td></tr>
+                            )}
+                            {loading && admissions.length === 0 && (
+                                <tr><td colSpan={6} className="px-3 py-10 text-center text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…</td></tr>
                             )}
                         </tbody>
                     </table>
                 </div>
             </section>
+
+            {/* Assign / transfer / discharge dialog */}
+            <Dialog open={!!selected} onOpenChange={(o) => { if (!o) closeDialog(); }}>
+                <DialogContent className="max-w-md">
+                    {selected && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>{selected.patientName || 'Patient'} · {selected.admissionNo}</DialogTitle>
+                                <DialogDescription>{selected.bedCode ? `${selected.wardName ?? ''} · ${selected.bedCode}` : 'No bed assigned'} · {selected.payerType}</DialogDescription>
+                            </DialogHeader>
+
+                            {actionMode === 'menu' && (
+                                <div className="space-y-2">
+                                    {selected.bedCode ? (
+                                        <Button variant="outline" className="w-full justify-start h-11" onClick={() => setActionMode('transfer')}>
+                                            <ArrowLeftRight className="h-4 w-4 mr-2" /> Transfer to another bed
+                                        </Button>
+                                    ) : (
+                                        <Button variant="outline" className="w-full justify-start h-11" onClick={() => setActionMode('assign')}>
+                                            <BedDouble className="h-4 w-4 mr-2" /> Assign a bed
+                                        </Button>
+                                    )}
+                                    <Button className="w-full justify-start h-11 bg-amber-600 hover:bg-amber-700" onClick={() => setActionMode('discharge')}>
+                                        <LogOut className="h-4 w-4 mr-2" /> Discharge patient
+                                    </Button>
+                                </div>
+                            )}
+
+                            {(actionMode === 'assign' || actionMode === 'transfer') && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label className="text-xs font-semibold text-slate-700">Bed</Label>
+                                        <select value={pickedBedId} onChange={e => setPickedBedId(e.target.value)} className="h-10 mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white">
+                                            <option value="">Select a bed…</option>
+                                            {freeBeds.map(b => (
+                                                <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <Button variant="ghost" onClick={() => setActionMode('menu')}>Back</Button>
+                                        <Button disabled={!pickedBedId || busy} className="bg-brand-600 hover:bg-brand-700"
+                                            onClick={() => runAction(
+                                                () => actionMode === 'assign'
+                                                    ? bedBoardApi.assignBed(selected.admissionId, pickedBedId)
+                                                    : bedBoardApi.transferBed(selected.admissionId, pickedBedId),
+                                                actionMode === 'assign' ? 'Bed assigned.' : 'Bed transferred.')}>
+                                            {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BedDouble className="h-4 w-4 mr-2" />}
+                                            {actionMode === 'assign' ? 'Assign' : 'Transfer'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {actionMode === 'discharge' && (
+                                <div className="space-y-3">
+                                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
+                                        This closes the admission to DISCHARGED{selected.bedCode ? ` and releases bed ${selected.bedCode}` : ''}.
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-slate-700">Discharge notes</Label>
+                                        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <Button variant="ghost" onClick={() => setActionMode('menu')}>Back</Button>
+                                        <Button disabled={busy} className="bg-amber-600 hover:bg-amber-700"
+                                            onClick={() => runAction(() => bedBoardApi.dischargeAdmission(selected.admissionId, notes || undefined), 'Patient discharged.')}>
+                                            {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
