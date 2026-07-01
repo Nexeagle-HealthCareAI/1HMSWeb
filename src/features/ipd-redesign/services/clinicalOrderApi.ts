@@ -16,6 +16,9 @@ const messageFrom = (err: unknown, fallback: string): string =>
 // One generic order type for every CPOE tab — Medication/Lab/Radiology/Procedure/Diet/Nursing.
 export type ClinicalOrderType = 'MEDICATION' | 'LAB' | 'RADIOLOGY' | 'PROCEDURE' | 'DIET' | 'NURSING';
 export type OrderUrgency = 'ROUTINE' | 'URGENT' | 'STAT';
+// Fixed dosing frequencies for MEDICATION orders (drives MAR's computed dose schedule). Orders
+// placed before this existed may still carry an arbitrary free-text Frequency string on the wire.
+export type MedicationFrequency = 'STAT' | 'OD' | 'BD' | 'TDS' | 'QID' | 'Q4H' | 'Q6H' | 'Q8H' | 'Q12H' | 'SOS';
 
 export interface ClinicalOrderLineItem {
     orderLineId: string;
@@ -28,6 +31,7 @@ export interface ClinicalOrderLineItem {
     instructions?: string | null;
     urgency?: string | null;
     scheduledAt?: string | null;
+    isHighAlert: boolean;
     qty: number;
     statusCode: string;          // ACTIVE / DISCONTINUED
     chargeEventId?: string | null;
@@ -61,6 +65,7 @@ export interface ClinicalOrderLineInput {
     instructions?: string;
     urgency?: OrderUrgency;
     scheduledAt?: string;
+    isHighAlert?: boolean;
     qty?: number;
 }
 

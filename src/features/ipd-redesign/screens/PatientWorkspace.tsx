@@ -13,24 +13,10 @@ import {
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { ClinicalOrderPanel } from '../components/ClinicalOrderPanel';
+import { MarPanel } from '../components/MarPanel';
+import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
-
-// Backend timestamps come back naive (no timezone suffix) — treat as UTC before converting to IST.
-const toIstDate = (iso: string): Date => {
-    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
-    return new Date(hasTz ? iso : `${iso}Z`);
-};
-const formatIstDateTime = (iso?: string | null): string => {
-    if (!iso) return '';
-    const d = toIstDate(iso);
-    if (isNaN(d.getTime())) return '';
-    const day = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit' });
-    const month = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short' });
-    const year = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric' });
-    const time = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${day}${month}.${year}, ${time}`;
-};
 
 type Section = 'overview' | 'cpoe' | 'mar';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
@@ -200,9 +186,8 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         </div>
                     )}
 
-                    <button type="button" disabled className={navItemClass(false, 'opacity-50 cursor-not-allowed justify-between')}>
-                        <span className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4" /> MAR</span>
-                        <Badge variant="outline" className="text-[9px] font-bold bg-slate-100 text-slate-500 border-slate-200">Soon</Badge>
+                    <button type="button" onClick={() => setActiveSection('mar')} className={navItemClass(activeSection === 'mar')}>
+                        <ClipboardCheck className="h-4 w-4" /> MAR
                     </button>
                 </aside>
 
@@ -364,6 +349,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                             noItemsText="No radiology orders yet."
                             showUrgency
                         />
+                    )}
+
+                    {activeSection === 'mar' && (
+                        <MarPanel admissionId={current.admissionId} isActive={isActive} patientName={current.patientName} />
                     )}
                 </div>
             </div>

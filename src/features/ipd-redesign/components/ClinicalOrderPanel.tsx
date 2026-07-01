@@ -9,29 +9,18 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, X, Plus, Trash2, RefreshCw } from 'lucide-react';
 import {
-    clinicalOrderApi, type ClinicalOrderItem, type ClinicalOrderLineInput, type ClinicalOrderType, type OrderUrgency,
+    clinicalOrderApi, type ClinicalOrderItem, type ClinicalOrderLineInput, type ClinicalOrderType, type OrderUrgency, type MedicationFrequency,
 } from '../services/clinicalOrderApi';
 import { ipdBillingService, type ChargeMaster } from '@/features/billing/services/ipdBillingService';
+import { formatIstDateTime } from '../utils/istDate';
 
-// Backend timestamps come back naive (no timezone suffix) — treat as UTC before converting to IST.
-const toIstDate = (iso: string): Date => {
-    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
-    return new Date(hasTz ? iso : `${iso}Z`);
-};
-const formatIstDateTime = (iso?: string | null): string => {
-    if (!iso) return '';
-    const d = toIstDate(iso);
-    if (isNaN(d.getTime())) return '';
-    const day = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit' });
-    const month = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short' });
-    const year = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric' });
-    const time = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${day}${month}.${year}, ${time}`;
-};
-
-const EMPTY_LINE: ClinicalOrderLineInput = { itemName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', urgency: undefined, scheduledAt: undefined, qty: 1 };
+const EMPTY_LINE: ClinicalOrderLineInput = { itemName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', urgency: undefined, scheduledAt: undefined, isHighAlert: false, qty: 1 };
 
 const URGENCIES: OrderUrgency[] = ['ROUTINE', 'URGENT', 'STAT'];
+
+// Fixed dosing frequencies — MEDICATION orders use this dropdown (drives MAR's computed dose
+// schedule); every other order type keeps a free-text Frequency input.
+const MEDICATION_FREQUENCIES: MedicationFrequency[] = ['STAT', 'OD', 'BD', 'TDS', 'QID', 'Q4H', 'Q6H', 'Q8H', 'Q12H', 'SOS'];
 
 interface Props {
     admissionId: string;
@@ -177,6 +166,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                                         {l.urgency}
                                                     </Badge>
                                                 )}
+                                                {l.isHighAlert && <Badge variant="outline" className="text-[9px] font-bold bg-rose-50 text-rose-700 border-rose-200">HIGH ALERT</Badge>}
                                                 {l.statusCode === 'DISCONTINUED' && <Badge variant="outline" className="text-[9px] bg-slate-100 text-slate-500">DISCONTINUED</Badge>}
                                             </div>
                                             <p className="text-[11px] text-slate-500 mt-0.5">
@@ -249,12 +239,24 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                         </div>
                                         <div>
                                             <Label className="text-[11px] font-semibold text-slate-600">Frequency</Label>
-                                            <Input value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })} className="h-9 mt-1" placeholder="BD / TDS" />
+                                            {orderType === 'MEDICATION' ? (
+                                                <select value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })}
+                                                    className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                    <option value="">— Select —</option>
+                                                    {MEDICATION_FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                                </select>
+                                            ) : (
+                                                <Input value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })} className="h-9 mt-1" placeholder="BD / TDS" />
+                                            )}
                                         </div>
                                         <div>
                                             <Label className="text-[11px] font-semibold text-slate-600">Duration (days)</Label>
                                             <Input type="number" min={0} value={line.durationDays ?? ''} onChange={e => setLine(i, { durationDays: e.target.value ? parseInt(e.target.value, 10) : undefined })} className="h-9 mt-1" />
                                         </div>
+                                        <label className="col-span-2 sm:col-span-4 flex items-center gap-2 text-xs font-semibold text-slate-600 mt-1">
+                                            <input type="checkbox" checked={!!line.isHighAlert} onChange={e => setLine(i, { isHighAlert: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
+                                            High-alert (requires witness at administration)
+                                        </label>
                                     </div>
                                 )}
 
