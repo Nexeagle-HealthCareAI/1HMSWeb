@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
-    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X,
+    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -31,7 +31,7 @@ const formatIstDateTime = (iso?: string | null): string => {
     return `${day}${month}.${year}, ${time}`;
 };
 
-type Tab = 'overview' | 'medications';
+type Tab = 'overview' | 'medications' | 'lab';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -166,6 +166,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'medications' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                     <Pill className="h-4 w-4" /> Medications
                 </button>
+                <button type="button" onClick={() => setTab('lab')}
+                    className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'lab' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                    <FlaskConical className="h-4 w-4" /> Lab
+                </button>
             </div>
 
             {tab === 'overview' && (
@@ -245,6 +249,18 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     itemLabel="Drug name"
                     noItemsText="No medication orders yet."
                     showMedicationFields
+                />
+            )}
+
+            {tab === 'lab' && (
+                <ClinicalOrderPanel
+                    admissionId={current.admissionId}
+                    isActive={isActive}
+                    orderType="LAB"
+                    itemPickerCategoryCodes={['LAB']}
+                    itemLabel="Test"
+                    noItemsText="No lab orders yet."
+                    showUrgency
                 />
             )}
 
