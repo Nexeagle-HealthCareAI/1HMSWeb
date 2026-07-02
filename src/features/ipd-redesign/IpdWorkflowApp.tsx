@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { IpdDashboard } from './screens/IpdDashboard';
 import { AdmitPatientSheet } from './screens/AdmitPatientSheet';
 import { BedBoardScreen } from './screens/BedBoardScreen';
+import { CssdBoardScreen } from './screens/CssdBoardScreen';
 import { PatientWorkspace } from './screens/PatientWorkspace';
 import type { ActiveAdmissionItem } from './services/admissionApi';
 
 type View =
     | { name: 'dashboard' }
     | { name: 'bedboard' }
+    | { name: 'cssdboard' }
     | { name: 'workspace'; admission: ActiveAdmissionItem };
 
 /**
@@ -30,6 +32,7 @@ export const IpdWorkflowApp: React.FC = () => {
                 <IpdDashboard
                     onAdmit={() => setAdmitOpen(true)}
                     onOpenBedBoard={() => setView({ name: 'bedboard' })}
+                    onOpenCssdBoard={() => setView({ name: 'cssdboard' })}
                     onOpenWorkspace={(admission) => setView({ name: 'workspace', admission })}
                     refreshSignal={refreshTick}
                 />
@@ -37,6 +40,10 @@ export const IpdWorkflowApp: React.FC = () => {
 
             {view.name === 'bedboard' && (
                 <BedBoardScreen onBack={() => setView({ name: 'dashboard' })} />
+            )}
+
+            {view.name === 'cssdboard' && (
+                <CssdBoardScreen onBack={() => setView({ name: 'dashboard' })} />
             )}
 
             {view.name === 'workspace' && (

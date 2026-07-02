@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
-    ClipboardList, ClipboardCheck, Activity, Droplets, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2,
+    ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -22,11 +22,13 @@ import { RoundNotePanel } from '../components/RoundNotePanel';
 import { ShiftHandoverPanel } from '../components/ShiftHandoverPanel';
 import { ConsentPanel } from '../components/ConsentPanel';
 import { DischargeSummaryPanel } from '../components/DischargeSummaryPanel';
+import { BloodBankPanel } from '../components/BloodBankPanel';
+import { SurgeryCasePanel } from '../components/SurgeryCasePanel';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'discharge';
+type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
@@ -208,6 +210,14 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     <button type="button" onClick={() => setActiveSection('consent')} className={navItemClass(activeSection === 'consent')}>
                         <FileCheck2 className="h-4 w-4" /> Consent
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('bloodBank')} className={navItemClass(activeSection === 'bloodBank')}>
+                        <Droplet className="h-4 w-4" /> Blood Bank
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('surgery')} className={navItemClass(activeSection === 'surgery')}>
+                        <Scissors className="h-4 w-4" /> Surgery
                     </button>
 
                     {/* Always visible, unlike every other section — staff need to reopen a signed
@@ -414,6 +424,14 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     {activeSection === 'consent' && (
                         <ConsentPanel admissionId={current.admissionId} isActive={isActive} prefilterTypeCode="PROCEDURE" />
+                    )}
+
+                    {activeSection === 'bloodBank' && (
+                        <BloodBankPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'surgery' && (
+                        <SurgeryCasePanel admissionId={current.admissionId} isActive={isActive} />
                     )}
 
                     {activeSection === 'discharge' && (

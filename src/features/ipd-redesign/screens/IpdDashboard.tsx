@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -52,16 +52,17 @@ const statusTone = (status: string) => STATUS_TONE[status] ?? 'bg-rose-50 text-r
 interface Props {
     onAdmit: () => void;
     onOpenBedBoard: () => void;
+    onOpenCssdBoard: () => void;
     onOpenWorkspace: (admission: ActiveAdmissionItem) => void;
     refreshSignal: number;
 }
 
 /**
- * IPD dashboard — the admitted-patient list only (the live bed board is its own screen,
- * BedBoardScreen; per-patient management — bed, medications, discharge — is the Patient
+ * IPD dashboard — the admitted-patient list only (the live bed board and CSSD board are their
+ * own screens; per-patient management — bed, medications, discharge, surgery — is the Patient
  * Workspace screen, opened by clicking a row). Backed by GET /admission/active.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenWorkspace, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
@@ -128,6 +129,9 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenW
                     </Button>
                     <Button onClick={onOpenBedBoard} variant="outline" className="h-10 font-semibold">
                         <LayoutGrid className="h-4 w-4 mr-2" /> Live Bed Board
+                    </Button>
+                    <Button onClick={onOpenCssdBoard} variant="outline" className="h-10 font-semibold">
+                        <Package className="h-4 w-4 mr-2" /> CSSD Board
                     </Button>
                     <Button onClick={onAdmit} className="h-10 bg-brand-600 hover:bg-brand-700 font-semibold">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient
