@@ -1,0 +1,390 @@
+import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Check, Download, Printer, LogOut, Clock3 } from 'lucide-react';
+import { useHospitalApi } from '@/hooks/useApi';
+import { useAuthStore } from '@/store/authStore';
+import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
+import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks } from '../services/irdaiDischargeApi';
+import { bedBoardApi } from '../services/bedBoardApi';
+import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
+import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
+import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
+import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
+import { formatIstDateTime } from '../utils/istDate';
+import type { ActiveAdmissionItem } from '../services/admissionApi';
+
+interface Props {
+    admission: ActiveAdmissionItem;
+    isActive: boolean;
+    onDischarged: () => void;
+}
+
+const CONDITIONS: ConditionAtDischarge[] = ['STABLE', 'IMPROVED', 'RECOVERED', 'REFERRED', 'LAMA', 'EXPIRED'];
+
+const EMPTY_FORM: SaveDischargeSummaryFields = {};
+
+export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, onDischarged }) => {
+    const { toast } = useToast();
+    const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
+    const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
+
+    const [loading, setLoading] = useState(true);
+    const [isSigned, setIsSigned] = useState(false);
+    const [signedByDoctorName, setSignedByDoctorName] = useState<string | null>(null);
+    const [signedAt, setSignedAt] = useState<string | null>(null);
+    const [form, setForm] = useState<SaveDischargeSummaryFields>({ ...EMPTY_FORM });
+    const [saving, setSaving] = useState(false);
+    const [signOpen, setSignOpen] = useState(false);
+    const [signing, setSigning] = useState(false);
+
+    const [tpaSplit, setTpaSplit] = useState<TpaSplit | null>(null);
+    const [clocks, setClocks] = useState<IrdaiClocks | null>(null);
+    const [stampingKey, setStampingKey] = useState<'CLAIM_SUBMITTED' | 'INSURER_APPROVAL' | null>(null);
+
+    const [dischargeOpen, setDischargeOpen] = useState(false);
+    const [dischargeNotes, setDischargeNotes] = useState('');
+    const [dischargeBusy, setDischargeBusy] = useState(false);
+
+    const isCash = admission.payerType === 'CASH';
+    const isDischarged = admission.statusCode === 'DISCHARGED';
+
+    const load = () => {
+        setLoading(true);
+        dischargeSummaryApi.getDraft(admission.admissionId)
+            .then(draft => {
+                if (!draft) return;
+                setIsSigned(draft.isSigned);
+                setSignedByDoctorName(draft.signedByDoctorName ?? null);
+                setSignedAt(draft.signedAt ?? null);
+                setForm({
+                    admittingDiagnosis: draft.admittingDiagnosis ?? undefined,
+                    finalDiagnosis: draft.finalDiagnosis ?? undefined,
+                    chiefComplaint: draft.chiefComplaint ?? undefined,
+                    historyOfPresentIllness: draft.historyOfPresentIllness ?? undefined,
+                    courseInHospital: draft.courseInHospital ?? undefined,
+                    proceduresPerformed: draft.proceduresPerformed ?? undefined,
+                    conditionAtDischarge: (draft.conditionAtDischarge as ConditionAtDischarge) ?? undefined,
+                    dischargeMedications: draft.dischargeMedications ?? undefined,
+                    followUpInstructions: draft.followUpInstructions ?? undefined,
+                    followUpDate: draft.followUpDate ?? undefined,
+                    dietInstructions: draft.dietInstructions ?? undefined,
+                    activityRestrictions: draft.activityRestrictions ?? undefined,
+                    additionalNotes: draft.additionalNotes ?? undefined,
+                });
+            })
+            .catch(() => toast({ title: 'Could not load the discharge summary', variant: 'destructive' }))
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => { load(); }, [admission.admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (isCash) return;
+        irdaiDischargeApi.getTpaSplit(admission.admissionId).then(setTpaSplit).catch(() => setTpaSplit(null));
+        irdaiDischargeApi.getClocks(admission.admissionId).then(setClocks).catch(() => setClocks(null));
+    }, [admission.admissionId, isCash]);
+
+    const setField = (patch: Partial<SaveDischargeSummaryFields>) => setForm(f => ({ ...f, ...patch }));
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            await dischargeSummaryApi.save(admission.admissionId, form);
+            toast({ title: 'Discharge summary saved.' });
+        } catch (err) {
+            toast({ title: 'Could not save', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const confirmSign = async () => {
+        setSigning(true);
+        try {
+            await dischargeSummaryApi.save(admission.admissionId, form);
+            await dischargeSummaryApi.sign(admission.admissionId);
+            toast({ title: 'Discharge summary signed.' });
+            setSignOpen(false);
+            load();
+        } catch (err) {
+            toast({ title: 'Could not sign', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setSigning(false);
+        }
+    };
+
+    const stampMilestone = async (key: 'CLAIM_SUBMITTED' | 'INSURER_APPROVAL') => {
+        setStampingKey(key);
+        try {
+            await irdaiDischargeApi.stampMilestone(admission.admissionId, key);
+            toast({ title: 'Milestone recorded.' });
+            irdaiDischargeApi.getClocks(admission.admissionId).then(setClocks).catch(() => {});
+        } catch (err) {
+            toast({ title: 'Could not record milestone', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setStampingKey(null);
+        }
+    };
+
+    const confirmDischarge = async () => {
+        setDischargeBusy(true);
+        try {
+            await bedBoardApi.dischargeAdmission(admission.admissionId, dischargeNotes || undefined);
+            toast({ title: 'Patient discharged.' });
+            setDischargeOpen(false);
+            onDischarged();
+        } catch (err) {
+            toast({ title: 'Could not discharge', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setDischargeBusy(false);
+        }
+    };
+
+    const buildPrintData = () => {
+        const physicalDischargeAt = clocks?.milestones.find(m => m.key === 'PHYSICAL_DISCHARGE')?.at;
+        return {
+            admissionNo: admission.admissionNo,
+            patientName: admission.patientName || admission.patientId || '',
+            patientId: admission.patientId || '',
+            ageGender: admission.patientAge != null ? `${admission.patientAge}${admission.patientSex ?? ''}` : '',
+            mobile: '',
+            admittedAt: admission.admittedAt,
+            dischargedAt: physicalDischargeAt || new Date().toISOString(),
+            admittingDiagnosis: form.admittingDiagnosis,
+            finalDiagnosis: form.finalDiagnosis,
+            chiefComplaint: form.chiefComplaint,
+            historyOfPresentIllness: form.historyOfPresentIllness,
+            courseInHospital: form.courseInHospital,
+            proceduresPerformed: form.proceduresPerformed,
+            conditionAtDischarge: form.conditionAtDischarge || 'STABLE',
+            dischargeMedications: form.dischargeMedications,
+            followUpInstructions: form.followUpInstructions,
+            followUpDate: form.followUpDate,
+            dietInstructions: form.dietInstructions,
+            activityRestrictions: form.activityRestrictions,
+            additionalNotes: form.additionalNotes,
+            signedByDoctorName: signedByDoctorName ?? undefined,
+            signedAt: signedAt ?? undefined,
+            tpaSplit: tpaSplit && !isCash ? {
+                payableTotal: tpaSplit.payableTotal,
+                nonPayableTotal: tpaSplit.nonPayableTotal,
+                unclassifiedTotal: tpaSplit.unclassifiedTotal,
+                nonPayableLines: tpaSplit.lines.filter(l => l.isIRDAIPayable === false).map(l => ({ displayName: l.displayName || '—', netAmount: l.netAmount })),
+            } : undefined,
+        };
+    };
+
+    const download = async () => {
+        const settings = buildPrintSettingsFromHospital(hospitalData);
+        const html = buildDischargeSummaryA4(buildPrintData(), settings);
+        await downloadHtmlAsPdf(html, `discharge-summary-${admission.admissionNo}.pdf`);
+    };
+    const print = () => {
+        const settings = buildPrintSettingsFromHospital(hospitalData);
+        openPrintHtml(buildDischargeSummaryA4(buildPrintData(), settings));
+    };
+
+    if (loading) {
+        return <div className="py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+    }
+
+    return (
+        <div className="space-y-5">
+            <div className="flex items-center justify-between">
+                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Discharge Summary</h2>
+                {isSigned && (
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-9" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
+                    </div>
+                )}
+            </div>
+
+            {isSigned && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
+                </div>
+            )}
+
+            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Admitting Diagnosis" value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} />
+                    <Field label="Final Diagnosis *" value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} />
+                    <Field label="Chief Complaint" value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} />
+                    <div>
+                        <Label className="text-[11px] font-semibold text-slate-600">Condition at Discharge *</Label>
+                        {isSigned ? (
+                            <p className="text-sm mt-1 text-slate-800">{form.conditionAtDischarge ?? '—'}</p>
+                        ) : (
+                            <select value={form.conditionAtDischarge ?? ''} onChange={e => setField({ conditionAtDischarge: e.target.value as ConditionAtDischarge })}
+                                className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                <option value="">— Select —</option>
+                                {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        )}
+                    </div>
+                </div>
+
+                <TextField label="History of Present Illness" value={form.historyOfPresentIllness} readOnly={isSigned} onChange={v => setField({ historyOfPresentIllness: v })} />
+
+                <div>
+                    <TextField label="Course in Hospital" value={form.courseInHospital} readOnly={isSigned} onChange={v => setField({ courseInHospital: v })} rows={6} />
+                    {!isSigned && <DischargeNarrativeAssist admissionId={admission.admissionId} onApply={v => setField({ courseInHospital: v })} />}
+                </div>
+
+                <TextField label="Procedures Performed" value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} />
+                <TextField label="Discharge Medications" value={form.dischargeMedications} readOnly={isSigned} onChange={v => setField({ dischargeMedications: v })} />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <TextField label="Follow-up Instructions" value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} rows={2} />
+                    <div>
+                        <Label className="text-[11px] font-semibold text-slate-600">Follow-up Date</Label>
+                        <Input type="date" value={form.followUpDate ? form.followUpDate.substring(0, 10) : ''} onChange={e => setField({ followUpDate: e.target.value || undefined })}
+                            className="h-9 mt-1" disabled={isSigned} />
+                    </div>
+                    <TextField label="Diet Instructions" value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} rows={2} />
+                    <TextField label="Activity Restrictions" value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} rows={2} />
+                </div>
+                <TextField label="Additional Notes" value={form.additionalNotes} readOnly={isSigned} onChange={v => setField({ additionalNotes: v })} rows={2} />
+
+                {!isSigned && isActive && (
+                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <Button variant="outline" disabled={saving} onClick={save}>
+                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Save draft
+                        </Button>
+                        <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => setSignOpen(true)}>
+                            <Check className="h-4 w-4 mr-2" /> Sign & finalize
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            {!isCash && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">IRDAI Discharge Clocks</h3>
+                        {clocks?.message && clocks.milestones.length === 0 ? (
+                            <p className="text-sm text-slate-400">{clocks.message}</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {(clocks?.milestones ?? []).map(m => (
+                                    <div key={m.key} className="flex items-center justify-between gap-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                                            <span className="text-slate-700">{m.label}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {(() => {
+                                                if (m.at) {
+                                                    return <span className="text-[11px] text-slate-500">{formatIstDateTime(m.at)}{m.durationFromPreviousMinutes != null ? ` (+${m.durationFromPreviousMinutes}m)` : ''}</span>;
+                                                }
+                                                const stampableKey = m.key === 'CLAIM_SUBMITTED' || m.key === 'INSURER_APPROVAL' ? m.key : null;
+                                                if (stampableKey && isActive) {
+                                                    return (
+                                                        <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled={stampingKey === stampableKey} onClick={() => stampMilestone(stampableKey)}>
+                                                            {stampingKey === stampableKey ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                                            Mark {stampableKey === 'CLAIM_SUBMITTED' ? 'submitted' : 'approved'}
+                                                        </Button>
+                                                    );
+                                                }
+                                                return <span className="text-[11px] text-slate-300">—</span>;
+                                            })()}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">TPA Payable / Non-Payable Split</h3>
+                        {tpaSplit ? (
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2">
+                                    <p className="text-[9px] font-bold uppercase text-emerald-600">Payable</p>
+                                    <p className="text-sm font-black text-emerald-800">₹{tpaSplit.payableTotal.toLocaleString('en-IN')}</p>
+                                </div>
+                                <div className="rounded-lg bg-rose-50 border border-rose-200 p-2">
+                                    <p className="text-[9px] font-bold uppercase text-rose-600">Non-Payable</p>
+                                    <p className="text-sm font-black text-rose-800">₹{tpaSplit.nonPayableTotal.toLocaleString('en-IN')}</p>
+                                </div>
+                                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2">
+                                    <p className="text-[9px] font-bold uppercase text-slate-500">Unclassified</p>
+                                    <p className="text-sm font-black text-slate-700">₹{tpaSplit.unclassifiedTotal.toLocaleString('en-IN')}</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-400">No charges to split yet.</p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {isActive && !isDischarged && (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between">
+                    <p className="text-sm text-slate-600">Discharge is a separate action from signing the summary — sign whenever ready, discharge when the patient physically leaves.</p>
+                    <Button className="bg-amber-600 hover:bg-amber-700 font-semibold shrink-0" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
+                        <LogOut className="h-4 w-4 mr-2" /> Discharge now
+                    </Button>
+                </div>
+            )}
+
+            <Dialog open={signOpen} onOpenChange={setSignOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Sign discharge summary?</DialogTitle>
+                        <DialogDescription>This locks the summary from further edits. Final diagnosis and condition at discharge are required.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setSignOpen(false)}>Cancel</Button>
+                        <Button disabled={signing} className="bg-amber-600 hover:bg-amber-700" onClick={confirmSign}>
+                            {signing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Sign & finalize
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={dischargeOpen} onOpenChange={setDischargeOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Discharge {admission.patientName || 'patient'}?</DialogTitle>
+                        <DialogDescription>This closes the admission and releases the bed.</DialogDescription>
+                    </DialogHeader>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Discharge notes</Label>
+                        <Textarea rows={3} value={dischargeNotes} onChange={e => setDischargeNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setDischargeOpen(false)}>Cancel</Button>
+                        <Button disabled={dischargeBusy} className="bg-amber-600 hover:bg-amber-700" onClick={confirmDischarge}>
+                            {dischargeBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+};
+
+const Field: React.FC<{ label: string; value?: string; readOnly: boolean; onChange: (v: string) => void }> = ({ label, value, readOnly, onChange }) => (
+    <div>
+        <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
+        {readOnly ? <p className="text-sm mt-1 text-slate-800">{value || '—'}</p> : <Input value={value ?? ''} onChange={e => onChange(e.target.value)} className="h-9 mt-1" />}
+    </div>
+);
+
+const TextField: React.FC<{ label: string; value?: string; readOnly: boolean; onChange: (v: string) => void; rows?: number }> = ({ label, value, readOnly, onChange, rows = 3 }) => (
+    <div>
+        <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
+        {readOnly
+            ? <p className={cn('text-sm mt-1 text-slate-800 whitespace-pre-wrap', !value && 'text-slate-400')}>{value || '—'}</p>
+            : <Textarea rows={rows} value={value ?? ''} onChange={e => onChange(e.target.value)} className="text-sm mt-1" />}
+    </div>
+);

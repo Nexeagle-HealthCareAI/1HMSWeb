@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -23,11 +21,12 @@ import { RestraintPanel } from '../components/RestraintPanel';
 import { RoundNotePanel } from '../components/RoundNotePanel';
 import { ShiftHandoverPanel } from '../components/ShiftHandoverPanel';
 import { ConsentPanel } from '../components/ConsentPanel';
+import { DischargeSummaryPanel } from '../components/DischargeSummaryPanel';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent';
+type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
@@ -76,10 +75,6 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     const [bedActionMode, setBedActionMode] = useState<'assign' | 'transfer' | null>(null);
     const [pickedBedId, setPickedBedId] = useState('');
     const [bedBusy, setBedBusy] = useState(false);
-
-    const [dischargeOpen, setDischargeOpen] = useState(false);
-    const [dischargeNotes, setDischargeNotes] = useState('');
-    const [dischargeBusy, setDischargeBusy] = useState(false);
 
     const refreshAdmission = async () => {
         try {
@@ -133,21 +128,6 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
         }
     };
 
-    // ── Discharge ────────────────────────────────────────────────────────────
-    const confirmDischarge = async () => {
-        setDischargeBusy(true);
-        try {
-            await bedBoardApi.dischargeAdmission(current.admissionId, dischargeNotes || undefined);
-            toast({ title: 'Patient discharged.' });
-            setDischargeOpen(false);
-            refreshAfterAction();
-        } catch (err) {
-            toast({ title: 'Could not discharge', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
-        } finally {
-            setDischargeBusy(false);
-        }
-    };
-
     const navItemClass = (isCurrent: boolean, extra?: string) => cn(
         'w-full h-10 px-3 rounded-lg text-sm font-bold transition-all flex items-center gap-2',
         isCurrent ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50',
@@ -179,11 +159,6 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         </p>
                     </div>
                 </div>
-                {isActive && (
-                    <Button onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }} className="h-10 bg-amber-600 hover:bg-amber-700 font-semibold">
-                        <LogOut className="h-4 w-4 mr-2" /> Discharge
-                    </Button>
-                )}
             </div>
 
             {/* Side nav + content */}
@@ -233,6 +208,12 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     <button type="button" onClick={() => setActiveSection('consent')} className={navItemClass(activeSection === 'consent')}>
                         <FileCheck2 className="h-4 w-4" /> Consent
+                    </button>
+
+                    {/* Always visible, unlike every other section — staff need to reopen a signed
+                        summary and re-download the PDF after the admission has already closed. */}
+                    <button type="button" onClick={() => setActiveSection('discharge')} className={navItemClass(activeSection === 'discharge')}>
+                        <LogOut className="h-4 w-4" /> Discharge
                     </button>
                 </aside>
 
@@ -434,30 +415,12 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     {activeSection === 'consent' && (
                         <ConsentPanel admissionId={current.admissionId} isActive={isActive} prefilterTypeCode="PROCEDURE" />
                     )}
+
+                    {activeSection === 'discharge' && (
+                        <DischargeSummaryPanel admission={current} isActive={isActive} onDischarged={refreshAfterAction} />
+                    )}
                 </div>
             </div>
-
-            {/* Discharge dialog */}
-            <Dialog open={dischargeOpen} onOpenChange={setDischargeOpen}>
-                <DialogContent className="max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle>Discharge {current.patientName || 'patient'}?</DialogTitle>
-                        <DialogDescription>
-                            This closes the admission to DISCHARGED{current.bedCode ? ` and releases bed ${current.bedCode}` : ''}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div>
-                        <Label className="text-xs font-semibold text-slate-700">Discharge notes</Label>
-                        <Textarea rows={3} value={dischargeNotes} onChange={e => setDischargeNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setDischargeOpen(false)}>Cancel</Button>
-                        <Button disabled={dischargeBusy} className="bg-amber-600 hover:bg-amber-700" onClick={confirmDischarge}>
-                            {dischargeBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };

@@ -98,6 +98,43 @@ export interface BillCumReceiptPrintData {
     receipt: ReceiptPrintData;
 }
 
+export interface DischargeSummaryTpaLine {
+    displayName: string;
+    netAmount: number;
+}
+
+export interface DischargeSummaryPrintData {
+    admissionNo: string;
+    patientName: string;
+    patientId: string;
+    ageGender: string;
+    mobile: string;
+    admittedAt: string;
+    dischargedAt: string;
+    admittingDiagnosis?: string;
+    finalDiagnosis?: string;
+    chiefComplaint?: string;
+    historyOfPresentIllness?: string;
+    courseInHospital?: string;
+    proceduresPerformed?: string;
+    conditionAtDischarge: string;
+    dischargeMedications?: string;
+    followUpInstructions?: string;
+    followUpDate?: string;
+    dietInstructions?: string;
+    activityRestrictions?: string;
+    additionalNotes?: string;
+    signedByDoctorName?: string;
+    signedAt?: string;
+    // Present only for TPA/SCHEME admissions.
+    tpaSplit?: {
+        payableTotal: number;
+        nonPayableTotal: number;
+        unclassifiedTotal: number;
+        nonPayableLines: DischargeSummaryTpaLine[];
+    };
+}
+
 export interface PaymentStatementLine {
     srNo: number;
     date: string;
