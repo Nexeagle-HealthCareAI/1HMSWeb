@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Printer } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/store/authStore';
+import { useHospitalApi } from '@/hooks/useApi';
+import { formatTokenNumber } from '@/lib/utils';
 
 interface TokenPrintModalProps {
     open: boolean;
@@ -16,6 +19,13 @@ interface TokenPrintModalProps {
         doctorName: string;
         appointmentDate: string;
         department?: string;
+        age?: string | number;
+        ageUnit?: string;
+        gender?: string;
+        referrerName?: string;
+        referrerType?: string;
+        guardianName?: string;
+        guardianRelation?: string;
     } | null;
 }
 
@@ -25,6 +35,13 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
     tokenData
 }) => {
     const componentRef = useRef<HTMLDivElement>(null);
+    const getHospitalId = useAuthStore(state => state.getHospitalId);
+    const { data: hospitalData } = useHospitalApi.getHospitalById(getHospitalId() || '');
+
+    const hospitalAddress = React.useMemo(() => {
+        if (!hospitalData) return undefined;
+        return [hospitalData.location, hospitalData.city, hospitalData.state].filter(Boolean).join(', ');
+    }, [hospitalData]);
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -40,7 +57,16 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
         pid: tokenData.patientId,
         dn: tokenData.doctorName,
         d: tokenData.department,
-        ad: tokenData.appointmentDate
+        ad: tokenData.appointmentDate,
+        ag: tokenData.age,
+        agU: tokenData.ageUnit,
+        g: tokenData.gender,
+        rn: tokenData.referrerName,
+        rt: tokenData.referrerType,
+        gn: tokenData.guardianName,
+        gr: tokenData.guardianRelation,
+        hn: hospitalData?.name,
+        ha: hospitalAddress
     };
 
     const encodedData = btoa(JSON.stringify(tokenPayload));
@@ -82,53 +108,85 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                                 `}
                             </style>
 
-                            {/* Header Removed */}
-
-                            {/* Token Number */}
-                            <div className="mt-8 mb-2">
-                                <div className="text-sm font-bold uppercase">Token Number</div>
-                                <div className="text-6xl font-black my-1 leading-none">{tokenData.tokenNumber}</div>
+                            {/* Hospital Header - Clean and premium without black background */}
+                            <div className="w-full border-b-2 border-black pb-2 mb-2 text-center">
+                                <div className="font-black text-[16px] leading-tight uppercase tracking-widest break-words whitespace-normal text-black">{hospitalData?.name || 'Loading Hospital...'}</div>
+                                {hospitalAddress && (
+                                    <div className="text-[10px] uppercase tracking-wide leading-tight mt-1 whitespace-normal text-gray-800">{hospitalAddress}</div>
+                                )}
                             </div>
 
-                            {/* Details */}
-                            <div className="w-full text-left space-y-1.5 mb-4 border-t-2 border-dashed border-black pt-3 mt-2 pl-4">
-                                <div className="flex justify-between items-baseline">
-                                    <span className="font-bold text-xs">Date:</span>
-                                    <span className="text-sm font-mono">{format(new Date(tokenData.appointmentDate), 'dd MMM, yyyy')}</span>
-                                </div>
+                            {/* Token Number Block - Refined sizing */}
+                            <div className="w-full border-2 border-black p-2 mb-3 text-center rounded-sm relative mt-2">
+                                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white print:bg-white px-2 text-[10px] font-black uppercase tracking-[0.2em]">Token No.</div>
+                                <div className="text-3xl font-black mt-1 leading-none tracking-tighter">{formatTokenNumber(tokenData.tokenNumber)}</div>
+                            </div>
 
-                                <div>
-                                    <span className="font-bold block text-[10px] uppercase text-gray-600">Patient Details</span>
-                                    <div className="text-sm font-bold truncate">{tokenData.patientName}</div>
-                                    <div className="text-xs font-mono font-bold bg-gray-200 print:bg-gray-200 px-1 inline-block mt-0.5 rounded">{tokenData.patientId}</div>
+                            {/* Patient Details - Clean, structured rows */}
+                            <div className="w-full border-t border-b border-black py-2 mb-3 space-y-1.5 text-left px-1">
+                                <div className="flex justify-between items-baseline border-b border-black/10 pb-1.5">
+                                    <span className="font-bold text-[9px] uppercase tracking-wider">Patient</span>
+                                    <span className="font-black text-[13px] text-right truncate pl-2">{tokenData.patientName}</span>
                                 </div>
+                                <div className="flex justify-between items-baseline border-b border-black/10 pb-1.5">
+                                    <span className="font-bold text-[9px] uppercase tracking-wider">Patient ID</span>
+                                    <span className="font-mono font-bold text-[11px]">{tokenData.patientId}</span>
+                                </div>
+                                {(tokenData.age != null || tokenData.gender) && (
+                                    <div className="flex justify-between items-baseline border-b border-black/10 pb-1.5">
+                                        <span className="font-bold text-[9px] uppercase tracking-wider">Age/Sex</span>
+                                        <span className="font-bold text-[11px]">
+                                            {[tokenData.age != null ? `${tokenData.age} ${tokenData.ageUnit || 'Y'}` : null, tokenData.gender?.charAt(0)].filter(Boolean).join(' / ')}
+                                        </span>
+                                    </div>
+                                )}
+                                {tokenData.guardianName && (
+                                    <div className="flex justify-between items-baseline border-b border-black/10 pb-1.5">
+                                        <span className="font-bold text-[9px] uppercase tracking-wider">
+                                            {tokenData.guardianRelation || 'C/O'}
+                                        </span>
+                                        <span className="font-bold text-[11px] text-right truncate pl-2">{tokenData.guardianName}</span>
+                                    </div>
+                                )}
+                                {tokenData.referrerName && tokenData.referrerName !== 'Self' && (
+                                    <div className="flex justify-between items-baseline pb-0.5">
+                                        <span className="font-bold text-[9px] uppercase tracking-wider">
+                                            {tokenData.referrerType === 'DOCTOR' ? 'Ref. Doctor'
+                                             : tokenData.referrerType === 'AGENT' ? 'Ref. Agent'
+                                             : 'Ref. By'}
+                                        </span>
+                                        <span className="font-bold text-[11px] text-right truncate pl-2">{tokenData.referrerName}</span>
+                                    </div>
+                                )}
+                            </div>
 
+                            {/* Doctor & Date - Side by Side */}
+                            <div className="w-full grid grid-cols-2 gap-2 text-left mb-3 px-1">
                                 <div>
-                                    <span className="font-bold block text-[10px] uppercase text-gray-600">Doctor</span>
-                                    <div className="text-sm font-bold truncate">{tokenData.doctorName}</div>
-                                    {tokenData.department && (
-                                        <div className="text-xs">{tokenData.department}</div>
-                                    )}
+                                    <div className="font-bold text-[9px] uppercase tracking-wider">Date</div>
+                                    <div className="font-bold text-[11px] mt-0.5">{format(new Date(tokenData.appointmentDate), 'dd MMM yyyy')}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="font-bold text-[9px] uppercase tracking-wider">Doctor</div>
+                                    <div className="font-bold text-[11px] truncate mt-0.5">{tokenData.doctorName}</div>
                                 </div>
                             </div>
 
-                            {/* QR Code */}
-                            <div className="mt-2 flex flex-col items-center w-full border-t-2 border-black pt-3">
+                            {/* QR Code and Footer */}
+                            <div className="flex flex-col items-center w-full">
                                 <QRCodeSVG
                                     value={qrUrl}
-                                    size={100} // Optimal size for verify scan
-                                    level="M"
+                                    size={64} // Optimal size for verify scan
+                                    level="H"
                                     includeMargin={false}
                                 />
-                                <div className="text-[10px] uppercase font-bold mt-1">Scan for Status</div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="text-[10px] mt-3 font-semibold text-center w-full">
-                                Please wait for your turn.
-                            </div>
-                            <div className="text-[11px] mt-1 text-center w-full">
-                                {format(new Date(), 'dd/MM/yyyy HH:mm')}
+                                <div className="text-[8px] uppercase tracking-widest font-black mt-1.5">Scan to Track</div>
+                                <div className="text-[9px] mt-3 font-bold text-center w-full border-t border-black pt-1.5">
+                                    Please wait for your turn.
+                                </div>
+                                <div className="text-[9px] mt-1 text-center w-full uppercase tracking-wider">
+                                    {format(new Date(), 'dd/MM/yyyy HH:mm')}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -138,9 +196,8 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
-
                     <Button onClick={handlePrint} className="gap-2">
-                        <Printer className="h-4 w-4" />
+                        <Printer className="w-4 h-4" />
                         Print Token
                     </Button>
                 </DialogFooter>

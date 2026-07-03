@@ -668,7 +668,14 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           patientId: patientData?.patientId || '',
           doctorName: selectedDoctor?.name || '',
           appointmentDate: selectedDate.toISOString(),
-          department: selectedDoctor?.department
+          department: selectedDoctor?.department,
+          age: patientData?.age,
+          ageUnit: patientData?.ageUnit,
+          gender: patientData?.gender,
+          referrerName: patientData?.referrerName,
+          referrerType: patientData?.referrerType,
+          guardianName: patientData?.guardianName,
+          guardianRelation: patientData?.guardianRelation
         }}
       />
     );

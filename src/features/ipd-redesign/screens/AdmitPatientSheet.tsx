@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
     UserPlus, Search, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
-    User, CalendarCheck, Sun, LogOut, AlertTriangle, Users,
+    User, CalendarCheck, Sun, LogOut, AlertTriangle, Users, Wallet, BedDouble,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -17,6 +17,7 @@ import {
     type PatientSearchResult, type AdmissionPatientDetail, type AdmissionHistoryItem,
     type DuplicateMatch, type DuplicateConfidence,
 } from '../services/admissionApi';
+import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
@@ -37,6 +38,13 @@ const TYPE_LABEL: Record<string, string> = {
     EMERGENCY: 'Emergency', ELECTIVE: 'Elective', DAYCARE: 'Day Care', LAMA: 'Left against advice',
 };
 
+type PayerTypeCode = 'CASH' | 'TPA' | 'SCHEME';
+const PAYER_TYPES: { value: PayerTypeCode; label: string }[] = [
+    { value: 'CASH', label: 'Cash' },
+    { value: 'TPA', label: 'TPA / Insurance' },
+    { value: 'SCHEME', label: 'Govt. scheme' },
+];
+
 const SELECT_CLS = 'h-10 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white outline-none transition focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400';
 const INPUT_CLS = 'h-10 rounded-lg';
 
@@ -49,6 +57,9 @@ interface FormState {
     aadhaarNumber: string; panNumber: string; abhaId: string;
     admissionType: AdmissionTypeCode; admissionReason: string; diagnosis: string; expectedDischargeAt: string;
     referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL'; referralName: string;
+
+    payerType: PayerTypeCode; depositExpected: string; bedId: string;
+    payerName: string; policyOrBeneficiaryNo: string; preAuthNo: string; packageCode: string; sanctionedAmount: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -60,6 +71,8 @@ const EMPTY_FORM: FormState = {
     aadhaarNumber: '', panNumber: '', abhaId: '',
     admissionType: 'EMERGENCY', admissionReason: '', diagnosis: '', expectedDischargeAt: '',
     referralSource: '', referralName: '',
+    payerType: 'CASH', depositExpected: '', bedId: '',
+    payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
 };
 
 interface Props {
@@ -75,6 +88,7 @@ const CHIP_TONES: Record<string, string> = {
     emerald: 'bg-emerald-100 text-emerald-600',
     amber: 'bg-amber-100 text-amber-600',
     slate: 'bg-slate-100 text-slate-600',
+    rose: 'bg-rose-100 text-rose-600',
 };
 
 const SectionCard: React.FC<{
@@ -136,8 +150,23 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [dupDismissed, setDupDismissed] = useState(false);
     const [confirmNotDup, setConfirmNotDup] = useState(false);
 
+    // Available beds for the optional bed picker.
+    const [availableBeds, setAvailableBeds] = useState<BedBoardItem[]>([]);
+
+    // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
+    // submission so a retried network call can't create a duplicate admission.
+    const clientRequestIdRef = useRef<string>(crypto.randomUUID());
+
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Load the live bed picker whenever the sheet opens.
+    useEffect(() => {
+        if (!open) return;
+        bedBoardApi.getBoard()
+            .then(items => setAvailableBeds(items.filter(b => b.isActive && !b.admissionId)))
+            .catch(() => setAvailableBeds([]));
+    }, [open]);
 
     // Debounced fast search
     useEffect(() => {
@@ -229,6 +258,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         setSearchText(''); setResults([]); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
+        clientRequestIdRef.current = crypto.randomUUID();
     };
 
     const switchMode = (m: Mode) => {
@@ -237,6 +267,15 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         setSearchText(''); setResults([]);
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
     };
+
+    const bedsByWard = useMemo(() => {
+        const groups: Record<string, BedBoardItem[]> = {};
+        for (const b of availableBeds) {
+            const key = b.wardName || b.wardCode || 'Other';
+            (groups[key] ??= []).push(b);
+        }
+        return groups;
+    }, [availableBeds]);
 
     const isReturning = mode === 'returning' && !!selectedPatientId;
     const showForm = mode === 'new' || isReturning;
@@ -275,6 +314,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             expectedDischargeAt: t(form.expectedDischargeAt),
             referralSource: form.referralSource || undefined,
             referralName: t(form.referralName),
+            clientRequestId: clientRequestIdRef.current,
+            payerType: form.payerType,
+            depositExpected: form.depositExpected ? parseFloat(form.depositExpected) : undefined,
+            bedId: form.bedId || undefined,
+            ...(form.payerType !== 'CASH' ? {
+                payerName: t(form.payerName),
+                policyOrBeneficiaryNo: t(form.policyOrBeneficiaryNo),
+                preAuthNo: t(form.preAuthNo),
+                packageCode: t(form.packageCode),
+                sanctionedAmount: form.sanctionedAmount ? parseFloat(form.sanctionedAmount) : undefined,
+            } : {}),
         };
         setSubmitting(true);
         try {
@@ -639,6 +689,64 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 </Field>
                                             )}
                                         </div>
+                                    </SectionCard>
+
+                                    {/* ── Payer & bed ────────────────────────────────── */}
+                                    <SectionCard icon={<Wallet className="h-4 w-4" />} title="Payer & bed" subtitle="Billing branch, deposit & bed assignment" tone="rose">
+                                        <Label className="text-[11px] font-semibold text-slate-600">Payer type</Label>
+                                        <div className="grid grid-cols-3 gap-2 mt-1.5 mb-4">
+                                            {PAYER_TYPES.map(p => {
+                                                const active = form.payerType === p.value;
+                                                return (
+                                                    <button key={p.value} type="button" onClick={() => set('payerType', p.value)}
+                                                        className={cn('rounded-xl border-2 py-2.5 px-1 text-xs font-bold transition-all',
+                                                            active ? 'border-rose-400 bg-rose-50 text-rose-700 ring-2 ring-rose-200' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300')}>
+                                                        {p.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <Field label="Deposit expected (₹)">
+                                                <Input type="number" min={0} value={form.depositExpected} onChange={e => set('depositExpected', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                            </Field>
+                                            <Field label="Bed">
+                                                <div className="relative">
+                                                    <select value={form.bedId} onChange={e => set('bedId', e.target.value)} className={SELECT_CLS}>
+                                                        <option value="">— Assign later —</option>
+                                                        {Object.entries(bedsByWard).map(([ward, beds]) => (
+                                                            <optgroup key={ward} label={ward}>
+                                                                {beds.map(b => (
+                                                                    <option key={b.bedId} value={b.bedId}>{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
+                                                                ))}
+                                                            </optgroup>
+                                                        ))}
+                                                    </select>
+                                                    <BedDouble className="h-3.5 w-3.5 text-slate-300 absolute right-8 top-3 pointer-events-none" />
+                                                </div>
+                                                {availableBeds.length === 0 && <p className="text-[11px] text-slate-400 mt-1">No free beds right now — can be assigned later from the bed board.</p>}
+                                            </Field>
+                                        </div>
+
+                                        {form.payerType !== 'CASH' && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">
+                                                <Field label={form.payerType === 'TPA' ? 'Insurer / TPA name' : 'Scheme name'}>
+                                                    <Input value={form.payerName} onChange={e => set('payerName', e.target.value)} className={INPUT_CLS} placeholder="Optional" />
+                                                </Field>
+                                                <Field label={form.payerType === 'TPA' ? 'Policy number' : 'Beneficiary number'}>
+                                                    <Input value={form.policyOrBeneficiaryNo} onChange={e => set('policyOrBeneficiaryNo', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                                </Field>
+                                                <Field label="Pre-auth number">
+                                                    <Input value={form.preAuthNo} onChange={e => set('preAuthNo', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                                </Field>
+                                                <Field label="Package code">
+                                                    <Input value={form.packageCode} onChange={e => set('packageCode', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="e.g. PM-JAY HBP code" />
+                                                </Field>
+                                                <Field label="Sanctioned amount (₹)" className="sm:col-span-2">
+                                                    <Input type="number" min={0} value={form.sanctionedAmount} onChange={e => set('sanctionedAmount', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                                </Field>
+                                            </div>
+                                        )}
                                     </SectionCard>
                                 </>
                             )}

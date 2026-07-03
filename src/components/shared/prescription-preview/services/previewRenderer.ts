@@ -376,16 +376,25 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   // Name (Large)
+  // Fallback: split dash just in case the name already comes pre-formatted with Guardian/Referrer (e.g. from an old cache or non-live payload)
   const rawPName = toUpper(patient.name || 'Unknown Patient');
-  const [mainName, ...restName] = rawPName.split('-');
-  let subName = restName.join('-').trim();
-  // "Referred By" line under the patient name. The live preview passes the raw API payload
-  // (no name suffix), so derive it directly from the referrer fields when not already present.
-  if (!subName && patient.referrerName) {
-    subName = toUpper(`${patient.referrerRelation || 'C/O'} ${patient.referrerName}`);
+  const [baseName, ...restName] = rawPName.split('-');
+  const mainName = baseName.trim();
+  
+  // Try to use explicit fields first
+  const guardianLabel = patient.guardianRelation || 'C/O';
+  const guardianLine = patient.guardianName ? toUpper(`${guardianLabel} ${patient.guardianName}`) : '';
+
+  const referrerLabel = patient.referrerType === 'DOCTOR' ? 'REF. DR.' : patient.referrerType === 'AGENT' ? 'REF. AGT.' : toUpper(patient.referrerRelation || 'REF. BY');
+  const referrerLine = patient.referrerName && patient.referrerName.toLowerCase() !== 'self' ? toUpper(`${referrerLabel} ${patient.referrerName}`) : '';
+
+  // If we couldn't build them from explicit fields, see if they were in the dash-split suffix
+  let legacySuffix = '';
+  if (!guardianLine && !referrerLine && restName.length > 0) {
+    legacySuffix = restName.join('-').trim();
   }
 
-  page.drawText(mainName.trim(), {
+  page.drawText(mainName, {
     x: nameX,
     y: cursorY,
     size: sizeLg,
@@ -393,9 +402,23 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     color: COLORS.TextMain
   });
 
-  if (subName) {
+  const subLineParts = [];
+  if (guardianLine) subLineParts.push(guardianLine);
+  if (referrerLine) subLineParts.push(referrerLine);
+  const subLine = subLineParts.join('     '); // Add spacing between them
+
+  if (subLine) {
     cursorY -= (sizeLg + 4);
-    page.drawText(subName, {
+    page.drawText(subLine, {
+      x: nameX,
+      y: cursorY,
+      size: sizeBase,
+      font: regularFont,
+      color: COLORS.TextMain
+    });
+  } else if (legacySuffix) {
+    cursorY -= (sizeLg + 4);
+    page.drawText(legacySuffix, {
       x: nameX,
       y: cursorY,
       size: sizeBase,
@@ -403,10 +426,11 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       color: COLORS.TextMain
     });
   }
+
   cursorY -= lineHeight * 1.2;
 
   // Grid Info
-  const pAgeSex = toUpper([patient.age ? `${patient.age} Y` : '', patient.sex].filter(Boolean).join(' / '));
+  const pAgeSex = toUpper([patient.age !== undefined && patient.age !== null ? `${patient.age} ${patient.ageUnit || 'Y'}` : '', patient.sex].filter(Boolean).join(' / '));
   const pUhid = toUpper(patient.patientId ? `ID: ${patient.patientId}` : '');
 
   // Dynamic width calculation

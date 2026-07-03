@@ -23,6 +23,9 @@ const RoleBasedRedirect = () => {
 };
 
 // Lazy load pages for better performance
+
+
+const SubscriptionPage = lazy(() => import('@/features/subscription/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const AdminConfigModule = lazy(() => import('@/features/dashboard/components/AdminConfigModule').then(module => ({ default: module.AdminConfigModule })));
@@ -163,6 +166,16 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <AdminConfigModule />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/subscription"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <SubscriptionPage />
                   </MainLayout>
                 </RouteGuard>
               }
@@ -314,7 +327,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>

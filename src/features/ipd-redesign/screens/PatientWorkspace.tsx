@@ -1,489 +1,453 @@
-import React, { useMemo, useState } from 'react';
-import {
-    ArrowLeft, Activity, Pill, NotebookPen, IndianRupee, LayoutDashboard, LogOut,
-    Plus, Check, AlertTriangle, Clock, Heart, Wind, Thermometer, Droplet, Loader2,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-    Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useIpdStore } from '../store';
-import type { MedStatus } from '../types';
+import {
+    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
+    ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
+} from 'lucide-react';
+import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
+import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
+import { ClinicalOrderPanel } from '../components/ClinicalOrderPanel';
+import { MarPanel } from '../components/MarPanel';
+import { VitalsPanel } from '../components/VitalsPanel';
+import { IntakeOutputPanel } from '../components/IntakeOutputPanel';
+import { GlucoseChartPanel } from '../components/GlucoseChartPanel';
+import { NursingAssessmentPanel } from '../components/NursingAssessmentPanel';
+import { NursingCarePlanPanel } from '../components/NursingCarePlanPanel';
+import { RestraintPanel } from '../components/RestraintPanel';
+import { RoundNotePanel } from '../components/RoundNotePanel';
+import { ShiftHandoverPanel } from '../components/ShiftHandoverPanel';
+import { ConsentPanel } from '../components/ConsentPanel';
+import { DischargeSummaryPanel } from '../components/DischargeSummaryPanel';
+import { BloodBankPanel } from '../components/BloodBankPanel';
+import { SurgeryCasePanel } from '../components/SurgeryCasePanel';
+import { IcuCriticalCarePanel } from '../components/IcuCriticalCarePanel';
+import { formatIstDateTime } from '../utils/istDate';
 
-type Tab = 'overview' | 'vitals' | 'mar' | 'notes' | 'billing';
+const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { id: 'vitals', label: 'Vitals', icon: <Activity className="h-4 w-4" /> },
-    { id: 'mar', label: 'MAR', icon: <Pill className="h-4 w-4" /> },
-    { id: 'notes', label: 'Round Notes', icon: <NotebookPen className="h-4 w-4" /> },
-    { id: 'billing', label: 'Billing', icon: <IndianRupee className="h-4 w-4" /> },
+type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
+type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
+type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
+
+const CPOE_TABS: { key: CpoeTab; label: string; icon: React.ElementType }[] = [
+    { key: 'medications', label: 'Medications', icon: Pill },
+    { key: 'lab', label: 'Lab', icon: FlaskConical },
+    { key: 'procedures', label: 'Procedures', icon: Scissors },
+    { key: 'dietNursing', label: 'Diet & Nursing', icon: Utensils },
+    { key: 'radiology', label: 'Radiology', icon: Scan },
+];
+
+const NURSING_TABS: { key: NursingTab; label: string; icon: React.ElementType }[] = [
+    { key: 'vitals', label: 'Vitals', icon: Activity },
+    { key: 'intakeOutput', label: 'I/O & Glucose', icon: Droplets },
+    { key: 'assessment', label: 'Assessment', icon: ShieldAlert },
+    { key: 'carePlan', label: 'Care Plan', icon: ListChecks },
+    { key: 'restraint', label: 'Restraint', icon: ShieldOff },
 ];
 
 interface Props {
-    admissionId: string;
+    admission: ActiveAdmissionItem;
     onBack: () => void;
-    onDischarge: () => void;
+    onChanged: () => void;
 }
 
-export const PatientWorkspace: React.FC<Props> = ({ admissionId, onBack, onDischarge }) => {
-    const [tab, setTab] = useState<Tab>('overview');
-    const admissionView = useIpdStore(s => s.admissionView);
-    const v = admissionView(admissionId);
+/**
+ * Real per-admission workspace — bed, CPOE orders, MAR, nursing documentation, and discharge all
+ * in one place. Two-level side nav: Overview (leaf) / CPOE (parent, 5 order-type children) / MAR
+ * (leaf) / Nursing (parent, Vitals+I-O&Glucose+Assessment+Care Plan+Restraint children) / Round
+ * Notes (leaf) / SBAR Handover (leaf) / Consent (leaf) — see patient_workspace_navigation memory
+ * for the IA rule this follows (new top-level clinical sections get their own sidebar item; only
+ * genuinely-same-concept things nest under an existing parent). Each order-type view renders the
+ * shared ClinicalOrderPanel rather than duplicating order-list/new-order/discontinue UI per type.
+ * Read-only for bed/order/nursing actions once the admission is no longer in an Active status.
+ */
+export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged }) => {
+    const { toast } = useToast();
+    const [current, setCurrent] = useState<ActiveAdmissionItem>(admission);
+    const [activeSection, setActiveSection] = useState<Section>('overview');
+    const [activeCpoeTab, setActiveCpoeTab] = useState<CpoeTab>('medications');
+    const [dietNursingSubTab, setDietNursingSubTab] = useState<'diet' | 'nursing'>('diet');
+    const [activeNursingTab, setActiveNursingTab] = useState<NursingTab>('vitals');
+    const isActive = ACTIVE_STATUSES.includes(current.statusCode);
 
-    if (!v) {
-        return (
-            <div className="max-w-7xl mx-auto px-6 py-10 text-center text-slate-500">
-                Admission not found. <Button variant="link" onClick={onBack}>Back to dashboard</Button>
-            </div>
-        );
-    }
+    const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
+    const [bedActionMode, setBedActionMode] = useState<'assign' | 'transfer' | null>(null);
+    const [pickedBedId, setPickedBedId] = useState('');
+    const [bedBusy, setBedBusy] = useState(false);
 
-    const discharging = v.status === 'DISCHARGE_INITIATED';
+    const refreshAdmission = async () => {
+        try {
+            const list = await admissionApi.getActiveAdmissions('ALL');
+            const found = list.find(a => a.admissionId === admission.admissionId);
+            if (found) setCurrent(found);
+        } catch { /* keep last known state on failure */ }
+    };
+
+    const loadFreeBeds = () => {
+        bedBoardApi.getBoard().then(beds => setFreeBeds(beds.filter(b => b.isActive && !b.admissionId))).catch(() => setFreeBeds([]));
+    };
+
+    useEffect(() => {
+        refreshAdmission();
+        loadFreeBeds();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const refreshAfterAction = () => {
+        refreshAdmission();
+        loadFreeBeds();
+        onChanged();
+    };
+
+    // ── Bed actions ──────────────────────────────────────────────────────────
+    const runBedAction = async (fn: () => Promise<unknown>, successMessage: string) => {
+        setBedBusy(true);
+        try {
+            await fn();
+            toast({ title: successMessage });
+            setBedActionMode(null);
+            setPickedBedId('');
+            refreshAfterAction();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setBedBusy(false);
+        }
+    };
+
+    const releaseBed = async () => {
+        setBedBusy(true);
+        try {
+            await bedBoardApi.releaseBed(current.admissionId);
+            toast({ title: 'Bed released.' });
+            refreshAfterAction();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setBedBusy(false);
+        }
+    };
+
+    const navItemClass = (isCurrent: boolean, extra?: string) => cn(
+        'w-full h-10 px-3 rounded-lg text-sm font-bold transition-all flex items-center gap-2',
+        isCurrent ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+        extra,
+    );
+    const subNavItemClass = (isCurrent: boolean) => cn(
+        'w-full h-9 pl-3 pr-2.5 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-2',
+        isCurrent ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+    );
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
-            {/* Header bar */}
+        <div className="px-6 py-6 space-y-5">
+            {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-start gap-3">
-                    <Button variant="ghost" size="icon" onClick={onBack} className="mt-0.5"><ArrowLeft className="h-5 w-5" /></Button>
-                    <div className="h-12 w-12 rounded-2xl bg-brand-600 flex items-center justify-center text-white font-black text-lg shrink-0">
-                        {v.patient.name.charAt(0)}
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
+                    <div className="h-11 w-11 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                        {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-xl font-black text-slate-900">{v.patient.name}</h1>
-                            <Badge variant="outline" className="text-[10px] font-bold bg-slate-50">{v.patient.age}{v.patient.sex} · {v.patient.bloodGroup}</Badge>
-                            {v.isMlc && <Badge variant="outline" className="text-[10px] font-bold bg-rose-50 text-rose-700 border-rose-200">MLC</Badge>}
-                            {discharging && <Badge variant="outline" className="text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-200">DISCHARGING</Badge>}
+                            <h1 className="text-lg font-black text-slate-900">{current.patientName || current.patientId}</h1>
+                            <Badge variant="outline" className={cn('text-[10px] font-bold', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600')}>
+                                {current.statusCode}
+                            </Badge>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            {v.admissionNo} · {v.ward.wardName} · {v.bed.bedCode} · {v.attendingDoctor} · LOS {v.lengthOfStayDays}d
+                        <p className="text-xs text-slate-500">
+                            {current.patientId}{current.patientAge != null ? ` · ${current.patientAge}${current.patientSex ?? ''}` : ''} · {current.admissionNo} · {current.admissionType ?? '—'} · {current.payerType}
                         </p>
-                        {v.patient.allergies?.length ? (
-                            <p className="text-[11px] text-rose-600 font-semibold mt-0.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Allergies: {v.patient.allergies.join(', ')}</p>
-                        ) : null}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className={cn('rounded-lg border px-3 py-1.5 text-right', v.balance > 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200')}>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Balance</p>
-                        <p className={cn('text-sm font-black font-mono', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</p>
-                    </div>
-                    {!discharging && (
-                        <Button onClick={onDischarge} variant="outline" className="h-10 border-amber-300 text-amber-700 hover:bg-amber-50">
-                            <LogOut className="h-4 w-4 mr-2" /> Discharge
-                        </Button>
+            </div>
+
+            {/* Side nav + content */}
+            <div className="flex items-start gap-5">
+                <aside className="w-60 shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm p-2 space-y-0.5 sticky top-6">
+                    <button type="button" onClick={() => setActiveSection('overview')} className={navItemClass(activeSection === 'overview')}>
+                        <BedDouble className="h-4 w-4" /> Overview
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('cpoe')} className={navItemClass(activeSection === 'cpoe')}>
+                        <ClipboardList className="h-4 w-4" /> CPOE
+                    </button>
+                    {activeSection === 'cpoe' && (
+                        <div className="pl-2 space-y-0.5">
+                            {CPOE_TABS.map(({ key, label, icon: Icon }) => (
+                                <button key={key} type="button" onClick={() => setActiveCpoeTab(key)} className={subNavItemClass(activeCpoeTab === key)}>
+                                    <Icon className="h-3.5 w-3.5" /> {label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <button type="button" onClick={() => setActiveSection('mar')} className={navItemClass(activeSection === 'mar')}>
+                        <ClipboardCheck className="h-4 w-4" /> MAR
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('nursing')} className={navItemClass(activeSection === 'nursing')}>
+                        <HeartPulse className="h-4 w-4" /> Nursing
+                    </button>
+                    {activeSection === 'nursing' && (
+                        <div className="pl-2 space-y-0.5">
+                            {NURSING_TABS.map(({ key, label, icon: Icon }) => (
+                                <button key={key} type="button" onClick={() => setActiveNursingTab(key)} className={subNavItemClass(activeNursingTab === key)}>
+                                    <Icon className="h-3.5 w-3.5" /> {label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <button type="button" onClick={() => setActiveSection('roundNotes')} className={navItemClass(activeSection === 'roundNotes')}>
+                        <FileText className="h-4 w-4" /> Round Notes
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('sbarHandover')} className={navItemClass(activeSection === 'sbarHandover')}>
+                        <MessageSquareText className="h-4 w-4" /> SBAR Handover
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('consent')} className={navItemClass(activeSection === 'consent')}>
+                        <FileCheck2 className="h-4 w-4" /> Consent
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('bloodBank')} className={navItemClass(activeSection === 'bloodBank')}>
+                        <Droplet className="h-4 w-4" /> Blood Bank
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('surgery')} className={navItemClass(activeSection === 'surgery')}>
+                        <Scissors className="h-4 w-4" /> Surgery
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('criticalCare')} className={navItemClass(activeSection === 'criticalCare')}>
+                        <Siren className="h-4 w-4" /> Critical Care
+                    </button>
+
+                    {/* Always visible, unlike every other section — staff need to reopen a signed
+                        summary and re-download the PDF after the admission has already closed. */}
+                    <button type="button" onClick={() => setActiveSection('discharge')} className={navItemClass(activeSection === 'discharge')}>
+                        <LogOut className="h-4 w-4" /> Discharge
+                    </button>
+                </aside>
+
+                <div className="flex-1 min-w-0 space-y-5">
+                    {activeSection === 'overview' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="rounded-xl border border-slate-200 bg-white p-5">
+                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Bed</h2>
+                                {current.bedCode ? (
+                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                        <p className="font-semibold text-slate-900">{current.wardName ? `${current.wardName} · ` : ''}{current.bedCode}</p>
+                                        {isActive && (
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="sm" className="h-9" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
+                                                    <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
+                                                </Button>
+                                                <Button variant="outline" size="sm" className="h-9 text-slate-500 hover:text-rose-600" onClick={releaseBed} disabled={bedBusy}>
+                                                    <X className="h-3.5 w-3.5 mr-1.5" /> Release
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                        <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Unassigned' : 'No bed'}</p>
+                                        {isActive && (
+                                            <Button variant="outline" size="sm" className="h-9" onClick={() => { setBedActionMode('assign'); setPickedBedId(''); }}>
+                                                <BedDouble className="h-3.5 w-3.5 mr-1.5" /> Assign a bed
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {bedActionMode && (
+                                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-end gap-2 flex-wrap">
+                                        <div className="flex-1 min-w-[220px]">
+                                            <Label className="text-[11px] font-semibold text-slate-600">{bedActionMode === 'assign' ? 'Bed to assign' : 'New bed'}</Label>
+                                            <select value={pickedBedId} onChange={e => setPickedBedId(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                <option value="">Select a bed…</option>
+                                                {freeBeds.map(b => (
+                                                    <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <Button variant="ghost" size="sm" className="h-9" onClick={() => setBedActionMode(null)}>Cancel</Button>
+                                        <Button size="sm" disabled={!pickedBedId || bedBusy} className="h-9 bg-brand-600 hover:bg-brand-700"
+                                            onClick={() => runBedAction(
+                                                () => bedActionMode === 'assign'
+                                                    ? bedBoardApi.assignBed(current.admissionId, pickedBedId)
+                                                    : bedBoardApi.transferBed(current.admissionId, pickedBedId),
+                                                bedActionMode === 'assign' ? 'Bed assigned.' : 'Bed transferred.')}>
+                                            {bedBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+                                            {bedActionMode === 'assign' ? 'Assign' : 'Transfer'}
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-5">
+                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Admission details</h2>
+                                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Admitted</dt><dd className="text-slate-800">{formatIstDateTime(current.admittedAt)}</dd></div>
+                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</dt><dd className="text-slate-800">{current.admissionType ?? '—'}</dd></div>
+                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Payer</dt><dd className="text-slate-800">{current.payerType}</dd></div>
+                                </dl>
+                                {(current.admissionReason || current.diagnosis) && (
+                                    <p className="text-sm text-slate-700 mt-3">{current.diagnosis || current.admissionReason}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === 'cpoe' && activeCpoeTab === 'medications' && (
+                        <ClinicalOrderPanel
+                            admissionId={current.admissionId}
+                            isActive={isActive}
+                            orderType="MEDICATION"
+                            itemPickerCategoryCodes={['PHARMACY']}
+                            itemLabel="Drug name"
+                            noItemsText="No medication orders yet."
+                            showMedicationFields
+                        />
+                    )}
+
+                    {activeSection === 'cpoe' && activeCpoeTab === 'lab' && (
+                        <ClinicalOrderPanel
+                            admissionId={current.admissionId}
+                            isActive={isActive}
+                            orderType="LAB"
+                            itemPickerCategoryCodes={['LAB']}
+                            itemLabel="Test"
+                            noItemsText="No lab orders yet."
+                            showUrgency
+                        />
+                    )}
+
+                    {activeSection === 'cpoe' && activeCpoeTab === 'procedures' && (
+                        <div className="space-y-3">
+                            <div className="flex justify-end">
+                                <Button variant="outline" size="sm" className="h-9" onClick={() => setActiveSection('consent')}>
+                                    <FileCheck2 className="h-3.5 w-3.5 mr-1.5" /> Capture consent
+                                </Button>
+                            </div>
+                            <ClinicalOrderPanel
+                                admissionId={current.admissionId}
+                                isActive={isActive}
+                                orderType="PROCEDURE"
+                                itemPickerCategoryCodes={['PROCEDURE']}
+                                itemLabel="Procedure"
+                                noItemsText="No procedure orders yet."
+                                showUrgency
+                                showScheduledAt
+                            />
+                        </div>
+                    )}
+
+                    {activeSection === 'cpoe' && activeCpoeTab === 'dietNursing' && (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 w-fit">
+                                <button type="button" onClick={() => setDietNursingSubTab('diet')}
+                                    className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'diet' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    <Utensils className="h-3.5 w-3.5" /> Diet
+                                </button>
+                                <button type="button" onClick={() => setDietNursingSubTab('nursing')}
+                                    className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'nursing' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    <HeartPulse className="h-3.5 w-3.5" /> Nursing
+                                </button>
+                            </div>
+                            {/* Most diet/nursing orders are free-text with no ChargeMaster link — nursing
+                                care and standard diets are usually bundled into the room charge already. */}
+                            {dietNursingSubTab === 'diet' ? (
+                                <ClinicalOrderPanel
+                                    admissionId={current.admissionId}
+                                    isActive={isActive}
+                                    orderType="DIET"
+                                    itemPickerCategoryCodes={['DIET']}
+                                    itemLabel="Diet"
+                                    noItemsText="No diet orders yet."
+                                />
+                            ) : (
+                                <ClinicalOrderPanel
+                                    admissionId={current.admissionId}
+                                    isActive={isActive}
+                                    orderType="NURSING"
+                                    itemPickerCategoryCodes={['NURSING']}
+                                    itemLabel="Nursing instruction"
+                                    noItemsText="No nursing orders yet."
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {/* Radiology fulfillment (modality worklist, DICOM, reporting) is explicitly out of
+                        EasyHMS scope -- lives in an external radiology system (see scope_decisions). This
+                        view is order-placement + charge-on-event only, same as every other type here. */}
+                    {activeSection === 'cpoe' && activeCpoeTab === 'radiology' && (
+                        <ClinicalOrderPanel
+                            admissionId={current.admissionId}
+                            isActive={isActive}
+                            orderType="RADIOLOGY"
+                            itemPickerCategoryCodes={['RAD', 'RADIOLOGY']}
+                            itemLabel="Study"
+                            noItemsText="No radiology orders yet."
+                            showUrgency
+                        />
+                    )}
+
+                    {activeSection === 'mar' && (
+                        <MarPanel admissionId={current.admissionId} isActive={isActive} patientName={current.patientName} />
+                    )}
+
+                    {activeSection === 'nursing' && activeNursingTab === 'vitals' && (
+                        <VitalsPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'intakeOutput' && (
+                        <div className="space-y-5">
+                            <IntakeOutputPanel admissionId={current.admissionId} isActive={isActive} />
+                            <GlucoseChartPanel admissionId={current.admissionId} isActive={isActive} />
+                        </div>
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'assessment' && (
+                        <NursingAssessmentPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'carePlan' && (
+                        <NursingCarePlanPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+                    {activeSection === 'nursing' && activeNursingTab === 'restraint' && (
+                        <RestraintPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'roundNotes' && (
+                        <RoundNotePanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'sbarHandover' && (
+                        <ShiftHandoverPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'consent' && (
+                        <ConsentPanel admissionId={current.admissionId} isActive={isActive} prefilterTypeCode="PROCEDURE" />
+                    )}
+
+                    {activeSection === 'bloodBank' && (
+                        <BloodBankPanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'surgery' && (
+                        <SurgeryCasePanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'criticalCare' && (
+                        <IcuCriticalCarePanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'discharge' && (
+                        <DischargeSummaryPanel admission={current} isActive={isActive} onDischarged={refreshAfterAction} />
                     )}
                 </div>
             </div>
-
-            {/* Tabs */}
-            <div className="inline-flex p-1 bg-slate-100 rounded-lg gap-1 flex-wrap">
-                {TABS.map(t => (
-                    <button key={t.id} type="button" onClick={() => setTab(t.id)} className={cn(
-                        'h-8 px-3 rounded-md text-xs font-semibold inline-flex items-center gap-1.5',
-                        tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    )}>{t.icon}{t.label}</button>
-                ))}
-            </div>
-
-            {/* Tab content */}
-            {tab === 'overview' && <OverviewTab admissionId={admissionId} />}
-            {tab === 'vitals' && <VitalsTab admissionId={admissionId} />}
-            {tab === 'mar' && <MarTab admissionId={admissionId} />}
-            {tab === 'notes' && <NotesTab admissionId={admissionId} />}
-            {tab === 'billing' && <BillingTab admissionId={admissionId} locked={discharging} />}
         </div>
     );
 };
-
-// ─── Overview ─────────────────────────────────────────────────────────────────
-const OverviewTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const v = useIpdStore(s => s.admissionView(admissionId))!;
-    const referredBy = useIpdStore(s => s.beneficiaryName(v.beneficiaryId));
-    const vitals = useIpdStore(s => s.vitals).filter(x => x.admissionId === admissionId);
-    const meds = useIpdStore(s => s.medications).filter(x => x.admissionId === admissionId);
-    const latest = vitals[vitals.length - 1];
-    const dueMeds = meds.filter(m => m.status === 'DUE').length;
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-4">
-                <Card title="Admission details">
-                    <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                        <Field label="Admission #" value={v.admissionNo} mono />
-                        <Field label="Admitted" value={format(parseISO(v.admittedAt), 'd MMM yyyy, HH:mm')} />
-                        <Field label="Ward / Bed" value={`${v.ward.wardName} · ${v.bed.bedCode}`} />
-                        <Field label="Attending" value={v.attendingDoctor} />
-                        <Field label="Provisional Dx" value={v.provisionalDiagnosis} />
-                        {v.finalDiagnosis && <Field label="Final Dx" value={v.finalDiagnosis} />}
-                        <Field label="Est. daily cost" value={`₹${v.estimatedDailyCost.toLocaleString('en-IN')}`} />
-                        <Field label="LOS" value={`${v.lengthOfStayDays} day(s)`} />
-                        {referredBy && <Field label="Referred by" value={referredBy} />}
-                    </dl>
-                </Card>
-            </div>
-            <div className="space-y-4">
-                <Card title="Latest vitals">
-                    {latest ? (
-                        <div className="grid grid-cols-2 gap-3">
-                            <Stat icon={<Thermometer className="h-4 w-4 text-rose-500" />} label="Temp" value={`${latest.temperatureF}°F`} />
-                            <Stat icon={<Heart className="h-4 w-4 text-rose-500" />} label="Pulse" value={`${latest.pulse}`} />
-                            <Stat icon={<Activity className="h-4 w-4 text-brand-500" />} label="BP" value={`${latest.systolic}/${latest.diastolic}`} />
-                            <Stat icon={<Wind className="h-4 w-4 text-sky-500" />} label="SpO₂" value={`${latest.spo2}%`} />
-                        </div>
-                    ) : <p className="text-xs text-slate-400">No vitals recorded.</p>}
-                </Card>
-                <Card title="Care snapshot">
-                    <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between"><span className="text-slate-500">Meds due</span><Badge variant="outline" className={cn('text-[10px] font-bold', dueMeds ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>{dueMeds}</Badge></div>
-                        <div className="flex items-center justify-between"><span className="text-slate-500">Total billed</span><span className="font-mono font-semibold">₹{v.totalCharges.toLocaleString('en-IN')}</span></div>
-                        <div className="flex items-center justify-between"><span className="text-slate-500">Received</span><span className="font-mono font-semibold text-emerald-700">₹{v.totalPaid.toLocaleString('en-IN')}</span></div>
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100"><span className="font-bold">Balance</span><span className={cn('font-mono font-bold', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</span></div>
-                    </div>
-                </Card>
-            </div>
-        </div>
-    );
-};
-
-// ─── Vitals ───────────────────────────────────────────────────────────────────
-const VitalsTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const { toast } = useToast();
-    const vitals = useIpdStore(s => s.vitals).filter(x => x.admissionId === admissionId);
-    const addVital = useIpdStore(s => s.addVital);
-    const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ temperatureF: '', pulse: '', systolic: '', diastolic: '', spo2: '', respRate: '', painScore: '' });
-
-    const submit = () => {
-        addVital({
-            admissionId, recordedAt: new Date().toISOString(), recordedBy: 'You',
-            temperatureF: num(form.temperatureF), pulse: num(form.pulse), systolic: num(form.systolic),
-            diastolic: num(form.diastolic), spo2: num(form.spo2), respRate: num(form.respRate), painScore: num(form.painScore),
-        });
-        toast({ title: 'Vitals recorded' });
-        setForm({ temperatureF: '', pulse: '', systolic: '', diastolic: '', spo2: '', respRate: '', painScore: '' });
-        setOpen(false);
-    };
-
-    return (
-        <div className="space-y-3">
-            <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-brand-600 hover:bg-brand-700"><Plus className="h-3.5 w-3.5 mr-1" /> Record vitals</Button>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                        <tr>
-                            <th className="text-left px-3 py-2.5 font-bold">Time</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Temp °F</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Pulse</th>
-                            <th className="text-right px-3 py-2.5 font-bold">BP</th>
-                            <th className="text-right px-3 py-2.5 font-bold">SpO₂</th>
-                            <th className="text-right px-3 py-2.5 font-bold">RR</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Pain</th>
-                            <th className="text-left px-3 py-2.5 font-bold">By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {[...vitals].reverse().map(r => (
-                            <tr key={r.id} className="border-t border-slate-100">
-                                <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(r.recordedAt), 'd MMM HH:mm')}</td>
-                                <td className={cn('px-3 py-2 text-right font-mono', (r.temperatureF ?? 0) >= 100.4 && 'text-rose-600 font-bold')}>{r.temperatureF ?? '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.pulse ?? '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.systolic ?? '—'}/{r.diastolic ?? '—'}</td>
-                                <td className={cn('px-3 py-2 text-right font-mono', (r.spo2 ?? 100) < 94 && 'text-rose-600 font-bold')}>{r.spo2 ?? '—'}%</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.respRate ?? '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.painScore ?? '—'}</td>
-                                <td className="px-3 py-2 text-xs text-slate-500">{r.recordedBy}</td>
-                            </tr>
-                        ))}
-                        {vitals.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-xs text-slate-400">No vitals yet.</td></tr>}
-                    </tbody>
-                </table>
-            </div>
-
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle>Record vitals</DialogTitle></DialogHeader>
-                    <div className="grid grid-cols-2 gap-3">
-                        {([['temperatureF', 'Temp °F'], ['pulse', 'Pulse'], ['systolic', 'Systolic'], ['diastolic', 'Diastolic'], ['spo2', 'SpO₂ %'], ['respRate', 'Resp rate'], ['painScore', 'Pain 0-10']] as const).map(([k, lbl]) => (
-                            <div key={k}>
-                                <Label className="text-xs font-semibold text-slate-700">{lbl}</Label>
-                                <Input type="number" value={(form as any)[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="h-9 mt-1" />
-                            </div>
-                        ))}
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button onClick={submit} className="bg-brand-600 hover:bg-brand-700">Save</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-};
-
-// ─── MAR ──────────────────────────────────────────────────────────────────────
-const MED_TONE: Record<MedStatus, string> = {
-    DUE: 'bg-amber-50 text-amber-700 border-amber-200',
-    GIVEN: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    MISSED: 'bg-rose-50 text-rose-700 border-rose-200',
-    HELD: 'bg-slate-100 text-slate-600 border-slate-200',
-};
-const MarTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const { toast } = useToast();
-    const meds = useIpdStore(s => s.medications).filter(x => x.admissionId === admissionId);
-    const give = useIpdStore(s => s.giveMedication);
-
-    return (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                    <tr>
-                        <th className="text-left px-3 py-2.5 font-bold">Drug</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Dose / Route</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Scheduled</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Status</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Given by</th>
-                        <th className="w-px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {[...meds].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)).map(m => (
-                        <tr key={m.id} className="border-t border-slate-100">
-                            <td className="px-3 py-2">
-                                <span className="font-semibold text-slate-900">{m.drugName}</span>
-                                {m.highAlert && <Badge variant="outline" className="ml-2 text-[11px] font-bold bg-rose-50 text-rose-700 border-rose-200">HIGH-ALERT</Badge>}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-slate-700">{m.dose} · {m.route}</td>
-                            <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(m.scheduledAt), 'd MMM HH:mm')}</td>
-                            <td className="px-3 py-2"><Badge variant="outline" className={cn('text-[10px] font-bold', MED_TONE[m.status])}>{m.status}</Badge></td>
-                            <td className="px-3 py-2 text-xs text-slate-500">{m.givenBy ?? '—'}</td>
-                            <td className="px-2 py-2 text-right">
-                                {m.status === 'DUE' && (
-                                    <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700" onClick={() => { give(m.id, 'You'); toast({ title: `${m.drugName} given`, description: m.highAlert ? 'High-alert — second-nurse verification recommended.' : undefined }); }}>
-                                        <Check className="h-3 w-3 mr-1" /> Give
-                                    </Button>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                    {meds.length === 0 && <tr><td colSpan={6} className="px-3 py-8 text-center text-xs text-slate-400">No medication orders.</td></tr>}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-// ─── Notes ────────────────────────────────────────────────────────────────────
-const NotesTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const { toast } = useToast();
-    const notes = useIpdStore(s => s.roundNotes).filter(x => x.admissionId === admissionId);
-    const addNote = useIpdStore(s => s.addRoundNote);
-    const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ subjective: '', objective: '', assessment: '', plan: '' });
-
-    const submit = () => {
-        addNote({ admissionId, author: 'You', authoredAt: new Date().toISOString(), ...form });
-        toast({ title: 'Round note saved' });
-        setForm({ subjective: '', objective: '', assessment: '', plan: '' });
-        setOpen(false);
-    };
-
-    return (
-        <div className="space-y-3">
-            <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-brand-600 hover:bg-brand-700"><Plus className="h-3.5 w-3.5 mr-1" /> Add SOAP note</Button>
-            </div>
-            <div className="space-y-3">
-                {[...notes].reverse().map(n => (
-                    <div key={n.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="font-bold text-sm text-slate-900">{n.author}</p>
-                            <p className="text-[11px] text-slate-500">{format(parseISO(n.authoredAt), 'd MMM yyyy, HH:mm')}</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <SoapLine letter="S" text={n.subjective} />
-                            <SoapLine letter="O" text={n.objective} />
-                            <SoapLine letter="A" text={n.assessment} />
-                            <SoapLine letter="P" text={n.plan} />
-                        </div>
-                    </div>
-                ))}
-                {notes.length === 0 && <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">No round notes yet.</div>}
-            </div>
-
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader><DialogTitle>SOAP round note</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        {([['subjective', 'Subjective'], ['objective', 'Objective'], ['assessment', 'Assessment'], ['plan', 'Plan']] as const).map(([k, lbl]) => (
-                            <div key={k}>
-                                <Label className="text-xs font-semibold text-slate-700">{lbl}</Label>
-                                <Textarea rows={2} value={(form as any)[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="text-sm mt-1" />
-                            </div>
-                        ))}
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button onClick={submit} className="bg-brand-600 hover:bg-brand-700">Save note</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-};
-
-// ─── Billing tab ────────────────────────────────────────────────────────────────
-const BillingTab: React.FC<{ admissionId: string; locked: boolean }> = ({ admissionId, locked }) => {
-    const { toast } = useToast();
-    const v = useIpdStore(s => s.admissionView(admissionId))!;
-    const ledger = useIpdStore(s => s.ledger).filter(l => l.admissionId === admissionId);
-    const addCharge = useIpdStore(s => s.addCharge);
-    const addPayment = useIpdStore(s => s.addPayment);
-    const [chargeOpen, setChargeOpen] = useState(false);
-    const [payOpen, setPayOpen] = useState(false);
-    const [charge, setCharge] = useState({ description: '', category: 'PROCEDURE', qty: '1', rate: '' });
-    const [pay, setPay] = useState({ amount: '', mode: 'CASH' });
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                        <tr>
-                            <th className="text-left px-3 py-2.5 font-bold">Date</th>
-                            <th className="text-left px-3 py-2.5 font-bold">Description</th>
-                            <th className="text-left px-3 py-2.5 font-bold">Category</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Debit</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Credit</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {[...ledger].reverse().map(l => (
-                            <tr key={l.id} className={cn('border-t border-slate-100', l.kind === 'PAYMENT' && 'bg-emerald-50/30')}>
-                                <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(l.at), 'd MMM HH:mm')}</td>
-                                <td className="px-3 py-2">
-                                    <span className="text-slate-800">{l.description}</span>
-                                    {l.qty && l.rate ? <span className="text-[11px] text-slate-400 ml-1">({l.qty} × ₹{l.rate})</span> : null}
-                                    {l.mode ? <span className="text-[11px] text-slate-400 ml-1">· {l.mode}</span> : null}
-                                    {l.auto ? <Badge variant="outline" className="ml-1.5 text-[11px] font-bold bg-amber-50 text-amber-700 border-amber-200">AUTO</Badge> : null}
-                                </td>
-                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{l.category}</td>
-                                <td className="px-3 py-2 text-right font-mono">{l.kind === 'CHARGE' ? `₹${l.amount.toLocaleString('en-IN')}` : '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono text-emerald-700">{l.kind === 'PAYMENT' ? `₹${l.amount.toLocaleString('en-IN')}` : '—'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="space-y-3">
-                <Card title="Summary">
-                    <div className="space-y-2 text-sm">
-                        <Row label="Total billed" value={`₹${v.totalCharges.toLocaleString('en-IN')}`} />
-                        <Row label="Received" value={`₹${v.totalPaid.toLocaleString('en-IN')}`} valueClass="text-emerald-700" />
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                            <span className="font-bold">Balance</span>
-                            <span className={cn('font-mono font-bold', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</span>
-                        </div>
-                    </div>
-                </Card>
-                <div className="grid grid-cols-1 gap-2">
-                    <Button onClick={() => setChargeOpen(true)} disabled={locked} className="bg-brand-600 hover:bg-brand-700"><Plus className="h-4 w-4 mr-1" /> Add charge</Button>
-                    <Button onClick={() => setPayOpen(true)} className="bg-emerald-600 hover:bg-emerald-700"><IndianRupee className="h-4 w-4 mr-1" /> Record payment</Button>
-                </div>
-                {locked && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Discharge initiated — charges are locked. Payments still allowed.</p>}
-            </div>
-
-            {/* Add charge */}
-            <Dialog open={chargeOpen} onOpenChange={setChargeOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle>Add charge</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        <div><Label className="text-xs font-semibold">Description</Label><Input value={charge.description} onChange={e => setCharge(c => ({ ...c, description: e.target.value }))} className="h-9 mt-1" /></div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div><Label className="text-xs font-semibold">Category</Label>
-                                <select value={charge.category} onChange={e => setCharge(c => ({ ...c, category: e.target.value }))} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-md px-2 bg-white">
-                                    {['PROCEDURE', 'LAB', 'PHARMACY', 'CONSULT', 'BED', 'OTHER'].map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div><Label className="text-xs font-semibold">Qty</Label><Input type="number" value={charge.qty} onChange={e => setCharge(c => ({ ...c, qty: e.target.value }))} className="h-9 mt-1" /></div>
-                            <div><Label className="text-xs font-semibold">Rate</Label><Input type="number" value={charge.rate} onChange={e => setCharge(c => ({ ...c, rate: e.target.value }))} className="h-9 mt-1" /></div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setChargeOpen(false)}>Cancel</Button>
-                        <Button className="bg-brand-600 hover:bg-brand-700" onClick={() => {
-                            if (!charge.description.trim() || !charge.rate) { toast({ title: 'Description and rate required', variant: 'destructive' }); return; }
-                            addCharge(admissionId, { description: charge.description.trim(), category: charge.category, qty: parseInt(charge.qty || '1', 10), rate: parseFloat(charge.rate) });
-                            toast({ title: 'Charge added' });
-                            setCharge({ description: '', category: 'PROCEDURE', qty: '1', rate: '' });
-                            setChargeOpen(false);
-                        }}>Add</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Record payment */}
-            <Dialog open={payOpen} onOpenChange={setPayOpen}>
-                <DialogContent className="max-w-sm">
-                    <DialogHeader><DialogTitle>Record payment</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        <div><Label className="text-xs font-semibold">Amount</Label><Input type="number" value={pay.amount} onChange={e => setPay(p => ({ ...p, amount: e.target.value }))} className="h-9 mt-1 font-mono text-lg" /></div>
-                        <div><Label className="text-xs font-semibold">Mode</Label>
-                            <select value={pay.mode} onChange={e => setPay(p => ({ ...p, mode: e.target.value }))} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-md px-2 bg-white">
-                                {['CASH', 'UPI', 'CARD', 'BANK'].map(m => <option key={m} value={m}>{m}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setPayOpen(false)}>Cancel</Button>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => {
-                            const amt = parseFloat(pay.amount);
-                            if (!amt || amt <= 0) { toast({ title: 'Enter a valid amount', variant: 'destructive' }); return; }
-                            addPayment(admissionId, amt, pay.mode);
-                            toast({ title: 'Payment recorded', description: `₹${amt.toLocaleString('en-IN')} · ${pay.mode}` });
-                            setPay({ amount: '', mode: 'CASH' });
-                            setPayOpen(false);
-                        }}>Record</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-};
-
-// ─── Small shared bits ──────────────────────────────────────────────────────────
-const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">{title}</h4>
-        {children}
-    </div>
-);
-const Field: React.FC<{ label: string; value: React.ReactNode; mono?: boolean }> = ({ label, value, mono }) => (
-    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt><dd className={cn('text-sm text-slate-800 mt-0.5', mono && 'font-mono')}>{value}</dd></div>
-);
-const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
-        <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{icon}{label}</div>
-        <p className="text-base font-black text-slate-900 mt-0.5">{value}</p>
-    </div>
-);
-const SoapLine: React.FC<{ letter: string; text: string }> = ({ letter, text }) => (
-    <div className="flex gap-2"><span className="h-5 w-5 shrink-0 rounded bg-brand-100 text-brand-700 text-[10px] font-black flex items-center justify-center">{letter}</span><p className="text-slate-700">{text || <span className="text-slate-300">—</span>}</p></div>
-);
-const Row: React.FC<{ label: string; value: string; valueClass?: string }> = ({ label, value, valueClass }) => (
-    <div className="flex items-center justify-between"><span className="text-slate-500">{label}</span><span className={cn('font-mono font-semibold', valueClass)}>{value}</span></div>
-);
-
-const num = (s: string) => s === '' ? undefined : Number(s);

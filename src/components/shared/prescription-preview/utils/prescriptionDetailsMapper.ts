@@ -117,19 +117,37 @@ export const buildPrescriptionDataFromResponse = (
     bmi: formatMetric(vitals?.bmi, '', 1),
   };
 
-  // Append "C/O Referrer" so the renderer shows it on a smaller second line below the name
-  // (the renderer splits the name on "-" and draws the suffix in a smaller font).
-  const referrerSuffix = firstPatient?.referrerName
-    ? `${firstPatient.referrerRelation || 'C/O'} ${firstPatient.referrerName}`
+  // Build guardian suffix
+  const guardianLabel = firstPatient?.guardianRelation || 'C/O';
+  const guardianSuffix = firstPatient?.guardianName
+    ? `${guardianLabel} ${firstPatient.guardianName}`
     : '';
+
+  // Build the referrer prefix based on type for a context-aware label
+  const referrerLabel = firstPatient?.referrerType === 'DOCTOR'
+    ? 'Ref. Dr.'
+    : firstPatient?.referrerType === 'AGENT'
+    ? 'Ref. Agt.'
+    : (firstPatient?.referrerRelation || 'Ref. By');
+
   const mappedPatient: PrescriptionPatient = {
-    name: referrerSuffix ? `${firstPatient?.name ?? ''}-${referrerSuffix}` : (firstPatient?.name ?? ''),
+    name: firstPatient?.name ?? '',
     id: firstPatient?.patientId ?? '',
     age: typeof firstPatient?.age === 'number' ? String(firstPatient.age) : '',
+    ageUnit: firstPatient?.ageUnit,
     gender: firstPatient?.sex ?? '',
     phone: firstPatient?.contact ?? '',
     address: buildAddressLine(firstPatient?.address, firstPatient?.city, firstPatient?.state, firstPatient?.country, firstPatient?.pincode),
     contact: firstPatient?.contact ?? '',
+    cityId: firstPatient?.city ?? '',
+    state: firstPatient?.state,
+    country: firstPatient?.country,
+    pincode: firstPatient?.pincode,
+    guardianName: firstPatient?.guardianName,
+    guardianRelation: firstPatient?.guardianRelation,
+    referrerName: firstPatient?.referrerName,
+    referrerRelation: firstPatient?.referrerRelation,
+    referrerType: firstPatient?.referrerType,
     // Optionally add details if needed
   };
 

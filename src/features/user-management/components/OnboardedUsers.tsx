@@ -12,19 +12,22 @@ import {
   Users,
   Search,
   Eye,
+  Pencil,
 
   UserX,
   Mail,
   Phone,
   Shield,
   Key,
-  KeyRound
+  KeyRound,
+  Clock
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { AllUsersResponse } from '../services/userManagementApi';
 import { useAuthStore } from '@/store/authStore';
 import { DeactivateUserDialog } from './DeactivateUserDialog';
 import { ShareLoginDialog, ShareLoginTarget } from './ShareLoginDialog';
+import { QuickAddUserForm } from './QuickAddUserForm';
 import { cn } from '@/lib/utils';
 
 export const OnboardedUsers: React.FC = () => {
@@ -54,6 +57,10 @@ export const OnboardedUsers: React.FC = () => {
   const [viewUser, setViewUser] = useState<AllUsersResponse['users'][number] | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
+  // Edit user state
+  const [editUser, setEditUser] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   // Share-login (reset + re-share credentials) state
   const [shareTarget, setShareTarget] = useState<ShareLoginTarget | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -65,13 +72,17 @@ export const OnboardedUsers: React.FC = () => {
   const isUserActive = (user: AllUsersResponse['users'][number]) => getUserStatus(user.usersStatusId) === 'active';
 
   // Get unique roles for filter
-  const uniqueRoles = Array.from(new Set(users.map((user) => getPrimaryRoleName(user))));
+  const uniqueRoles = Array.from(new Set(users.flatMap((user) => 
+    user.roles?.length ? user.roles.map(r => r.roleName) : [t('userManagement.onboardedUsers.unknownRole')]
+  )));
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = (user.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.mobileNumber || '').includes(searchTerm);
-    const matchesRole = roleFilter === 'all' || getPrimaryRoleName(user) === roleFilter;
+    const hasRoles = user.roles && user.roles.length > 0;
+    const matchesRole = roleFilter === 'all' || 
+      (hasRoles ? user.roles!.some(r => r.roleName === roleFilter) : roleFilter === t('userManagement.onboardedUsers.unknownRole'));
     const matchesStatus = statusFilter === 'all' || getUserStatus(user.usersStatusId) === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   }).sort((a, b) => {
@@ -309,26 +320,59 @@ export const OnboardedUsers: React.FC = () => {
                           {user.employeeID || 'N/A'}
                         </div>
                       </div>
+                      <div className="col-span-2 space-y-1.5 border-t border-slate-200 dark:border-slate-700 pt-2 mt-1">
+                        <span className="text-[11px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
+                          <Clock className="h-2.5 w-2.5" />
+                          {t('userManagement.onboardedUsers.labels.lastLogin', 'LAST LOGIN')}
+                        </span>
+                        <div className={cn(
+                          "text-xs font-mono font-medium tracking-tight truncate",
+                          isUserActive(user) ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-500"
+                        )}>
+                          {user.lastLoginTime 
+                            ? new Intl.DateTimeFormat('en-IN', {
+                                timeZone: 'Asia/Kolkata',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              }).format(new Date(user.lastLoginTime + (user.lastLoginTime.endsWith('Z') ? '' : 'Z'))) 
+                            : t('userManagement.onboardedUsers.labels.neverLoggedIn', 'Never logged in')}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Badges & Actions Footer */}
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex flex-wrap gap-1.5">
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
-                            isUserActive(user)
-                              ? getRoleColor(getPrimaryRoleName(user))
-                              : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
-                          )}
-                        >
-                          {getPrimaryRoleName(user)}
-                        </Badge>
-
-                        {user.isPrimary && (
-                          <Badge variant="outline" className="text-[11px] font-mono font-bold tracking-widest uppercase bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-2 py-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                            {t('userManagement.onboardedUsers.badges.primary', 'PRIMARY')}
+                        {user.roles && user.roles.length > 0 ? (
+                          user.roles.map((role, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="secondary"
+                              className={cn(
+                                "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
+                                isUserActive(user)
+                                  ? getRoleColor(role.roleName)
+                                  : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                              )}
+                            >
+                              {role.roleName}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
+                              isUserActive(user)
+                                ? getRoleColor(undefined)
+                                : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                            )}
+                          >
+                            {t('userManagement.onboardedUsers.unknownRole')}
                           </Badge>
                         )}
                       </div>
@@ -350,6 +394,23 @@ export const OnboardedUsers: React.FC = () => {
                           title={t('userManagement.onboardedUsers.actions.viewTooltip')}
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditUser(user);
+                            setIsEditDialogOpen(true);
+                          }}
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
+                            isUserActive(user)
+                              ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:hover:bg-blue-900/20"
+                              : "bg-transparent border-slate-300 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800"
+                          )}
+                          title="Edit user details"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
@@ -432,6 +493,17 @@ export const OnboardedUsers: React.FC = () => {
         userName={selectedUser?.fullName || ''}
         userEmail={selectedUser?.email || ''}
         isPending={deactivateUser.isPending}
+      />
+
+      {/* Edit User Form Modal */}
+      <QuickAddUserForm
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setEditUser(null);
+        }}
+        editMode={true}
+        initialData={editUser}
       />
 
       {/* View User Details Dialog */}

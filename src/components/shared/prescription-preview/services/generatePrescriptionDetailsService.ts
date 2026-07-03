@@ -47,6 +47,7 @@ export interface PrescriptionPatientDetail {
   patientId: string;
   name: string;
   age: number;
+  ageUnit?: string;
   sex: string;
   address: string;
   contact: string;
@@ -58,6 +59,9 @@ export interface PrescriptionPatientDetail {
   insuranceId?: string;
   referrerName?: string | null;
   referrerRelation?: string | null;
+  referrerType?: string | null;
+  guardianName?: string | null;
+  guardianRelation?: string | null;
 }
 
 export interface PrescriptionPatientData {

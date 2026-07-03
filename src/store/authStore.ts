@@ -8,6 +8,7 @@ export interface User {
   mobile?: string;
   name?: string;
   role?: string;
+  roles?: string[];
   permissions?: string[];
   profilePicture?: string;
   doctorId?: string;
@@ -34,6 +35,7 @@ export interface AuthState {
   tokenExpiry: number | null;
   userId: string | null;
   userRole: string | null;
+  userRoles: string[];
   permissions: string[];
   hospitalId: string | null;
   hospitals: HospitalSummary[];
@@ -56,8 +58,10 @@ export interface AuthActions {
   refreshToken: () => Promise<void>;
   setUserId: (userId: string) => void;
   getUserId: () => string | null;
-  setUserRole: (role: string) => void;
+  setUserRole: (role: string | null) => void;
   getUserRole: () => string | null;
+  setUserRoles: (roles: string[]) => void;
+  getUserRoles: () => string[];
   setPermissions: (permissions: string[]) => void;
   getPermissions: () => string[];
   setHospitalId: (hospitalId: string) => void;
@@ -92,6 +96,7 @@ const initialState: AuthState = {
   tokenExpiry: null,
   userId: null,
   userRole: null,
+  userRoles: [],
   permissions: [],
   hospitalId: null,
   hospitals: [],
@@ -116,7 +121,8 @@ export const useAuthStore = create<AuthStore>()(
             user,
             isAuthenticated: !!user,
             userId: user?.id || null,
-            userRole: user?.role || null,
+            userRole: user?.role || (user?.roles?.[0]) || null,
+            userRoles: user?.roles || (user?.role ? [user.role] : []),
             hospitalAccessRestricted: false,
             hospitalAccessMessage: null,
             doctorProfileRestricted: false,
@@ -189,12 +195,23 @@ export const useAuthStore = create<AuthStore>()(
           return get().userId;
         },
 
-        setUserRole: (role: string) => {
-          set({ userRole: role });
+        setUserRole: (role: string | null) => {
+          set({ 
+            userRole: role, 
+            userRoles: role ? role.split(',').map(r => r.trim()).filter(Boolean) : [] 
+          });
         },
 
         getUserRole: () => {
           return get().userRole;
+        },
+
+        setUserRoles: (roles: string[]) => {
+          set({ userRoles: roles, userRole: roles.length > 0 ? roles[0] : null });
+        },
+
+        getUserRoles: () => {
+          return get().userRoles || [];
         },
 
         setPermissions: (permissions: string[]) => {
@@ -300,6 +317,7 @@ export const useAuthStore = create<AuthStore>()(
           tokenExpiry: state.tokenExpiry,
           userId: state.userId,
           userRole: state.userRole,
+          userRoles: state.userRoles,
           hospitalId: state.hospitalId,
           hospitals: state.hospitals,
           employeeId: state.employeeId,

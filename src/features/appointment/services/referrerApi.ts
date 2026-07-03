@@ -29,6 +29,7 @@ export interface CreateReferrerRequest {
 
 export interface CreateReferrerResponse {
   referrerId: string;
+  referrerName: string;
   message?: string;
 }
 

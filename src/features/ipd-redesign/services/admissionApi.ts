@@ -112,6 +112,20 @@ export interface AdmitPatientPayload {
 
     referralSource?: 'SELF' | 'DOCTOR' | 'HOSPITAL' | '';
     referralName?: string;
+
+    // ── Payer branch (CASH is fully wired; TPA/SCHEME are capture-only in Phase 1) ──
+    payerType?: 'CASH' | 'TPA' | 'SCHEME';
+    depositExpected?: number | null;
+    enableIpdBilling?: boolean;        // opens an IPD billing encounter; default true server-side
+    clientRequestId?: string;         // offline-resync idempotency key
+    bedId?: string | null;            // optional bed to assign at admit time
+
+    // Coverage detail — only meaningful when payerType is TPA / SCHEME.
+    payerName?: string;
+    policyOrBeneficiaryNo?: string;
+    preAuthNo?: string;
+    packageCode?: string;
+    sanctionedAmount?: number | null;
 }
 
 export interface AdmitPatientResponse {
@@ -123,6 +137,37 @@ export interface AdmitPatientResponse {
     isNewPatient?: boolean;
     admittedAt?: string;
     wasExisting?: boolean;
+    encounterId?: string | null;
+    payerType?: string | null;
+    bedId?: string | null;
+    bedAssignmentId?: string | null;
+}
+
+// ─── Active admissions (real data — every currently-open admission for the hospital) ─
+export type AdmissionStatusFilter = 'ACTIVE' | 'DISCHARGED' | 'ALL';
+
+export interface ActiveAdmissionItem {
+    admissionId: string;
+    admissionNo: string;
+    admissionType?: string | null;
+    statusCode: string;
+    payerType: string;
+    admittedAt: string;
+    admissionReason?: string | null;
+    diagnosis?: string | null;
+    patientId?: string | null;
+    patientName?: string | null;
+    patientAge?: number | null;
+    patientSex?: string | null;
+    bedCode?: string | null;      // null => no bed assigned yet
+    wardName?: string | null;
+    encounterId?: string | null;
+}
+
+interface GetActiveAdmissionsResponse {
+    success?: boolean;
+    message?: string;
+    items?: ActiveAdmissionItem[];
 }
 
 // ─── Duplicate detection ────────────────────────────────────────────────────────
@@ -165,6 +210,11 @@ export const admissionApi = {
         ipdApiClient.get<GetPatientAdmissionsResponse>('/admission/patient', {
             params: { hospitalId: hospitalIdOrThrow(hospitalId), patientId },
         }),
+
+    getActiveAdmissions: (statusFilter?: AdmissionStatusFilter, hospitalId?: string): Promise<ActiveAdmissionItem[]> =>
+        ipdApiClient
+            .get<GetActiveAdmissionsResponse>('/admission/active', { params: { hospitalId: hospitalIdOrThrow(hospitalId), statusFilter } })
+            .then(r => r.items ?? []),
 
     admit: (payload: AdmitPatientPayload, hospitalId?: string): Promise<AdmitPatientResponse> =>
         ipdApiClient.post<AdmitPatientResponse>('/admission', {

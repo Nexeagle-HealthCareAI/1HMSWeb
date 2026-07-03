@@ -60,7 +60,8 @@ import {
   Siren,
   Wrench,
   Ambulance,
-  UserSquare
+  UserSquare,
+  Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -185,9 +186,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const profileScore = completionPercentage;
   const authStore = useAuthStore.getState();
-  const userRole = authStore.getUserRole() || 'Doctor';
+  const userRoles = authStore.getUserRoles() || ['Doctor'];
   const userId = authStore.getUserId();
-  const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
+  const isDoc = userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
+  const profileTarget = isDoc ? '/profile?tab=professional' : '/profile';
   const personalProfileLabel = t('header.personalProfile');
 
 
@@ -207,6 +209,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
     { id: 'configuration', name: t('header.configuration') || 'Configuration', icon: Settings, path: '/configuration' },
+    { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
     {
       id: 'appointments',
@@ -215,25 +218,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       path: '/appointment-dashboard',
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'ipd-redesign', name: 'IPD (new)', icon: Hotel, path: '/ipd-redesign' },
+    { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-redesign' },
   ];
 
   // Filter navigation items based on user role
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin' || item.id === 'configuration') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor';
+    if (item.id === 'admin' || item.id === 'configuration' || item.id === 'subscription') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
     }
     if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
-      return userRole === 'Doctor' || userRole === 'AdminDoctor';
+      return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
     }
     if (item.id === 'appointments') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Receptionist' || userRole === 'Nurse';
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist') || userRoles.includes('Nurse');
     }
     if (item.id === 'billing') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
     }
     if (item.id === 'ipd-redesign') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
     }
     return true;
   });
@@ -424,7 +427,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         {getUserDisplayName()}
                       </p>
                       <p className="text-xs leading-none text-gray-600 dark:text-gray-300">
-                        {userRole}
+                        {userRoles.join(', ')}
                       </p>
                     </div>
                   </DropdownMenuItem>

@@ -61,7 +61,7 @@ export const postOpdConsult = async (
     patientId: string,
     opts: { markPaid: boolean; paymentMode?: string; hospitalId?: string; appointmentId?: string },
 ): Promise<PostOpdConsultResult> => {
-    const enc = await ipdBillingService.createEncounter({
+    const enc = await ipdBillingService.createChargeEvent({
         patientId,
         encounterType: 'OPD',
         hospitalId: opts.hospitalId,
@@ -69,11 +69,11 @@ export const postOpdConsult = async (
     });
 
     const d = enc?.data;
-    const posted = !!d?.consultChargePosted;
-    const alreadyCharged = !!d?.consultAlreadyCharged;
-    const alreadyPaid = !!d?.consultPaid;
-    const consultFee = Number(d?.consultFee ?? 0);
-    const encounterId = d?.encounterId;
+    const posted = !!(d?.consultChargePosted ?? (d as any)?.ConsultChargePosted);
+    const alreadyCharged = !!(d?.consultAlreadyCharged ?? (d as any)?.ConsultAlreadyCharged);
+    const alreadyPaid = !!(d?.consultPaid ?? (d as any)?.ConsultPaid);
+    const consultFee = Number((d?.consultFee ?? (d as any)?.ConsultFee) ?? 0);
+    const encounterId = d?.encounterId ?? (d as any)?.EncounterId;
 
     const result: PostOpdConsultResult = {
         posted, alreadyCharged, alreadyPaid, consultFee, encounterId, paymentRecorded: false,
@@ -89,7 +89,7 @@ export const postOpdConsult = async (
     const inv = await ipdBillingService.createDraftInvoice({ patientId, encounterId: encounterId!, hospitalId: opts.hospitalId });
     if (inv?.success === false) throw new Error(inv?.message ?? 'Could not create invoice.');
     result.invoiceNo = inv?.data?.invoiceNo ?? null;
-    const netAmount = Number(inv?.data?.netAmount ?? consultFee) || consultFee;
+    const netAmount = Number(inv?.data?.netAmount ?? (inv?.data as any)?.NetAmount ?? consultFee) || consultFee;
 
     // 2) Finalize it (best-effort — ignore "already finalized"; a draft still accepts payment).
     try {
@@ -108,9 +108,8 @@ export const postOpdConsult = async (
             description: 'OPD consultation fee',
         },
     });
-    if (pay?.success === false) throw new Error(pay?.message ?? 'Could not record payment.');
-    result.paymentRecorded = true;
-    result.receiptNo = pay?.data?.receiptNo ?? null;
-
-    return result;
+    if (pay?.success || (pay as any)?.Success) {
+        result.paymentRecorded = true;
+        result.receiptNo = pay.data?.receiptNo ?? (pay.data as any)?.ReceiptNo ?? result.receiptNo;
+    } return result;
 };

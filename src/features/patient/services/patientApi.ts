@@ -14,7 +14,8 @@ export interface DuplicateMatch {
   patientId: string;
   fullName?: string | null;
   mobile?: string | null;
-  ageYears?: number | null;
+  age?: number | null;
+  ageUnit?: string | null;
   sex?: string | null;
   city?: string | null;
   similarity: number;

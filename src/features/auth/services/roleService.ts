@@ -12,7 +12,8 @@ export class RoleService {
     RECEPTIONIST: 'receptionist',
     LAB_TECHNICIAN: 'lab_technician',
     PHARMACIST: 'pharmacist',
-    PATIENT: 'patient'
+    PATIENT: 'patient',
+    ACCOUNTANT: 'accountant'
   };
 
   // Permission definitions
@@ -128,31 +129,62 @@ export class RoleService {
       this.PERMISSIONS.VIEW_APPOINTMENTS,
       this.PERMISSIONS.VIEW_PRESCRIPTIONS,
       this.PERMISSIONS.VIEW_BILLS
+    ],
+    [this.ROLES.ACCOUNTANT]: [
+      this.PERMISSIONS.VIEW_BILLS,
+      this.PERMISSIONS.CREATE_BILLS,
+      this.PERMISSIONS.EDIT_BILLS,
+      this.PERMISSIONS.DELETE_BILLS,
+      this.PERMISSIONS.VIEW_PATIENTS,
+      this.PERMISSIONS.VIEW_REPORTS
     ]
   };
 
-  // Set user role
+  // Set user role (kept for backward compatibility, sets single role)
   static setRole(role: string): void {
     const authStore = useAuthStore.getState();
     authStore.setUserRole(role);
   }
 
-  // Get user role
-  static getRole(): string | null {
+  // Set multiple roles
+  static setRoles(roles: string[]): void {
     const authStore = useAuthStore.getState();
-    return authStore.getUserRole();
+    if (authStore.setUserRoles) {
+      authStore.setUserRoles(roles);
+    } else {
+      // Fallback if auth store doesn't have setUserRoles yet
+      authStore.setUserRole(roles[0] || null);
+    }
+  }
+
+  // Get first user role (backward compatibility)
+  static getRole(): string | null {
+    const roles = this.getRoles();
+    return roles.length > 0 ? roles[0] : null;
+  }
+
+  // Get all user roles
+  static getRoles(): string[] {
+    const authStore = useAuthStore.getState();
+    if (authStore.getUserRoles) {
+      return authStore.getUserRoles();
+    }
+    const single = authStore.getUserRole();
+    return single ? [single] : [];
   }
 
   // Check if user has a specific role
   static hasRole(role: string): boolean {
-    const currentRole = this.getRole();
-    return currentRole === role;
+    const roles = this.getRoles();
+    // Normalize casing for checks
+    return roles.some(r => r.toLowerCase() === role.toLowerCase());
   }
 
   // Check if user has any of the specified roles
   static hasAnyRole(roles: string[]): boolean {
-    const currentRole = this.getRole();
-    return roles.includes(currentRole || '');
+    const currentRoles = this.getRoles().map(r => r.toLowerCase());
+    const targetRoles = roles.map(r => r.toLowerCase());
+    return targetRoles.some(r => currentRoles.includes(r));
   }
 
   // Get permissions for a role
@@ -178,18 +210,20 @@ export class RoleService {
   // Check if user has a specific permission
   static hasPermission(permission: string): boolean {
     const userPermissions = this.getUserPermissions();
-    const userRole = this.getRole();
+    const userRoles = this.getRoles();
     
-    if (!userRole) return false;
+    if (userRoles.length === 0) return false;
     
     // Check if permission is in user's direct permissions
     if (userPermissions.includes(permission)) {
       return true;
     }
     
-    // Check if permission is in role's permissions
-    const rolePermissions = this.getRolePermissions(userRole);
-    return rolePermissions.includes(permission);
+    // Check if permission is in any of the user's role's permissions
+    return userRoles.some(role => {
+      const rolePermissions = this.getRolePermissions(role.toLowerCase());
+      return rolePermissions.includes(permission);
+    });
   }
 
   // Check if user has all specified permissions
@@ -230,7 +264,8 @@ export class RoleService {
       [this.ROLES.RECEPTIONIST]: 'Receptionist',
       [this.ROLES.LAB_TECHNICIAN]: 'Lab Technician',
       [this.ROLES.PHARMACIST]: 'Pharmacist',
-      [this.ROLES.PATIENT]: 'Patient'
+      [this.ROLES.PATIENT]: 'Patient',
+      [this.ROLES.ACCOUNTANT]: 'Accountant'
     };
     return displayNames[role] || role;
   }
@@ -263,7 +298,8 @@ export class RoleService {
       [this.ROLES.RECEPTIONIST]: '/receptionist/dashboard',
       [this.ROLES.LAB_TECHNICIAN]: '/lab/dashboard',
       [this.ROLES.PHARMACIST]: '/pharmacy/dashboard',
-      [this.ROLES.PATIENT]: '/patient/dashboard'
+      [this.ROLES.PATIENT]: '/patient/dashboard',
+      [this.ROLES.ACCOUNTANT]: '/billing'
     };
 
     return roleRedirects[userRole] || '/';

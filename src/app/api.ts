@@ -8,7 +8,11 @@ const join = (base: string, path: string) => `${trimEnd(base)}/${trimStart(path)
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL
   || 'http://151.185.45.77:5001';
 
+const rawSubscriptionUrl = import.meta.env.VITE_SUBSCRIPTION_API_URL
+  || 'http://151.185.45.77:5002';
+
 export const API_BASE_URL = ensureProtocol(rawApiUrl);
+export const SUBSCRIPTION_BASE_URL = ensureProtocol(rawSubscriptionUrl);
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -127,6 +131,12 @@ export const API_ENDPOINTS = {
     RESET_CREDENTIALS: 'admin/users/reset-credentials',
     GET_ALL_USERS: 'admin/user-onboarding/allusers',
     DEACTIVATE_USER: 'admin/user-onboarding/deactivate-user',
+  },
+  SUBSCRIPTION: {
+    GET_STATUS: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}`,
+    SELECT_PLAN: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/select-plan`,
+    SUBMIT_PAYMENT: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/submit-payment`,
+    GET_PLANS_URL: `${SUBSCRIPTION_BASE_URL}/api/v1/SubscriptionPlans`,
   },
   APPOINTMENTS: {
     SAVE_VITALS: 'appointments/patient-vitals',
