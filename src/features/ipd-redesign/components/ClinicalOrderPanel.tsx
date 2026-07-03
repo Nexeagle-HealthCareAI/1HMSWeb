@@ -14,9 +14,13 @@ import {
 import { ipdBillingService, type ChargeMaster } from '@/features/billing/services/ipdBillingService';
 import { formatIstDateTime } from '../utils/istDate';
 
-const EMPTY_LINE: ClinicalOrderLineInput = { itemName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', urgency: undefined, scheduledAt: undefined, isHighAlert: false, qty: 1 };
+const EMPTY_LINE: ClinicalOrderLineInput = { itemName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', urgency: undefined, scheduledAt: undefined, isHighAlert: false, isDailyRecurringCharge: false, qty: 1 };
 
 const URGENCIES: OrderUrgency[] = ['ROUTINE', 'URGENT', 'STAT'];
+
+// Categories where "accrue daily instead of once" makes clinical sense — oxygen therapy and
+// continuous monitoring are ongoing services, not one-off items.
+const RECURRING_ELIGIBLE_CATEGORIES = ['OXYGEN', 'MONITORING'];
 
 // Fixed dosing frequencies — MEDICATION orders use this dropdown (drives MAR's computed dose
 // schedule); every other order type keeps a free-text Frequency input.
@@ -167,6 +171,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                                     </Badge>
                                                 )}
                                                 {l.isHighAlert && <Badge variant="outline" className="text-[9px] font-bold bg-rose-50 text-rose-700 border-rose-200">HIGH ALERT</Badge>}
+                                                {l.isDailyRecurringCharge && <Badge variant="outline" className="text-[9px] font-bold bg-sky-50 text-sky-700 border-sky-200">DAILY CHARGE</Badge>}
                                                 {l.statusCode === 'DISCONTINUED' && <Badge variant="outline" className="text-[9px] bg-slate-100 text-slate-500">DISCONTINUED</Badge>}
                                             </div>
                                             <p className="text-[11px] text-slate-500 mt-0.5">
@@ -226,6 +231,18 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                         <Input value={line.itemName} onChange={e => setLine(i, { itemName: e.target.value })} className="h-9 mt-1" placeholder={`e.g. ${itemLabel}`} />
                                     </div>
                                 </div>
+
+                                {(() => {
+                                    const pickedItem = pickerItems.find(p => p.chargeId === line.chargeId);
+                                    const recurringEligible = !!pickedItem && RECURRING_ELIGIBLE_CATEGORIES.includes((pickedItem.categoryCode || '').toUpperCase());
+                                    if (!recurringEligible) return null;
+                                    return (
+                                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                                            <input type="checkbox" checked={!!line.isDailyRecurringCharge} onChange={e => setLine(i, { isDailyRecurringCharge: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
+                                            Recurring daily charge (bills once per day this stays active, instead of once now)
+                                        </label>
+                                    );
+                                })()}
 
                                 {showMedicationFields && (
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

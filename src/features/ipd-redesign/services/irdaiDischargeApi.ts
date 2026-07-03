@@ -58,6 +58,36 @@ interface GetIrdaiDischargeClocksResponse {
     milestones?: IrdaiMilestone[];
 }
 
+export interface CoverageUtilization {
+    payerType?: string | null;
+    sanctionedAmount?: number | null;
+    effectiveSanctionedAmount: number;
+    runningTotal: number;
+    utilizationPercent?: number | null;
+    isApproachingLimit: boolean;
+    enhancementRequestedAt?: string | null;
+    enhancementRequestedBy?: string | null;
+    enhancedSanctionedAmount?: number | null;
+    enhancementApprovedAt?: string | null;
+    enhancementApprovedBy?: string | null;
+}
+
+interface GetCoverageUtilizationResponse {
+    success?: boolean;
+    message?: string;
+    payerType?: string | null;
+    sanctionedAmount?: number | null;
+    effectiveSanctionedAmount?: number;
+    runningTotal?: number;
+    utilizationPercent?: number | null;
+    isApproachingLimit?: boolean;
+    enhancementRequestedAt?: string | null;
+    enhancementRequestedBy?: string | null;
+    enhancedSanctionedAmount?: number | null;
+    enhancementApprovedAt?: string | null;
+    enhancementApprovedBy?: string | null;
+}
+
 export const irdaiDischargeApi = {
     getTpaSplit: (admissionId: string, hospitalId?: string): Promise<TpaSplit> =>
         ipdApiClient
@@ -80,6 +110,39 @@ export const irdaiDischargeApi = {
             return await ipdApiClient.post('/irdai-discharge/stamp-milestone', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, milestoneKey, at });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not record the milestone.'));
+        }
+    },
+
+    getCoverageUtilization: (admissionId: string, hospitalId?: string): Promise<CoverageUtilization> =>
+        ipdApiClient
+            .get<GetCoverageUtilizationResponse>('/irdai-discharge/coverage-utilization', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .then(r => ({
+                payerType: r.payerType,
+                sanctionedAmount: r.sanctionedAmount,
+                effectiveSanctionedAmount: r.effectiveSanctionedAmount ?? 0,
+                runningTotal: r.runningTotal ?? 0,
+                utilizationPercent: r.utilizationPercent,
+                isApproachingLimit: r.isApproachingLimit ?? false,
+                enhancementRequestedAt: r.enhancementRequestedAt,
+                enhancementRequestedBy: r.enhancementRequestedBy,
+                enhancedSanctionedAmount: r.enhancedSanctionedAmount,
+                enhancementApprovedAt: r.enhancementApprovedAt,
+                enhancementApprovedBy: r.enhancementApprovedBy,
+            })),
+
+    requestEnhancement: async (admissionId: string, requestedSanctionedAmount: number, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/irdai-discharge/enhancement-request', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, requestedSanctionedAmount });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not record the enhancement request.'));
+        }
+    },
+
+    approveEnhancement: async (admissionId: string, approvedSanctionedAmount?: number, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/irdai-discharge/enhancement-approval', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, approvedSanctionedAmount });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not record the enhancement approval.'));
         }
     },
 };

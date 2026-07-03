@@ -6,11 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Check, Download, Printer, LogOut, Clock3 } from 'lucide-react';
+import { Loader2, Check, Download, Printer, LogOut, Clock3, AlertTriangle } from 'lucide-react';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
-import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks } from '../services/irdaiDischargeApi';
+import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
 import { bedBoardApi } from '../services/bedBoardApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
 import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
@@ -46,6 +46,11 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [tpaSplit, setTpaSplit] = useState<TpaSplit | null>(null);
     const [clocks, setClocks] = useState<IrdaiClocks | null>(null);
     const [stampingKey, setStampingKey] = useState<'CLAIM_SUBMITTED' | 'INSURER_APPROVAL' | null>(null);
+
+    const [coverageUtilization, setCoverageUtilization] = useState<CoverageUtilization | null>(null);
+    const [enhancementMode, setEnhancementMode] = useState<'request' | 'approve' | null>(null);
+    const [enhancementAmount, setEnhancementAmount] = useState('');
+    const [enhancementBusy, setEnhancementBusy] = useState(false);
 
     const [dischargeOpen, setDischargeOpen] = useState(false);
     const [dischargeNotes, setDischargeNotes] = useState('');
@@ -84,11 +89,15 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
     useEffect(() => { load(); }, [admission.admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const reloadCoverageUtilization = () =>
+        irdaiDischargeApi.getCoverageUtilization(admission.admissionId).then(setCoverageUtilization).catch(() => setCoverageUtilization(null));
+
     useEffect(() => {
         if (isCash) return;
         irdaiDischargeApi.getTpaSplit(admission.admissionId).then(setTpaSplit).catch(() => setTpaSplit(null));
         irdaiDischargeApi.getClocks(admission.admissionId).then(setClocks).catch(() => setClocks(null));
-    }, [admission.admissionId, isCash]);
+        reloadCoverageUtilization();
+    }, [admission.admissionId, isCash]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setField = (patch: Partial<SaveDischargeSummaryFields>) => setForm(f => ({ ...f, ...patch }));
 
@@ -129,6 +138,38 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             toast({ title: 'Could not record milestone', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
         } finally {
             setStampingKey(null);
+        }
+    };
+
+    const openEnhancementDialog = (mode: 'request' | 'approve') => {
+        setEnhancementMode(mode);
+        setEnhancementAmount(mode === 'approve' && coverageUtilization?.enhancedSanctionedAmount != null
+            ? String(coverageUtilization.enhancedSanctionedAmount)
+            : '');
+    };
+
+    const submitEnhancement = async () => {
+        if (!enhancementMode) return;
+        const amount = enhancementAmount ? Number(enhancementAmount) : undefined;
+        if (enhancementMode === 'request' && (!amount || amount <= 0)) {
+            toast({ title: 'Enter a valid amount', variant: 'destructive' });
+            return;
+        }
+        setEnhancementBusy(true);
+        try {
+            if (enhancementMode === 'request') {
+                await irdaiDischargeApi.requestEnhancement(admission.admissionId, amount!);
+                toast({ title: 'Enhancement request recorded.' });
+            } else {
+                await irdaiDischargeApi.approveEnhancement(admission.admissionId, amount);
+                toast({ title: 'Enhancement approval recorded.' });
+            }
+            setEnhancementMode(null);
+            reloadCoverageUtilization();
+        } catch (err) {
+            toast({ title: 'Could not save', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setEnhancementBusy(false);
         }
     };
 
@@ -266,6 +307,37 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 )}
             </div>
 
+            {!isCash && coverageUtilization?.isApproachingLimit && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                            <p className="text-sm font-semibold text-amber-800">
+                                Approaching sanctioned limit — ₹{coverageUtilization.runningTotal.toLocaleString('en-IN')} of ₹{coverageUtilization.effectiveSanctionedAmount.toLocaleString('en-IN')} billed
+                                {coverageUtilization.utilizationPercent != null ? ` (${coverageUtilization.utilizationPercent}%)` : ''}.
+                            </p>
+                            {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt ? (
+                                <p className="text-[11px] text-amber-700 mt-0.5">
+                                    Enhancement to ₹{coverageUtilization.enhancedSanctionedAmount?.toLocaleString('en-IN')} requested {formatIstDateTime(coverageUtilization.enhancementRequestedAt)} — awaiting approval.
+                                </p>
+                            ) : (
+                                <p className="text-[11px] text-amber-700 mt-0.5">Consider requesting a sanction enhancement from the insurer/TPA.</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="shrink-0 flex gap-2">
+                        {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt && (
+                            <Button size="sm" variant="outline" className="h-8 text-[11px] border-amber-300" onClick={() => openEnhancementDialog('approve')}>
+                                Mark approved
+                            </Button>
+                        )}
+                        <Button size="sm" className="h-8 text-[11px] bg-amber-600 hover:bg-amber-700" onClick={() => openEnhancementDialog('request')}>
+                            Request enhancement
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {!isCash && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -346,6 +418,31 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Button variant="ghost" onClick={() => setSignOpen(false)}>Cancel</Button>
                         <Button disabled={signing} className="bg-amber-600 hover:bg-amber-700" onClick={confirmSign}>
                             {signing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Sign & finalize
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={enhancementMode !== null} onOpenChange={open => { if (!open) setEnhancementMode(null); }}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>{enhancementMode === 'approve' ? 'Record enhancement approval' : 'Request sanction enhancement'}</DialogTitle>
+                        <DialogDescription>
+                            {enhancementMode === 'approve'
+                                ? 'Confirm the amount the insurer/TPA sanctioned. Leave as-is if it matches what was requested.'
+                                : 'Manual internal tracking only — record the new total sanctioned amount being requested from the insurer/TPA.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">
+                            {enhancementMode === 'approve' ? 'Approved sanctioned amount' : 'Requested sanctioned amount'}
+                        </Label>
+                        <Input type="number" min={0} value={enhancementAmount} onChange={e => setEnhancementAmount(e.target.value)} className="h-9 mt-1" placeholder="₹" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setEnhancementMode(null)}>Cancel</Button>
+                        <Button disabled={enhancementBusy} className="bg-amber-600 hover:bg-amber-700" onClick={submitEnhancement}>
+                            {enhancementBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>
                 </DialogContent>
