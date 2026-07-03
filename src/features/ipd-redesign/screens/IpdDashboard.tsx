@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { admissionApi, type ActiveAdmissionItem, type AdmissionStatusFilter } from '../services/admissionApi';
+import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 
 type DateFilterMode = 'TODAY' | 'ALL' | 'RANGE';
 
@@ -76,6 +79,12 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const [rangeFrom, setRangeFrom] = useState('');
     const [rangeTo, setRangeTo] = useState('');
 
+    // Confirm-arrival: a PRE_ADMIT (elective pre-registration) admission has physically arrived.
+    const [confirmArrivalTarget, setConfirmArrivalTarget] = useState<ActiveAdmissionItem | null>(null);
+    const [arrivalBeds, setArrivalBeds] = useState<BedBoardItem[]>([]);
+    const [arrivalBedId, setArrivalBedId] = useState('');
+    const [confirmingArrival, setConfirmingArrival] = useState(false);
+
     const load = () => {
         setLoading(true);
         Promise.all([
@@ -88,6 +97,33 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     };
 
     useEffect(() => { load(); }, [refreshSignal, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const openConfirmArrival = (a: ActiveAdmissionItem) => {
+        setConfirmArrivalTarget(a);
+        setArrivalBedId('');
+        bedBoardApi.getBoard()
+            .then(items => setArrivalBeds(items.filter(b => b.isActive && !b.admissionId)))
+            .catch(() => setArrivalBeds([]));
+    };
+
+    const submitConfirmArrival = async () => {
+        if (!confirmArrivalTarget) return;
+        setConfirmingArrival(true);
+        try {
+            const res = await admissionApi.confirmArrival(confirmArrivalTarget.admissionId, arrivalBedId || undefined);
+            if (res.success) {
+                toast({ title: 'Arrival confirmed.' });
+                setConfirmArrivalTarget(null);
+                load();
+            } else {
+                toast({ title: 'Could not confirm arrival', description: res.message, variant: 'destructive' });
+            }
+        } catch (err) {
+            toast({ title: 'Could not confirm arrival', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setConfirmingArrival(false);
+        }
+    };
 
     const kpis = useMemo(() => ({
         admittedCount: activeAdmissions.length,
@@ -217,7 +253,15 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                     </td>
                                     <td className="px-3 py-2 text-xs text-slate-600 whitespace-nowrap">{formatIstDateTime(a.admittedAt)}</td>
                                     <td className="px-3 py-2">
-                                        <Badge variant="outline" className={cn('text-[10px] font-bold', statusTone(a.statusCode))}>{a.statusCode}</Badge>
+                                        <div className="flex items-center gap-1.5">
+                                            <Badge variant="outline" className={cn('text-[10px] font-bold', statusTone(a.statusCode))}>{a.statusCode}</Badge>
+                                            {a.statusCode === 'PRE_ADMIT' && (
+                                                <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
+                                                    onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
+                                                    <CalendarCheck className="h-3 w-3 mr-1" /> Confirm arrival
+                                                </Button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -231,6 +275,35 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     </table>
                 </div>
             </section>
+
+            <Dialog open={!!confirmArrivalTarget} onOpenChange={o => { if (!o) setConfirmArrivalTarget(null); }}>
+                <DialogContent className="max-w-sm">
+                    {confirmArrivalTarget && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Confirm arrival — {confirmArrivalTarget.patientName || confirmArrivalTarget.patientId}?</DialogTitle>
+                                <DialogDescription>Moves this pre-registration to a completed admission. Optionally assign a bed now.</DialogDescription>
+                            </DialogHeader>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Bed (optional)</Label>
+                                <select value={arrivalBedId} onChange={e => setArrivalBedId(e.target.value)}
+                                    className="h-10 mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white">
+                                    <option value="">— Assign later —</option>
+                                    {arrivalBeds.map(b => (
+                                        <option key={b.bedId} value={b.bedId}>{b.wardName ? `${b.wardName} · ` : ''}{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button variant="ghost" onClick={() => setConfirmArrivalTarget(null)}>Cancel</Button>
+                                <Button disabled={confirmingArrival} className="bg-brand-600 hover:bg-brand-700" onClick={submitConfirmArrival}>
+                                    {confirmingArrival ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm arrival
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

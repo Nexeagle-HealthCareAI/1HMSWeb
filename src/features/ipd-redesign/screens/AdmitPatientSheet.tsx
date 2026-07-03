@@ -16,9 +16,11 @@ import { useToast } from '@/hooks/use-toast';
 import {
     admissionApi, type AdmissionTypeCode, type AdmitPatientPayload,
     type PatientSearchResult, type AdmissionPatientDetail, type AdmissionHistoryItem,
-    type DuplicateMatch, type DuplicateConfidence,
+    type DuplicateMatch, type DuplicateConfidence, type HospitalDoctorItem,
 } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
+import { consentApi, type ConsentTemplateItem } from '../services/consentApi';
+import { isAboveEntitlement } from '../utils/roomEntitlement';
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
@@ -46,6 +48,21 @@ const PAYER_TYPES: { value: PayerTypeCode; label: string }[] = [
     { value: 'SCHEME', label: 'Govt. scheme' },
 ];
 
+const REFERRING_FACILITY_TYPES: { value: 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | 'OTHER'; label: string }[] = [
+    { value: 'PHC', label: 'PHC' },
+    { value: 'NURSING_HOME', label: 'Nursing home' },
+    { value: 'HOSPITAL', label: 'Hospital' },
+    { value: 'OTHER', label: 'Other' },
+];
+
+const ROOM_CATEGORIES = ['GENERAL', 'SEMI_PRIVATE', 'PRIVATE'];
+
+const synthesizeUnknownName = (sex: string, ageYears: string): string => {
+    const label = sex === 'M' ? 'Male' : sex === 'F' ? 'Female' : 'Patient';
+    const ageSuffix = ageYears ? `, ~${ageYears}y` : '';
+    return `Unknown ${label}${ageSuffix}`;
+};
+
 const SELECT_CLS = 'h-10 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white outline-none transition focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400';
 const INPUT_CLS = 'h-10 rounded-lg';
 
@@ -56,11 +73,17 @@ interface FormState {
     emergencyContactName: string; emergencyContactRelation: string; emergencyContactPhone: string;
     flatHouse: string; street: string; city: string; district: string; state: string; pincode: string;
     aadhaarNumber: string; panNumber: string; abhaId: string;
-    admissionType: AdmissionTypeCode; admissionReason: string; diagnosis: string; expectedDischargeAt: string;
+    admissionType: AdmissionTypeCode; primaryDoctorId: string;
+    admissionReason: string; diagnosis: string; expectedDischargeAt: string;
+    isPreRegistration: boolean;
     referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL'; referralName: string;
+    referringFacilityName: string; referringFacilityType: '' | 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | 'OTHER'; referringFacilityContact: string;
 
     payerType: PayerTypeCode; depositExpected: string; bedId: string;
     payerName: string; policyOrBeneficiaryNo: string; preAuthNo: string; packageCode: string; sanctionedAmount: string;
+    entitledRoomCategory: string;
+
+    consentObtained: boolean; consentSignedByName: string; consentSignerRelation: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -70,10 +93,15 @@ const EMPTY_FORM: FormState = {
     emergencyContactName: '', emergencyContactRelation: '', emergencyContactPhone: '',
     flatHouse: '', street: '', city: '', district: '', state: '', pincode: '',
     aadhaarNumber: '', panNumber: '', abhaId: '',
-    admissionType: 'EMERGENCY', admissionReason: '', diagnosis: '', expectedDischargeAt: '',
+    admissionType: 'EMERGENCY', primaryDoctorId: '',
+    admissionReason: '', diagnosis: '', expectedDischargeAt: '',
+    isPreRegistration: false,
     referralSource: '', referralName: '',
+    referringFacilityName: '', referringFacilityType: '', referringFacilityContact: '',
     payerType: 'CASH', depositExpected: '', bedId: '',
     payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
+    entitledRoomCategory: '',
+    consentObtained: false, consentSignedByName: '', consentSignerRelation: 'Self',
 };
 
 interface Props {
@@ -143,7 +171,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [loadingDetail, setLoadingDetail] = useState(false);
 
     const [submitting, setSubmitting] = useState(false);
-    const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string } | null>(null);
+    const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string } | null>(null);
 
     // duplicate detection (new-patient mode)
     const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
@@ -153,6 +181,11 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
     // Available beds for the optional bed picker.
     const [availableBeds, setAvailableBeds] = useState<BedBoardItem[]>([]);
+    // Admitting-consultant picker.
+    const [doctors, setDoctors] = useState<HospitalDoctorItem[]>([]);
+    // Active GENERAL_ADMISSION consent template, if the hospital has configured one — the consent
+    // checkbox only renders when this is non-null (never blocks admission on missing config).
+    const [generalConsentTemplate, setGeneralConsentTemplate] = useState<ConsentTemplateItem | null>(null);
 
     // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
     // submission so a retried network call can't create a duplicate admission.
@@ -161,12 +194,16 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Load the live bed picker whenever the sheet opens.
+    // Load the live bed picker, doctor list, and general-consent template whenever the sheet opens.
     useEffect(() => {
         if (!open) return;
         bedBoardApi.getBoard()
             .then(items => setAvailableBeds(items.filter(b => b.isActive && !b.admissionId)))
             .catch(() => setAvailableBeds([]));
+        admissionApi.getHospitalDoctors().then(setDoctors).catch(() => setDoctors([]));
+        consentApi.getTemplates('GENERAL_ADMISSION')
+            .then(templates => setGeneralConsentTemplate(templates.find(t => t.isActive) ?? null))
+            .catch(() => setGeneralConsentTemplate(null));
     }, [open]);
 
     // Debounced fast search
@@ -281,21 +318,34 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const isReturning = mode === 'returning' && !!selectedPatientId;
     const showForm = mode === 'new' || isReturning;
     const hasNearCertainDup = mode === 'new' && dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
+    // Emergency/casualty: an unidentified patient must never be blocked at the door — Sex +
+    // approximate age are the only two things required; name/mobile are backfilled later.
+    const isEmergencyQuickAdmit = mode === 'new' && form.admissionType === 'EMERGENCY';
+    const namePreview = isEmergencyQuickAdmit && !form.fullName.trim() ? synthesizeUnknownName(form.sex, form.ageYears) : null;
+    const pickedBed = useMemo(() => availableBeds.find(b => b.bedId === form.bedId), [availableBeds, form.bedId]);
+    const showsEntitlementWarning = form.payerType !== 'CASH' && !!form.entitledRoomCategory
+        && isAboveEntitlement(pickedBed?.wardType, form.entitledRoomCategory);
     const canSubmit = useMemo(() => {
         if (mode === 'returning') return !!selectedPatientId;
-        if (!form.fullName.trim() || !form.mobile.trim()) return false;
+        if (isEmergencyQuickAdmit) {
+            if (!form.sex || (!form.ageYears.trim() && !form.dateOfBirth)) return false;
+        } else if (!form.fullName.trim() || !form.mobile.trim()) {
+            return false;
+        }
         // A near-certain duplicate must be explicitly acknowledged before a second UHID is created.
         if (hasNearCertainDup && !confirmNotDup) return false;
         return true;
-    }, [mode, selectedPatientId, form.fullName, form.mobile, hasNearCertainDup, confirmNotDup]);
+    }, [mode, selectedPatientId, isEmergencyQuickAdmit, form.fullName, form.mobile, form.sex, form.ageYears, form.dateOfBirth, hasNearCertainDup, confirmNotDup]);
 
     const submit = async () => {
         if (!canSubmit || submitting) {
-            if (mode === 'new') toast({ title: 'Incomplete', description: 'Patient name and mobile are required.', variant: 'destructive' });
+            if (isEmergencyQuickAdmit) toast({ title: 'Incomplete', description: 'Sex and approximate age are required.', variant: 'destructive' });
+            else if (mode === 'new') toast({ title: 'Incomplete', description: 'Patient name and mobile are required.', variant: 'destructive' });
             else toast({ title: 'Pick a patient', description: 'Search and select the returning patient first.', variant: 'destructive' });
             return;
         }
         const t = (s: string) => { const v = s.trim(); return v.length ? v : undefined; };
+        const isPreRegistration = form.admissionType === 'ELECTIVE' && form.isPreRegistration;
         const payload: AdmitPatientPayload = {
             patientId: isReturning ? selectedPatientId! : undefined,
             fullName: t(form.fullName), mobile: t(form.mobile),
@@ -311,10 +361,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             aadhaarNumber: mode === 'new' ? t(form.aadhaarNumber) : undefined,
             panNumber: t(form.panNumber), abhaId: t(form.abhaId),
             admissionType: form.admissionType,
+            primaryDoctorId: form.primaryDoctorId || undefined,
             admissionReason: t(form.admissionReason), diagnosis: t(form.diagnosis),
             expectedDischargeAt: t(form.expectedDischargeAt),
+            isPreRegistration,
             referralSource: form.referralSource || undefined,
             referralName: t(form.referralName),
+            ...(form.referralSource === 'HOSPITAL' ? {
+                referringFacilityName: t(form.referringFacilityName),
+                referringFacilityType: form.referringFacilityType || undefined,
+                referringFacilityContact: t(form.referringFacilityContact),
+            } : {}),
             clientRequestId: clientRequestIdRef.current,
             payerType: form.payerType,
             depositExpected: form.depositExpected ? parseFloat(form.depositExpected) : undefined,
@@ -325,14 +382,28 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                 preAuthNo: t(form.preAuthNo),
                 packageCode: t(form.packageCode),
                 sanctionedAmount: form.sanctionedAmount ? parseFloat(form.sanctionedAmount) : undefined,
+                entitledRoomCategory: form.entitledRoomCategory || undefined,
             } : {}),
         };
         setSubmitting(true);
         try {
             const res = await admissionApi.admit(payload);
             if (res.success) {
-                setSuccess({ admissionNo: res.admissionNo, patientId: res.patientId, isNewPatient: res.isNewPatient, admissionId: res.admissionId });
-                toast({ title: 'Patient admitted', description: `${res.admissionNo} · Patient ID ${res.patientId}` });
+                setSuccess({ admissionNo: res.admissionNo, patientId: res.patientId, isNewPatient: res.isNewPatient, admissionId: res.admissionId, statusCode: res.statusCode });
+                toast({ title: isPreRegistration ? 'Patient pre-registered' : 'Patient admitted', description: `${res.admissionNo} · Patient ID ${res.patientId}` });
+                // Best-effort general consent capture — never blocks or undoes an admission that
+                // already succeeded. Skipped entirely for a pre-registration (patient not yet
+                // physically present); captured instead at confirm-arrival time.
+                if (!isPreRegistration && form.consentObtained && generalConsentTemplate && res.admissionId) {
+                    try {
+                        await consentApi.sign(res.admissionId, generalConsentTemplate.consentTemplateId, {
+                            signedByName: form.consentSignedByName.trim() || form.fullName.trim() || 'Patient',
+                            signerRelation: form.consentSignerRelation.trim() || 'Self',
+                        });
+                    } catch {
+                        // Non-fatal — admission stands either way.
+                    }
+                }
             } else {
                 toast({ title: 'Could not admit', description: res.message ?? 'Please try again.', variant: 'destructive' });
             }
@@ -372,8 +443,12 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         <div className="h-16 w-16 rounded-full bg-emerald-100 ring-8 ring-emerald-50 flex items-center justify-center mb-4">
                             <Check className="h-8 w-8 text-emerald-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">Admission created</h3>
-                        <p className="text-sm text-slate-500 mt-1">{success.isNewPatient ? 'New patient registered and admitted.' : 'Returning patient admitted.'}</p>
+                        <h3 className="text-lg font-bold text-slate-900">{success.statusCode === 'PRE_ADMIT' ? 'Patient pre-registered' : 'Admission created'}</h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                            {success.statusCode === 'PRE_ADMIT'
+                                ? 'Bed/pre-auth can be arranged ahead of arrival — confirm arrival from the dashboard once the patient reaches the hospital.'
+                                : success.isNewPatient ? 'New patient registered and admitted.' : 'Returning patient admitted.'}
+                        </p>
                         <div className="mt-5 grid grid-cols-2 gap-3 w-full max-w-sm">
                             <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-3">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No.</p>
@@ -549,12 +624,13 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             {showForm && (
                                 <>
                                     <SectionCard icon={<User className="h-4 w-4" />} title="Identity"
-                                        subtitle={mode === 'new' ? 'Name is required' : 'Pre-filled — edit if needed'} tone="indigo">
+                                        subtitle={isEmergencyQuickAdmit ? 'Sex and approximate age are required — name can be backfilled later' : mode === 'new' ? 'Name is required' : 'Pre-filled — edit if needed'} tone="indigo">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <Field label="Full name" required={mode === 'new'} className="sm:col-span-2">
-                                                <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={INPUT_CLS} placeholder="Patient full name" />
+                                            <Field label="Full name" required={mode === 'new' && !isEmergencyQuickAdmit} className="sm:col-span-2">
+                                                <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={INPUT_CLS} placeholder={isEmergencyQuickAdmit ? 'Unknown — leave blank if not identifiable' : 'Patient full name'} />
+                                                {namePreview && <p className="text-[11px] text-slate-400 mt-1">Will admit as: <span className="font-semibold text-slate-600">{namePreview}</span></p>}
                                             </Field>
-                                            <Field label="Sex">
+                                            <Field label="Sex" required={isEmergencyQuickAdmit}>
                                                 <select value={form.sex} onChange={e => set('sex', e.target.value)} className={SELECT_CLS}>
                                                     <option value="">Select…</option><option value="M">Male</option><option value="F">Female</option><option value="O">Other</option>
                                                 </select>
@@ -565,8 +641,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(g => <option key={g} value={g}>{g}</option>)}
                                                 </select>
                                             </Field>
-                                            <Field label="Age (years)">
-                                                <Input type="number" min={0} max={130} value={form.ageYears} onChange={e => set('ageYears', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="e.g. 42" />
+                                            <Field label="Age (years)" required={isEmergencyQuickAdmit}>
+                                                <Input type="number" min={0} max={130} value={form.ageYears} onChange={e => set('ageYears', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="e.g. 42 (approximate is fine)" />
                                             </Field>
                                             <Field label="Date of birth">
                                                 <Input type="date" value={form.dateOfBirth} onChange={e => set('dateOfBirth', e.target.value)} className={INPUT_CLS} />
@@ -581,25 +657,25 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     </SectionCard>
 
                                     <SectionCard icon={<Phone className="h-4 w-4" />} title="Contact"
-                                        subtitle={mode === 'new' ? 'Mobile is required' : undefined} tone="sky">
+                                        subtitle={isEmergencyQuickAdmit ? 'Optional in Emergency mode' : mode === 'new' ? 'Mobile is required' : undefined} tone="sky">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <Field label="Primary mobile" required={mode === 'new'}>
+                                            <Field label="Patient mobile" required={mode === 'new' && !isEmergencyQuickAdmit}>
                                                 <Input value={form.mobile} onChange={e => set('mobile', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="10-digit mobile" />
+                                            </Field>
+                                            <Field label="Attendant / next-of-kin phone">
+                                                <Input value={form.emergencyContactPhone} onChange={e => set('emergencyContactPhone', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Often more reachable than the patient's own" />
+                                            </Field>
+                                            <Field label="Attendant / next-of-kin name">
+                                                <Input value={form.emergencyContactName} onChange={e => set('emergencyContactName', e.target.value)} className={INPUT_CLS} placeholder="Name" />
+                                            </Field>
+                                            <Field label="Relation to patient">
+                                                <Input value={form.emergencyContactRelation} onChange={e => set('emergencyContactRelation', e.target.value)} className={INPUT_CLS} placeholder="e.g. Son" />
                                             </Field>
                                             <Field label="Alternate mobile">
                                                 <Input value={form.alternateMobile} onChange={e => set('alternateMobile', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
                                             </Field>
-                                            <Field label="Email" className="sm:col-span-2">
+                                            <Field label="Email">
                                                 <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={INPUT_CLS} placeholder="Optional" />
-                                            </Field>
-                                            <Field label="Emergency contact">
-                                                <Input value={form.emergencyContactName} onChange={e => set('emergencyContactName', e.target.value)} className={INPUT_CLS} placeholder="Name" />
-                                            </Field>
-                                            <Field label="Relation">
-                                                <Input value={form.emergencyContactRelation} onChange={e => set('emergencyContactRelation', e.target.value)} className={INPUT_CLS} placeholder="e.g. Son" />
-                                            </Field>
-                                            <Field label="Emergency phone" className="sm:col-span-2">
-                                                <Input value={form.emergencyContactPhone} onChange={e => set('emergencyContactPhone', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Phone" />
                                             </Field>
                                         </div>
                                     </SectionCard>
@@ -663,7 +739,21 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 );
                                             })}
                                         </div>
+
+                                        {form.admissionType === 'ELECTIVE' && (
+                                            <label className="flex items-start gap-2 text-xs text-slate-600 mb-4 p-2.5 rounded-lg border border-brand-200 bg-brand-50/50 cursor-pointer">
+                                                <input type="checkbox" checked={form.isPreRegistration} onChange={e => set('isPreRegistration', e.target.checked)} className="mt-0.5" />
+                                                <span><span className="font-semibold text-slate-800">Patient not yet arrived — pre-register.</span> Bed/pre-auth can still be arranged now; confirm arrival later from the dashboard.</span>
+                                            </label>
+                                        )}
+
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <Field label="Admitting consultant">
+                                                <select value={form.primaryDoctorId} onChange={e => set('primaryDoctorId', e.target.value)} className={SELECT_CLS}>
+                                                    <option value="">— Not specified —</option>
+                                                    {doctors.map(d => <option key={d.doctorId} value={d.doctorId}>{d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}</option>)}
+                                                </select>
+                                            </Field>
                                             <Field label="Provisional diagnosis">
                                                 <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
                                             </Field>
@@ -685,11 +775,31 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 </select>
                                             </Field>
                                             {(form.referralSource === 'DOCTOR' || form.referralSource === 'HOSPITAL') && (
-                                                <Field label="Referrer name">
-                                                    <Input value={form.referralName} onChange={e => set('referralName', e.target.value)} className={INPUT_CLS} placeholder="Doctor / hospital name" />
+                                                <Field label="Referrer name" className="text-slate-500">
+                                                    <Input value={form.referralName} onChange={e => set('referralName', e.target.value)} className={INPUT_CLS} placeholder="Doctor / hospital name (for MIS/commission)" />
                                                 </Field>
                                             )}
                                         </div>
+
+                                        {form.referralSource === 'HOSPITAL' && (
+                                            <div className="mt-3 pt-3 border-t border-slate-100">
+                                                <p className="text-[11px] font-semibold text-slate-500 mb-2">Transfer-in facility <span className="font-normal text-slate-400">(for referral records — PM-JAY rules &amp; your referral-network analytics)</span></p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <Field label="Facility type">
+                                                        <select value={form.referringFacilityType} onChange={e => set('referringFacilityType', e.target.value as FormState['referringFacilityType'])} className={SELECT_CLS}>
+                                                            <option value="">— Select —</option>
+                                                            {REFERRING_FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                                        </select>
+                                                    </Field>
+                                                    <Field label="Facility name">
+                                                        <Input value={form.referringFacilityName} onChange={e => set('referringFacilityName', e.target.value)} className={INPUT_CLS} placeholder="e.g. Sub-District Hospital" />
+                                                    </Field>
+                                                    <Field label="Facility contact">
+                                                        <Input value={form.referringFacilityContact} onChange={e => set('referringFacilityContact', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        )}
                                     </SectionCard>
 
                                     {/* ── Payer & bed ────────────────────────────────── */}
@@ -743,12 +853,46 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <Field label="Package code">
                                                     <Input value={form.packageCode} onChange={e => set('packageCode', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="e.g. PM-JAY HBP code" />
                                                 </Field>
-                                                <Field label="Sanctioned amount (₹)" className="sm:col-span-2">
+                                                <Field label="Entitled room category">
+                                                    <select value={form.entitledRoomCategory} onChange={e => set('entitledRoomCategory', e.target.value)} className={SELECT_CLS}>
+                                                        <option value="">— Not specified —</option>
+                                                        {ROOM_CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
+                                                    </select>
+                                                </Field>
+                                                <Field label="Sanctioned amount (₹)">
                                                     <Input type="number" min={0} value={form.sanctionedAmount} onChange={e => set('sanctionedAmount', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
                                                 </Field>
                                             </div>
                                         )}
+
+                                        {showsEntitlementWarning && (
+                                            <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5">
+                                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                                <p className="text-[11px] text-amber-800">
+                                                    Patient is entitled to <span className="font-semibold">{form.entitledRoomCategory.replace('_', ' ')}</span> — the picked bed ({pickedBed?.wardType}) is above that. The differential will show as non-payable at discharge unless the patient/family accepts the upgrade.
+                                                </p>
+                                            </div>
+                                        )}
                                     </SectionCard>
+
+                                    {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
+                                        <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="General consent" subtitle="Optional — can also be captured later" tone="emerald">
+                                            <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
+                                                <input type="checkbox" checked={form.consentObtained} onChange={e => set('consentObtained', e.target.checked)} className="mt-0.5" />
+                                                <span>General admission &amp; treatment consent obtained from the patient/attendant.</span>
+                                            </label>
+                                            {form.consentObtained && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                                                    <Field label="Signed by">
+                                                        <Input value={form.consentSignedByName} onChange={e => set('consentSignedByName', e.target.value)} className={INPUT_CLS} placeholder={form.fullName || 'Patient name'} />
+                                                    </Field>
+                                                    <Field label="Relation to patient">
+                                                        <Input value={form.consentSignerRelation} onChange={e => set('consentSignerRelation', e.target.value)} className={INPUT_CLS} placeholder="Self" />
+                                                    </Field>
+                                                </div>
+                                            )}
+                                        </SectionCard>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -758,12 +902,15 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             <Button variant="outline" className="h-10 px-4" onClick={closeAll}><X className="h-4 w-4 mr-1" /> Cancel</Button>
                             <div className="flex-1 min-w-0">
                                 {showForm && !canSubmit && mode === 'new' && (
-                                    <p className="text-[11px] text-slate-400 truncate">Name and mobile are required to admit.</p>
+                                    <p className="text-[11px] text-slate-400 truncate">
+                                        {isEmergencyQuickAdmit ? 'Sex and approximate age are required to admit.' : 'Name and mobile are required to admit.'}
+                                    </p>
                                 )}
                                 {isReturning && <p className="text-[11px] text-slate-400 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
                             </div>
                             <Button onClick={submit} disabled={!canSubmit || submitting} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
-                                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Admit patient
+                                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                                {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
                             </Button>
                         </div>
                     </>

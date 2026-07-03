@@ -105,13 +105,22 @@ export interface AdmitPatientPayload {
     abhaId?: string;
 
     admissionType?: AdmissionTypeCode;
+    primaryDoctorId?: string;          // admitting consultant
     admittedAt?: string | null;
     expectedDischargeAt?: string | null;
     admissionReason?: string;
     diagnosis?: string;
+    // Elective only: patient hasn't physically arrived yet — creates a PRE_ADMIT admission instead
+    // of a completed one; confirm arrival later via admissionApi.confirmArrival.
+    isPreRegistration?: boolean;
 
     referralSource?: 'SELF' | 'DOCTOR' | 'HOSPITAL' | '';
     referralName?: string;
+    // Structured "referred/transferred in from an outside facility" — distinct from referralSource/
+    // referralName above, which track referral commission, not provenance.
+    referringFacilityName?: string;
+    referringFacilityType?: 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | 'OTHER' | '';
+    referringFacilityContact?: string;
 
     // ── Payer branch (CASH is fully wired; TPA/SCHEME are capture-only in Phase 1) ──
     payerType?: 'CASH' | 'TPA' | 'SCHEME';
@@ -126,6 +135,7 @@ export interface AdmitPatientPayload {
     preAuthNo?: string;
     packageCode?: string;
     sanctionedAmount?: number | null;
+    entitledRoomCategory?: string;     // drives the bed-entitlement warning + TPA-split proration
 }
 
 export interface AdmitPatientResponse {
@@ -137,10 +147,31 @@ export interface AdmitPatientResponse {
     isNewPatient?: boolean;
     admittedAt?: string;
     wasExisting?: boolean;
+    statusCode?: string;    // ADMITTED, or PRE_ADMIT when isPreRegistration was set
     encounterId?: string | null;
     payerType?: string | null;
     bedId?: string | null;
     bedAssignmentId?: string | null;
+}
+
+export interface ConfirmArrivalResponse {
+    success?: boolean;
+    message?: string;
+    admissionId?: string;
+    admittedAt?: string;
+    bedId?: string | null;
+    bedAssignmentId?: string | null;
+}
+
+export interface HospitalDoctorItem {
+    doctorId: string;
+    fullName?: string | null;
+    departmentName?: string | null;
+}
+
+interface GetHospitalDoctorsResponse {
+    success?: boolean;
+    doctors?: HospitalDoctorItem[];
 }
 
 // ─── Active admissions (real data — every currently-open admission for the hospital) ─
@@ -162,6 +193,7 @@ export interface ActiveAdmissionItem {
     bedCode?: string | null;      // null => no bed assigned yet
     wardName?: string | null;
     encounterId?: string | null;
+    entitledRoomCategory?: string | null;   // drives the bed-entitlement warning at assign/transfer
 }
 
 interface GetActiveAdmissionsResponse {
@@ -221,6 +253,16 @@ export const admissionApi = {
             ...payload,
             hospitalId: hospitalIdOrThrow(hospitalId),
         }),
+
+    confirmArrival: (admissionId: string, bedId?: string, hospitalId?: string): Promise<ConfirmArrivalResponse> =>
+        ipdApiClient.post<ConfirmArrivalResponse>('/admission/confirm-arrival', {
+            hospitalId: hospitalIdOrThrow(hospitalId), admissionId, bedId: bedId || undefined,
+        }),
+
+    getHospitalDoctors: (hospitalId?: string): Promise<HospitalDoctorItem[]> =>
+        ipdApiClient
+            .get<GetHospitalDoctorsResponse>('/doctors/hospital', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .then(r => r.doctors ?? []),
 
     checkDuplicates: (payload: CheckDuplicatesPayload, hospitalId?: string): Promise<DuplicateMatch[]> =>
         ipdApiClient

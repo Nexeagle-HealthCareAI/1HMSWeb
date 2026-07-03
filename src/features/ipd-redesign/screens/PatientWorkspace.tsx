@@ -7,9 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
     ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
+    AlertTriangle,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
+import { isAboveEntitlement } from '../utils/roomEntitlement';
 import { ClinicalOrderPanel } from '../components/ClinicalOrderPanel';
 import { MarPanel } from '../components/MarPanel';
 import { VitalsPanel } from '../components/VitalsPanel';
@@ -283,6 +285,14 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                             {bedBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
                                             {bedActionMode === 'assign' ? 'Assign' : 'Transfer'}
                                         </Button>
+                                        {isAboveEntitlement(freeBeds.find(b => b.bedId === pickedBedId)?.wardType, current.entitledRoomCategory) && (
+                                            <div className="w-full flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5">
+                                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                                <p className="text-[11px] text-amber-800">
+                                                    Patient is entitled to <span className="font-semibold">{current.entitledRoomCategory?.replace('_', ' ')}</span> — this bed is above that. The differential will show as non-payable at discharge unless the patient/family accepts the upgrade.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
