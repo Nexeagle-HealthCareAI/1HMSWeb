@@ -14,7 +14,10 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ipdBillingService, type ChargeMaster as BackendChargeMaster, type UpsertChargeMasterRequest } from '@/features/billing/services/ipdBillingService';
+import {
+    ipdBillingService, type ChargeMaster as BackendChargeMaster, type UpsertChargeMasterRequest,
+    type ChargeMasterPayerRate, type RoomClassRateMultiplier, type PayerType,
+} from '@/features/billing/services/ipdBillingService';
 
 // Short code prefix per category — used to auto-generate a default Charge Code (e.g. LAB-001).
 const CATEGORY_CODE_PREFIX: Record<string, string> = {
@@ -34,6 +37,11 @@ export interface ChargeRecord {
     defaultQty: number;
     maxDiscountPercent: number;
     incentiveAmount: number;
+    hsnSacCode?: string;
+    isTaxable: boolean;
+    gstSlabPercent?: number;
+    taxInclusive: boolean;
+    isIRDAIPayable: boolean;
     isActive: boolean;
     sortOrder: number;
     notes?: string;
@@ -50,6 +58,11 @@ const fromBackend = (m: BackendChargeMaster): ChargeRecord => ({
     defaultQty: Number(m.defaultQty ?? 1),
     maxDiscountPercent: Number(m.maxDiscountPercent ?? 0),
     incentiveAmount: Number(m.incentiveAmount ?? 0),
+    hsnSacCode: m.hsnSacCode,
+    isTaxable: m.isTaxable ?? false,
+    gstSlabPercent: m.gstSlabPercent != null ? Number(m.gstSlabPercent) : undefined,
+    taxInclusive: m.taxInclusive ?? false,
+    isIRDAIPayable: m.isIRDAIPayable ?? true,
     isActive: m.isActive,
     sortOrder: Number(m.sortOrder ?? 0),
     notes: m.notes,
@@ -72,6 +85,30 @@ export const ChargeMaster = () => {
     const [editingRecord, setEditingRecord] = useState<Partial<ChargeRecord> | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    // Rate card state (payer-type override + room-class multiplier)
+    const [payerRates, setPayerRates] = useState<ChargeMasterPayerRate[]>([]);
+    const [roomMultipliers, setRoomMultipliers] = useState<RoomClassRateMultiplier[]>([]);
+    const [rateCardLoading, setRateCardLoading] = useState(true);
+    const [newPayerRate, setNewPayerRate] = useState<{ chargeId: string; payerType: PayerType; overrideRate: string }>({ chargeId: '', payerType: 'TPA', overrideRate: '' });
+    const [newRoomMultiplier, setNewRoomMultiplier] = useState<{ roomType: string; multiplierPercent: string }>({ roomType: 'ICU', multiplierPercent: '100' });
+    const [rateCardSaving, setRateCardSaving] = useState(false);
+
+    const loadRateCard = useCallback(async () => {
+        setRateCardLoading(true);
+        try {
+            const res = await ipdBillingService.getRateCardConfig();
+            setPayerRates(res.payerRates ?? []);
+            setRoomMultipliers(res.roomMultipliers ?? []);
+        } catch {
+            setPayerRates([]);
+            setRoomMultipliers([]);
+        } finally {
+            setRateCardLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { loadRateCard(); }, [loadRateCard]);
 
     const loadCharges = useCallback(async (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
@@ -159,7 +196,9 @@ export const ChargeMaster = () => {
         } else {
             setEditingRecord({
                 chargeCode: nextChargeCode('CONSULT'), displayName: '', appliesTo: 'OPD', categoryCode: 'CONSULT',
-                defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0, isActive: true, sortOrder: (charges.length + 1) * 10
+                defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0,
+                isTaxable: false, taxInclusive: false, isIRDAIPayable: true,
+                isActive: true, sortOrder: (charges.length + 1) * 10
             });
         }
         setIsDrawerOpen(true);
@@ -202,6 +241,11 @@ export const ChargeMaster = () => {
                 defaultQty: Number(editingRecord.defaultQty ?? 1),
                 maxDiscountPercent: Number(editingRecord.maxDiscountPercent ?? 0),
                 incentiveAmount: Number(editingRecord.incentiveAmount ?? 0),
+                hsnSacCode: editingRecord.hsnSacCode,
+                isTaxable: editingRecord.isTaxable ?? false,
+                gstSlabPercent: editingRecord.isTaxable ? Number(editingRecord.gstSlabPercent ?? 0) : undefined,
+                taxInclusive: editingRecord.taxInclusive ?? false,
+                isIRDAIPayable: editingRecord.isIRDAIPayable ?? true,
                 isActive: editingRecord.isActive ?? true,
                 sortOrder: Number(editingRecord.sortOrder ?? 0),
                 notes: editingRecord.notes,
@@ -238,13 +282,52 @@ export const ChargeMaster = () => {
             if (addAnother) {
                 setEditingRecord({
                     chargeCode: nextChargeCode(savedRecord.categoryCode), displayName: '', appliesTo: savedRecord.appliesTo, categoryCode: savedRecord.categoryCode,
-                    defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0, isActive: true, sortOrder: savedRecord.sortOrder + 10
+                    defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0,
+                    isTaxable: false, taxInclusive: false, isIRDAIPayable: true,
+                    isActive: true, sortOrder: savedRecord.sortOrder + 10
                 });
             } else {
                 setIsDrawerOpen(false);
                 setEditingRecord(null);
             }
         }, 1200);
+    };
+
+    const handleAddPayerRate = async () => {
+        const rate = Number(newPayerRate.overrideRate);
+        if (!newPayerRate.chargeId || !rate || rate <= 0) {
+            toast({ title: 'Select a charge and enter a rate', variant: 'destructive' });
+            return;
+        }
+        setRateCardSaving(true);
+        try {
+            await ipdBillingService.upsertPayerRate({ chargeId: newPayerRate.chargeId, payerType: newPayerRate.payerType, overrideRate: rate, isActive: true });
+            toast({ title: 'Payer rate saved.' });
+            setNewPayerRate({ chargeId: '', payerType: 'TPA', overrideRate: '' });
+            loadRateCard();
+        } catch (e: any) {
+            toast({ title: 'Could not save payer rate', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setRateCardSaving(false);
+        }
+    };
+
+    const handleAddRoomMultiplier = async () => {
+        const pct = Number(newRoomMultiplier.multiplierPercent);
+        if (!newRoomMultiplier.roomType || !pct || pct <= 0) {
+            toast({ title: 'Select a room type and enter a multiplier', variant: 'destructive' });
+            return;
+        }
+        setRateCardSaving(true);
+        try {
+            await ipdBillingService.upsertRoomMultiplier({ roomType: newRoomMultiplier.roomType, multiplierPercent: pct });
+            toast({ title: 'Room-class multiplier saved.' });
+            loadRateCard();
+        } catch (e: any) {
+            toast({ title: 'Could not save room multiplier', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setRateCardSaving(false);
+        }
     };
 
 
@@ -421,6 +504,71 @@ export const ChargeMaster = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* RATE CARDS: payer-type override + room-class multiplier */}
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Payer Rate Overrides</h3>
+                        <div className="grid grid-cols-[1fr_90px_110px_auto] gap-2 mb-3">
+                            <Select value={newPayerRate.chargeId} onValueChange={v => setNewPayerRate(p => ({ ...p, chargeId: v }))}>
+                                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Charge item" /></SelectTrigger>
+                                <SelectContent>
+                                    {charges.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={newPayerRate.payerType} onValueChange={v => setNewPayerRate(p => ({ ...p, payerType: v as PayerType }))}>
+                                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="CASH">CASH</SelectItem>
+                                    <SelectItem value="TPA">TPA</SelectItem>
+                                    <SelectItem value="SCHEME">SCHEME</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Input type="number" min="0" className="h-9 text-xs font-mono" placeholder="Rate ₹" value={newPayerRate.overrideRate} onChange={e => setNewPayerRate(p => ({ ...p, overrideRate: e.target.value }))} />
+                            <Button size="sm" className="h-9" disabled={rateCardSaving} onClick={handleAddPayerRate}>Save</Button>
+                        </div>
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                            {rateCardLoading ? (
+                                <Skeleton className="h-8 w-full" />
+                            ) : payerRates.length === 0 ? (
+                                <p className="text-xs text-gray-400">No payer overrides configured — all payers bill at Default Rate.</p>
+                            ) : payerRates.map(r => (
+                                <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-gray-50 dark:bg-slate-800/50">
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">{r.chargeDisplayName ?? r.chargeCode}</span>
+                                    <span className="text-gray-500">{r.payerType} · ₹{r.overrideRate.toLocaleString('en-IN')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Room-Class Rate Multipliers</h3>
+                        <div className="grid grid-cols-[1fr_110px_auto] gap-2 mb-3">
+                            <Select value={newRoomMultiplier.roomType} onValueChange={v => setNewRoomMultiplier(p => ({ ...p, roomType: v }))}>
+                                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['GENERAL', 'ICU', 'NICU', 'PICU', 'HDU', 'CCU', 'ICCU', 'PRIVATE', 'SEMI_PRIVATE', 'OTHER'].map(w => (
+                                        <SelectItem key={w} value={w}>{w.replace('_', ' ')}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Input type="number" min="0" className="h-9 text-xs font-mono" placeholder="% (100 = no change)" value={newRoomMultiplier.multiplierPercent} onChange={e => setNewRoomMultiplier(p => ({ ...p, multiplierPercent: e.target.value }))} />
+                            <Button size="sm" className="h-9" disabled={rateCardSaving} onClick={handleAddRoomMultiplier}>Save</Button>
+                        </div>
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                            {rateCardLoading ? (
+                                <Skeleton className="h-8 w-full" />
+                            ) : roomMultipliers.length === 0 ? (
+                                <p className="text-xs text-gray-400">No room multipliers configured — every room type bills at 100% of Default Rate.</p>
+                            ) : roomMultipliers.map(r => (
+                                <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-gray-50 dark:bg-slate-800/50">
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">{r.roomType.replace('_', ' ')}</span>
+                                    <span className="text-gray-500">{r.multiplierPercent}%</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* RIGHT DRAWER: CREATE/EDIT */}
@@ -577,6 +725,70 @@ export const ChargeMaster = () => {
                                                 />
                                             </div>
                                         </div>
+                                    </div>
+                                </section>
+
+                                <section className="space-y-4">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Tax &amp; Insurance
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2">
+                                            <Label>HSN/SAC Code</Label>
+                                            <Input
+                                                className="font-mono"
+                                                placeholder="e.g. 9993"
+                                                value={editingRecord?.hsnSacCode || ''}
+                                                onChange={e => setEditingRecord(p => ({ ...p!, hsnSacCode: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label className="flex justify-between">
+                                                <span>GST Slab (%)</span>
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                min="0" max="28"
+                                                className="font-mono"
+                                                disabled={!editingRecord?.isTaxable}
+                                                placeholder="0"
+                                                value={editingRecord?.gstSlabPercent ?? ''}
+                                                onChange={e => setEditingRecord(p => ({ ...p!, gstSlabPercent: Number(e.target.value) }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                        <div>
+                                            <Label className="font-semibold cursor-pointer">Taxable</Label>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Otherwise this item is GST-exempt</p>
+                                        </div>
+                                        <Switch
+                                            checked={!!editingRecord?.isTaxable}
+                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isTaxable: v, gstSlabPercent: v ? p!.gstSlabPercent : undefined }))}
+                                            className="data-[state=checked]:bg-green-500"
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                        <div>
+                                            <Label className="font-semibold cursor-pointer">Rate is tax-inclusive</Label>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Default Rate above already includes GST</p>
+                                        </div>
+                                        <Switch
+                                            checked={!!editingRecord?.taxInclusive}
+                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, taxInclusive: v }))}
+                                            className="data-[state=checked]:bg-green-500"
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                        <div>
+                                            <Label className="font-semibold cursor-pointer">TPA/insurance payable</Label>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Off = counted as non-payable in the IRDAI discharge split</p>
+                                        </div>
+                                        <Switch
+                                            checked={editingRecord?.isIRDAIPayable ?? true}
+                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isIRDAIPayable: v }))}
+                                            className="data-[state=checked]:bg-green-500"
+                                        />
                                     </div>
                                 </section>
 

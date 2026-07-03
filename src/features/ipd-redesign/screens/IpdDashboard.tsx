@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ interface Props {
     onOpenBedBoard: () => void;
     onOpenCssdBoard: () => void;
     onOpenKpiDashboard: () => void;
+    onOpenConsultantLedger: () => void;
     onOpenWorkspace: (admission: ActiveAdmissionItem) => void;
     refreshSignal: number;
 }
@@ -63,7 +64,7 @@ interface Props {
  * dashboard are their own screens; per-patient management — bed, medications, discharge,
  * surgery — is the Patient Workspace screen, opened by clicking a row). Backed by GET /admission/active.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenWorkspace, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
@@ -136,6 +137,9 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     </Button>
                     <Button onClick={onOpenKpiDashboard} variant="outline" className="h-10 font-semibold">
                         <Gauge className="h-4 w-4 mr-2" /> KPI Dashboard
+                    </Button>
+                    <Button onClick={onOpenConsultantLedger} variant="outline" className="h-10 font-semibold">
+                        <Stethoscope className="h-4 w-4 mr-2" /> Consultant Ledger
                     </Button>
                     <Button onClick={onAdmit} className="h-10 bg-brand-600 hover:bg-brand-700 font-semibold">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient

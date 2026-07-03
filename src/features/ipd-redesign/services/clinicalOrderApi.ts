@@ -32,6 +32,7 @@ export interface ClinicalOrderLineItem {
     urgency?: string | null;
     scheduledAt?: string | null;
     isHighAlert: boolean;
+    isDailyRecurringCharge: boolean;
     qty: number;
     statusCode: string;          // ACTIVE / DISCONTINUED
     chargeEventId?: string | null;
@@ -66,6 +67,7 @@ export interface ClinicalOrderLineInput {
     urgency?: OrderUrgency;
     scheduledAt?: string;
     isHighAlert?: boolean;
+    isDailyRecurringCharge?: boolean;
     qty?: number;
 }
 

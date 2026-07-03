@@ -4,6 +4,7 @@ import { AdmitPatientSheet } from './screens/AdmitPatientSheet';
 import { BedBoardScreen } from './screens/BedBoardScreen';
 import { CssdBoardScreen } from './screens/CssdBoardScreen';
 import { IpdKpiDashboardScreen } from './screens/IpdKpiDashboardScreen';
+import { ConsultantLedgerScreen } from './screens/ConsultantLedgerScreen';
 import { PatientWorkspace } from './screens/PatientWorkspace';
 import type { ActiveAdmissionItem } from './services/admissionApi';
 
@@ -12,6 +13,7 @@ type View =
     | { name: 'bedboard' }
     | { name: 'cssdboard' }
     | { name: 'kpidashboard' }
+    | { name: 'consultantledger' }
     | { name: 'workspace'; admission: ActiveAdmissionItem };
 
 /**
@@ -36,6 +38,7 @@ export const IpdWorkflowApp: React.FC = () => {
                     onOpenBedBoard={() => setView({ name: 'bedboard' })}
                     onOpenCssdBoard={() => setView({ name: 'cssdboard' })}
                     onOpenKpiDashboard={() => setView({ name: 'kpidashboard' })}
+                    onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
                     onOpenWorkspace={(admission) => setView({ name: 'workspace', admission })}
                     refreshSignal={refreshTick}
                 />
@@ -51,6 +54,10 @@ export const IpdWorkflowApp: React.FC = () => {
 
             {view.name === 'kpidashboard' && (
                 <IpdKpiDashboardScreen onBack={() => setView({ name: 'dashboard' })} />
+            )}
+
+            {view.name === 'consultantledger' && (
+                <ConsultantLedgerScreen onBack={() => setView({ name: 'dashboard' })} />
             )}
 
             {view.name === 'workspace' && (

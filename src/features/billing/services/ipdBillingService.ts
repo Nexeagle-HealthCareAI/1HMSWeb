@@ -30,6 +30,9 @@ export interface ChargeMaster {
     gstSlabPercent?: number;
     taxInclusive?: boolean;
 
+    // TPA/insurance
+    isIRDAIPayable?: boolean;
+
     isActive: boolean;
     sortOrder: number;
     notes?: string;
@@ -63,6 +66,9 @@ export interface UpsertChargeMasterRequest {
     gstSlabPercent?: number;
     taxInclusive?: boolean;
 
+    // TPA/insurance
+    isIRDAIPayable?: boolean;
+
     isActive: boolean;
     sortOrder?: number;
     notes?: string;
@@ -71,6 +77,43 @@ export interface UpsertChargeMasterRequest {
 export interface UpsertChargeMasterResponse {
     chargeId: string;
     chargeCode?: string;
+}
+
+// ─── Rate cards (payer override + room-class multiplier) ─────────────────────
+
+export type PayerType = 'CASH' | 'TPA' | 'SCHEME';
+
+export interface ChargeMasterPayerRate {
+    chargeMasterPayerRateId: string;
+    chargeId: string;
+    chargeDisplayName?: string;
+    chargeCode?: string;
+    payerType: PayerType | string;
+    overrideRate: number;
+    isActive: boolean;
+}
+
+export interface RoomClassRateMultiplier {
+    roomClassRateMultiplierId: string;
+    roomType: string;
+    multiplierPercent: number;
+}
+
+export interface GetRateCardConfigResponse {
+    payerRates?: ChargeMasterPayerRate[];
+    roomMultipliers?: RoomClassRateMultiplier[];
+}
+
+export interface UpsertPayerRateRequest {
+    chargeId: string;
+    payerType: PayerType | string;
+    overrideRate: number;
+    isActive?: boolean;
+}
+
+export interface UpsertRoomMultiplierRequest {
+    roomType: string;
+    multiplierPercent: number;
 }
 
 // ─── Charge Events ────────────────────────────────────────────────────────────
@@ -435,6 +478,17 @@ export const ipdBillingService = {
 
     updateChargeMasterStatus: (chargeId: string, isActive: boolean, hospitalId?: string): Promise<{ isSucess: boolean; message?: string }> =>
         ipdApiClient.patch(IPD_API_ENDPOINTS.CHARGE.UPDATE_MASTER_STATUS(chargeId, hospitalIdOrThrow(hospitalId)), { isActive }),
+
+    // Rate cards: payer-type rate override + room-class multiplier. Both optional — absence
+    // falls through to ChargeMaster.defaultRate at charge-posting time.
+    getRateCardConfig: (hospitalId?: string): Promise<GetRateCardConfigResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.CHARGE.GET_RATE_CARD(hospitalIdOrThrow(hospitalId))),
+
+    upsertPayerRate: (req: UpsertPayerRateRequest, hospitalId?: string) =>
+        ipdApiClient.put(IPD_API_ENDPOINTS.CHARGE.UPSERT_PAYER_RATE, { ...req, hospitalId: hospitalIdOrThrow(hospitalId) }),
+
+    upsertRoomMultiplier: (req: UpsertRoomMultiplierRequest, hospitalId?: string) =>
+        ipdApiClient.put(IPD_API_ENDPOINTS.CHARGE.UPSERT_ROOM_MULTIPLIER, { ...req, hospitalId: hospitalIdOrThrow(hospitalId) }),
 
     // Charge Events
     // Creates a billing encounter for a registered patient without requiring an appointment
