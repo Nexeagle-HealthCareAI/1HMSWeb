@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,16 +53,17 @@ interface Props {
     onAdmit: () => void;
     onOpenBedBoard: () => void;
     onOpenCssdBoard: () => void;
+    onOpenKpiDashboard: () => void;
     onOpenWorkspace: (admission: ActiveAdmissionItem) => void;
     refreshSignal: number;
 }
 
 /**
- * IPD dashboard — the admitted-patient list only (the live bed board and CSSD board are their
- * own screens; per-patient management — bed, medications, discharge, surgery — is the Patient
- * Workspace screen, opened by clicking a row). Backed by GET /admission/active.
+ * IPD dashboard — the admitted-patient list only (the live bed board, CSSD board, and KPI
+ * dashboard are their own screens; per-patient management — bed, medications, discharge,
+ * surgery — is the Patient Workspace screen, opened by clicking a row). Backed by GET /admission/active.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenWorkspace, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
@@ -132,6 +133,9 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     </Button>
                     <Button onClick={onOpenCssdBoard} variant="outline" className="h-10 font-semibold">
                         <Package className="h-4 w-4 mr-2" /> CSSD Board
+                    </Button>
+                    <Button onClick={onOpenKpiDashboard} variant="outline" className="h-10 font-semibold">
+                        <Gauge className="h-4 w-4 mr-2" /> KPI Dashboard
                     </Button>
                     <Button onClick={onAdmit} className="h-10 bg-brand-600 hover:bg-brand-700 font-semibold">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient
