@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Table2, LineChart as LineChartIcon } from 'lucide-react';
 import { vitalsApi, type VitalReadingItem, type RecordVitalReadingFields } from '../services/vitalsApi';
+import { VitalsTrendChart } from './VitalsTrendChart';
 import { formatIstDateTime } from '../utils/istDate';
 
 interface Props {
@@ -19,6 +21,7 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
     const [readings, setReadings] = useState<VitalReadingItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [view, setView] = useState<'table' | 'chart'>('chart');
     const [newOpen, setNewOpen] = useState(false);
     const [form, setForm] = useState<RecordVitalReadingFields>({ ...EMPTY_FORM });
     const [submitting, setSubmitting] = useState(false);
@@ -61,6 +64,16 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             <div className="flex items-center justify-between">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Vitals</h2>
                 <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100">
+                        <button type="button" onClick={() => setView('chart')}
+                            className={cn('h-7 px-2.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', view === 'chart' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            <LineChartIcon className="h-3.5 w-3.5" /> Chart
+                        </button>
+                        <button type="button" onClick={() => setView('table')}
+                            className={cn('h-7 px-2.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', view === 'table' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            <Table2 className="h-3.5 w-3.5" /> Table
+                        </button>
+                    </div>
                     <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
@@ -76,6 +89,8 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                 <div className="py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading vitals…</div>
             ) : readings.length === 0 ? (
                 <div className="py-12 text-center text-sm text-slate-400">No vital readings yet.</div>
+            ) : view === 'chart' ? (
+                <VitalsTrendChart readings={readings} />
             ) : (
                 <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
                     <table className="w-full text-sm">

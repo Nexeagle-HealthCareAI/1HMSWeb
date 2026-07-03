@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
-    ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2,
+    ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -24,11 +24,12 @@ import { ConsentPanel } from '../components/ConsentPanel';
 import { DischargeSummaryPanel } from '../components/DischargeSummaryPanel';
 import { BloodBankPanel } from '../components/BloodBankPanel';
 import { SurgeryCasePanel } from '../components/SurgeryCasePanel';
+import { IcuCriticalCarePanel } from '../components/IcuCriticalCarePanel';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'discharge';
+type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
@@ -218,6 +219,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     <button type="button" onClick={() => setActiveSection('surgery')} className={navItemClass(activeSection === 'surgery')}>
                         <Scissors className="h-4 w-4" /> Surgery
+                    </button>
+
+                    <button type="button" onClick={() => setActiveSection('criticalCare')} className={navItemClass(activeSection === 'criticalCare')}>
+                        <Siren className="h-4 w-4" /> Critical Care
                     </button>
 
                     {/* Always visible, unlike every other section — staff need to reopen a signed
@@ -432,6 +437,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     {activeSection === 'surgery' && (
                         <SurgeryCasePanel admissionId={current.admissionId} isActive={isActive} />
+                    )}
+
+                    {activeSection === 'criticalCare' && (
+                        <IcuCriticalCarePanel admissionId={current.admissionId} isActive={isActive} />
                     )}
 
                     {activeSection === 'discharge' && (
