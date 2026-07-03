@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { generateUuid } from '@/utils/uuid';
 import {
     UserPlus, Search, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
@@ -155,7 +156,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
     // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
     // submission so a retried network call can't create a duplicate admission.
-    const clientRequestIdRef = useRef<string>(crypto.randomUUID());
+    const clientRequestIdRef = useRef<string>(generateUuid());
 
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -258,7 +259,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         setSearchText(''); setResults([]); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
-        clientRequestIdRef.current = crypto.randomUUID();
+        clientRequestIdRef.current = generateUuid();
     };
 
     const switchMode = (m: Mode) => {

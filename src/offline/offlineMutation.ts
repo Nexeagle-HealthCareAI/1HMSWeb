@@ -1,6 +1,7 @@
 import { isReachable } from './connectivity';
 import { enqueue } from './outbox';
 import type { OutboxItem } from './db';
+import { generateUuid } from '@/utils/uuid';
 
 export interface OfflineMutationOptions<T> {
     entity: string;                                   // 'appointment', 'vitals', …
@@ -34,7 +35,7 @@ export async function offlineMutation<T>(opts: OfflineMutationOptions<T>): Promi
         const data = await opts.run();
         return { queued: false, data };
     }
-    const clientKey = crypto.randomUUID();
+    const clientKey = generateUuid();
     opts.optimistic?.(clientKey);
     await enqueue({
         clientKey,
