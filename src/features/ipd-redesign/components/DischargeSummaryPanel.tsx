@@ -56,6 +56,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [dischargeNotes, setDischargeNotes] = useState('');
     const [dischargeBusy, setDischargeBusy] = useState(false);
 
+    const [lamaOpen, setLamaOpen] = useState(false);
+    const [lamaReason, setLamaReason] = useState('');
+    const [lamaBusy, setLamaBusy] = useState(false);
+
     const isCash = admission.payerType === 'CASH';
     const isDischarged = admission.statusCode === 'DISCHARGED';
 
@@ -184,6 +188,23 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             toast({ title: 'Could not discharge', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
         } finally {
             setDischargeBusy(false);
+        }
+    };
+
+    // Patient left the premises without receiving (or completing) treatment — a distinct exit
+    // path from the normal discharge flow. Reuses the existing LAMA status transition (auto-
+    // releases the bed, closes the admission) — no separate "zero treatment" concept in the schema.
+    const confirmLama = async () => {
+        setLamaBusy(true);
+        try {
+            await bedBoardApi.updateAdmissionStatus(admission.admissionId, 'LAMA', lamaReason || undefined);
+            toast({ title: 'Recorded — patient left without treatment.' });
+            setLamaOpen(false);
+            onDischarged();
+        } catch (err) {
+            toast({ title: 'Could not record', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setLamaBusy(false);
         }
     };
 
@@ -400,11 +421,16 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             )}
 
             {isActive && !isDischarged && (
-                <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-sm text-slate-600">Discharge is a separate action from signing the summary — sign whenever ready, discharge when the patient physically leaves.</p>
-                    <Button className="bg-amber-600 hover:bg-amber-700 font-semibold shrink-0" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
-                        <LogOut className="h-4 w-4 mr-2" /> Discharge now
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Button variant="outline" className="text-slate-500 hover:text-rose-600" onClick={() => { setLamaReason(''); setLamaOpen(true); }}>
+                            Left without treatment
+                        </Button>
+                        <Button className="bg-amber-600 hover:bg-amber-700 font-semibold" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
+                            <LogOut className="h-4 w-4 mr-2" /> Discharge now
+                        </Button>
+                    </div>
                 </div>
             )}
 
@@ -462,6 +488,25 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Button variant="ghost" onClick={() => setDischargeOpen(false)}>Cancel</Button>
                         <Button disabled={dischargeBusy} className="bg-amber-600 hover:bg-amber-700" onClick={confirmDischarge}>
                             {dischargeBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={lamaOpen} onOpenChange={setLamaOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>{admission.patientName || 'Patient'} left without treatment?</DialogTitle>
+                        <DialogDescription>Records the admission as LAMA (left against medical advice), closes it, and releases the bed. This cannot be undone.</DialogDescription>
+                    </DialogHeader>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Reason</Label>
+                        <Textarea rows={3} value={lamaReason} onChange={e => setLamaReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setLamaOpen(false)}>Cancel</Button>
+                        <Button disabled={lamaBusy} className="bg-rose-600 hover:bg-rose-700" onClick={confirmLama}>
+                            {lamaBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm
                         </Button>
                     </div>
                 </DialogContent>
