@@ -78,6 +78,18 @@ export interface ResetPasswordWithUserIdResponse {
   message: string;
 }
 
+// Change password from an authenticated session (My Profile) — the backend resolves the
+// target user from the caller's own JWT, so no userId is sent here.
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  password: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface UserPermissionsRequest {
   userId: string;
 }
@@ -118,6 +130,11 @@ export const authApi = {
   // Reset password with userId (for forgot password)
   resetPasswordWithUserId: (data: ResetPasswordWithUserIdRequest): Promise<ResetPasswordWithUserIdResponse> => {
     return apiClient.patch(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
+  },
+
+  // Change password from My Profile (requires the current password)
+  changePassword: (data: ChangePasswordRequest): Promise<ChangePasswordResponse> => {
+    return apiClient.patch(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, data);
   },
 
   // Get user permissions

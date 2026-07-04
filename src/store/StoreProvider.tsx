@@ -43,7 +43,8 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
           setAuthenticatedUser(userId, token);
         }
       }
-      // Extend the token expiry by 24 hours when the app loads
+      // No real refresh endpoint exists yet — refreshToken() is a no-op today. If/when a
+      // refresh endpoint is added, this is where an actual server round-trip would go.
       refreshToken();
     }
   }, []);
@@ -66,11 +67,11 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     // Update activity periodically (every 5 minutes)
     const interval = setInterval(updateActivity, 5 * 60 * 1000);
 
-    // Check and refresh token during active sessions
+    // No real refresh endpoint exists yet, so this can't actually extend the session — the
+    // 401 interceptor (axiosClient.ts) handles the real expiry by logging out + redirecting.
     const tokenRefreshInterval = setInterval(() => {
       const { isTokenExpiringSoon, refreshToken } = useAuthStore.getState();
       if (isTokenExpiringSoon()) {
-        console.log('Token expiring soon, refreshing...');
         refreshToken();
       }
     }, 60 * 1000); // Check every minute

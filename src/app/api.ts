@@ -74,6 +74,7 @@ export const API_ENDPOINTS = {
     OTP_CHECKER: 'auth/otp/verify',
     SET_PASSWORD: 'auth/user/password?scope=set-password',
     RESET_PASSWORD: 'auth/user/password?scope=reset-password',
+    CHANGE_PASSWORD: 'auth/user/password?scope=change-password',
   },
   USER: {
     PERMISSIONS: 'user/permissions',

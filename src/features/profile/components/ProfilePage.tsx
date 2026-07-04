@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { DoctorProfile } from '@/features/doctor/components/DoctorProfile';
 import { useUserDetails, useUpdateUserDetails } from '@/hooks/useUserProfileApi';
+import { useAuthApi } from '@/hooks/useApi';
 import { ProfilePictureUploader } from '@/components/shared';
 import { UserProfileUpdateRequest, UserDetailsResponse } from '@/features/profile/services/userProfileApi';
 import { useMediaUploadApi } from '@/hooks/useApi';
@@ -48,7 +49,8 @@ import {
   AlertCircle,
   ExternalLink,
   Edit3,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -165,6 +167,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   // User profile API hooks
   const { data: userDetailsResponse, isLoading: userDetailsLoading } = useUserDetails(userId || '');
   const updateUserDetailsMutation = useUpdateUserDetails();
+  const changePasswordMutation = useAuthApi.changePassword();
 
 
   const [expanded, setExpanded] = useState<string[]>(['personal']);
@@ -174,6 +177,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [basicErrors, setBasicErrors] = useState<FieldErrors>({});
   const [addressErrors, setAddressErrors] = useState<FieldErrors>({});
   const [employmentErrors, setEmploymentErrors] = useState<FieldErrors>({});
+
+  // Change Password (independent of the profile-edit toggle above)
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordFormError, setPasswordFormError] = useState<string | undefined>(undefined);
 
 
   // Validation schemas (Zod)
@@ -606,6 +615,42 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       toast({ title: t('profilePage.toast.savedTitle'), description: t('profilePage.toast.employmentSaved') });
     } finally {
       setSaving((s) => ({ ...s, employment: false }));
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordFormError(undefined);
+
+    if (!currentPassword.trim()) {
+      setPasswordFormError('Current password is required.');
+      return;
+    }
+    const strength = ValidationUtils.validatePassword(newPassword);
+    if (!strength.isValid) {
+      setPasswordFormError(strength.errors[0]);
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordFormError('New password and confirmation do not match.');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setPasswordFormError('New password cannot be the same as your current password.');
+      return;
+    }
+
+    try {
+      const res = await changePasswordMutation.mutateAsync({ currentPassword, password: newPassword });
+      if (!res.success) {
+        setPasswordFormError(res.message || 'Could not change password.');
+        return;
+      }
+      toast({ title: 'Password changed', description: 'Your password has been updated successfully.' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      setPasswordFormError(error?.response?.data?.message || error?.message || 'Could not change password.');
     }
   };
 
@@ -1239,7 +1284,88 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 </Card>
               </div>
 
-
+              {/* Change Password — independent of the profile-edit toggle above */}
+              <div className="mb-4">
+                <Card className="transition-colors dark:border-border">
+                  <CardContent className="p-4 sm:p-6">
+                    <Accordion type="single" collapsible>
+                      <AccordionItem value="password">
+                        <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
+                          <div className="flex flex-wrap items-center gap-2 text-left">
+                            <Lock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-foreground">Change Password</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-4 mt-4 max-w-md">
+                            <div>
+                              <Label htmlFor="currentPassword">
+                                Current Password <span className="text-red-500" aria-hidden="true">*</span>
+                              </Label>
+                              <Input
+                                id="currentPassword"
+                                type="password"
+                                autoComplete="current-password"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="newPassword">
+                                New Password <span className="text-red-500" aria-hidden="true">*</span>
+                              </Label>
+                              <Input
+                                id="newPassword"
+                                type="password"
+                                autoComplete="new-password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="confirmNewPassword">
+                                Confirm New Password <span className="text-red-500" aria-hidden="true">*</span>
+                              </Label>
+                              <Input
+                                id="confirmNewPassword"
+                                type="password"
+                                autoComplete="new-password"
+                                value={confirmNewPassword}
+                                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                            {passwordFormError && (
+                              <p className="text-xs text-red-600">{passwordFormError}</p>
+                            )}
+                            <div className="flex justify-end pt-2 border-t">
+                              <Button
+                                onClick={handleChangePassword}
+                                disabled={changePasswordMutation.isPending}
+                                className="flex items-center justify-center gap-2 w-full sm:w-auto"
+                              >
+                                {changePasswordMutation.isPending ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Changing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="h-4 w-4" />
+                                    Change Password
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Doctor Professional (moved to top) removed here to avoid duplicate */}
             </Accordion>
