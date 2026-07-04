@@ -1,18 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse } from '../services/appointmentApi';
+import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse, type AppointmentDetail } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
 import { usePatientSearch } from '../hooks/usePatientSearch';
 import { PatientSearchItem } from '../services/appointmentApi';
 import { patientApi, type DuplicateMatch, type DuplicateConfidence } from '@/features/patient/services/patientApi';
 import { isReachable } from '@/offline';
 import { useReferrers, useCreateReferrer } from '../hooks/useReferrers';
+import type { Referrer } from '../services/referrerApi';
 import { useAuthStore } from '@/store/authStore';
 import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
 import { toast } from '@/hooks/use-toast';
+import { patientProfileApi } from '@/features/patient/services/patientProfileApi';
 
 // Define types locally to avoid import issues
 interface Doctor {
@@ -154,7 +156,6 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -165,6 +166,10 @@ interface PatientFormProps {
   hospitalId?: string;
   onSubmit: (patientInfo: any) => void;
   onCancel: () => void;
+  // Present => edit this existing appointment in place instead of booking a new one.
+  // The parent still resolves/synthesizes selectedSlot+doctor (this form has no slot picker);
+  // Reschedule remains the separate, dedicated path for actually changing doctor/date/time.
+  editAppointment?: AppointmentDetail;
 }
 
 export const PatientForm: React.FC<PatientFormProps> = ({
@@ -172,7 +177,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   doctor,
   hospitalId,
   onSubmit,
-  onCancel
+  onCancel,
+  editAppointment
 }) => {
   const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState<PatientFormState>(createInitialFormState());
@@ -222,8 +228,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       h => h.apptDate
         && localDayKey(h.apptDate) === selectedSlot.date
         && (h.statusCode ?? '').toUpperCase() !== 'CANCELLED'
+        // Editing an appointment naturally finds itself in its own doctor timeline — that's
+        // not a duplicate, it's the record being edited.
+        && h.appointmentId !== editAppointment?.appointmentId
     ) ?? null;
-  }, [timeline, selectedSlot?.date]);
+  }, [timeline, selectedSlot?.date, editAppointment?.appointmentId]);
 
   useEffect(() => {
     if (!doctor?.id) { setConsultCtx({ autoConsult: false, fee: 0 }); return; }
@@ -265,7 +274,67 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { data: referrersData } = useReferrers(hospitalId || '', referrerSearch.trim() || undefined);
   const createReferrer = useCreateReferrer(hospitalId || '');
   const referrers = referrersData?.referrers ?? [];
-  const selectedReferrer = referrers.find(r => r.referrerId === formData.referrerId);
+  // Captured directly at selection time — NOT derived via referrers.find(), which used to break
+  // right after picking a result: clearing referrerSearch on select changes the react-query key
+  // (search term → unfiltered), so `referrers` would momentarily/actually resolve empty and the
+  // chip (and the referrer name sent with the booking) would silently fall back to "Self".
+  const [selectedReferrer, setSelectedReferrer] = useState<Referrer | null>(null);
+
+  // Edit mode: seed the form from the appointment being edited, plus a patient-profile fetch
+  // for the full demographics AppointmentDetail doesn't carry (address/city/pincode/etc).
+  useEffect(() => {
+    if (!editAppointment) return;
+    setFormData(prev => ({
+      ...prev,
+      patientId: editAppointment.patientId || '',
+      name: editAppointment.patientFullName || '',
+      phone: formatPhoneNumber(editAppointment.patientMobile || ''),
+      age: editAppointment.patientAge != null ? String(editAppointment.patientAge) : '',
+      ageUnit: editAppointment.patientAgeUnit || 'Y',
+      gender: editAppointment.patientSex || 'Male',
+      reason: editAppointment.reason || '',
+      hasInsurance: !!editAppointment.insuranceId,
+      insuranceId: editAppointment.insuranceId || '',
+      paymentMode: editAppointment.paymentMode || '',
+      guardianName: editAppointment.guardianName || '',
+      guardianRelation: editAppointment.guardianRelation || 'C/O',
+    }));
+    if (editAppointment.referrerId) {
+      setFormData(prev => ({ ...prev, referrerId: editAppointment.referrerId || '' }));
+      setSelectedReferrer({
+        referrerId: editAppointment.referrerId,
+        referrerName: editAppointment.referrerName || '',
+        referrerType: editAppointment.referrerType || 'REFERRER',
+        phone: null,
+        email: null,
+        address: null,
+        pan: null,
+        defaultRatePercent: 0,
+        isActive: true,
+      });
+    }
+    if (!hospitalId || !editAppointment.patientId) return;
+    let active = true;
+    patientProfileApi.getPatientProfile(hospitalId, editAppointment.patientId)
+      .then(profile => {
+        if (!active) return;
+        setFormData(prev => ({
+          ...prev,
+          address: profile.addressLine1 || prev.address,
+          city: profile.city || prev.city,
+          pincode: profile.pincode || prev.pincode,
+          country: profile.country || prev.country,
+          bloodGroup: profile.bloodGroup || prev.bloodGroup,
+          email: profile.email || prev.email,
+          emergencyContactName: profile.emergencyContactName || prev.emergencyContactName,
+          emergencyContactPhone: profile.emergencyContactPhone || prev.emergencyContactPhone,
+        }));
+      })
+      .catch(() => { /* non-fatal — core fields already seeded from editAppointment */ });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editAppointment?.appointmentId, hospitalId]);
+
   const pendingValidationErrors = useMemo(() => collectValidationErrors(formData), [formData]);
   const isFormReady = Object.keys(pendingValidationErrors).length === 0;
 
@@ -355,6 +424,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       guardianName: (patient as any).guardianName || '',
       guardianRelation: (patient as any).guardianRelation || 'C/O',
     });
+    setSelectedReferrer(null);
     setShowSearchResults(false);
     setSearchQuery('');
     setSelectedIndex(0);
@@ -532,6 +602,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10,
         userId: getUserId() || '',
         referredByReferrerId,
+        ...(editAppointment ? { appointmentId: editAppointment.appointmentId } : {}),
       };
 
       // Call the API using the hook
@@ -612,15 +683,25 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   return (
-    <Sheet open={true} onOpenChange={onCancel}>
-      <SheetContent side="right" className="w-[100vw] sm:max-w-[540px] md:max-w-[700px] p-0 flex flex-col gap-0 border-l dark:bg-gray-900 shadow-2xl overflow-hidden">
+    <Dialog open={true} onOpenChange={onCancel}>
+      <DialogContent className="w-[96vw] max-w-[1600px] h-[92vh] max-h-[92vh] p-0 flex flex-col gap-0 rounded-2xl border border-border/60 shadow-2xl overflow-hidden bg-background dark:bg-gray-900">
         {/* Sticky Header */}
-        <SheetHeader className="p-4 md:p-6 border-b bg-background z-10 shrink-0 text-left">
+        <DialogHeader className="p-3 md:p-4 border-b bg-gradient-to-br from-brand-50 via-white to-white dark:from-brand-950/30 dark:via-gray-900 dark:to-gray-900 z-10 shrink-0 text-left space-y-0">
           <div className="pr-8 space-y-1.5">
-            <div className="flex items-center justify-between pr-4">
-              <SheetTitle className="text-2xl md:text-3xl font-extrabold text-brand-900 dark:text-brand-400 tracking-tight">
-                {t('patientForm.title')}
-              </SheetTitle>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/30">
+                  {editAppointment ? <Pencil className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-xl md:text-2xl font-extrabold text-brand-900 dark:text-brand-300 tracking-tight truncate">
+                    {editAppointment ? t('patientForm.editTitle', { defaultValue: 'Edit Appointment' }) : t('patientForm.title')}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+                    {t('patientForm.description')}
+                  </DialogDescription>
+                </div>
+              </div>
               {showConsult && (
                 <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm shrink-0">
                   <span className="text-sm">⚡</span>
@@ -628,14 +709,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
               )}
             </div>
-            <SheetDescription className="text-sm text-gray-600 dark:text-gray-300">
-              {t('patientForm.description')}
-            </SheetDescription>
           </div>
-          
+
           {/* Appointment Details Row in Header */}
           <div className="mt-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar">
-            <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-brand-50/80 dark:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-lg border border-brand-200/60 dark:border-brand-700 shadow-sm whitespace-nowrap text-brand-800 dark:text-brand-200">
+            <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-white/80 dark:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-brand-200/60 dark:border-brand-700 shadow-sm whitespace-nowrap text-brand-800 dark:text-brand-200">
               <div className="flex items-center gap-1.5 md:gap-2">
                 <User className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
                 <span className="font-semibold">{doctor.name}</span>
@@ -657,17 +735,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               </div>
             </div>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <ScrollArea className="flex-1 px-4 md:px-6 py-4">
-          <div className="grid grid-cols-1 gap-4 md:gap-5 pb-6">
+        <ScrollArea className="flex-1 min-h-0 px-4 md:px-6 py-3 bg-slate-50/60 dark:bg-transparent">
+          <div className="grid grid-cols-1 gap-4 md:gap-5 pb-3">
           {/* Main Form */}
           <div className="w-full">
-            <form id="patient-form" onSubmit={handleSubmit} className="space-y-2 md:space-y-4">
+            <form id="patient-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5 items-start">
               {/* Duplicate-patient warning (new patient only) */}
               {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (
-                <div className={`rounded-xl border shadow-sm overflow-hidden ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
+                <div className={`xl:col-span-12 rounded-xl border shadow-sm overflow-hidden ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-black/5">
                     <AlertTriangle className={`h-4 w-4 shrink-0 ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'text-rose-600' : 'text-amber-600'}`} />
                     <div className="min-w-0 flex-1">
@@ -695,7 +773,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
               )}
               {/* Personal & Contact Information - Single Row */}
-              <Card className="p-3 md:p-4 dark:bg-gray-800 shadow-sm mt-0">
+              <Card className="xl:col-span-5 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow mt-0">
                 <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-base md:text-lg text-foreground dark:text-white flex items-center gap-2">
                     <User className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
@@ -860,7 +938,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             </span>
                             <button
                               type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, referrerId: '' }))}
+                              onClick={() => { setFormData(prev => ({ ...prev, referrerId: '' })); setSelectedReferrer(null); }}
                               className="ml-2 shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -913,7 +991,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                                   <button
                                     key={r.referrerId}
                                     type="button"
-                                    onClick={() => { setFormData(prev => ({ ...prev, referrerId: r.referrerId })); setReferrerSearch(''); }}
+                                    onClick={() => { setFormData(prev => ({ ...prev, referrerId: r.referrerId })); setSelectedReferrer(r); setReferrerSearch(''); }}
                                     className={`w-full text-left px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center gap-3 transition-colors border-l-4 ${accentCls}`}
                                   >
                                     <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white ${avatarCls}`}>
@@ -1118,10 +1196,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
               </Card>
 
-              {/* Address, Insurance & Payment - Combined */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-                {/* Address Information */}
-                <Card className="p-3 md:p-4 shadow-sm">
+              {/* Address Information */}
+              <Card className="xl:col-span-4 p-4 md:p-5 rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <MapPin className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
                     {t('patientForm.address.title')}
@@ -1204,9 +1280,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </div>
                 </Card>
 
-
+              {/* Emergency Contact + Consultation & Payment column */}
+              <div className="xl:col-span-3 flex flex-col gap-4 md:gap-5">
                 {/* Emergency Contact (optional) */}
-                <Card className="p-3 md:p-4 shadow-sm">
+                <Card className="p-4 md:p-5 rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <Phone className="h-4 w-4 md:h-5 md:w-5 text-rose-500" />
                     Emergency Contact <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
@@ -1236,7 +1313,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
                 {/* Consultation & Payment — shown when there is consult history or a fee to collect */}
                 {(timeline || showConsult) && (
-                <Card className="p-3 md:p-4 shadow-sm">
+                <Card className="p-4 md:p-5 rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                     {t('patientForm.payment.title', { defaultValue: 'Consultation & Payment' })}
@@ -1333,12 +1410,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         </ScrollArea>
 
         {/* Sticky Footer */}
-        <div className="p-4 md:p-6 border-t bg-background shrink-0 flex justify-end gap-3 md:gap-4 mt-auto">
+        <div className="p-3 md:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 shrink-0 flex justify-end gap-3 md:gap-4 mt-auto">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="flex-1 md:flex-none md:min-w-[200px] h-10 md:h-11 md:text-base"
+            className="flex-1 md:flex-none md:min-w-[160px] h-10 md:h-11 md:text-base"
           >
             {t('patientForm.actions.cancel')}
           </Button>
@@ -1346,13 +1423,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             type="submit"
             form="patient-form"
             disabled={isSubmitting || isBookingLoading || !isFormReady}
-            className="flex-1 md:flex-none md:min-w-[320px] h-10 md:h-11 md:text-base bg-healthcare-primary hover:bg-healthcare-primary/90 gap-2 shadow-lg shadow-brand-500/20"
+            className="flex-1 md:flex-none md:min-w-[280px] h-10 md:h-11 md:text-base bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 gap-2 shadow-lg shadow-brand-500/30"
           >
             {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
+            {isSubmitting || isBookingLoading
+              ? t('patientForm.actions.submitting')
+              : editAppointment
+                ? t('patientForm.actions.saveChanges', { defaultValue: 'Save changes' })
+                : t('patientForm.actions.submit')}
           </Button>
         </div>
-      </SheetContent>
+      </DialogContent>
 
       {/* Same-day duplicate appointment warning (warn, but allow) */}
       {/* We use a separate Dialog here so it overlays above the Sheet safely */}
@@ -1404,6 +1485,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-    </Sheet>
+    </Dialog>
   );
 };
