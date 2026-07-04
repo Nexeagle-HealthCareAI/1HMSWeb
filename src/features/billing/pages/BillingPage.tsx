@@ -35,6 +35,7 @@ import { offlineCachedRead, isReachable } from '@/offline';
 import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
+import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 import { VISIT_TYPES, visitTypeLabel } from '../utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
@@ -388,7 +389,7 @@ export const BillingPage: React.FC = () => {
 
     // Render the bill (invoice / receipt / bill-cum-receipt) from the loaded ledger data
     // using the shared A4 templates — print to a window or download as PDF.
-    const handleDoc = async (kind: OpdDocKind, mode: 'print' | 'download', paymentId?: string) => {
+    const handleDoc = async (kind: OpdDocKind, mode: 'print' | 'download', paymentId?: string, paperFormat?: 'a4' | 'thermal') => {
         if (!selectedPatient || !eventsData || docBusy) return;
         setDocBusy(true);
         try {
@@ -418,7 +419,7 @@ export const BillingPage: React.FC = () => {
                     }
                 } catch { /* best-effort — invoice still prints without the breakup */ }
             }
-            const html = getOpdDocHtml(kind, eventsData, settings, ctx, { paymentId, dayWise });
+            const html = getOpdDocHtml(kind, eventsData, settings, ctx, { paymentId, dayWise, paperFormat });
             const fileSuffix = paymentId ? `${kind}-${paymentId.slice(0, 8)}` : `${kind}-${selectedPatient.patientId}`;
             if (mode === 'print') openPrintHtml(html);
             else await downloadHtmlAsPdf(html, `${fileSuffix}.pdf`);
@@ -806,8 +807,11 @@ export const BillingPage: React.FC = () => {
                                                 </td>
                                                 <td className="px-2 py-2 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-0.5">
-                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Print this payment's receipt" onClick={() => handleDoc('receipt', 'print', row.p.paymentId)}>
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Print this payment's receipt (A4)" onClick={() => handleDoc('receipt', 'print', row.p.paymentId, 'a4')}>
                                                             <Printer className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" disabled={docBusy} title="Print this payment's receipt (80mm thermal)" onClick={() => handleDoc('receipt', 'print', row.p.paymentId, 'thermal')}>
+                                                            <Receipt className="h-3.5 w-3.5" />
                                                         </Button>
                                                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}>
                                                             <Download className="h-3.5 w-3.5" />
@@ -956,7 +960,10 @@ export const BillingPage: React.FC = () => {
                                                     <div key={kind} className="flex items-center justify-between gap-1.5 text-xs">
                                                         <span className="font-medium text-slate-600 truncate">{label}</span>
                                                         <div className="flex gap-1 shrink-0">
-                                                            <Button size="sm" variant="ghost" title={`Print ${label}`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3.5 w-3.5" /></Button>
+                                                            <Button size="sm" variant="ghost" title={`Print ${label} (A4)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print', undefined, 'a4')}><Printer className="h-3.5 w-3.5" /></Button>
+                                                            {kind === 'receipt' && (
+                                                                <Button size="sm" variant="ghost" title={`Print ${label} (80mm thermal)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print', undefined, 'thermal')}><Receipt className="h-3.5 w-3.5" /></Button>
+                                                            )}
                                                             <Button size="sm" variant="ghost" title={`Download ${label} (PDF)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3.5 w-3.5" /></Button>
                                                         </div>
                                                     </div>
@@ -972,6 +979,11 @@ export const BillingPage: React.FC = () => {
                                 <p className="font-bold">VISIT CANCELLED</p>
                                 {selectedEncounter.cancelReason && <p className="mt-1">{selectedEncounter.cancelReason}</p>}
                             </div>
+                        )}
+
+                        {/* Credit approvals (only renders if any approvals exist for this encounter) */}
+                        {selectedEncounterId && (
+                            <CreditApprovalsCard encounterId={selectedEncounterId} pendingOnly={false} />
                         )}
                     </CardContent>
                 </Card>
@@ -994,7 +1006,7 @@ export const BillingPage: React.FC = () => {
                     onOpenChange={setShowAddPayment}
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
-                    suggestedAmount={Math.max(0, due)}
+                    netBalance={due}
                     onSaved={handlePaymentSaved}
                 />
             )}

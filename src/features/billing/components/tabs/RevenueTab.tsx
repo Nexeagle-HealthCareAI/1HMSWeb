@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search, Plus, Calendar, ArrowRight, IndianRupee,
-    ChevronLeft, ChevronRight, RefreshCw, Wallet, TrendingDown, TrendingUp, CheckCircle2,
+    ChevronLeft, ChevronRight, RefreshCw, Wallet, TrendingDown, TrendingUp, CheckCircle2, PiggyBank,
 } from 'lucide-react';
 import { ipdBillingService } from '../../services/ipdBillingService';
 import { offlineCachedRead } from '@/offline';
@@ -146,18 +146,19 @@ export const RevenueTab: React.FC = () => {
     // KPIs reflect the current view (date/status/search filters) — so with the default "today"
     // filter these are the day's billed / collected / unpaid totals.
     const kpis = useMemo(() => {
-        let billed = 0, collected = 0, due = 0, bills = 0, unpaid = 0;
+        let billed = 0, collected = 0, due = 0, credit = 0, bills = 0, unpaid = 0, inCredit = 0;
         for (const r of filteredRows) {
             if (r.status === 'CANCELLED') continue;
             billed += r.totalDebit;
             collected += r.totalCredit;
             const d = Math.max(0, r.balance);
             due += d;
+            if (r.balance < 0) { credit += Math.abs(r.balance); inCredit += 1; }
             bills += 1;
             if (d > 0) unpaid += 1;
         }
         const rate = billed > 0 ? Math.round((collected / billed) * 100) : 0;
-        return { billed, collected, due, bills, unpaid, rate };
+        return { billed, collected, due, credit, bills, unpaid, inCredit, rate };
     }, [filteredRows]);
 
     // Human label for what the KPIs currently cover (drives the "scope" chip).
@@ -225,10 +226,11 @@ export const RevenueTab: React.FC = () => {
                         <Calendar className="h-3 w-3" /> {scopeLabel}
                     </span>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                     <KpiStat label="Billed" amount={kpis.billed} format={inr} hint={`${kpis.bills} ${kpis.bills === 1 ? 'bill' : 'bills'}`} icon={<IndianRupee className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-brand-100/50 text-brand-900" />
                     <KpiStat label="Collected" amount={kpis.collected} format={inr} hint={`${kpis.rate}% collected`} icon={<Wallet className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" />
                     <KpiStat label="Outstanding" amount={kpis.due} format={inr} hint={`${kpis.unpaid} unpaid ${kpis.unpaid === 1 ? 'bill' : 'bills'}`} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
+                    <KpiStat label="Credit Outstanding" amount={kpis.credit} format={inr} hint={`${kpis.inCredit} ${kpis.inCredit === 1 ? 'bill' : 'bills'} in credit`} icon={<PiggyBank className="h-5 w-5 text-blue-600" />} tone="from-blue-50 to-indigo-100/50 text-blue-900" />
                     <KpiStat label="Collection Rate" value={`${kpis.rate}%`} hint={`${inr(kpis.collected)} of ${inr(kpis.billed)}`} icon={<TrendingUp className="h-5 w-5 text-violet-600" />} tone="from-violet-50 to-fuchsia-100/50 text-violet-900" />
                 </div>
             </div>
@@ -348,11 +350,24 @@ export const RevenueTab: React.FC = () => {
                                         <TableCell className="text-right text-sm text-slate-700 tabular-nums">{inr(g.current?.totalDebit ?? 0)}</TableCell>
                                         <TableCell className="text-right text-emerald-600 text-sm font-bold tabular-nums">{inr(g.current?.totalCredit ?? 0)}</TableCell>
                                         <TableCell className="text-right">
-                                            {(g.current ? Math.max(0, g.current.balance) : 0) > 0 ? (
-                                                <span className="font-bold text-rose-600 text-sm tabular-nums">{inr(Math.max(0, g.current!.balance))}</span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-emerald-700 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm"><CheckCircle2 className="h-3 w-3" /> Paid</span>
-                                            )}
+                                            {(() => {
+                                                const bal = g.current?.balance ?? 0;
+                                                if (bal > 0) {
+                                                    return <span className="font-bold text-rose-600 text-sm tabular-nums">{inr(bal)}</span>;
+                                                }
+                                                if (bal < 0) {
+                                                    return (
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-blue-700 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
+                                                            <PiggyBank className="h-3 w-3" /> Credit {inr(Math.abs(bal))}
+                                                        </span>
+                                                    );
+                                                }
+                                                return (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-emerald-700 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm">
+                                                        <CheckCircle2 className="h-3 w-3" /> Paid
+                                                    </span>
+                                                );
+                                            })()}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             {g.pastDue > 0 ? (

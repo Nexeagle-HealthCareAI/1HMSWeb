@@ -58,9 +58,10 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
     }, [open, netBalance]);
 
     const needsTxnId = paymentMode !== 'CASH';
-    const canSubmit = amount > 0 && !submitting;
-
+    const availableCredit = netBalance < 0 ? Math.abs(netBalance) : 0;
     const exceedsBalance = paymentType === 'PAYMENT' && amount > Math.max(0, netBalance);
+    const exceedsCredit = paymentType === 'REFUND' && availableCredit > 0 && amount > availableCredit;
+    const canSubmit = amount > 0 && !exceedsCredit && !submitting;
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
@@ -81,13 +82,20 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
             if (!res.success) {
                 throw new Error(res.message ?? 'Payment failed');
             }
-            const credit = res.data?.creditAmount;
-            toast({
-                title: `Payment recorded · ${res.data?.receiptNo ?? ''}`,
-                description: credit && credit > 0
-                    ? `₹${(res.data?.allocatedAmount ?? 0).toLocaleString('en-IN')} allocated, ₹${credit.toLocaleString('en-IN')} held as advance credit.`
-                    : `₹${(res.data?.allocatedAmount ?? amount).toLocaleString('en-IN')} allocated.`,
-            });
+            if (res.pendingApproval) {
+                toast({
+                    title: 'Pending admin approval',
+                    description: res.message ?? 'This would leave the patient in credit and needs Admin/AdminDoctor sign-off before it is recorded.',
+                });
+            } else {
+                const credit = res.data?.creditAmount;
+                toast({
+                    title: `Payment recorded · ${res.data?.receiptNo ?? ''}`,
+                    description: credit && credit > 0
+                        ? `₹${(res.data?.allocatedAmount ?? 0).toLocaleString('en-IN')} allocated, ₹${credit.toLocaleString('en-IN')} held as advance credit.`
+                        : `₹${(res.data?.allocatedAmount ?? amount).toLocaleString('en-IN')} allocated.`,
+                });
+            }
             onPaid();
             onOpenChange(false);
         } catch (err: any) {
@@ -112,18 +120,31 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                 </DialogHeader>
 
                 <div className="space-y-4 py-2">
-                    {/* Outstanding balance */}
-                    <div className={cn(
-                        'rounded-lg border px-3 py-2 flex items-center justify-between text-sm',
-                        netBalance > 0
-                            ? 'border-amber-200 bg-amber-50 text-amber-700'
-                            : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                    )}>
-                        <span className="font-semibold">Outstanding balance</span>
-                        <span className="font-extrabold flex items-center">
-                            <IndianRupee className="h-3.5 w-3.5" />{Math.max(0, netBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                        </span>
-                    </div>
+                    {/* Outstanding balance / credit available */}
+                    {availableCredit > 0 ? (
+                        <button
+                            type="button"
+                            onClick={() => { setPaymentType('REFUND'); setAmount(availableCredit); }}
+                            className="w-full rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2 flex items-center justify-between text-sm hover:bg-blue-100/60 transition-colors"
+                        >
+                            <span className="font-semibold">Credit available · tap to refund</span>
+                            <span className="font-extrabold flex items-center">
+                                <IndianRupee className="h-3.5 w-3.5" />{availableCredit.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                            </span>
+                        </button>
+                    ) : (
+                        <div className={cn(
+                            'rounded-lg border px-3 py-2 flex items-center justify-between text-sm',
+                            netBalance > 0
+                                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        )}>
+                            <span className="font-semibold">Outstanding balance</span>
+                            <span className="font-extrabold flex items-center">
+                                <IndianRupee className="h-3.5 w-3.5" />{Math.max(0, netBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                            </span>
+                        </div>
+                    )}
 
                     {/* Type tabs */}
                     <div>
@@ -171,6 +192,12 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                             <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1">
                                 <AlertCircle className="h-3 w-3" />
                                 Payment exceeds balance. Consider <strong>Advance</strong> to hold the excess as credit.
+                            </p>
+                        )}
+                        {exceedsCredit && (
+                            <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Refund exceeds available credit (₹{availableCredit.toLocaleString('en-IN', { maximumFractionDigits: 2 })}).
                             </p>
                         )}
                     </div>

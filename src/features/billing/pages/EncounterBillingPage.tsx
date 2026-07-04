@@ -28,6 +28,7 @@ import { offlineCachedRead, isReachable } from '@/offline';
 import { AddChargesModal } from '../components/AddChargesModal';
 import { AddPaymentModal } from '../components/AddPaymentModal';
 import { DiscountApprovalsCard } from '../components/DiscountApprovalsCard';
+import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -536,6 +537,9 @@ export const EncounterBillingPage: React.FC = () => {
 
                 {/* Discount approvals (only renders if any approvals exist for this encounter) */}
                 <DiscountApprovalsCard encounterId={encounterId} pendingOnly={false} />
+
+                {/* Credit approvals (only renders if any approvals exist for this encounter) */}
+                <CreditApprovalsCard encounterId={encounterId} pendingOnly={false} />
 
                 {/* Invoice card */}
                 {invoice && (

@@ -115,7 +115,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/print-preview"
           element={
-            <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
+            <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse', 'Accountant']}>
               <PrintPreviewPage />
             </RouteGuard>
           }
@@ -337,7 +337,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/ledger"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -347,7 +347,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/:appointmentId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -357,7 +357,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/encounter/:encounterId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Nurse']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Nurse', 'Accountant']}>
                   <MainLayout>
                     <EncounterBillingPage />
                   </MainLayout>

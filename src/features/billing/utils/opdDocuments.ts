@@ -6,6 +6,7 @@ import {
 } from '@/types/print';
 import { buildInvoiceA4 } from '@/printTemplates/invoiceA4';
 import { buildReceiptA4 } from '@/printTemplates/receiptA4';
+import { buildReceiptThermal80 } from '@/printTemplates/receiptThermal80';
 import { buildBillCumReceiptA4 } from '@/printTemplates/billCumReceiptA4';
 import { buildPaymentStatementA4 } from '@/printTemplates/paymentStatementA4';
 
@@ -182,14 +183,14 @@ export const getOpdDocHtml = (
     data: EventsData,
     settings: PrintSettings,
     ctx: OpdDocContext,
-    opts?: { paymentId?: string; dayWise?: InvoiceDayWiseRow[] },
+    opts?: { paymentId?: string; dayWise?: InvoiceDayWiseRow[]; paperFormat?: 'a4' | 'thermal' },
 ): string => {
     if (kind === 'invoice') return buildInvoiceA4({ ...mapEventsToInvoiceData(data, ctx), dayWise: opts?.dayWise }, settings);
     if (kind === 'statement') return buildPaymentStatementA4(mapEventsToStatementData(data, ctx), settings);
     const receipt = opts?.paymentId
         ? mapPaymentToReceiptData(data, ctx, opts.paymentId)
         : mapEventsToReceiptData(data, ctx);
-    if (kind === 'receipt') return buildReceiptA4(receipt, settings);
+    if (kind === 'receipt') return opts?.paperFormat === 'thermal' ? buildReceiptThermal80(receipt, settings) : buildReceiptA4(receipt, settings);
     const billcum: BillCumReceiptPrintData = {
         invoice: { ...mapEventsToInvoiceData(data, ctx), dayWise: opts?.dayWise },
         receipt,

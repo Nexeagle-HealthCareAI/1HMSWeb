@@ -282,6 +282,17 @@ export const IPD_API_ENDPOINTS = {
     },
     DECIDE: 'discount-approvals/decide',
   },
+  CREDIT_APPROVAL: {
+    LIST: (hospitalId: string, opts?: { status?: string; encounterId?: string; patientId?: string; take?: number }) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (opts?.status)      parts.push(`status=${encodeURIComponent(opts.status)}`);
+      if (opts?.encounterId) parts.push(`encounterId=${encodeURIComponent(opts.encounterId)}`);
+      if (opts?.patientId)   parts.push(`patientId=${encodeURIComponent(opts.patientId)}`);
+      if (opts?.take)        parts.push(`take=${opts.take}`);
+      return `credit-approvals?${parts.join('&')}`;
+    },
+    DECIDE: 'credit-approvals/decide',
+  },
 } as const;
 
 // Default headers

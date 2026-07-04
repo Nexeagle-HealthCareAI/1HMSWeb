@@ -417,6 +417,17 @@ export const appointmentApi = {
     return apiClient.get(url);
   },
 
+  // Most recent appointment for a patient, across all doctors/dates — used to surface
+  // "what we captured at booking" (referrer, reason, payment mode) on the patient profile.
+  getLatestAppointmentForPatient: (hospitalId: string, patientId: string): Promise<AppointmentDetail | null> => {
+    const url = `/appointments/patient-appointment-details?status=All&hospitalId=${hospitalId}&patientId=${encodeURIComponent(patientId)}`;
+    return apiClient.get<AppointmentDetailsResponse>(url).then(res => {
+      const items = res.items ?? [];
+      if (items.length === 0) return null;
+      return items.reduce((latest, item) => new Date(item.startAt) > new Date(latest.startAt) ? item : latest);
+    });
+  },
+
   // Cancel appointment
   cancelAppointment: (request: {
     appointmentId: string;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Loader2 } from 'lucide-react';
+import { CreditCard, Loader2, PiggyBank, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,11 +16,13 @@ export interface AddPaymentDialogProps {
     onOpenChange: (v: boolean) => void;
     patientId: string;
     encounterId: string;
-    suggestedAmount: number;
+    // Raw signed balance for this encounter: positive = amount due, negative = credit
+    // already held on the account (available to refund).
+    netBalance: number;
     onSaved: () => void;
 }
 
-export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, suggestedAmount, onSaved }) => {
+export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, onSaved }) => {
     const { toast } = useToast();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
@@ -29,19 +31,23 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
     const [transactionId, setTransactionId] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    const availableCredit = netBalance < 0 ? Math.abs(netBalance) : 0;
+    const exceedsCredit = paymentType === 'REFUND' && availableCredit > 0 && amount > availableCredit;
+
     useEffect(() => {
         if (open) {
             setPaymentType('PAYMENT');
             setPaymentMode('CASH');
-            setAmount(Math.max(0, suggestedAmount));
+            setAmount(Math.max(0, netBalance));
             setDescription('');
             setTransactionId('');
         }
-    }, [open, suggestedAmount]);
+    }, [open, netBalance]);
 
     const submit = async () => {
         if (submitting) return;
         if (amount <= 0) { toast({ title: 'Amount must be > 0', variant: 'destructive' }); return; }
+        if (exceedsCredit) { toast({ title: 'Refund exceeds available credit', variant: 'destructive' }); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
         setSubmitting(true);
         try {
@@ -58,7 +64,14 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
             };
             const res = await ipdBillingService.addPayment(req);
             if (!res?.success) throw new Error(res?.message ?? 'Could not record payment');
-            toast({ title: 'Payment recorded', description: `${paymentMode} · ₹${amount.toLocaleString('en-IN')}` });
+            if (res.pendingApproval) {
+                toast({
+                    title: 'Pending admin approval',
+                    description: res.message ?? 'This would leave the patient in credit and needs Admin/AdminDoctor sign-off before it is recorded.',
+                });
+            } else {
+                toast({ title: 'Payment recorded', description: `${paymentMode} · ₹${amount.toLocaleString('en-IN')}` });
+            }
             onSaved();
             onOpenChange(false);
         } catch (e: any) {
@@ -85,14 +98,27 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {suggestedAmount > 0 && (
+                    {netBalance > 0 && (
                         <button
                             type="button"
-                            onClick={() => setAmount(Math.max(0, suggestedAmount))}
+                            onClick={() => setAmount(Math.max(0, netBalance))}
                             className="w-full flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-left hover:bg-emerald-50 transition-colors"
                         >
                             <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Balance Due · tap to fill</span>
-                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{suggestedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{netBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </button>
+                    )}
+
+                    {availableCredit > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => { setPaymentType('REFUND'); setAmount(availableCredit); }}
+                            className="w-full flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-3 text-left hover:bg-blue-50 transition-colors"
+                        >
+                            <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex items-center gap-1.5">
+                                <PiggyBank className="h-3.5 w-3.5" /> Credit available · tap to refund
+                            </span>
+                            <span className="text-base font-bold text-blue-700 tabular-nums">₹{availableCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </button>
                     )}
 
@@ -125,6 +151,12 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₹</span>
                             <Input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value || '0'))} className="h-12 pl-8 rounded-xl tabular-nums text-xl font-bold" />
                         </div>
+                        {exceedsCredit && (
+                            <p className="text-[11px] text-amber-700 mt-1.5 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Refund exceeds available credit (₹{availableCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}).
+                            </p>
+                        )}
                     </div>
 
                     {paymentMode !== 'CASH' && (
