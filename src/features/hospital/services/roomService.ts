@@ -40,7 +40,7 @@ export interface UpsertRoomRequest {
     wardCode?: string;
     wardName?: string;
     wardType?: string;
-    floorNo?: string;
+    floorNo: string;
     roomNo: string;
     roomType?: string;
     capacityInRoom: number;
