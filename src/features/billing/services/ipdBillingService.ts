@@ -553,8 +553,8 @@ export const ipdBillingService = {
     getPatientEvents: (patientId: string, hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.GET_PATIENT_EVENTS(patientId, hospitalIdOrThrow(hospitalId))),
 
-    deleteEvent: (eventId: string, type: 'Charges' | 'Payment', patientId: string, hospitalId?: string) =>
-        ipdApiClient.delete(IPD_API_ENDPOINTS.BILLING.DELETE_EVENT(hospitalIdOrThrow(hospitalId), patientId, eventId, type)),
+    deleteEvent: (eventId: string, type: 'Charges' | 'Payment', patientId: string, reason: string, hospitalId?: string): Promise<{ success: boolean; message?: string; pendingApproval?: boolean; creditApprovalId?: string }> =>
+        ipdApiClient.delete(IPD_API_ENDPOINTS.BILLING.DELETE_EVENT(hospitalIdOrThrow(hospitalId), patientId, eventId, type, reason)),
 
     dashboard: (hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.DASHBOARD(hospitalIdOrThrow(hospitalId))),

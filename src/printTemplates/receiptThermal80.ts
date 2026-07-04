@@ -61,7 +61,7 @@ export const buildReceiptThermal80 = (data: ReceiptPrintData, settings: PrintSet
 
         <div class="text-center">
             <div class="label">AMOUNT RECEIVED</div>
-            <div class="big-amount">₹ ${data.amount}</div>
+            <div class="big-amount">Rs. ${data.amount}</div>
             <div>${data.mode} ${data.transactionId ? ` / ${data.transactionId.slice(-4)}` : ''}</div>
         </div>
 

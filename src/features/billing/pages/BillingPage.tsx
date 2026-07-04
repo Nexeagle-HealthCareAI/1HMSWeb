@@ -114,6 +114,7 @@ export const BillingPage: React.FC = () => {
     const [newVisitType, setNewVisitType] = useState<'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'>('OPD');
     const [creatingVisit, setCreatingVisit] = useState(false);
     const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
+    const [voidReason, setVoidReason] = useState('');
     const [voidBusy, setVoidBusy] = useState(false);
 
     // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
@@ -250,13 +251,22 @@ export const BillingPage: React.FC = () => {
 
     const handleVoid = async () => {
         if (!voidConfirm || !selectedPatient || voidBusy) return;
+        if (!voidReason.trim()) {
+            toast({ title: 'Reason required', description: 'Explain why this entry should be deleted.', variant: 'destructive' });
+            return;
+        }
         setVoidBusy(true);
         try {
             const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
-            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId);
+            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId, voidReason.trim());
             if (res?.success === false) throw new Error(res.message ?? 'Could not delete');
-            toast({ title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` });
+            toast(
+                res?.pendingApproval
+                    ? { title: 'Submitted for approval', description: `An Admin/AdminDoctor needs to approve this ${voidConfirm.kind} deletion.` }
+                    : { title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` }
+            );
             setVoidConfirm(null);
+            setVoidReason('');
             loadEvents();
         } catch (e: any) {
             toast({ title: 'Could not delete', description: e?.message ?? '', variant: 'destructive' });
@@ -1140,7 +1150,7 @@ export const BillingPage: React.FC = () => {
             </Dialog>
 
             {/* Void confirm — premium */}
-            <AlertDialog open={!!voidConfirm} onOpenChange={(o) => { if (!o) setVoidConfirm(null); }}>
+            <AlertDialog open={!!voidConfirm} onOpenChange={(o) => { if (!o) { setVoidConfirm(null); setVoidReason(''); } }}>
                 <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
                     <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-rose-500 to-rose-600">
                         <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
@@ -1148,15 +1158,25 @@ export const BillingPage: React.FC = () => {
                         </div>
                         <AlertDialogTitle className="text-white text-base font-bold">Delete this entry?</AlertDialogTitle>
                     </div>
-                    <div className="px-5 py-4">
+                    <div className="px-5 py-4 space-y-3">
                         <AlertDialogDescription className="text-sm text-slate-600">
-                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This action cannot be undone.
+                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This needs Admin/AdminDoctor approval before it takes effect.
                         </AlertDialogDescription>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">Reason (required)</label>
+                            <Textarea
+                                value={voidReason}
+                                onChange={(e) => setVoidReason(e.target.value)}
+                                rows={2}
+                                placeholder="Why should this be deleted?"
+                                className="text-sm"
+                            />
+                        </div>
                     </div>
                     <AlertDialogFooter className="px-5 pb-5 pt-0">
                         <AlertDialogCancel disabled={voidBusy} className="rounded-xl">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleVoid} disabled={voidBusy} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
-                            {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removing…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Delete</>}
+                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handleVoid(); }} disabled={voidBusy || !voidReason.trim()} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
+                            {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Request Delete</>}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

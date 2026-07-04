@@ -219,8 +219,8 @@ export const IPD_API_ENDPOINTS = {
       `billing/get-events?encounterId=${encodeURIComponent(encounterId)}&patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     GET_PATIENT_EVENTS: (patientId: string, hospitalId: string) =>
       `billing/get-event?patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
-    DELETE_EVENT: (hospitalId: string, patientId: string, eventId: string, type: string) =>
-      `billing/delete-event?hospitalId=${encodeURIComponent(hospitalId)}&patientId=${encodeURIComponent(patientId)}&eventId=${encodeURIComponent(eventId)}&type=${encodeURIComponent(type)}`,
+    DELETE_EVENT: (hospitalId: string, patientId: string, eventId: string, type: string, reason?: string) =>
+      `billing/delete-event?hospitalId=${encodeURIComponent(hospitalId)}&patientId=${encodeURIComponent(patientId)}&eventId=${encodeURIComponent(eventId)}&type=${encodeURIComponent(type)}${reason ? `&reason=${encodeURIComponent(reason)}` : ''}`,
     DASHBOARD: (hospitalId: string) => `billing/dashboard?hospitalId=${encodeURIComponent(hospitalId)}`,
     CREATE_INVOICE: 'billing/invoice',
     FINALIZE: (type: string) => `billing/finalize?type=${encodeURIComponent(type)}`,
