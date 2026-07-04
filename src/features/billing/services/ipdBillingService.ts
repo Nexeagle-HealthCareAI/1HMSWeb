@@ -241,6 +241,10 @@ export interface CreateDraftInvoiceResponse {
         taxAmount?: number;
         wasReused: boolean;
     };
+    // True when an explicit discount request would have reduced NetAmount below what's already
+    // been collected — held as a PENDING CreditApproval instead of applied.
+    pendingApproval?: boolean;
+    creditApprovalId?: string;
 }
 
 export type FinalizeAction = 'finalize' | 'reopen';

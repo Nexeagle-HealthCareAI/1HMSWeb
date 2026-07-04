@@ -1,20 +1,40 @@
-export const openPrintHtml = (htmlContent: string) => {
+// Opens a blank tab immediately — call this SYNCHRONOUSLY, as the first thing inside a click
+// handler, before any `await`. Browsers only treat window.open() as a direct, un-blockable
+// response to a user gesture when it runs before the handler yields to the event loop; once an
+// async caller has awaited anything (e.g. an API call for extra print data), a later window.open()
+// can be treated as a background popup and silently blocked or opened as an empty/blank tab.
+export const openBlankPrintWindow = (): Window | null => {
   const printWindow = window.open('', '_blank', 'width=800,height=600');
   if (!printWindow) {
     alert("Pop-up blocked! Please allow pop-ups for this site.");
-    return;
+    return null;
   }
+  printWindow.document.write(
+    '<!DOCTYPE html><html><body style="font-family:sans-serif;color:#94a3b8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">Preparing document…</body></html>'
+  );
+  return printWindow;
+};
 
+// Writes the final HTML into a tab already opened via openBlankPrintWindow() and prints it.
+export const writeAndPrint = (printWindow: Window, htmlContent: string) => {
+  printWindow.document.open();
   printWindow.document.write(htmlContent);
   printWindow.document.close(); // necessary for IE >= 10
-  printWindow.focus(); // necessary for IE >= 10*/
+  printWindow.focus(); // necessary for IE >= 10
 
   // Wait for content to load then print
   setTimeout(() => {
     printWindow.print();
     // Optional: close after print
-    // printWindow.close(); 
+    // printWindow.close();
   }, 500);
+};
+
+// Convenience wrapper for callers with the HTML ready synchronously (no async work in between).
+export const openPrintHtml = (htmlContent: string) => {
+  const printWindow = openBlankPrintWindow();
+  if (!printWindow) return;
+  writeAndPrint(printWindow, htmlContent);
 };
 
 export const openPreviewHtml = (htmlContent: string) => {

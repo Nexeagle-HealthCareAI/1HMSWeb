@@ -21,6 +21,9 @@ import {
 const inr = (n: number | undefined | null) =>
     `₹${(n ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
+const paymentTypeLabel = (paymentType: string) =>
+    paymentType === 'REFUND' ? 'Refund' : paymentType === 'DISCOUNT' ? 'Discount' : 'Advance';
+
 const STATUS_TONE: Record<string, string> = {
     PENDING:  'bg-amber-50 text-amber-700 border-amber-200',
     APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -84,7 +87,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
             if (!res.success) throw new Error(res.message ?? 'Could not decide');
             toast({
                 title: decideCtx.decision === 'APPROVED' ? 'Credit approved' : 'Credit request rejected',
-                description: `${decideCtx.item.paymentType === 'REFUND' ? 'Refund' : 'Advance'} · ${inr(decideCtx.item.requestedAmount)}`,
+                description: `${paymentTypeLabel(decideCtx.item.paymentType)} · ${inr(decideCtx.item.requestedAmount)}`,
             });
             setDecideCtx(null);
             setDecideNote('');
@@ -145,7 +148,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                         >
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-bold text-slate-900">{it.paymentType === 'REFUND' ? 'Refund' : 'Advance'}</p>
+                                    <p className="text-sm font-bold text-slate-900">{paymentTypeLabel(it.paymentType)}</p>
                                     <Badge variant="outline" className={cn('text-[10px] font-bold', tone)}>{it.status}</Badge>
                                     {it.paymentMode && <span className="text-[11px] text-slate-500">{it.paymentMode}</span>}
                                 </div>
@@ -196,7 +199,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                         <AlertDialogDescription>
                             {decideCtx && (
                                 <>
-                                    {decideCtx.item.paymentType === 'REFUND' ? 'Refund' : 'Advance'} of {inr(decideCtx.item.requestedAmount)}
+                                    {paymentTypeLabel(decideCtx.item.paymentType)} of {inr(decideCtx.item.requestedAmount)}
                                     {' — '}would leave {inr(decideCtx.item.resultingCreditBalance)} in credit.
                                     {decideCtx.decision === 'APPROVED'
                                         ? ' Approving will record this as a real payment now.'
