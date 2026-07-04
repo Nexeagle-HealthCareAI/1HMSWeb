@@ -284,6 +284,10 @@ export interface AddPaymentResponse {
         allocatedAmount: number;
         creditAmount?: number;
     };
+    // True when this would have left the patient with a credit balance and was held for
+    // admin approval instead of being posted — no payment was recorded yet.
+    pendingApproval?: boolean;
+    creditApprovalId?: string;
 }
 
 // ─── Encounter Events (read) ─────────────────────────────────────────────────
