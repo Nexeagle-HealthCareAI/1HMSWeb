@@ -214,6 +214,9 @@ export interface RegisterAppointmentRequest {
   userId: string;
   referredByReferrerId?: string;
   referrerRelation?: string;
+  // Present => update this existing appointment in place instead of creating a new one
+  // (RegisterAppointmentHandler routes on this).
+  appointmentId?: string;
 }
 
 export interface RegisterAppointmentResponse {
@@ -278,6 +281,7 @@ export interface AppointmentDetail {
   paymentMode: string;
   lastStatusAt: string;
   appointmentType: string | null;
+  referrerId?: string | null;
   referrerName?: string | null;
   referrerType?: string | null;
   referrerRelation?: string | null;

@@ -38,6 +38,7 @@ import {
   Download,
   CheckCircle2,
   ArrowRight,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +60,7 @@ import { TokenPrintModal } from './TokenPrintModal';
 import { DashboardQuickGuide } from './DashboardQuickGuide';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
+import { PatientForm } from './PatientForm';
 import { format as dateFnsFormat } from 'date-fns';
 
 // Helper to force IST timezone for date-fns formatting
@@ -145,6 +147,8 @@ export const AppointmentDashboard = () => {
   const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
+  const [showEditAppointment, setShowEditAppointment] = useState(false);
+  const [appointmentToEdit, setAppointmentToEdit] = useState<AppointmentDetail | null>(null);
   const [showQuickGuide, setShowQuickGuide] = useState(false);
 
   // Token Print State
@@ -218,6 +222,17 @@ export const AppointmentDashboard = () => {
 
   const handleRescheduleSuccess = () => {
     // Refresh list after successful reschedule
+    if (refetch) refetch();
+  };
+
+  const handleEditClick = (appointment: AppointmentDetail) => {
+    setAppointmentToEdit(appointment);
+    setShowEditAppointment(true);
+  };
+
+  const handleEditSuccess = () => {
+    setShowEditAppointment(false);
+    setAppointmentToEdit(null);
     if (refetch) refetch();
   };
 
@@ -1744,6 +1759,19 @@ export const AppointmentDashboard = () => {
                                     <CalendarClock className="h-3 w-3 mr-1.5 opacity-80" />
                                     Reschedule
                                   </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                    className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
+                                      ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
+                                      : 'text-slate-600 border-slate-200 dark:border-slate-800/50 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 dark:hover:from-slate-900/20 dark:hover:to-slate-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-slate-300 dark:hover:border-slate-700'
+                                      }`}
+                                    onClick={() => handleEditClick(appointment)}
+                                  >
+                                    <Pencil className="h-3 w-3 mr-1.5 opacity-80" />
+                                    {t('common.edit', { defaultValue: 'Edit' })}
+                                  </Button>
                                   {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                                     <Button
                                       variant="outline"
@@ -2451,6 +2479,31 @@ export const AppointmentDashboard = () => {
             appointment={appointmentToReschedule}
             onSuccess={handleRescheduleSuccess}
             enableDoctorSelection={true}
+          />
+        )
+      }
+      {
+        showEditAppointment && appointmentToEdit && (
+          <PatientForm
+            editAppointment={appointmentToEdit}
+            selectedSlot={{
+              id: appointmentToEdit.appointmentId,
+              time: format(new Date(appointmentToEdit.startAt), 'HH:mm'),
+              isBooked: true,
+              doctorId: String(appointmentToEdit.doctorId),
+              date: getAppointmentDateKey(appointmentToEdit),
+              slotDurationInMinutes: Math.max(1, Math.round((new Date(appointmentToEdit.endAt).getTime() - new Date(appointmentToEdit.startAt).getTime()) / 60000)),
+            }}
+            doctor={{
+              id: String(appointmentToEdit.doctorId),
+              name: appointmentToEdit.doctorName || '',
+              department: appointmentToEdit.departmentName || '',
+              specialization: '',
+              is_available: true,
+            }}
+            hospitalId={hospitalId || ''}
+            onSubmit={handleEditSuccess}
+            onCancel={() => { setShowEditAppointment(false); setAppointmentToEdit(null); }}
           />
         )
       }
