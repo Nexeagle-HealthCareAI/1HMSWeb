@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, User, Edit3, Save, X, Phone, MapPin, Calendar, CreditCard, Heart } from 'lucide-react';
+import { Loader2, User, Edit3, Save, X, Phone, MapPin, Calendar, CreditCard, Heart, Stethoscope, UserCheck } from 'lucide-react';
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { PatientProfileData, UpdatePatientProfileData } from '../services/patientProfileApi';
+import { appointmentApi, type AppointmentDetail } from '@/features/appointment/services/appointmentApi';
 
 interface PatientProfileModalProps {
   isOpen: boolean;
@@ -64,9 +65,30 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
     email: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
+    emergencyContactRelation: '',
+    block: '',
+    alternateMobile: '',
+    guardianName: '',
+    guardianRelation: '',
   });
 
   const [referenceName, setReferenceName] = useState('');
+
+  // Latest appointment — read-only summary of what was captured at the most recent booking
+  // (referrer, reason, payment mode), since that's per-visit data, not part of the patient record above.
+  const [latestAppt, setLatestAppt] = useState<AppointmentDetail | null>(null);
+  const [latestApptLoading, setLatestApptLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !hospitalId || !patientId) { setLatestAppt(null); return; }
+    let active = true;
+    setLatestApptLoading(true);
+    appointmentApi.getLatestAppointmentForPatient(hospitalId, patientId)
+      .then(appt => { if (active) setLatestAppt(appt); })
+      .catch(() => { if (active) setLatestAppt(null); })
+      .finally(() => { if (active) setLatestApptLoading(false); });
+    return () => { active = false; };
+  }, [isOpen, hospitalId, patientId]);
 
   // Update form data when patient profile is loaded
   useEffect(() => {
@@ -90,6 +112,11 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
         email: patientProfile.email || '',
         emergencyContactName: patientProfile.emergencyContactName || '',
         emergencyContactPhone: patientProfile.emergencyContactPhone || '',
+        emergencyContactRelation: patientProfile.emergencyContactRelation || '',
+        block: patientProfile.block || '',
+        alternateMobile: patientProfile.alternateMobile || '',
+        guardianName: patientProfile.guardianName || '',
+        guardianRelation: patientProfile.guardianRelation || '',
       });
       // Set reference name from the part after the first hyphen
       if (patientProfile.fullName && patientProfile.fullName.includes('-')) {
@@ -218,6 +245,37 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-1">
+                        <Label htmlFor="guardianRelation" className={labelClassName}>Guardian Relation</Label>
+                        <Select
+                          value={formData.guardianRelation || ''}
+                          onValueChange={(value) => handleInputChange('guardianRelation', value)}
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger className={inputClassName}>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'].map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="guardianName" className={labelClassName}>Guardian / Relative Name</Label>
+                        <Input
+                          id="guardianName"
+                          value={formData.guardianName || ''}
+                          onChange={(e) => handleInputChange('guardianName', e.target.value)}
+                          disabled={!isEditing}
+                          placeholder="Optional"
+                          className={inputClassName}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                      <div className="space-y-1">
                         <Label htmlFor="ageYears" className={labelClassName}>Age *</Label>
                         <Input
                           id="ageYears"
@@ -264,6 +322,18 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                         />
                       </div>
                     </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="alternateMobile" className={labelClassName}>Alternate Mobile</Label>
+                      <Input
+                        id="alternateMobile"
+                        value={formData.alternateMobile || ''}
+                        onChange={(e) => handleInputChange('alternateMobile', e.target.value)}
+                        disabled={!isEditing}
+                        placeholder="Optional"
+                        className={inputClassName}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -284,6 +354,18 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                         onChange={(e) => handleInputChange('addressLine1', e.target.value)}
                         disabled={!isEditing}
                         required
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="block" className={labelClassName}>Block / Locality</Label>
+                      <Input
+                        id="block"
+                        value={formData.block || ''}
+                        onChange={(e) => handleInputChange('block', e.target.value)}
+                        disabled={!isEditing}
+                        placeholder="Block, street or landmark"
                         className={inputClassName}
                       />
                     </div>
@@ -470,7 +552,82 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                           className={inputClassName}
                         />
                       </div>
+                      <div className="space-y-1">
+                        <Label className={labelClassName}>Emergency contact relation</Label>
+                        <Select
+                          value={formData.emergencyContactRelation || ''}
+                          onValueChange={(v) => handleInputChange('emergencyContactRelation', v)}
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger className={inputClassName}>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['Spouse', 'Parent', 'Child', 'Sibling', 'Relative', 'Friend', 'Guardian', 'Other'].map(r => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Latest Appointment — read-only, per-visit info (not part of the patient record) */}
+              <div className="mt-2 sm:mt-3">
+                <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
+                  <CardHeader className="bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-2 py-1">
+                    <CardTitle className="flex items-center gap-1 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                      <Stethoscope className="h-3 w-3" />
+                      Latest Appointment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    {latestApptLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading latest appointment...
+                      </div>
+                    ) : !latestAppt ? (
+                      <p className="text-xs text-muted-foreground py-2">No appointment history found for this patient.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                        <div className="space-y-1">
+                          <span className={labelClassName}>Doctor</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
+                            <UserCheck className="h-3 w-3 text-muted-foreground" /> {latestAppt.doctorName || 'N/A'}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className={labelClassName}>Date & time</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {new Date(latestAppt.startAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className={labelClassName}>Status</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{latestAppt.finalStatusCode || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className={labelClassName}>Referred by</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {latestAppt.referrerName ? `${latestAppt.referrerName}${latestAppt.referrerType ? ` (${latestAppt.referrerType})` : ''}` : 'Self'}
+                          </p>
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <span className={labelClassName}>Reason for visit</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{latestAppt.reason || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className={labelClassName}>Payment mode</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{latestAppt.paymentMode || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className={labelClassName}>Insurance ID</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{latestAppt.insuranceId || 'N/A'}</p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

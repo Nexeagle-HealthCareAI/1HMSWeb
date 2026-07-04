@@ -24,6 +24,11 @@ export interface PatientProfileData {
   email?: string | null;
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
+  emergencyContactRelation?: string | null;
+  block?: string | null;
+  alternateMobile?: string | null;
+  guardianName?: string | null;
+  guardianRelation?: string | null;
 }
 
 export interface UpdatePatientProfileData {
@@ -45,6 +50,11 @@ export interface UpdatePatientProfileData {
   email?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  block?: string;
+  alternateMobile?: string;
+  guardianName?: string;
+  guardianRelation?: string;
 }
 
 export interface UpdatePatientProfileResponse {
