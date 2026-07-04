@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import {
     UserPlus, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
     User, CalendarCheck, Sun, LogOut, AlertTriangle, Users, Wallet, BedDouble,
+    Printer, Download, Search,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -21,6 +23,12 @@ import {
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { consentApi, type ConsentTemplateItem } from '../services/consentApi';
 import { isAboveEntitlement } from '../utils/roomEntitlement';
+import { useAuthStore } from '@/store/authStore';
+import { useHospitalApi } from '@/hooks/useApi';
+import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
+import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
+import { buildAdmissionConfirmationA4 } from '@/printTemplates/admissionConfirmationA4';
+import { referrerApi, type Referrer } from '@/features/appointment/services/referrerApi';
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
@@ -28,22 +36,25 @@ const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     POSSIBLE: { chip: 'bg-sky-100 text-sky-700 border-sky-200', label: 'Possible' },
 };
 
-type WizardStep = 'admissionType' | 'personal' | 'advanceBed';
-const WIZARD_STEPS: { key: WizardStep; label: string }[] = [
-    { key: 'admissionType', label: 'Admission Type' },
-    { key: 'personal', label: 'Personal Information' },
-    { key: 'advanceBed', label: 'Advance & Bed' },
+type WizardStep = 'admissionType' | 'personal' | 'clinical' | 'advanceBed';
+const WIZARD_STEPS: { key: WizardStep; label: string; required: boolean }[] = [
+    { key: 'admissionType', label: 'Admission Type', required: true },
+    { key: 'personal', label: 'Personal Information', required: true },
+    { key: 'clinical', label: 'Clinical & Referral', required: false },
+    { key: 'advanceBed', label: 'Advance & Bed', required: false },
 ];
 
-const ADMISSION_TYPES: { value: AdmissionTypeCode; label: string; icon: React.ElementType; tone: string }[] = [
-    { value: 'EMERGENCY', label: 'Emergency', icon: Siren, tone: 'border-rose-400 bg-rose-50 text-rose-700 ring-rose-200' },
-    { value: 'ELECTIVE', label: 'Elective', icon: CalendarCheck, tone: 'border-brand-400 bg-brand-50 text-brand-700 ring-brand-200' },
-    { value: 'DAYCARE', label: 'Day Care', icon: Sun, tone: 'border-sky-400 bg-sky-50 text-sky-700 ring-sky-200' },
-    { value: 'LAMA', label: 'Left against advice', icon: LogOut, tone: 'border-amber-400 bg-amber-50 text-amber-700 ring-amber-200' },
+// "Planned" shown first — the easier, friendlier name for an elective admission; value stays
+// ELECTIVE (the backend also accepts the literal string "PLANNED" as a synonym).
+const ADMISSION_TYPES: { value: AdmissionTypeCode; label: string; icon: React.ElementType; tone: string; description: string }[] = [
+    { value: 'ELECTIVE', label: 'Planned', icon: CalendarCheck, tone: 'border-brand-400 bg-brand-50 text-brand-700 ring-brand-200', description: 'Scheduled admission with lead time — pre-register the patient and arrange the bed/pre-auth before they arrive.' },
+    { value: 'EMERGENCY', label: 'Emergency', icon: Siren, tone: 'border-rose-400 bg-rose-50 text-rose-700 ring-rose-200', description: 'Casualty or unidentified patient — only Sex and approximate age are needed to admit; everything else can be filled in once stabilised.' },
+    { value: 'DAYCARE', label: 'Day Care', icon: Sun, tone: 'border-sky-400 bg-sky-50 text-sky-700 ring-sky-200', description: 'Short procedure or observation stay with no overnight — same admission flow, discharge the same day.' },
+    { value: 'LAMA', label: 'Left Against Advice', icon: LogOut, tone: 'border-amber-400 bg-amber-50 text-amber-700 ring-amber-200', description: 'Patient is leaving the facility against medical advice — recorded for the clinical record.' },
 ];
 
 const TYPE_LABEL: Record<string, string> = {
-    EMERGENCY: 'Emergency', ELECTIVE: 'Elective', DAYCARE: 'Day Care', LAMA: 'Left against advice',
+    EMERGENCY: 'Emergency', ELECTIVE: 'Planned', DAYCARE: 'Day Care', LAMA: 'Left Against Advice',
 };
 
 type PayerTypeCode = 'CASH' | 'TPA' | 'SCHEME';
@@ -62,9 +73,30 @@ const REFERRING_FACILITY_TYPES: { value: 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | '
 
 const ROOM_CATEGORIES = ['GENERAL', 'SEMI_PRIVATE', 'PRIVATE'];
 
-const synthesizeUnknownName = (sex: string, ageYears: string): string => {
+// Referrer-master type styling — same colour language as OPD's appointment-booking referrer
+// picker (PatientForm.tsx): DOCTOR=blue, AGENT=purple, REFERRER="Other"=emerald.
+const REFERRER_LABEL: Record<string, string> = { DOCTOR: 'Doctor', AGENT: 'Agent', REFERRER: 'Other' };
+const REFERRER_TONE: Record<string, { bg: string; avatar: string; badge: string; border: string; text: string }> = {
+    DOCTOR: { bg: 'bg-blue-50 border-blue-200', avatar: 'bg-blue-600', badge: 'bg-blue-50 text-blue-700 border-blue-200', border: 'border-blue-200', text: 'text-blue-600' },
+    AGENT: { bg: 'bg-purple-50 border-purple-200', avatar: 'bg-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-200', border: 'border-purple-200', text: 'text-purple-600' },
+    REFERRER: { bg: 'bg-emerald-50 border-emerald-200', avatar: 'bg-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', border: 'border-emerald-200', text: 'text-emerald-600' },
+};
+
+const SEX_OPTIONS: { value: 'M' | 'F' | 'O'; label: string }[] = [
+    { value: 'M', label: 'Male' },
+    { value: 'F', label: 'Female' },
+    { value: 'O', label: 'Other' },
+];
+
+const AGE_UNITS: { value: 'Y' | 'M' | 'D'; label: string }[] = [
+    { value: 'Y', label: 'Yrs' },
+    { value: 'M', label: 'Month' },
+    { value: 'D', label: 'Day' },
+];
+
+const synthesizeUnknownName = (sex: string, ageYears: string, ageUnit: 'Y' | 'M' | 'D'): string => {
     const label = sex === 'M' ? 'Male' : sex === 'F' ? 'Female' : 'Patient';
-    const ageSuffix = ageYears ? `, ~${ageYears}y` : '';
+    const ageSuffix = ageYears ? `, ~${ageYears}${ageUnit.toLowerCase()}` : '';
     return `Unknown ${label}${ageSuffix}`;
 };
 
@@ -72,7 +104,7 @@ const SELECT_CLS = 'h-10 w-full text-sm border border-slate-200 rounded-lg px-3 
 const INPUT_CLS = 'h-10 rounded-lg';
 
 interface FormState {
-    fullName: string; sex: string; ageYears: string; dateOfBirth: string;
+    fullName: string; sex: string; ageYears: string; ageUnit: 'Y' | 'M' | 'D'; dateOfBirth: string;
     bloodGroup: string; religion: string; nationality: string;
     mobile: string; alternateMobile: string; email: string;
     emergencyContactName: string; emergencyContactRelation: string; emergencyContactPhone: string;
@@ -81,7 +113,9 @@ interface FormState {
     admissionType: AdmissionTypeCode; primaryDoctorId: string;
     admissionReason: string; diagnosis: string; expectedDischargeAt: string;
     isPreRegistration: boolean;
-    referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL'; referralName: string;
+    referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL' | 'OTHER'; referralName: string;
+    referredByReferrerId: string;
+    newReferrerName: string; newReferrerPhone: string; newReferrerAddress: string; newReferrerType: 'DOCTOR' | 'AGENT' | 'REFERRER';
     referringFacilityName: string; referringFacilityType: '' | 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | 'OTHER'; referringFacilityContact: string;
 
     payerType: PayerTypeCode; depositExpected: string; bedId: string;
@@ -92,16 +126,18 @@ interface FormState {
 }
 
 const EMPTY_FORM: FormState = {
-    fullName: '', sex: '', ageYears: '', dateOfBirth: '',
+    fullName: '', sex: 'M', ageYears: '', ageUnit: 'Y', dateOfBirth: '',
     bloodGroup: '', religion: '', nationality: 'India',
     mobile: '', alternateMobile: '', email: '',
     emergencyContactName: '', emergencyContactRelation: '', emergencyContactPhone: '',
     flatHouse: '', street: '', city: '', district: '', state: '', pincode: '',
     aadhaarNumber: '', panNumber: '', abhaId: '',
-    admissionType: 'EMERGENCY', primaryDoctorId: '',
+    admissionType: 'ELECTIVE', primaryDoctorId: '',
     admissionReason: '', diagnosis: '', expectedDischargeAt: '',
     isPreRegistration: false,
     referralSource: '', referralName: '',
+    referredByReferrerId: '',
+    newReferrerName: '', newReferrerPhone: '', newReferrerAddress: '', newReferrerType: 'REFERRER',
     referringFacilityName: '', referringFacilityType: '', referringFacilityContact: '',
     payerType: 'CASH', depositExpected: '', bedId: '',
     payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
@@ -147,8 +183,11 @@ const OptionalPill = () => (
 );
 
 const Field: React.FC<{ label: string; required?: boolean; className?: string; children: React.ReactNode }> = ({ label, required, className, children }) => (
-    <div className={className}>
-        <Label className="text-[11px] font-semibold text-slate-600">{label}{required && <span className="text-rose-500"> *</span>}</Label>
+    <div className={cn(className, required && 'border-l-2 border-rose-300 pl-2 -ml-2.5')}>
+        <div className="flex items-center gap-1.5">
+            <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
+            {required && <span className="text-[8px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded px-1 py-0.5 leading-none">Required</span>}
+        </div>
         <div className="mt-1">{children}</div>
     </div>
 );
@@ -161,10 +200,15 @@ const initials = (name?: string | null) => {
 
 export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmitted }) => {
     const { toast } = useToast();
+    const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
+    const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
 
     const [step, setStep] = useState<WizardStep>('admissionType');
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
+    // Phone fields: digits only, max 10 — same convention as PatientForm's mobile input.
+    const setPhone = (k: 'mobile' | 'alternateMobile' | 'emergencyContactPhone' | 'referringFacilityContact' | 'newReferrerPhone', v: string) =>
+        set(k, v.replace(/\D/g, '').slice(0, 10));
 
     // Set once staff picks a live-duplicate-detection match — from then on this is a known,
     // existing patient (no more "new vs returning" mode; there's just one flow).
@@ -174,7 +218,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [loadingDetail, setLoadingDetail] = useState(false);
 
     const [submitting, setSubmitting] = useState(false);
-    const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string } | null>(null);
+    const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string; admittedAt?: string } | null>(null);
 
     // Live duplicate detection — replaces the old separate "Returning: search" step. Runs
     // continuously as name/mobile/DOB/Aadhaar are typed, unless an existing patient is already
@@ -191,6 +235,15 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     // Active GENERAL_ADMISSION consent template, if the hospital has configured one — the consent
     // checkbox only renders when this is non-null (never blocks admission on missing config).
     const [generalConsentTemplate, setGeneralConsentTemplate] = useState<ConsentTemplateItem | null>(null);
+
+    // Referrer master search-or-create — same pattern/hospital-wide Referrer entity used by OPD
+    // appointment booking (PatientForm.tsx), reused as-is for the "person referred this patient"
+    // case (DOCTOR/OTHER). SELF needs no referrer; HOSPITAL keeps its own separate facility block.
+    const [referrers, setReferrers] = useState<Referrer[]>([]);
+    const [referrerSearch, setReferrerSearch] = useState('');
+    const [referrerFocused, setReferrerFocused] = useState(false);
+    const [creatingReferrer, setCreatingReferrer] = useState(false);
+    const referrerSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
     // submission so a retried network call can't create a duplicate admission.
@@ -233,6 +286,22 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
     }, [selectedPatientId, form.fullName, form.mobile, form.dateOfBirth, form.aadhaarNumber]);
 
+    // Debounced referrer-master search — only relevant when referralSource is DOCTOR/OTHER
+    // (a person referred this patient, as opposed to SELF or the separate HOSPITAL facility block).
+    useEffect(() => {
+        if (form.referralSource !== 'DOCTOR' && form.referralSource !== 'OTHER') return;
+        if (referrerSearchTimer.current) clearTimeout(referrerSearchTimer.current);
+        referrerSearchTimer.current = setTimeout(async () => {
+            try {
+                const res = await referrerApi.getReferrers(hospitalId, referrerSearch.trim() || undefined);
+                setReferrers(res.referrers ?? []);
+            } catch {
+                setReferrers([]);
+            }
+        }, 300);
+        return () => { if (referrerSearchTimer.current) clearTimeout(referrerSearchTimer.current); };
+    }, [form.referralSource, referrerSearch, hospitalId]);
+
     const selectPatient = async (patientId: string) => {
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
         setSelectedPatientId(patientId);
@@ -270,10 +339,20 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         setForm(EMPTY_FORM);
     };
 
+    const selectReferrer = (r: Referrer) => {
+        setForm(f => ({ ...f, referredByReferrerId: r.referrerId, referralName: r.referrerName }));
+        setReferrerSearch(''); setCreatingReferrer(false);
+    };
+    const clearReferrerSelection = () => {
+        setForm(f => ({ ...f, referredByReferrerId: '', referralName: '', newReferrerName: '', newReferrerPhone: '', newReferrerAddress: '', newReferrerType: 'REFERRER' }));
+        setReferrerSearch(''); setCreatingReferrer(false); setReferrers([]);
+    };
+
     const reset = () => {
         setStep('admissionType'); setForm(EMPTY_FORM); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
+        setReferrers([]); setReferrerSearch(''); setReferrerFocused(false); setCreatingReferrer(false);
         clientRequestIdRef.current = generateUuid();
     };
 
@@ -291,7 +370,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     // approximate age are the only two things required; name/mobile are backfilled later.
     // Doesn't apply once an existing patient has been picked — their identity is already known.
     const isEmergencyQuickAdmit = !selectedPatientId && form.admissionType === 'EMERGENCY';
-    const namePreview = isEmergencyQuickAdmit && !form.fullName.trim() ? synthesizeUnknownName(form.sex, form.ageYears) : null;
+    const namePreview = isEmergencyQuickAdmit && !form.fullName.trim() ? synthesizeUnknownName(form.sex, form.ageYears, form.ageUnit) : null;
     const pickedBed = useMemo(() => availableBeds.find(b => b.bedId === form.bedId), [availableBeds, form.bedId]);
     const showsEntitlementWarning = form.payerType !== 'CASH' && !!form.entitledRoomCategory
         && isAboveEntitlement(pickedBed?.wardType, form.entitledRoomCategory);
@@ -315,12 +394,37 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             else toast({ title: 'Incomplete', description: 'Patient name and mobile are required.', variant: 'destructive' });
             return;
         }
+        setSubmitting(true);
         const t = (s: string) => { const v = s.trim(); return v.length ? v : undefined; };
         const isPreRegistration = form.admissionType === 'ELECTIVE' && form.isPreRegistration;
+
+        // A brand-new referrer is created at submit time (same pattern as OPD appointment
+        // booking) — its id then rides along as ReferredByReferrerId on the admission.
+        let referredByReferrerId = form.referredByReferrerId || undefined;
+        let referralNameForPayload = t(form.referralName);
+        if (creatingReferrer && form.newReferrerName.trim()) {
+            try {
+                const created = await referrerApi.createReferrer(hospitalId, {
+                    referrerName: form.newReferrerName.trim(),
+                    referrerType: form.newReferrerType,
+                    phone: form.newReferrerPhone.trim() || undefined,
+                    address: form.newReferrerAddress.trim() || undefined,
+                    defaultRatePercent: 0,
+                });
+                referredByReferrerId = created.referrerId;
+                referralNameForPayload = created.referrerName;
+            } catch (err) {
+                toast({ title: 'Could not save the new referrer', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+                setSubmitting(false);
+                return;
+            }
+        }
+
         const payload: AdmitPatientPayload = {
             patientId: selectedPatientId ?? undefined,
             fullName: t(form.fullName), mobile: t(form.mobile),
             ageYears: form.ageYears ? parseInt(form.ageYears, 10) : undefined,
+            ageUnit: form.ageYears ? form.ageUnit : undefined,
             dateOfBirth: t(form.dateOfBirth), sex: t(form.sex),
             bloodGroup: t(form.bloodGroup), religion: t(form.religion), nationality: t(form.nationality),
             flatHouse: t(form.flatHouse), street: t(form.street), city: t(form.city),
@@ -337,7 +441,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             expectedDischargeAt: t(form.expectedDischargeAt),
             isPreRegistration,
             referralSource: form.referralSource || undefined,
-            referralName: t(form.referralName),
+            referralName: referralNameForPayload,
+            referredByReferrerId,
             ...(form.referralSource === 'HOSPITAL' ? {
                 referringFacilityName: t(form.referringFacilityName),
                 referringFacilityType: form.referringFacilityType || undefined,
@@ -356,11 +461,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                 entitledRoomCategory: form.entitledRoomCategory || undefined,
             } : {}),
         };
-        setSubmitting(true);
         try {
             const res = await admissionApi.admit(payload);
             if (res.success) {
-                setSuccess({ admissionNo: res.admissionNo, patientId: res.patientId, isNewPatient: res.isNewPatient, admissionId: res.admissionId, statusCode: res.statusCode });
+                setSuccess({ admissionNo: res.admissionNo, patientId: res.patientId, isNewPatient: res.isNewPatient, admissionId: res.admissionId, statusCode: res.statusCode, admittedAt: res.admittedAt });
                 toast({ title: isPreRegistration ? 'Patient pre-registered' : 'Patient admitted', description: `${res.admissionNo} · Patient ID ${res.patientId}` });
                 // Best-effort general consent capture — never blocks or undoes an admission that
                 // already succeeded. Skipped entirely for a pre-registration (patient not yet
@@ -390,6 +494,30 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         const id = success?.admissionId;
         reset();
         if (id) onAdmitted(id); else onOpenChange(false);
+    };
+
+    const printConfirmation = (mode: 'print' | 'download') => {
+        if (!success) return;
+        const pickedBedForPrint = availableBeds.find(b => b.bedId === form.bedId);
+        const doctor = doctors.find(d => d.doctorId === form.primaryDoctorId);
+        const settings = buildPrintSettingsFromHospital(hospitalData);
+        const html = buildAdmissionConfirmationA4({
+            admissionNo: success.admissionNo || '',
+            admittedAt: success.admittedAt ?? new Date().toISOString(),
+            patientName: form.fullName || namePreview || success.patientId || '',
+            patientId: success.patientId || '',
+            ageGender: form.ageYears ? `${form.ageYears}${form.ageUnit === 'Y' ? '' : form.ageUnit}${form.sex}` : form.sex,
+            admissionType: form.admissionType,
+            wardBed: pickedBedForPrint ? `${pickedBedForPrint.wardName ? pickedBedForPrint.wardName + ' · ' : ''}${pickedBedForPrint.bedCode}` : undefined,
+            admittingDoctorName: doctor?.fullName,
+            provisionalDiagnosis: form.diagnosis || form.admissionReason,
+            payerType: form.payerType,
+            depositExpected: form.depositExpected ? parseFloat(form.depositExpected) : undefined,
+            attendantName: form.emergencyContactName || undefined,
+            attendantPhone: form.emergencyContactPhone || undefined,
+        }, settings);
+        if (mode === 'download') downloadHtmlAsPdf(html, `admission-confirmation-${success.admissionNo}.pdf`);
+        else openPrintHtml(html);
     };
 
     return (
@@ -430,7 +558,11 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                 <p className="text-base font-bold text-slate-900 font-mono mt-0.5">{success.patientId}</p>
                             </div>
                         </div>
-                        <div className="mt-8 flex items-center gap-3">
+                        <div className="mt-5 flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print confirmation</Button>
+                            <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
+                        </div>
+                        <div className="mt-5 flex items-center gap-3">
                             <Button variant="outline" className="h-10" onClick={reset}><RotateCcw className="h-4 w-4 mr-1.5" /> Admit another</Button>
                             <Button className="h-10 bg-brand-600 hover:bg-brand-700" onClick={finishToWorkspace}>Done <ArrowRight className="h-4 w-4 ml-1.5" /></Button>
                         </div>
@@ -449,12 +581,18 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         <React.Fragment key={s.key}>
                                             {i > 0 && <div className={cn('h-0.5 flex-1 rounded-full', isVisited || isCurrent ? 'bg-brand-400' : 'bg-slate-200')} />}
                                             <button type="button" disabled={!canJump} onClick={() => canJump && setStep(s.key)}
-                                                className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-all shrink-0',
+                                                className={cn('flex flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 transition-all shrink-0',
                                                     isCurrent ? 'bg-brand-600 text-white shadow' : isVisited ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-400',
                                                     canJump && !isCurrent && 'cursor-pointer hover:bg-brand-100')}>
-                                                <span className={cn('h-4 w-4 rounded-full flex items-center justify-center text-[10px]',
-                                                    isCurrent ? 'bg-white/20' : isVisited ? 'bg-brand-200' : 'bg-slate-200')}>{i + 1}</span>
-                                                <span className="hidden sm:inline">{s.label}</span>
+                                                <span className="flex items-center gap-1.5 text-[11px] font-bold">
+                                                    <span className={cn('h-4 w-4 rounded-full flex items-center justify-center text-[10px]',
+                                                        isCurrent ? 'bg-white/20' : isVisited ? 'bg-brand-200' : 'bg-slate-200')}>{i + 1}</span>
+                                                    <span className="hidden sm:inline">{s.label}</span>
+                                                </span>
+                                                <span className={cn('hidden sm:inline text-[8px] font-bold uppercase tracking-wider',
+                                                    isCurrent ? 'text-white/70' : s.required ? 'text-rose-500' : 'text-slate-400')}>
+                                                    {s.required ? 'Required' : 'Optional'}
+                                                </span>
                                             </button>
                                         </React.Fragment>
                                     );
@@ -471,20 +609,23 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             const Icon = t.icon;
                                             const active = form.admissionType === t.value;
                                             return (
-                                                <button key={t.value} type="button" onClick={() => set('admissionType', t.value)}
+                                                <motion.button key={t.value} type="button" onClick={() => set('admissionType', t.value)}
+                                                    whileTap={{ scale: 0.96 }}
                                                     className={cn('rounded-xl border-2 py-2.5 px-1 text-xs font-bold transition-all flex flex-col items-center justify-center gap-1',
                                                         active ? cn(t.tone, 'ring-2') : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300')}>
                                                     <Icon className="h-4 w-4" />{t.label}
-                                                </button>
+                                                </motion.button>
                                             );
                                         })}
                                     </div>
 
-                                    {form.admissionType === 'EMERGENCY' && (
-                                        <p className="mt-3 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
-                                            Emergency/casualty: the next step only requires Sex + approximate age — name, mobile and everything else can be backfilled once the patient is stabilised.
-                                        </p>
-                                    )}
+                                    <AnimatePresence mode="wait">
+                                        <motion.p key={form.admissionType}
+                                            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.15 }}
+                                            className="mt-3 text-[11px] text-slate-600 bg-slate-100 border border-slate-200 rounded-lg p-2.5">
+                                            {ADMISSION_TYPES.find(t => t.value === form.admissionType)?.description}
+                                        </motion.p>
+                                    </AnimatePresence>
 
                                     {form.admissionType === 'ELECTIVE' && (
                                         <label className="flex items-start gap-2 text-xs text-slate-600 mt-3 p-2.5 rounded-lg border border-brand-200 bg-brand-50/50 cursor-pointer">
@@ -575,22 +716,27 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <p className="text-xs text-slate-400 flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading history…</p>
                                             ) : (
                                                 <div className="space-y-2">
-                                                    {history.map(h => (
-                                                        <div key={h.admissionId} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                                                            <div className="flex items-center justify-between gap-2">
-                                                                <span className="font-mono text-xs font-bold text-brand-700">{h.admissionNo}</span>
-                                                                <Badge variant="outline" className={cn('text-[10px]', h.statusCode === 'ADMITTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-500')}>
-                                                                    {h.statusCode}{h.admissionType ? ` · ${TYPE_LABEL[h.admissionType] ?? h.admissionType}` : ''}
-                                                                </Badge>
+                                                    {history.map(h => {
+                                                        const isActive = h.statusCode === 'ADMITTED' || h.statusCode === 'PRE_ADMIT';
+                                                        const isAdverse = h.statusCode === 'LAMA' || h.statusCode === 'DAMA' || h.statusCode === 'EXPIRED';
+                                                        return (
+                                                            <div key={h.admissionId} className={cn('rounded-xl border-l-4 bg-white shadow-sm p-3',
+                                                                isActive ? 'border-l-emerald-400 border border-emerald-100' : isAdverse ? 'border-l-rose-400 border border-rose-100' : 'border-l-slate-300 border border-slate-200')}>
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <span className="font-mono text-sm font-black text-brand-700">{h.admissionNo}</span>
+                                                                    <Badge variant="outline" className={cn('text-[10px] font-bold', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : isAdverse ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-500 border-slate-200')}>
+                                                                        {h.statusCode}{h.admissionType ? ` · ${TYPE_LABEL[h.admissionType] ?? h.admissionType}` : ''}
+                                                                    </Badge>
+                                                                </div>
+                                                                <p className="text-[11px] font-semibold text-slate-600 mt-1">
+                                                                    {new Date(h.admittedAt).toLocaleDateString('en-IN')}
+                                                                    {h.dischargedAt ? ` → ${new Date(h.dischargedAt).toLocaleDateString('en-IN')}` : ' → (current)'}
+                                                                </p>
+                                                                {(h.diagnosis || h.admissionReason) && <p className="text-xs text-slate-700 mt-1">{h.diagnosis || h.admissionReason}</p>}
+                                                                {h.dischargeNotesPreview && <p className="text-[11px] text-slate-500 mt-1 italic">“{h.dischargeNotesPreview}”</p>}
                                                             </div>
-                                                            <p className="text-[11px] text-slate-500 mt-1">
-                                                                {new Date(h.admittedAt).toLocaleDateString('en-IN')}
-                                                                {h.dischargedAt ? ` → ${new Date(h.dischargedAt).toLocaleDateString('en-IN')}` : ' → (current)'}
-                                                            </p>
-                                                            {(h.diagnosis || h.admissionReason) && <p className="text-xs text-slate-700 mt-1">{h.diagnosis || h.admissionReason}</p>}
-                                                            {h.dischargeNotesPreview && <p className="text-[11px] text-slate-500 mt-1 italic">“{h.dischargeNotesPreview}”</p>}
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </SectionCard>
@@ -607,9 +753,15 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 {namePreview && <p className="text-[11px] text-slate-400 mt-1">Will admit as: <span className="font-semibold text-slate-600">{namePreview}</span></p>}
                                             </Field>
                                             <Field label="Sex" required={isEmergencyQuickAdmit}>
-                                                <select value={form.sex} onChange={e => set('sex', e.target.value)} className={SELECT_CLS}>
-                                                    <option value="">Select…</option><option value="M">Male</option><option value="F">Female</option><option value="O">Other</option>
-                                                </select>
+                                                <div className="flex bg-slate-100 p-1 h-10 rounded-lg border border-slate-200 w-full">
+                                                    {SEX_OPTIONS.map(o => (
+                                                        <button key={o.value} type="button" onClick={() => set('sex', o.value)}
+                                                            className={cn('flex-1 text-[11px] font-bold rounded-md transition-all duration-200',
+                                                                form.sex === o.value ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white')}>
+                                                            {o.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </Field>
                                             <Field label="Blood group">
                                                 <select value={form.bloodGroup} onChange={e => set('bloodGroup', e.target.value)} className={SELECT_CLS}>
@@ -617,8 +769,22 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(g => <option key={g} value={g}>{g}</option>)}
                                                 </select>
                                             </Field>
-                                            <Field label="Age (years)" required={isEmergencyQuickAdmit}>
-                                                <Input type="number" min={0} max={130} value={form.ageYears} onChange={e => set('ageYears', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="e.g. 42 (approximate is fine)" />
+                                            <Field label="Age" required={isEmergencyQuickAdmit}>
+                                                <div className="flex items-center h-10 rounded-lg border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-brand-500/25 focus-within:border-brand-400 transition">
+                                                    <Input type="number" min={0} max={form.ageUnit === 'Y' ? 130 : form.ageUnit === 'M' ? 11 : 30}
+                                                        value={form.ageYears} onChange={e => set('ageYears', e.target.value)}
+                                                        className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-lg font-mono"
+                                                        placeholder={form.ageUnit === 'Y' ? 'e.g. 42' : 'approximate'} />
+                                                    <div className="flex bg-slate-100 p-0.5 h-full shrink-0 border-l border-slate-200 rounded-r-lg">
+                                                        {AGE_UNITS.map(u => (
+                                                            <button key={u.value} type="button" onClick={() => set('ageUnit', u.value)}
+                                                                className={cn('px-2.5 text-[11px] font-bold rounded-md transition-all duration-200',
+                                                                    form.ageUnit === u.value ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white')}>
+                                                                {u.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </Field>
                                             <Field label="Date of birth">
                                                 <Input type="date" value={form.dateOfBirth} onChange={e => set('dateOfBirth', e.target.value)} className={INPUT_CLS} />
@@ -636,10 +802,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         subtitle={isEmergencyQuickAdmit ? 'Optional in Emergency mode' : !selectedPatientId ? 'Mobile is required' : undefined} tone="sky">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Field label="Patient mobile" required={!selectedPatientId && !isEmergencyQuickAdmit}>
-                                                <Input value={form.mobile} onChange={e => set('mobile', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="10-digit mobile" />
+                                                <Input value={form.mobile} onChange={e => setPhone('mobile', e.target.value)} inputMode="numeric" maxLength={10} className={cn(INPUT_CLS, 'font-mono')} placeholder="10-digit mobile" />
                                             </Field>
                                             <Field label="Attendant / next-of-kin phone">
-                                                <Input value={form.emergencyContactPhone} onChange={e => set('emergencyContactPhone', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Often more reachable than the patient's own" />
+                                                <Input value={form.emergencyContactPhone} onChange={e => setPhone('emergencyContactPhone', e.target.value)} inputMode="numeric" maxLength={10} className={cn(INPUT_CLS, 'font-mono')} placeholder="Often more reachable than the patient's own" />
                                             </Field>
                                             <Field label="Attendant / next-of-kin name">
                                                 <Input value={form.emergencyContactName} onChange={e => set('emergencyContactName', e.target.value)} className={INPUT_CLS} placeholder="Name" />
@@ -648,7 +814,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <Input value={form.emergencyContactRelation} onChange={e => set('emergencyContactRelation', e.target.value)} className={INPUT_CLS} placeholder="e.g. Son" />
                                             </Field>
                                             <Field label="Alternate mobile">
-                                                <Input value={form.alternateMobile} onChange={e => set('alternateMobile', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                                <Input value={form.alternateMobile} onChange={e => setPhone('alternateMobile', e.target.value)} inputMode="numeric" maxLength={10} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
                                             </Field>
                                             <Field label="Email">
                                                 <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={INPUT_CLS} placeholder="Optional" />
@@ -699,63 +865,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         </div>
                                     </SectionCard>
 
-                                    {/* ── Clinical & referral details ───────────────── */}
-                                    <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <Field label="Admitting consultant">
-                                                <select value={form.primaryDoctorId} onChange={e => set('primaryDoctorId', e.target.value)} className={SELECT_CLS}>
-                                                    <option value="">— Not specified —</option>
-                                                    {doctors.map(d => <option key={d.doctorId} value={d.doctorId}>{d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}</option>)}
-                                                </select>
-                                            </Field>
-                                            <Field label="Provisional diagnosis">
-                                                <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
-                                            </Field>
-                                            <Field label="Expected discharge">
-                                                <div className="relative">
-                                                    <Input type="date" value={form.expectedDischargeAt} onChange={e => set('expectedDischargeAt', e.target.value)} className={INPUT_CLS} />
-                                                    <CalendarClock className="h-3.5 w-3.5 text-slate-300 absolute right-2.5 top-3 pointer-events-none" />
-                                                </div>
-                                            </Field>
-                                            <Field label="Reason for admission" className="sm:col-span-2">
-                                                <Textarea value={form.admissionReason} onChange={e => set('admissionReason', e.target.value)} rows={2} className="text-sm rounded-lg" placeholder="Chief complaint / notes" />
-                                            </Field>
-                                            <Field label="Referred by">
-                                                <select value={form.referralSource} onChange={e => set('referralSource', e.target.value as FormState['referralSource'])} className={SELECT_CLS}>
-                                                    <option value="">— Not specified —</option>
-                                                    <option value="SELF">Self</option>
-                                                    <option value="DOCTOR">Doctor</option>
-                                                    <option value="HOSPITAL">Hospital</option>
-                                                </select>
-                                            </Field>
-                                            {(form.referralSource === 'DOCTOR' || form.referralSource === 'HOSPITAL') && (
-                                                <Field label="Referrer name" className="text-slate-500">
-                                                    <Input value={form.referralName} onChange={e => set('referralName', e.target.value)} className={INPUT_CLS} placeholder="Doctor / hospital name (for MIS/commission)" />
-                                                </Field>
-                                            )}
-                                        </div>
-
-                                        {form.referralSource === 'HOSPITAL' && (
-                                            <div className="mt-3 pt-3 border-t border-slate-100">
-                                                <p className="text-[11px] font-semibold text-slate-500 mb-2">Transfer-in facility <span className="font-normal text-slate-400">(for referral records — PM-JAY rules &amp; your referral-network analytics)</span></p>
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                    <Field label="Facility type">
-                                                        <select value={form.referringFacilityType} onChange={e => set('referringFacilityType', e.target.value as FormState['referringFacilityType'])} className={SELECT_CLS}>
-                                                            <option value="">— Select —</option>
-                                                            {REFERRING_FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                                        </select>
-                                                    </Field>
-                                                    <Field label="Facility name">
-                                                        <Input value={form.referringFacilityName} onChange={e => set('referringFacilityName', e.target.value)} className={INPUT_CLS} placeholder="e.g. Sub-District Hospital" />
-                                                    </Field>
-                                                    <Field label="Facility contact">
-                                                        <Input value={form.referringFacilityContact} onChange={e => set('referringFacilityContact', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
-                                                    </Field>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </SectionCard>
-
                                     {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
                                         <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="General consent" subtitle="Optional — can also be captured later" tone="emerald">
                                             <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
@@ -777,14 +886,203 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                 </>
                             )}
 
-                            {/* ══ Step 3: Advance & Bed (optional) ════════════════ */}
+                            {/* ══ Step 3: Clinical & Referral ═════════════════════ */}
+                            {step === 'clinical' && (
+                                <>
+                                    <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <Field label="Admitting consultant">
+                                                <select value={form.primaryDoctorId} onChange={e => set('primaryDoctorId', e.target.value)} className={SELECT_CLS}>
+                                                    <option value="">— Not specified —</option>
+                                                    {doctors.map(d => <option key={d.doctorId} value={d.doctorId}>{d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}</option>)}
+                                                </select>
+                                            </Field>
+                                            <Field label="Provisional diagnosis">
+                                                <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
+                                            </Field>
+                                            <Field label="Expected discharge">
+                                                <div className="relative">
+                                                    <Input type="date" value={form.expectedDischargeAt} onChange={e => set('expectedDischargeAt', e.target.value)} className={INPUT_CLS} />
+                                                    <CalendarClock className="h-3.5 w-3.5 text-slate-300 absolute right-2.5 top-3 pointer-events-none" />
+                                                </div>
+                                            </Field>
+                                            <Field label="Reason for admission" className="sm:col-span-2">
+                                                <Textarea value={form.admissionReason} onChange={e => set('admissionReason', e.target.value)} rows={2} className="text-sm rounded-lg" placeholder="Chief complaint / notes" />
+                                            </Field>
+                                            <Field label="Referred by">
+                                                <select value={form.referralSource} onChange={e => { set('referralSource', e.target.value as FormState['referralSource']); clearReferrerSelection(); }} className={SELECT_CLS}>
+                                                    <option value="">— Not specified —</option>
+                                                    <option value="SELF">Self</option>
+                                                    <option value="DOCTOR">Doctor</option>
+                                                    <option value="HOSPITAL">Hospital</option>
+                                                    <option value="OTHER">Other</option>
+                                                </select>
+                                            </Field>
+
+                                            {(form.referralSource === 'DOCTOR' || form.referralSource === 'OTHER') && (
+                                                <Field label="Referrer" className="sm:col-span-2">
+                                                    {form.referredByReferrerId ? (
+                                                        (() => {
+                                                            const selected = referrers.find(r => r.referrerId === form.referredByReferrerId);
+                                                            const type = selected?.referrerType ?? form.newReferrerType;
+                                                            const tone = REFERRER_TONE[type] ?? REFERRER_TONE.REFERRER;
+                                                            return (
+                                                                <div className={cn('h-10 px-3 rounded-xl border flex items-center justify-between', tone.bg)}>
+                                                                    <span className="flex items-center gap-2 min-w-0">
+                                                                        <span className={cn('h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0', tone.avatar)}>
+                                                                            {(form.referralName || '?').charAt(0).toUpperCase()}
+                                                                        </span>
+                                                                        <span className="font-semibold text-sm text-slate-800 truncate">{form.referralName}</span>
+                                                                        <Badge variant="outline" className={cn('text-[9px] font-bold shrink-0', tone.badge)}>{REFERRER_LABEL[type] ?? type}</Badge>
+                                                                    </span>
+                                                                    <button type="button" onClick={clearReferrerSelection} className="h-6 w-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-500 shrink-0">
+                                                                        <X className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })()
+                                                    ) : creatingReferrer ? (
+                                                        <Input value={form.newReferrerName} onChange={e => set('newReferrerName', e.target.value)} placeholder="New referrer name" autoFocus className={INPUT_CLS} />
+                                                    ) : (
+                                                        <div className="relative">
+                                                            <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
+                                                            <Input value={referrerSearch} onChange={e => setReferrerSearch(e.target.value)}
+                                                                onFocus={() => setReferrerFocused(true)} onBlur={() => setTimeout(() => setReferrerFocused(false), 150)}
+                                                                placeholder="Search doctor / agent referrer…" className={cn(INPUT_CLS, 'pl-9')} />
+                                                            {(referrerFocused || referrerSearch.trim()) && (
+                                                                <div className="absolute z-20 left-0 right-0 mt-1.5 max-h-52 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl divide-y divide-slate-100">
+                                                                    {referrers.length === 0 && (
+                                                                        <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
+                                                                            <Search className="h-3.5 w-3.5" /> No referrers yet — add one below.
+                                                                        </div>
+                                                                    )}
+                                                                    {referrers.map(r => {
+                                                                        const tone = REFERRER_TONE[r.referrerType] ?? REFERRER_TONE.REFERRER;
+                                                                        return (
+                                                                            <button key={r.referrerId} type="button"
+                                                                                onMouseDown={() => selectReferrer(r)}
+                                                                                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-center gap-3">
+                                                                                <span className={cn('h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0', tone.avatar)}>
+                                                                                    {r.referrerName.charAt(0).toUpperCase()}
+                                                                                </span>
+                                                                                <span className="flex-1 min-w-0">
+                                                                                    <span className="block font-medium text-sm text-slate-800 truncate">{r.referrerName}</span>
+                                                                                    {r.phone && <span className="block text-[11px] text-slate-400">{r.phone}</span>}
+                                                                                </span>
+                                                                                <Badge variant="outline" className={cn('text-[9px] font-bold shrink-0', tone.badge)}>{REFERRER_LABEL[r.referrerType] ?? r.referrerType}</Badge>
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                    <button type="button" onMouseDown={() => { setCreatingReferrer(true); set('newReferrerName', referrerSearch.trim()); setReferrerSearch(''); }}
+                                                                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 flex items-center gap-2">
+                                                                        <span className="h-5 w-5 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold">+</span>
+                                                                        Add new referrer{referrerSearch.trim() ? ` "${referrerSearch.trim()}"` : ''}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {creatingReferrer && (
+                                                        <div className="mt-2 rounded-xl border border-slate-200 bg-white shadow-sm p-3 space-y-2.5">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">New referrer</span>
+                                                                <button type="button" onClick={() => { setCreatingReferrer(false); set('newReferrerName', ''); }} className="h-6 w-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-500">
+                                                                    <X className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                {(['DOCTOR', 'AGENT', 'REFERRER'] as const).map(opt => {
+                                                                    const active = form.newReferrerType === opt;
+                                                                    const tone = REFERRER_TONE[opt];
+                                                                    return (
+                                                                        <button key={opt} type="button" onClick={() => set('newReferrerType', opt)}
+                                                                            className={cn('flex-1 h-8 rounded-lg border-2 text-xs font-semibold transition-all',
+                                                                                active ? cn(tone.avatar, 'text-white border-transparent') : cn('bg-white', tone.border, tone.text))}>
+                                                                            {REFERRER_LABEL[opt]}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <Input value={form.newReferrerPhone} onChange={e => setPhone('newReferrerPhone', e.target.value)} inputMode="numeric" maxLength={10} placeholder="Phone (optional)" className="h-9 text-xs font-mono" />
+                                                                <Input value={form.newReferrerAddress} onChange={e => set('newReferrerAddress', e.target.value)} placeholder="Address (optional)" className="h-9 text-xs" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Field>
+                                            )}
+                                        </div>
+
+                                        {form.referralSource === 'HOSPITAL' && (
+                                            <div className="mt-3 pt-3 border-t border-slate-100">
+                                                <p className="text-[11px] font-semibold text-slate-500 mb-2">Transfer-in facility <span className="font-normal text-slate-400">(for referral records — PM-JAY rules &amp; your referral-network analytics)</span></p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <Field label="Facility type">
+                                                        <select value={form.referringFacilityType} onChange={e => set('referringFacilityType', e.target.value as FormState['referringFacilityType'])} className={SELECT_CLS}>
+                                                            <option value="">— Select —</option>
+                                                            {REFERRING_FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                                        </select>
+                                                    </Field>
+                                                    <Field label="Facility name">
+                                                        <Input value={form.referringFacilityName} onChange={e => set('referringFacilityName', e.target.value)} className={INPUT_CLS} placeholder="e.g. Sub-District Hospital" />
+                                                    </Field>
+                                                    <Field label="Facility contact">
+                                                        <Input value={form.referringFacilityContact} onChange={e => setPhone('referringFacilityContact', e.target.value)} inputMode="numeric" maxLength={10} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </SectionCard>
+                                </>
+                            )}
+
+                            {/* ══ Step 4: Advance & Bed (optional) ════════════════ */}
                             {step === 'advanceBed' && (
                                 <>
                                     <p className="text-[11px] text-slate-500 bg-slate-100 rounded-lg px-3 py-2">
-                                        This step is optional — you can admit now and add deposit/bed details later from the dashboard.
+                                        This step is optional — you can admit now and add bed/payment details later from the dashboard.
                                     </p>
-                                    {/* ── Payer & bed ────────────────────────────────── */}
-                                    <SectionCard icon={<Wallet className="h-4 w-4" />} title="Payer & bed" subtitle="Billing branch, deposit & bed assignment" tone="rose">
+
+                                    {/* ── Bed selection ──────────────────────────────── */}
+                                    <SectionCard icon={<BedDouble className="h-4 w-4" />} title="Bed selection" subtitle="Optional — assign now or later from the bed board" tone="sky">
+                                        <div className="relative">
+                                            <BedDouble className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            <select value={form.bedId} onChange={e => set('bedId', e.target.value)}
+                                                className="h-12 w-full text-sm font-semibold border-2 border-slate-200 rounded-xl pl-10 pr-4 bg-white outline-none transition focus:ring-4 focus:ring-brand-500/15 focus:border-brand-400 hover:border-slate-300 appearance-none">
+                                                <option value="">— Assign later —</option>
+                                                {Object.entries(bedsByWard).map(([ward, beds]) => (
+                                                    <optgroup key={ward} label={ward}>
+                                                        {beds.map(b => (
+                                                            <option key={b.bedId} value={b.bedId}>{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
+                                                        ))}
+                                                    </optgroup>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <AnimatePresence mode="wait">
+                                            {pickedBed && (
+                                                <motion.div key={pickedBed.bedId} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.15 }}
+                                                    className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/50 px-4 py-3">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="h-8 w-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
+                                                            <BedDouble className="h-4 w-4" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-900">{pickedBed.bedCode}</p>
+                                                            <p className="text-[11px] text-slate-500">{pickedBed.wardName || pickedBed.wardCode}{pickedBed.wardType ? ` · ${pickedBed.wardType}` : ''}</p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-brand-700 font-mono">₹{pickedBed.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                        {availableBeds.length === 0 && <p className="text-[11px] text-slate-400 mt-2">No free beds right now — can be assigned later from the bed board.</p>}
+                                    </SectionCard>
+
+                                    {/* ── Payment ─────────────────────────────────────── */}
+                                    <SectionCard icon={<Wallet className="h-4 w-4" />} title="Payment" subtitle="Billing branch & deposit" tone="rose">
                                         <Label className="text-[11px] font-semibold text-slate-600">Payer type</Label>
                                         <div className="grid grid-cols-3 gap-2 mt-1.5 mb-4">
                                             {PAYER_TYPES.map(p => {
@@ -801,22 +1099,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Field label="Deposit expected (₹)">
                                                 <Input type="number" min={0} value={form.depositExpected} onChange={e => set('depositExpected', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
-                                            </Field>
-                                            <Field label="Bed">
-                                                <div className="relative">
-                                                    <select value={form.bedId} onChange={e => set('bedId', e.target.value)} className={SELECT_CLS}>
-                                                        <option value="">— Assign later —</option>
-                                                        {Object.entries(bedsByWard).map(([ward, beds]) => (
-                                                            <optgroup key={ward} label={ward}>
-                                                                {beds.map(b => (
-                                                                    <option key={b.bedId} value={b.bedId}>{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
-                                                                ))}
-                                                            </optgroup>
-                                                        ))}
-                                                    </select>
-                                                    <BedDouble className="h-3.5 w-3.5 text-slate-300 absolute right-8 top-3 pointer-events-none" />
-                                                </div>
-                                                {availableBeds.length === 0 && <p className="text-[11px] text-slate-400 mt-1">No free beds right now — can be assigned later from the bed board.</p>}
                                             </Field>
                                         </div>
 
@@ -846,14 +1128,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             </div>
                                         )}
 
-                                        {showsEntitlementWarning && (
-                                            <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5">
-                                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                                                <p className="text-[11px] text-amber-800">
-                                                    Patient is entitled to <span className="font-semibold">{form.entitledRoomCategory.replace('_', ' ')}</span> — the picked bed ({pickedBed?.wardType}) is above that. The differential will show as non-payable at discharge unless the patient/family accepts the upgrade.
-                                                </p>
-                                            </div>
-                                        )}
+                                        <AnimatePresence>
+                                            {showsEntitlementWarning && (
+                                                <motion.div initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 'auto', marginTop: 12 }} exit={{ opacity: 0, height: 0, marginTop: 0 }} transition={{ duration: 0.2 }}
+                                                    className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 overflow-hidden">
+                                                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                                    <p className="text-[11px] text-amber-800">
+                                                        Patient is entitled to <span className="font-semibold">{form.entitledRoomCategory.replace('_', ' ')}</span> — the picked bed ({pickedBed?.wardType}) is above that. The differential will show as non-payable at discharge unless the patient/family accepts the upgrade.
+                                                    </p>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </SectionCard>
                                 </>
                             )}
@@ -882,7 +1167,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-10 px-4">
                                         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Skip &amp; admit
                                     </Button>
-                                    <Button onClick={() => setStep('advanceBed')} disabled={!canSubmit} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                    <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                        Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                                    </Button>
+                                </>
+                            )}
+                            {step === 'clinical' && (
+                                <>
+                                    <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-10 px-4">
+                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Skip &amp; admit
+                                    </Button>
+                                    <Button onClick={() => setStep('advanceBed')} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
                                         Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                     </Button>
                                 </>

@@ -169,6 +169,22 @@ export interface DashboardInvoice {
     latestReceiptNo?: string;
 }
 
+export interface AdmissionConfirmationPrintData {
+    admissionNo: string;
+    admittedAt: string;
+    patientName: string;
+    patientId: string;
+    ageGender: string;
+    admissionType?: string | null;
+    wardBed?: string;               // e.g. "General Ward · B-104", undefined => "to be assigned"
+    admittingDoctorName?: string | null;
+    provisionalDiagnosis?: string | null;
+    payerType: string;
+    depositExpected?: number | null;
+    attendantName?: string;
+    attendantPhone?: string;
+}
+
 export interface LedgerEntry {
     date: string;
     particulars: string;

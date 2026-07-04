@@ -7,11 +7,12 @@ import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
     ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
-    AlertTriangle,
+    AlertTriangle, FileBadge2,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { isAboveEntitlement } from '../utils/roomEntitlement';
+import { AdmissionDetailsPanel } from '../components/AdmissionDetailsPanel';
 import { ClinicalOrderPanel } from '../components/ClinicalOrderPanel';
 import { MarPanel } from '../components/MarPanel';
 import { VitalsPanel } from '../components/VitalsPanel';
@@ -31,7 +32,7 @@ import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-type Section = 'overview' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
+type Section = 'overview' | 'admissionDetails' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
@@ -173,6 +174,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         <BedDouble className="h-4 w-4" /> Overview
                     </button>
 
+                    <button type="button" onClick={() => setActiveSection('admissionDetails')} className={navItemClass(activeSection === 'admissionDetails')}>
+                        <FileBadge2 className="h-4 w-4" /> Admission Details
+                    </button>
+
                     <button type="button" onClick={() => setActiveSection('cpoe')} className={navItemClass(activeSection === 'cpoe')}>
                         <ClipboardList className="h-4 w-4" /> CPOE
                     </button>
@@ -309,6 +314,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
                             </div>
                         </div>
+                    )}
+
+                    {activeSection === 'admissionDetails' && (
+                        <AdmissionDetailsPanel admission={current} isActive={isActive} onUpdated={refreshAfterAction} />
                     )}
 
                     {activeSection === 'cpoe' && activeCpoeTab === 'medications' && (

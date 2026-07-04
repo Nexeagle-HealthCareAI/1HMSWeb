@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { ipdApiClient } from '@/services/ipdApiClient';
 import { useAuthStore } from '@/store/authStore';
 
@@ -6,6 +7,9 @@ const hospitalIdOrThrow = (override?: string) => {
     if (!id) throw new Error('Hospital ID is not available on the current user session.');
     return id;
 };
+
+const messageFrom = (err: unknown, fallback: string): string =>
+    (axios.isAxiosError(err) && (err.response?.data as { message?: string } | undefined)?.message) || fallback;
 
 // ─── Returning-patient fast search (UHID / name / mobile / Aadhaar partial / ABHA) ──
 export interface PatientSearchResult {
@@ -78,6 +82,7 @@ export interface AdmitPatientPayload {
     fullName?: string;
     mobile?: string;
     ageYears?: number | null;
+    ageUnit?: 'Y' | 'M' | 'D';
     dateOfBirth?: string | null;
     sex?: string;
     bloodGroup?: string;
@@ -114,8 +119,11 @@ export interface AdmitPatientPayload {
     // of a completed one; confirm arrival later via admissionApi.confirmArrival.
     isPreRegistration?: boolean;
 
-    referralSource?: 'SELF' | 'DOCTOR' | 'HOSPITAL' | '';
+    referralSource?: 'SELF' | 'DOCTOR' | 'HOSPITAL' | 'OTHER' | '';
     referralName?: string;
+    // Set when the referrer was picked/created via the Referrer master (DOCTOR/OTHER cases) —
+    // the same hospital-wide Referrer entity OPD appointment booking uses.
+    referredByReferrerId?: string;
     // Structured "referred/transferred in from an outside facility" — distinct from referralSource/
     // referralName above, which track referral commission, not provenance.
     referringFacilityName?: string;
@@ -184,8 +192,17 @@ export interface ActiveAdmissionItem {
     statusCode: string;
     payerType: string;
     admittedAt: string;
+    expectedDischargeAt?: string | null;
     admissionReason?: string | null;
     diagnosis?: string | null;
+    depositExpected?: number | null;
+    primaryDoctorId?: string | null;
+    primaryDoctorName?: string | null;
+    referralSource?: string | null;
+    referralName?: string | null;
+    referringFacilityName?: string | null;
+    referringFacilityType?: string | null;
+    referringFacilityContact?: string | null;
     patientId?: string | null;
     patientName?: string | null;
     patientAge?: number | null;
@@ -193,7 +210,37 @@ export interface ActiveAdmissionItem {
     bedCode?: string | null;      // null => no bed assigned yet
     wardName?: string | null;
     encounterId?: string | null;
+    payerName?: string | null;
+    policyOrBeneficiaryNo?: string | null;
+    preAuthNo?: string | null;
+    packageCode?: string | null;
+    sanctionedAmount?: number | null;
     entitledRoomCategory?: string | null;   // drives the bed-entitlement warning at assign/transfer
+}
+
+export interface UpdateAdmissionDetailsPayload {
+    admissionId: string;
+    primaryDoctorId?: string;
+    admissionReason?: string;
+    diagnosis?: string;
+    expectedDischargeAt?: string;
+    payerType?: string;
+    depositExpected?: number;
+    referralSource?: string;
+    referralName?: string;
+    referringFacilityName?: string;
+    referringFacilityType?: string;
+    referringFacilityContact?: string;
+}
+
+export interface UpsertAdmissionCoveragePayload {
+    admissionId: string;
+    payerName?: string;
+    policyOrBeneficiaryNo?: string;
+    preAuthNo?: string;
+    packageCode?: string;
+    sanctionedAmount?: number;
+    entitledRoomCategory?: string;
 }
 
 interface GetActiveAdmissionsResponse {
@@ -263,6 +310,22 @@ export const admissionApi = {
         ipdApiClient
             .get<GetHospitalDoctorsResponse>('/doctors/hospital', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
             .then(r => r.doctors ?? []),
+
+    updateDetails: async (payload: UpdateAdmissionDetailsPayload, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.put('/admission/details', { ...payload, hospitalId: hospitalIdOrThrow(hospitalId) });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not update admission details.'));
+        }
+    },
+
+    upsertCoverage: async (payload: UpsertAdmissionCoveragePayload, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.put('/admission/coverage', { ...payload, hospitalId: hospitalIdOrThrow(hospitalId) });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not update coverage details.'));
+        }
+    },
 
     checkDuplicates: (payload: CheckDuplicatesPayload, hospitalId?: string): Promise<DuplicateMatch[]> =>
         ipdApiClient
