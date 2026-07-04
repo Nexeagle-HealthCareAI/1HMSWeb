@@ -7,6 +7,7 @@ export interface DoctorFeeRow {
     departmentName?: string | null;
     opdConsultFee: number;
     ipdVisitFee: number;
+    emergencyFee: number;
 }
 
 export interface GetDoctorFeesResponse {
@@ -17,6 +18,7 @@ export interface UpsertDoctorFeeRequest {
     doctorId: string;
     opdConsultFee: number;
     ipdVisitFee: number;
+    emergencyFee: number;
 }
 
 const hospitalIdOrThrow = (override?: string) => {

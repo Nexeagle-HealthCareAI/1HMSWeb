@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search, RefreshCw, AlertCircle, Stethoscope, Loader2, Check, Filter, Users, IndianRupee, BedDouble } from 'lucide-react';
+import { Search, RefreshCw, AlertCircle, Stethoscope, Loader2, Check, Filter, Users, IndianRupee, BedDouble, Siren } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -69,9 +69,10 @@ export const DoctorFees: React.FC = () => {
         total: rows.length,
         opd: rows.filter(r => Number(r.opdConsultFee) > 0).length,
         ipd: rows.filter(r => Number(r.ipdVisitFee) > 0).length,
+        emergency: rows.filter(r => Number(r.emergencyFee) > 0).length,
     }), [rows]);
 
-    const setField = (doctorId: string, key: 'opdConsultFee' | 'ipdVisitFee', value: number) => {
+    const setField = (doctorId: string, key: 'opdConsultFee' | 'ipdVisitFee' | 'emergencyFee', value: number) => {
         setRows(prev => prev.map(r => r.doctorId === doctorId ? { ...r, [key]: value, dirty: true } : r));
     };
 
@@ -84,6 +85,7 @@ export const DoctorFees: React.FC = () => {
                 doctorId,
                 opdConsultFee: Number(row.opdConsultFee) || 0,
                 ipdVisitFee: Number(row.ipdVisitFee) || 0,
+                emergencyFee: Number(row.emergencyFee) || 0,
             });
             setRows(prev => prev.map(r => r.doctorId === doctorId ? { ...r, dirty: false, saving: false } : r));
             toast({ title: 'Fees saved', description: row.doctorName ?? '' });
@@ -103,7 +105,7 @@ export const DoctorFees: React.FC = () => {
                     </div>
                     <div>
                         <h2 className="text-lg font-bold tracking-tight text-slate-900">Doctor Fees</h2>
-                        <p className="text-xs text-slate-500">Per-doctor OPD consultation and IPD visit charges.</p>
+                        <p className="text-xs text-slate-500">Per-doctor OPD consultation, IPD visit and emergency charges.</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -130,10 +132,11 @@ export const DoctorFees: React.FC = () => {
             </div>
 
             {/* KPI row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <Stat label="Doctors" value={loading ? '…' : stats.total} icon={<Users className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-brand-100/50 text-brand-900" />
                 <Stat label="OPD Fee Set" value={loading ? '…' : stats.opd} icon={<IndianRupee className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" />
                 <Stat label="IPD Fee Set" value={loading ? '…' : stats.ipd} icon={<BedDouble className="h-5 w-5 text-violet-600" />} tone="from-violet-50 to-fuchsia-100/50 text-violet-900" />
+                <Stat label="Emergency Fee Set" value={loading ? '…' : stats.emergency} icon={<Siren className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl bg-white overflow-hidden shadow-lg shadow-brand-500/5">
@@ -142,16 +145,17 @@ export const DoctorFees: React.FC = () => {
                         <TableRow className="border-none hover:bg-transparent">
                             <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Doctor</TableHead>
                             <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Department</TableHead>
-                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest w-[170px]">OPD Consult (₹)</TableHead>
-                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest w-[170px]">IPD Visit (₹)</TableHead>
+                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest w-[150px]">OPD Consult (₹)</TableHead>
+                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest w-[150px]">IPD Visit (₹)</TableHead>
+                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest w-[150px]">Emergency (₹)</TableHead>
                             <TableHead className="w-[90px]" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={5} className="py-3"><Skeleton className="h-9 w-full rounded-lg" /></TableCell></TableRow>)
+                            Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={6} className="py-3"><Skeleton className="h-9 w-full rounded-lg" /></TableCell></TableRow>)
                         ) : error ? (
-                            <TableRow><TableCell colSpan={5} className="text-center h-40 text-rose-600">
+                            <TableRow><TableCell colSpan={6} className="text-center h-40 text-rose-600">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="h-12 w-12 rounded-2xl bg-rose-50 flex items-center justify-center"><AlertCircle className="h-6 w-6" /></div>
                                     <p className="text-sm font-semibold">{error}</p>
@@ -159,7 +163,7 @@ export const DoctorFees: React.FC = () => {
                                 </div>
                             </TableCell></TableRow>
                         ) : filtered.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center h-40 text-slate-400">
+                            <TableRow><TableCell colSpan={6} className="text-center h-40 text-slate-400">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center"><Stethoscope className="h-6 w-6" /></div>
                                     <p className="text-sm font-semibold text-slate-600">{rows.length === 0 ? 'No doctors found for this hospital' : 'No doctors match your filters'}</p>
@@ -186,6 +190,12 @@ export const DoctorFees: React.FC = () => {
                                         <Input type="number" min={0} step="1" value={r.ipdVisitFee} onChange={(e) => setField(r.doctorId, 'ipdVisitFee', parseFloat(e.target.value || '0'))} className="h-8 pl-6 font-mono text-sm tabular-nums" />
                                     </div>
                                 </TableCell>
+                                <TableCell>
+                                    <div className="relative">
+                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">₹</span>
+                                        <Input type="number" min={0} step="1" value={r.emergencyFee} onChange={(e) => setField(r.doctorId, 'emergencyFee', parseFloat(e.target.value || '0'))} className="h-8 pl-6 font-mono text-sm tabular-nums" />
+                                    </div>
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Button size="sm" className={cn('h-8 text-xs rounded-lg transition-all', r.dirty ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 text-slate-400')} disabled={!r.dirty || r.saving} onClick={() => save(r.doctorId)}>
                                         {r.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5 mr-1" /> Save</>}
@@ -196,7 +206,7 @@ export const DoctorFees: React.FC = () => {
                     </TableBody>
                 </Table>
             </Card>
-            <p className="text-[11px] text-muted-foreground px-1">Tip: the OPD consult fee is charged on New / Old-with-fee appointments (per the prescription validity rule); IPD visit fee applies per doctor visit during admission.</p>
+            <p className="text-[11px] text-muted-foreground px-1">Tip: the OPD consult fee is charged on New / Old-with-fee appointments (per the prescription validity rule); IPD visit fee applies per doctor visit during admission; emergency fee is stored per doctor for use in ER billing.</p>
         </div>
     );
 };
