@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, DoorOpen, Stethoscope } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';
 import { PrescriptionConfig } from '@/features/prescription/components/PrescriptionConfig';
 import { ChargeMaster } from '@/features/hospital/components/masters/ChargeMaster';
 import { BedMaster } from '@/features/hospital/components/masters/BedMaster';
+import { RoomMaster } from '@/features/hospital/components/masters/RoomMaster';
 import { DoctorFees } from '@/features/hospital/components/masters/DoctorFees';
 
 export const AdminConfigModule = () => {
@@ -30,6 +31,12 @@ export const AdminConfigModule = () => {
             label: 'Charge Master',
             description: 'Manage comprehensive service & pricing catalog',
             icon: Database,
+        },
+        {
+            id: 'room-master',
+            label: 'Room Master',
+            description: 'Set up rooms by room number and add the beds each one holds',
+            icon: DoorOpen,
         },
         {
             id: 'bed-master',
@@ -124,6 +131,7 @@ export const AdminConfigModule = () => {
                     {activeTab === 'billing' && <BillingPolicyConfig />}
                     {activeTab === 'prescriptions' && <PrescriptionConfig />}
                     {activeTab === 'charge-master' && <ChargeMaster />}
+                    {activeTab === 'room-master' && <RoomMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
                     {activeTab === 'doctor-fees' && <DoctorFees />}
                 </div>

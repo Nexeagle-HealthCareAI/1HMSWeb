@@ -6,6 +6,7 @@ export type ApiBedStatus = 'AVAILABLE' | 'OCCUPIED' | 'CLEANING' | 'RESERVED' | 
 
 export interface BedMasterItem {
     bedId: string;
+    roomId?: string;
     wardCode?: string;
     wardName?: string;
     wardType?: string;
@@ -44,6 +45,7 @@ export interface BedMasterDetail extends BedMasterItem {
 export interface UpsertBedMasterRequest {
     bedId?: string;
     hospitalId?: string;
+    roomId?: string;
     wardCode?: string;
     wardName?: string;
     wardType?: string;
@@ -71,6 +73,7 @@ export interface UpsertBedMasterResponse {
 
 export interface BulkCreateBedMasterRequest {
     hospitalId?: string;
+    roomId?: string;
     wardCode?: string;
     wardName?: string;
     wardType?: string;

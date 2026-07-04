@@ -248,6 +248,13 @@ export const IPD_API_ENDPOINTS = {
     UPSERT_MASTER: 'bed/master',
     BULK_CREATE: 'bed/master/bulk',
   },
+  ROOM: {
+    GET_MASTERS: (hospitalId: string, page = 1, pageSize = 50) =>
+      `bed/room/master?hospitalId=${encodeURIComponent(hospitalId)}&page=${page}&pageSize=${pageSize}`,
+    GET_MASTER_BY_ID: (roomId: string, hospitalId: string) =>
+      `bed/room/master/${encodeURIComponent(roomId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
+    UPSERT_MASTER: 'bed/room/master',
+  },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {
       const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
