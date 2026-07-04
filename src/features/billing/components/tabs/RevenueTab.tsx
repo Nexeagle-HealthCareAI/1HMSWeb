@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Search, Plus, Calendar, ArrowRight, IndianRupee,
     ChevronLeft, ChevronRight, RefreshCw, Wallet, TrendingDown, TrendingUp, CheckCircle2, PiggyBank,
+    Download, Printer, FileText,
 } from 'lucide-react';
 import { ipdBillingService } from '../../services/ipdBillingService';
 import { offlineCachedRead } from '@/offline';
@@ -12,7 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Visit } from '../../types';
@@ -216,10 +219,49 @@ export const RevenueTab: React.FC = () => {
         { key: 'CANCELLED', label: 'Cancelled', active: 'bg-rose-600 text-white shadow-sm' },
     ] as const;
 
+    const exportCSV = () => {
+        if (groupedPatients.length === 0) {
+            toast({ title: 'No data to export', variant: 'destructive' });
+            return;
+        }
+        const headers = ['Patient ID', 'Patient Name', 'Current Bill Date', 'Current Bill Status', 'Billed', 'Paid', 'Due', 'Past Due'];
+        const rows = groupedPatients.map(g => [
+            g.patientIdDisplay,
+            g.patientName,
+            g.current ? format(new Date(g.current.date), 'dd MMM yyyy') : '',
+            g.current?.status ?? '',
+            g.current?.totalDebit ?? 0,
+            g.current?.totalCredit ?? 0,
+            g.current?.balance ?? 0,
+            g.pastDue
+        ]);
+        
+        const csvContent = [
+            headers.join(','), 
+            ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+            '',
+            `"Total Billed",,,,"${kpis.billed}"`,
+            `"Total Collected",,,,"${kpis.collected}"`,
+            `"Total Outstanding",,,,"${kpis.due}"`
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `revenue_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const printTable = () => {
+        window.print();
+    };
+
     return (
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-4 h-full print:bg-white print:p-0">
             {/* Overview — KPIs scoped to the current view, with a scope chip for context. */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 print:hidden">
                 <div className="flex items-center justify-between px-0.5">
                     <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Overview</span>
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 bg-brand-50 border border-brand-100 px-2.5 py-1 rounded-full shadow-sm">
@@ -235,8 +277,8 @@ export const RevenueTab: React.FC = () => {
                 </div>
             </div>
 
-            <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-brand-500/5">
-                <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/60">
+            <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-brand-500/5 print:shadow-none print:ring-0">
+                <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/60 print:hidden">
                     <div className="flex items-center p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
                         {FILTERS.map(({ key, label, active }) => (
                             <button
@@ -288,6 +330,17 @@ export const RevenueTab: React.FC = () => {
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                             <Input placeholder="Search by PTID or Name..." className="pl-9 bg-white text-sm rounded-xl" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
                         </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl">
+                                    <Download className="h-3.5 w-3.5" /> Export
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={exportCSV}><FileText className="h-4 w-4 mr-2" /> Excel (CSV)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={printTable}><Printer className="h-4 w-4 mr-2" /> Print PDF</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl" onClick={() => loadDashboard(true)} disabled={refreshing || loading}>
                             <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> Refresh
                         </Button>
@@ -384,6 +437,15 @@ export const RevenueTab: React.FC = () => {
                                     </TableRow>
                                 ))}
                             </TableBody>
+                            <TableFooter className="hidden print:table-footer-group">
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-right font-bold text-slate-600">Totals</TableCell>
+                                    <TableCell className="text-right font-bold text-slate-800 tabular-nums">{inr(kpis.billed)}</TableCell>
+                                    <TableCell className="text-right font-bold text-emerald-600 tabular-nums">{inr(kpis.collected)}</TableCell>
+                                    <TableCell className="text-right font-bold text-rose-600 tabular-nums">{inr(kpis.due)}</TableCell>
+                                    <TableCell colSpan={2} className="print:hidden"></TableCell>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                     )}
                 </div>

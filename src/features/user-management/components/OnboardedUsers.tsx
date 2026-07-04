@@ -15,6 +15,7 @@ import {
   Pencil,
 
   UserX,
+  UserCheck,
   Mail,
   Phone,
   Shield,
@@ -32,7 +33,7 @@ import { cn } from '@/lib/utils';
 
 export const OnboardedUsers: React.FC = () => {
   const { t } = useTranslation();
-  const { getAllUsers, deactivateUser } = useUserManagementApi();
+  const { getAllUsers, deactivateUser, reactivateUser } = useUserManagementApi();
   const authStore = useAuthStore.getState();
   const hospitalId = authStore.getHospitalId();
   const currentUserId = authStore.getUserId();
@@ -142,6 +143,19 @@ export const OnboardedUsers: React.FC = () => {
 
       setShowDeactivateDialog(false);
       setSelectedUser(null);
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+  // Reactivate a previously-deactivated user (no confirmation dialog — lower-risk than deactivate).
+  const handleReactivateUser = async (user: { userId: string }) => {
+    if (!hospitalId) return;
+    try {
+      await reactivateUser.mutateAsync({
+        hospitalId,
+        userId: user.userId,
+      });
     } catch (error) {
       // Error is handled by the mutation
     }
@@ -462,6 +476,18 @@ export const OnboardedUsers: React.FC = () => {
                         >
                           <UserX className="h-4 w-4" />
                         </Button>
+                        {!isUserActive(user) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReactivateUser({ userId: user.userId })}
+                            disabled={reactivateUser.isPending}
+                            className="h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-900/20"
+                            title={t('userManagement.onboardedUsers.actions.reactivateUser', 'Reactivate user')}
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

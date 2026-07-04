@@ -87,6 +87,29 @@ export interface AuthActions {
 
 export type AuthStore = AuthState & AuthActions;
 
+// Reads the real `exp` claim (seconds since epoch) out of a JWT's payload, so the client's
+// notion of session validity matches what the server will actually accept — the backend token
+// lives 1h (see JwtAuthService.cs), not the 24h this store used to assume unconditionally.
+const decodeJwtExpiryMs = (token: string): number | null => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(normalized)
+        .split('')
+        .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('')
+    );
+    const exp = JSON.parse(json)?.exp;
+    return typeof exp === 'number' ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+// Fallback only used if a token can't be decoded — matches the backend's real token lifetime.
+const FALLBACK_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
+
 // Initial state
 const initialState: AuthState = {
   user: null,
@@ -132,13 +155,13 @@ export const useAuthStore = create<AuthStore>()(
 
         // Token management
         setToken: (token: string) => {
-          const tokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+          const tokenExpiry = decodeJwtExpiryMs(token) ?? (Date.now() + FALLBACK_TOKEN_LIFETIME_MS);
           set({ token, tokenExpiry });
         },
 
         // Set authenticated user
         setAuthenticatedUser: (userId: string, token: string) => {
-          const tokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+          const tokenExpiry = decodeJwtExpiryMs(token) ?? (Date.now() + FALLBACK_TOKEN_LIFETIME_MS);
           const user: User = {
             id: userId,
           };
@@ -176,16 +199,13 @@ export const useAuthStore = create<AuthStore>()(
           return Date.now() > (tokenExpiry - fiveMinutes);
         },
 
-        // Refresh token (to be called during active sessions)
-        refreshToken: async () => {
-          // This would call your refresh token API
-          // For now, just extend the expiry by 24 hours
-          const { token } = get();
-          if (token) {
-            const newTokenExpiry = Date.now() + (24 * 60 * 60 * 1000);
-            set({ tokenExpiry: newTokenExpiry });
-          }
-        },
+        // No refresh-token endpoint exists on the backend today — this intentionally does NOT
+        // fake-extend tokenExpiry. Faking it previously made the client believe a session was
+        // still good for up to 24h after the real JWT (1h lifetime) had already died server-side,
+        // so every subsequent API call would 401 despite the UI showing "logged in". The 401
+        // response interceptor (axiosClient.ts) already logs out + redirects to /login when the
+        // real token is rejected, which is the correct behavior until a real refresh endpoint exists.
+        refreshToken: async () => {},
 
         setUserId: (userId: string) => {
           set({ userId });

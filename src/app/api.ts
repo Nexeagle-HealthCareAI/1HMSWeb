@@ -74,6 +74,7 @@ export const API_ENDPOINTS = {
     OTP_CHECKER: 'auth/otp/verify',
     SET_PASSWORD: 'auth/user/password?scope=set-password',
     RESET_PASSWORD: 'auth/user/password?scope=reset-password',
+    CHANGE_PASSWORD: 'auth/user/password?scope=change-password',
   },
   USER: {
     PERMISSIONS: 'user/permissions',
@@ -89,6 +90,7 @@ export const API_ENDPOINTS = {
     GET_BY_USER_ID: (userId: string) => `hospitals/users/${userId}`,
     MINE: 'hospitals/mine',
     GET_ANALYSIS: (hospitalId: string) => `hospitals/analysis/hospitalId=${hospitalId}`,
+    DEACTIVATE: (id: string) => `hospitals/${id}/deactivate`,
   },
   CHAINS: {
     CREATE: 'chains',
@@ -131,6 +133,7 @@ export const API_ENDPOINTS = {
     RESET_CREDENTIALS: 'admin/users/reset-credentials',
     GET_ALL_USERS: 'admin/user-onboarding/allusers',
     DEACTIVATE_USER: 'admin/user-onboarding/deactivate-user',
+    REACTIVATE_USER: 'admin/user-onboarding/reactivate-user',
   },
   SUBSCRIPTION: {
     GET_STATUS: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}`,

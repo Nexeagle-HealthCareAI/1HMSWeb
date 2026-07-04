@@ -50,6 +50,8 @@ export const useAuthApi = {
 
   // Reset password with userId (for forgot password)
   resetPasswordWithUserId: () => createMutationHook(authApi.resetPasswordWithUserId),
+  // Change password from an authenticated session (My Profile)
+  changePassword: () => createMutationHook(authApi.changePassword),
   getUserPermissions: () => createMutationHook(authApi.getUserPermissions),
 };
 

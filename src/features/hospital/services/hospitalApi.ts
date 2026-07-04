@@ -188,4 +188,14 @@ export const hospitalApi = {
     const response = await apiClient.put(API_ENDPOINTS.HOSPITALS.GET_BY_ID(hospitalId), data);
     return response;
   },
+
+  /**
+   * Deactivate a hospital/chain branch
+   */
+  deactivateHospital: async (
+    hospitalId: string
+  ): Promise<{ success: boolean; message?: string; hospitalId: string }> => {
+    const response = await apiClient.patch(API_ENDPOINTS.HOSPITALS.DEACTIVATE(hospitalId), {});
+    return response;
+  },
 };
