@@ -8,14 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { generateUuid } from '@/utils/uuid';
 import {
-    UserPlus, Search, Check, X, Siren, CalendarClock, Loader2, CreditCard,
+    UserPlus, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
     User, CalendarCheck, Sun, LogOut, AlertTriangle, Users, Wallet, BedDouble,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
     admissionApi, type AdmissionTypeCode, type AdmitPatientPayload,
-    type PatientSearchResult, type AdmissionPatientDetail, type AdmissionHistoryItem,
+    type AdmissionPatientDetail, type AdmissionHistoryItem,
     type DuplicateMatch, type DuplicateConfidence, type HospitalDoctorItem,
 } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -28,7 +28,12 @@ const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     POSSIBLE: { chip: 'bg-sky-100 text-sky-700 border-sky-200', label: 'Possible' },
 };
 
-type Mode = 'returning' | 'new';
+type WizardStep = 'admissionType' | 'personal' | 'advanceBed';
+const WIZARD_STEPS: { key: WizardStep; label: string }[] = [
+    { key: 'admissionType', label: 'Admission Type' },
+    { key: 'personal', label: 'Personal Information' },
+    { key: 'advanceBed', label: 'Advance & Bed' },
+];
 
 const ADMISSION_TYPES: { value: AdmissionTypeCode; label: string; icon: React.ElementType; tone: string }[] = [
     { value: 'EMERGENCY', label: 'Emergency', icon: Siren, tone: 'border-rose-400 bg-rose-50 text-rose-700 ring-rose-200' },
@@ -157,14 +162,12 @@ const initials = (name?: string | null) => {
 export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmitted }) => {
     const { toast } = useToast();
 
-    const [mode, setMode] = useState<Mode>('returning');
+    const [step, setStep] = useState<WizardStep>('admissionType');
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
 
-    // returning-patient search
-    const [searchText, setSearchText] = useState('');
-    const [results, setResults] = useState<PatientSearchResult[]>([]);
-    const [searching, setSearching] = useState(false);
+    // Set once staff picks a live-duplicate-detection match — from then on this is a known,
+    // existing patient (no more "new vs returning" mode; there's just one flow).
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [patientDetail, setPatientDetail] = useState<AdmissionPatientDetail | null>(null);
     const [history, setHistory] = useState<AdmissionHistoryItem[]>([]);
@@ -173,7 +176,9 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string } | null>(null);
 
-    // duplicate detection (new-patient mode)
+    // Live duplicate detection — replaces the old separate "Returning: search" step. Runs
+    // continuously as name/mobile/DOB/Aadhaar are typed, unless an existing patient is already
+    // selected below.
     const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
     const [dupChecking, setDupChecking] = useState(false);
     const [dupDismissed, setDupDismissed] = useState(false);
@@ -191,7 +196,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     // submission so a retried network call can't create a duplicate admission.
     const clientRequestIdRef = useRef<string>(generateUuid());
 
-    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Load the live bed picker, doctor list, and general-consent template whenever the sheet opens.
@@ -206,29 +210,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             .catch(() => setGeneralConsentTemplate(null));
     }, [open]);
 
-    // Debounced fast search
+    // Debounced duplicate probe while typing name/mobile/DOB/Aadhaar — stops once an existing
+    // patient has been picked below (selectedPatientId set).
     useEffect(() => {
-        if (mode !== 'returning') return;
-        if (searchTimer.current) clearTimeout(searchTimer.current);
-        const q = searchText.trim();
-        if (q.length < 2) { setResults([]); setSearching(false); return; }
-        setSearching(true);
-        searchTimer.current = setTimeout(async () => {
-            try {
-                const items = await admissionApi.searchPatients(q);
-                setResults(items);
-            } catch {
-                setResults([]);
-            } finally {
-                setSearching(false);
-            }
-        }, 300);
-        return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-    }, [searchText, mode]);
-
-    // Debounced duplicate probe while entering a brand-new patient.
-    useEffect(() => {
-        if (mode !== 'new') { setDupMatches([]); setDupChecking(false); return; }
+        if (selectedPatientId) { setDupMatches([]); setDupChecking(false); return; }
         if (dupTimer.current) clearTimeout(dupTimer.current);
         const name = form.fullName.trim();
         if (name.length < 3) { setDupMatches([]); setDupChecking(false); return; }
@@ -246,16 +231,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             setDupChecking(false);
         }, 450);
         return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
-    }, [mode, form.fullName, form.mobile, form.dateOfBirth, form.aadhaarNumber]);
-
-    const useExistingPatient = async (patientId: string) => {
-        setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
-        setMode('returning');
-        setSearchText(''); setResults([]);
-        await selectPatient(patientId);
-    };
+    }, [selectedPatientId, form.fullName, form.mobile, form.dateOfBirth, form.aadhaarNumber]);
 
     const selectPatient = async (patientId: string) => {
+        setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
         setSelectedPatientId(patientId);
         setLoadingDetail(true);
         try {
@@ -292,18 +271,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     };
 
     const reset = () => {
-        setMode('returning'); setForm(EMPTY_FORM);
-        setSearchText(''); setResults([]); setSelectedPatientId(null);
+        setStep('admissionType'); setForm(EMPTY_FORM); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
         clientRequestIdRef.current = generateUuid();
-    };
-
-    const switchMode = (m: Mode) => {
-        setMode(m);
-        clearSelection();
-        setSearchText(''); setResults([]);
-        setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
     };
 
     const bedsByWard = useMemo(() => {
@@ -315,18 +286,19 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         return groups;
     }, [availableBeds]);
 
-    const isReturning = mode === 'returning' && !!selectedPatientId;
-    const showForm = mode === 'new' || isReturning;
-    const hasNearCertainDup = mode === 'new' && dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
+    const hasNearCertainDup = !selectedPatientId && dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
     // Emergency/casualty: an unidentified patient must never be blocked at the door — Sex +
     // approximate age are the only two things required; name/mobile are backfilled later.
-    const isEmergencyQuickAdmit = mode === 'new' && form.admissionType === 'EMERGENCY';
+    // Doesn't apply once an existing patient has been picked — their identity is already known.
+    const isEmergencyQuickAdmit = !selectedPatientId && form.admissionType === 'EMERGENCY';
     const namePreview = isEmergencyQuickAdmit && !form.fullName.trim() ? synthesizeUnknownName(form.sex, form.ageYears) : null;
     const pickedBed = useMemo(() => availableBeds.find(b => b.bedId === form.bedId), [availableBeds, form.bedId]);
     const showsEntitlementWarning = form.payerType !== 'CASH' && !!form.entitledRoomCategory
         && isAboveEntitlement(pickedBed?.wardType, form.entitledRoomCategory);
+    // Gates both "Next" out of the Personal Information step and the final submit — identical
+    // requirement either way, since nothing on the Advance & Bed step is ever required.
     const canSubmit = useMemo(() => {
-        if (mode === 'returning') return !!selectedPatientId;
+        if (selectedPatientId) return true;
         if (isEmergencyQuickAdmit) {
             if (!form.sex || (!form.ageYears.trim() && !form.dateOfBirth)) return false;
         } else if (!form.fullName.trim() || !form.mobile.trim()) {
@@ -335,19 +307,18 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         // A near-certain duplicate must be explicitly acknowledged before a second UHID is created.
         if (hasNearCertainDup && !confirmNotDup) return false;
         return true;
-    }, [mode, selectedPatientId, isEmergencyQuickAdmit, form.fullName, form.mobile, form.sex, form.ageYears, form.dateOfBirth, hasNearCertainDup, confirmNotDup]);
+    }, [selectedPatientId, isEmergencyQuickAdmit, form.fullName, form.mobile, form.sex, form.ageYears, form.dateOfBirth, hasNearCertainDup, confirmNotDup]);
 
     const submit = async () => {
         if (!canSubmit || submitting) {
             if (isEmergencyQuickAdmit) toast({ title: 'Incomplete', description: 'Sex and approximate age are required.', variant: 'destructive' });
-            else if (mode === 'new') toast({ title: 'Incomplete', description: 'Patient name and mobile are required.', variant: 'destructive' });
-            else toast({ title: 'Pick a patient', description: 'Search and select the returning patient first.', variant: 'destructive' });
+            else toast({ title: 'Incomplete', description: 'Patient name and mobile are required.', variant: 'destructive' });
             return;
         }
         const t = (s: string) => { const v = s.trim(); return v.length ? v : undefined; };
         const isPreRegistration = form.admissionType === 'ELECTIVE' && form.isPreRegistration;
         const payload: AdmitPatientPayload = {
-            patientId: isReturning ? selectedPatientId! : undefined,
+            patientId: selectedPatientId ?? undefined,
             fullName: t(form.fullName), mobile: t(form.mobile),
             ageYears: form.ageYears ? parseInt(form.ageYears, 10) : undefined,
             dateOfBirth: t(form.dateOfBirth), sex: t(form.sex),
@@ -357,8 +328,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             alternateMobile: t(form.alternateMobile), email: t(form.email),
             emergencyContactName: t(form.emergencyContactName), emergencyContactRelation: t(form.emergencyContactRelation),
             emergencyContactPhone: t(form.emergencyContactPhone),
-            // Aadhaar is only captured for a new patient; for returning ones it is left untouched.
-            aadhaarNumber: mode === 'new' ? t(form.aadhaarNumber) : undefined,
+            // Aadhaar is only captured for a brand-new patient; for an existing one it is left untouched.
+            aadhaarNumber: selectedPatientId ? undefined : t(form.aadhaarNumber),
             panNumber: t(form.panNumber), abhaId: t(form.abhaId),
             admissionType: form.admissionType,
             primaryDoctorId: form.primaryDoctorId || undefined,
@@ -466,27 +437,69 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                     </div>
                 ) : (
                     <>
-                        {/* Mode toggle */}
+                        {/* Step indicator */}
                         <div className="px-5 sm:px-6 pt-4 pb-1 shrink-0">
-                            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-white border border-slate-200 shadow-sm">
-                                <button type="button" onClick={() => switchMode('returning')}
-                                    className={cn('flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 transition-all',
-                                        mode === 'returning' ? 'bg-brand-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50')}>
-                                    <span className="flex items-center gap-1.5 text-sm font-semibold"><Search className="h-4 w-4" /> Returning</span>
-                                    <span className={cn('text-[10px]', mode === 'returning' ? 'text-brand-100' : 'text-slate-400')}>Search &amp; re-admit</span>
-                                </button>
-                                <button type="button" onClick={() => switchMode('new')}
-                                    className={cn('flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 transition-all',
-                                        mode === 'new' ? 'bg-brand-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50')}>
-                                    <span className="flex items-center gap-1.5 text-sm font-semibold"><UserPlus className="h-4 w-4" /> New patient</span>
-                                    <span className={cn('text-[10px]', mode === 'new' ? 'text-brand-100' : 'text-slate-400')}>Register &amp; admit</span>
-                                </button>
+                            <div className="flex items-center gap-2">
+                                {WIZARD_STEPS.map((s, i) => {
+                                    const stepIndex = WIZARD_STEPS.findIndex(x => x.key === step);
+                                    const isCurrent = s.key === step;
+                                    const isVisited = i < stepIndex;
+                                    const canJump = i <= stepIndex || (i === stepIndex + 1 && canSubmit);
+                                    return (
+                                        <React.Fragment key={s.key}>
+                                            {i > 0 && <div className={cn('h-0.5 flex-1 rounded-full', isVisited || isCurrent ? 'bg-brand-400' : 'bg-slate-200')} />}
+                                            <button type="button" disabled={!canJump} onClick={() => canJump && setStep(s.key)}
+                                                className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-all shrink-0',
+                                                    isCurrent ? 'bg-brand-600 text-white shadow' : isVisited ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-400',
+                                                    canJump && !isCurrent && 'cursor-pointer hover:bg-brand-100')}>
+                                                <span className={cn('h-4 w-4 rounded-full flex items-center justify-center text-[10px]',
+                                                    isCurrent ? 'bg-white/20' : isVisited ? 'bg-brand-200' : 'bg-slate-200')}>{i + 1}</span>
+                                                <span className="hidden sm:inline">{s.label}</span>
+                                            </button>
+                                        </React.Fragment>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
-                            {/* ── Duplicate warning (new-patient mode) ──────────── */}
-                            {mode === 'new' && dupMatches.length > 0 && (!dupDismissed || hasNearCertainDup) && (
+                            {/* ══ Step 1: Admission Type ══════════════════════════ */}
+                            {step === 'admissionType' && (
+                                <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Admission type" subtitle="Choose the route this patient is coming through" tone="amber">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {ADMISSION_TYPES.map(t => {
+                                            const Icon = t.icon;
+                                            const active = form.admissionType === t.value;
+                                            return (
+                                                <button key={t.value} type="button" onClick={() => set('admissionType', t.value)}
+                                                    className={cn('rounded-xl border-2 py-2.5 px-1 text-xs font-bold transition-all flex flex-col items-center justify-center gap-1',
+                                                        active ? cn(t.tone, 'ring-2') : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300')}>
+                                                    <Icon className="h-4 w-4" />{t.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {form.admissionType === 'EMERGENCY' && (
+                                        <p className="mt-3 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
+                                            Emergency/casualty: the next step only requires Sex + approximate age — name, mobile and everything else can be backfilled once the patient is stabilised.
+                                        </p>
+                                    )}
+
+                                    {form.admissionType === 'ELECTIVE' && (
+                                        <label className="flex items-start gap-2 text-xs text-slate-600 mt-3 p-2.5 rounded-lg border border-brand-200 bg-brand-50/50 cursor-pointer">
+                                            <input type="checkbox" checked={form.isPreRegistration} onChange={e => set('isPreRegistration', e.target.checked)} className="mt-0.5" />
+                                            <span><span className="font-semibold text-slate-800">Patient not yet arrived — pre-register.</span> Bed/pre-auth can still be arranged now; confirm arrival later from the dashboard.</span>
+                                        </label>
+                                    )}
+                                </SectionCard>
+                            )}
+
+                            {/* ══ Step 2: Personal Information ═══════════════════ */}
+                            {step === 'personal' && (
+                                <>
+                            {/* ── Duplicate warning — live-detected while typing name/mobile ── */}
+                            {!selectedPatientId && dupMatches.length > 0 && (!dupDismissed || hasNearCertainDup) && (
                                 <div className={cn('rounded-2xl border shadow-sm overflow-hidden',
                                     hasNearCertainDup ? 'border-rose-300 bg-rose-50/60' : 'border-amber-300 bg-amber-50/50')}>
                                     <div className="flex items-center gap-2.5 px-4 py-3 border-b border-black/5">
@@ -511,7 +524,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                         {m.patientId}{m.ageYears != null ? ` · ${m.ageYears}${m.sex ?? ''}` : m.sex ? ` · ${m.sex}` : ''}{m.mobile ? ` · ${m.mobile}` : ''} · {Math.round(m.similarity * 100)}% name
                                                     </p>
                                                 </div>
-                                                <Button size="sm" onClick={() => useExistingPatient(m.patientId)} className="h-8 text-xs bg-brand-600 hover:bg-brand-700 shrink-0">
+                                                <Button size="sm" onClick={() => selectPatient(m.patientId)} className="h-8 text-xs bg-brand-600 hover:bg-brand-700 shrink-0">
                                                     <Users className="h-3.5 w-3.5 mr-1" /> Use this
                                                 </Button>
                                             </div>
@@ -523,53 +536,18 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             </label>
                                         ) : (
                                             <div className="flex justify-end pt-0.5">
-                                                <Button size="sm" variant="ghost" onClick={() => setDupDismissed(true)} className="h-7 text-[11px] text-slate-500">Continue as new patient</Button>
+                                                <Button size="sm" variant="ghost" onClick={() => setDupDismissed(true)} className="h-7 text-[11px] text-slate-500">Not this patient</Button>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             )}
-                            {mode === 'new' && dupChecking && dupMatches.length === 0 && form.fullName.trim().length >= 3 && (
+                            {!selectedPatientId && dupChecking && dupMatches.length === 0 && form.fullName.trim().length >= 3 && (
                                 <p className="text-[11px] text-slate-400 flex items-center gap-1.5 px-1"><Loader2 className="h-3 w-3 animate-spin" /> Checking for existing patients…</p>
                             )}
 
-                            {/* ── Returning: search ─────────────────────────────── */}
-                            {mode === 'returning' && !selectedPatientId && (
-                                <SectionCard icon={<Search className="h-4 w-4" />} title="Find a patient" subtitle="Search by patient ID, name, mobile, Aadhaar or ABHA" tone="indigo">
-                                    <div className="relative">
-                                        <Search className="h-4 w-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
-                                        <Input value={searchText} onChange={e => setSearchText(e.target.value)} autoFocus
-                                            placeholder="Start typing to search…" className="h-10 pl-9 pr-9 rounded-lg" />
-                                        {searching && <Loader2 className="h-4 w-4 text-brand-400 animate-spin absolute right-3 top-3" />}
-                                    </div>
-                                    <div className="mt-3 border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
-                                        {results.map(p => (
-                                            <button key={p.patientId} type="button" onClick={() => selectPatient(p.patientId)}
-                                                className="w-full text-left px-3 py-2.5 hover:bg-brand-50/60 flex items-center gap-3 group">
-                                                <div className="h-9 w-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
-                                                    {initials(p.fullName)}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-semibold text-slate-900 truncate">{p.fullName || '—'}</p>
-                                                    <p className="text-[11px] text-slate-500 font-mono truncate">
-                                                        {p.patientId}{p.age != null ? ` · ${p.age}${p.sex ?? ''}` : p.sex ? ` · ${p.sex}` : ''}{p.mobile ? ` · ${p.mobile}` : ''}{p.city ? ` · ${p.city}` : ''}
-                                                    </p>
-                                                </div>
-                                                <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-brand-500 shrink-0 transition-colors" />
-                                            </button>
-                                        ))}
-                                        {!searching && searchText.trim().length >= 2 && results.length === 0 && (
-                                            <p className="px-3 py-8 text-center text-xs text-slate-400">No patient matched. Try a different term, or switch to <button type="button" onClick={() => switchMode('new')} className="text-brand-600 font-semibold underline">New patient</button>.</p>
-                                        )}
-                                        {searchText.trim().length < 2 && (
-                                            <p className="px-3 py-8 text-center text-xs text-slate-400">Type at least 2 characters to search.</p>
-                                        )}
-                                    </div>
-                                </SectionCard>
-                            )}
-
-                            {/* ── Selected returning patient: identity card ─────── */}
-                            {isReturning && (
+                            {/* ── Selected existing patient: identity card ──────── */}
+                            {!!selectedPatientId && (
                                 <>
                                     <div className="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white shadow-sm p-4 flex items-start gap-3">
                                         <div className="h-12 w-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-base font-bold shrink-0 shadow">
@@ -581,12 +559,12 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 {selectedPatientId}{form.ageYears ? ` · ${form.ageYears}${form.sex}` : form.sex ? ` · ${form.sex}` : ''}{form.bloodGroup ? ` · ${form.bloodGroup}` : ''}
                                             </p>
                                             <div className="flex flex-wrap gap-1.5 mt-2">
-                                                <Badge variant="outline" className="text-[10px] bg-white text-brand-700 border-brand-200">Returning patient</Badge>
+                                                <Badge variant="outline" className="text-[10px] bg-white text-brand-700 border-brand-200">Existing patient</Badge>
                                                 {patientDetail?.aadhaarMasked && <Badge variant="outline" className="text-[10px] bg-white text-slate-500 gap-1"><ShieldCheck className="h-3 w-3" /> {patientDetail.aadhaarMasked}</Badge>}
                                                 {patientDetail?.abhaId && <Badge variant="outline" className="text-[10px] bg-white text-slate-500 gap-1"><CreditCard className="h-3 w-3" /> ABHA</Badge>}
                                             </div>
                                         </div>
-                                        <Button size="sm" variant="ghost" onClick={clearSelection} className="h-8 text-xs shrink-0 text-slate-500 hover:text-slate-900"><X className="h-3.5 w-3.5 mr-1" /> Change</Button>
+                                        <Button size="sm" variant="ghost" onClick={clearSelection} className="h-8 text-xs shrink-0 text-slate-500 hover:text-slate-900"><X className="h-3.5 w-3.5 mr-1" /> Not this patient</Button>
                                     </div>
 
                                     {(loadingDetail || history.length > 0) && (
@@ -620,13 +598,11 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                 </>
                             )}
 
-                            {/* ── Demographics (new patient, or editable for returning) ── */}
-                            {showForm && (
-                                <>
+                            {/* ── Demographics ───────────────────────────────── */}
                                     <SectionCard icon={<User className="h-4 w-4" />} title="Identity"
-                                        subtitle={isEmergencyQuickAdmit ? 'Sex and approximate age are required — name can be backfilled later' : mode === 'new' ? 'Name is required' : 'Pre-filled — edit if needed'} tone="indigo">
+                                        subtitle={isEmergencyQuickAdmit ? 'Sex and approximate age are required — name can be backfilled later' : !selectedPatientId ? 'Name is required' : 'Pre-filled — edit if needed'} tone="indigo">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <Field label="Full name" required={mode === 'new' && !isEmergencyQuickAdmit} className="sm:col-span-2">
+                                            <Field label="Full name" required={!selectedPatientId && !isEmergencyQuickAdmit} className="sm:col-span-2">
                                                 <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={INPUT_CLS} placeholder={isEmergencyQuickAdmit ? 'Unknown — leave blank if not identifiable' : 'Patient full name'} />
                                                 {namePreview && <p className="text-[11px] text-slate-400 mt-1">Will admit as: <span className="font-semibold text-slate-600">{namePreview}</span></p>}
                                             </Field>
@@ -657,9 +633,9 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     </SectionCard>
 
                                     <SectionCard icon={<Phone className="h-4 w-4" />} title="Contact"
-                                        subtitle={isEmergencyQuickAdmit ? 'Optional in Emergency mode' : mode === 'new' ? 'Mobile is required' : undefined} tone="sky">
+                                        subtitle={isEmergencyQuickAdmit ? 'Optional in Emergency mode' : !selectedPatientId ? 'Mobile is required' : undefined} tone="sky">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <Field label="Patient mobile" required={mode === 'new' && !isEmergencyQuickAdmit}>
+                                            <Field label="Patient mobile" required={!selectedPatientId && !isEmergencyQuickAdmit}>
                                                 <Input value={form.mobile} onChange={e => set('mobile', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="10-digit mobile" />
                                             </Field>
                                             <Field label="Attendant / next-of-kin phone">
@@ -705,7 +681,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
                                     <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="Government ID" tone="emerald" right={<OptionalPill />}>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            {mode === 'new' ? (
+                                            {!selectedPatientId ? (
                                                 <Field label="Aadhaar">
                                                     <Input value={form.aadhaarNumber} onChange={e => set('aadhaarNumber', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="12 digits" />
                                                 </Field>
@@ -723,30 +699,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         </div>
                                     </SectionCard>
 
-                                    {/* ── Admission details ─────────────────────────── */}
-                                    <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Admission details" subtitle="Type, diagnosis & referral" tone="amber">
-                                        <Label className="text-[11px] font-semibold text-slate-600">Admission type</Label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5 mb-4">
-                                            {ADMISSION_TYPES.map(t => {
-                                                const Icon = t.icon;
-                                                const active = form.admissionType === t.value;
-                                                return (
-                                                    <button key={t.value} type="button" onClick={() => set('admissionType', t.value)}
-                                                        className={cn('rounded-xl border-2 py-2.5 px-1 text-xs font-bold transition-all flex flex-col items-center justify-center gap-1',
-                                                            active ? cn(t.tone, 'ring-2') : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300')}>
-                                                        <Icon className="h-4 w-4" />{t.label}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {form.admissionType === 'ELECTIVE' && (
-                                            <label className="flex items-start gap-2 text-xs text-slate-600 mb-4 p-2.5 rounded-lg border border-brand-200 bg-brand-50/50 cursor-pointer">
-                                                <input type="checkbox" checked={form.isPreRegistration} onChange={e => set('isPreRegistration', e.target.checked)} className="mt-0.5" />
-                                                <span><span className="font-semibold text-slate-800">Patient not yet arrived — pre-register.</span> Bed/pre-auth can still be arranged now; confirm arrival later from the dashboard.</span>
-                                            </label>
-                                        )}
-
+                                    {/* ── Clinical & referral details ───────────────── */}
+                                    <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Field label="Admitting consultant">
                                                 <select value={form.primaryDoctorId} onChange={e => set('primaryDoctorId', e.target.value)} className={SELECT_CLS}>
@@ -802,6 +756,33 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         )}
                                     </SectionCard>
 
+                                    {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
+                                        <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="General consent" subtitle="Optional — can also be captured later" tone="emerald">
+                                            <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
+                                                <input type="checkbox" checked={form.consentObtained} onChange={e => set('consentObtained', e.target.checked)} className="mt-0.5" />
+                                                <span>General admission &amp; treatment consent obtained from the patient/attendant.</span>
+                                            </label>
+                                            {form.consentObtained && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                                                    <Field label="Signed by">
+                                                        <Input value={form.consentSignedByName} onChange={e => set('consentSignedByName', e.target.value)} className={INPUT_CLS} placeholder={form.fullName || 'Patient name'} />
+                                                    </Field>
+                                                    <Field label="Relation to patient">
+                                                        <Input value={form.consentSignerRelation} onChange={e => set('consentSignerRelation', e.target.value)} className={INPUT_CLS} placeholder="Self" />
+                                                    </Field>
+                                                </div>
+                                            )}
+                                        </SectionCard>
+                                    )}
+                                </>
+                            )}
+
+                            {/* ══ Step 3: Advance & Bed (optional) ════════════════ */}
+                            {step === 'advanceBed' && (
+                                <>
+                                    <p className="text-[11px] text-slate-500 bg-slate-100 rounded-lg px-3 py-2">
+                                        This step is optional — you can admit now and add deposit/bed details later from the dashboard.
+                                    </p>
                                     {/* ── Payer & bed ────────────────────────────────── */}
                                     <SectionCard icon={<Wallet className="h-4 w-4" />} title="Payer & bed" subtitle="Billing branch, deposit & bed assignment" tone="rose">
                                         <Label className="text-[11px] font-semibold text-slate-600">Payer type</Label>
@@ -874,44 +855,44 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             </div>
                                         )}
                                     </SectionCard>
-
-                                    {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
-                                        <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="General consent" subtitle="Optional — can also be captured later" tone="emerald">
-                                            <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
-                                                <input type="checkbox" checked={form.consentObtained} onChange={e => set('consentObtained', e.target.checked)} className="mt-0.5" />
-                                                <span>General admission &amp; treatment consent obtained from the patient/attendant.</span>
-                                            </label>
-                                            {form.consentObtained && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                                    <Field label="Signed by">
-                                                        <Input value={form.consentSignedByName} onChange={e => set('consentSignedByName', e.target.value)} className={INPUT_CLS} placeholder={form.fullName || 'Patient name'} />
-                                                    </Field>
-                                                    <Field label="Relation to patient">
-                                                        <Input value={form.consentSignerRelation} onChange={e => set('consentSignerRelation', e.target.value)} className={INPUT_CLS} placeholder="Self" />
-                                                    </Field>
-                                                </div>
-                                            )}
-                                        </SectionCard>
-                                    )}
                                 </>
                             )}
                         </div>
 
                         {/* Footer */}
                         <div className="shrink-0 px-5 sm:px-6 pt-3 pb-4 bg-white border-t border-slate-200 flex items-center gap-3">
-                            <Button variant="outline" className="h-10 px-4" onClick={closeAll}><X className="h-4 w-4 mr-1" /> Cancel</Button>
+                            <Button variant="outline" className="h-10 px-4" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
+                                {step === 'admissionType' ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
+                            </Button>
                             <div className="flex-1 min-w-0">
-                                {showForm && !canSubmit && mode === 'new' && (
+                                {step === 'personal' && !canSubmit && (
                                     <p className="text-[11px] text-slate-400 truncate">
-                                        {isEmergencyQuickAdmit ? 'Sex and approximate age are required to admit.' : 'Name and mobile are required to admit.'}
+                                        {isEmergencyQuickAdmit ? 'Sex and approximate age are required to continue.' : 'Name and mobile are required to continue.'}
                                     </p>
                                 )}
-                                {isReturning && <p className="text-[11px] text-slate-400 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
+                                {!!selectedPatientId && step !== 'admissionType' && <p className="text-[11px] text-slate-400 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
                             </div>
-                            <Button onClick={submit} disabled={!canSubmit || submitting} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
-                                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
-                                {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
-                            </Button>
+                            {step === 'admissionType' && (
+                                <Button onClick={() => setStep('personal')} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                    Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                                </Button>
+                            )}
+                            {step === 'personal' && (
+                                <>
+                                    <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-10 px-4">
+                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Skip &amp; admit
+                                    </Button>
+                                    <Button onClick={() => setStep('advanceBed')} disabled={!canSubmit} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                        Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                                    </Button>
+                                </>
+                            )}
+                            {step === 'advanceBed' && (
+                                <Button onClick={submit} disabled={!canSubmit || submitting} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                    {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                                    {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
+                                </Button>
+                            )}
                         </div>
                     </>
                 )}
