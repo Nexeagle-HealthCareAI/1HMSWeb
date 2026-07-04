@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Search, Wallet, TrendingDown, Building2, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Wallet, TrendingDown, Building2, RefreshCw, Pencil, Trash2, Loader2, Download, Printer, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -52,7 +53,7 @@ type FormState = {
 
 const emptyForm = (): FormState => ({
     expenseId: undefined,
-    expenseDate: new Date().toISOString().slice(0, 10),
+    expenseDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     categoryCode: 'OTHER',
     vendor: '',
     description: '',
@@ -70,6 +71,12 @@ export const ExpenseTab: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
 
+    const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'YESTERDAY' | 'CUSTOM'>('ALL');
+    const [customFromDate, setCustomFromDate] = useState(new Date().toISOString().slice(0, 10));
+    const [customToDate, setCustomToDate] = useState(new Date().toISOString().slice(0, 10));
+    const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+
+
     const [dialogOpen, setDialogOpen] = useState(false);
     const [form, setForm] = useState<FormState>(emptyForm());
     const [saving, setSaving] = useState(false);
@@ -79,8 +86,35 @@ export const ExpenseTab: React.FC = () => {
     const load = useCallback(async (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
         setError(null);
+
+        let fromDate: string | undefined;
+        let toDate: string | undefined;
+
+        if (dateFilter === 'TODAY') {
+            const today = new Date().toISOString().slice(0, 10);
+            fromDate = today;
+            toDate = today;
+        } else if (dateFilter === 'YESTERDAY') {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yStr = yesterday.toISOString().slice(0, 10);
+            fromDate = yStr;
+            toDate = yStr;
+        } else if (dateFilter === 'CUSTOM') {
+            fromDate = customFromDate;
+            toDate = customToDate;
+        }
+
+        const cat = categoryFilter === 'ALL' ? undefined : categoryFilter;
+
         try {
-            const res = await expenseService.list({ search: search.trim() || undefined, pageSize: 200 });
+            const res = await expenseService.list({ 
+                search: search.trim() || undefined, 
+                fromDate,
+                toDate,
+                category: cat,
+                pageSize: 200 
+            });
             setItems(res?.items ?? []);
             setSummary({ total: res?.totalAmount ?? 0, pending: res?.pendingAmount ?? 0, categories: res?.categoryCount ?? 0 });
         } catch (e: any) {
@@ -89,15 +123,52 @@ export const ExpenseTab: React.FC = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [search]);
+    }, [search, dateFilter, customFromDate, customToDate, categoryFilter]);
 
     useEffect(() => { load(); }, [load]);
+
+    const exportCSV = () => {
+        if (items.length === 0) {
+            toast({ title: 'No data to export', variant: 'destructive' });
+            return;
+        }
+        const headers = ['Date', 'Category', 'Vendor', 'Description', 'Mode', 'Status', 'Amount'];
+        const rows = items.map(e => [
+            format(new Date(e.expenseDate), 'dd MMM yyyy, hh:mm a'),
+            CAT_LABEL(e.categoryCode),
+            e.vendor || '',
+            e.description || '',
+            e.paymentMode || '',
+            e.statusCode || '',
+            e.amount
+        ]);
+        
+        const csvContent = [
+            headers.join(','), 
+            ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+            '',
+            `"Total Expense",,,,,, "${summary.total}"`,
+            `"Pending Payment",,,,,, "${summary.pending}"`
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `expenses_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const printTable = () => {
+        window.print();
+    };
 
     const openAdd = () => { setForm(emptyForm()); setDialogOpen(true); };
     const openEdit = (e: ExpenseItem) => {
         setForm({
             expenseId: e.expenseId,
-            expenseDate: (e.expenseDate ?? new Date().toISOString()).slice(0, 10),
+            expenseDate: e.expenseDate ? format(new Date(e.expenseDate), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
             categoryCode: e.categoryCode || 'OTHER',
             vendor: e.vendor ?? '',
             description: e.description ?? '',
@@ -153,20 +224,60 @@ export const ExpenseTab: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col gap-4 h-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="flex flex-col gap-4 h-full print:bg-white print:p-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print:hidden">
                 <KpiStat label="Total Expenses" amount={summary.total} format={inr} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                 <KpiStat label="Pending Payment" amount={summary.pending} format={inr} icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" />
                 <KpiStat label="Categories" value={String(summary.categories)} icon={<Building2 className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-violet-100/50 text-brand-900" />
             </div>
 
-            <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-rose-500/5">
-                <div className="p-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
-                    <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                        <Input placeholder="Search category, vendor…" className="pl-9 bg-white text-sm rounded-xl" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }} />
+            <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-rose-500/5 print:shadow-none print:ring-0">
+                <div className="p-3 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 bg-slate-50/60 print:hidden">
+                    <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+                        <div className="relative w-full sm:w-48 flex-shrink-0">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                            <Input placeholder="Search category, vendor…" className="pl-9 bg-white text-sm rounded-xl h-9" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }} />
+                        </div>
+                        <Select value={dateFilter} onValueChange={(v: any) => setDateFilter(v)}>
+                            <SelectTrigger className="w-full sm:w-[130px] h-9 bg-white rounded-xl text-sm">
+                                <SelectValue placeholder="Date" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ALL">All Time</SelectItem>
+                                <SelectItem value="TODAY">Today</SelectItem>
+                                <SelectItem value="YESTERDAY">Yesterday</SelectItem>
+                                <SelectItem value="CUSTOM">Custom Range</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {dateFilter === 'CUSTOM' && (
+                            <div className="flex items-center gap-1 w-full sm:w-auto">
+                                <Input type="date" className="h-9 w-full sm:w-[130px] bg-white rounded-xl text-sm" value={customFromDate} onChange={e => setCustomFromDate(e.target.value)} />
+                                <span className="text-slate-400">-</span>
+                                <Input type="date" className="h-9 w-full sm:w-[130px] bg-white rounded-xl text-sm" value={customToDate} onChange={e => setCustomToDate(e.target.value)} />
+                            </div>
+                        )}
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                            <SelectTrigger className="w-full sm:w-[160px] h-9 bg-white rounded-xl text-sm">
+                                <SelectValue placeholder="Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ALL">All Categories</SelectItem>
+                                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{CAT_LABEL(c)}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl">
+                                    <Download className="h-3.5 w-3.5" /> Export
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={exportCSV}><FileText className="h-4 w-4 mr-2" /> Excel (CSV)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={printTable}><Printer className="h-4 w-4 mr-2" /> Print PDF</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl" onClick={() => load(true)} disabled={refreshing || loading}>
                             <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> Refresh
                         </Button>
@@ -193,13 +304,13 @@ export const ExpenseTab: React.FC = () => {
                                     <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Mode</TableHead>
                                     <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Status</TableHead>
                                     <TableHead className="text-right text-[11px] font-bold text-slate-500 uppercase tracking-widest">Amount</TableHead>
-                                    <TableHead className="w-px" />
+                                    <TableHead className="w-px print:hidden" />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {items.map(e => (
                                     <TableRow key={e.expenseId} className="border-b border-slate-50 transition-colors hover:bg-rose-50/40 group">
-                                        <TableCell className="text-slate-600 text-xs whitespace-nowrap tabular-nums">{format(new Date(e.expenseDate), 'dd MMM yy')}</TableCell>
+                                        <TableCell className="text-slate-600 text-xs whitespace-nowrap tabular-nums">{format(new Date(e.expenseDate), 'dd MMM yy, hh:mm a')}</TableCell>
                                         <TableCell><Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', CATEGORY_TONE[e.categoryCode] ?? 'bg-slate-50 text-slate-600 border-slate-200')}>{CAT_LABEL(e.categoryCode)}</Badge></TableCell>
                                         <TableCell>
                                             <div className="font-semibold text-slate-800">{e.vendor || '—'}</div>
@@ -208,7 +319,7 @@ export const ExpenseTab: React.FC = () => {
                                         <TableCell className="text-xs font-mono uppercase text-slate-500">{e.paymentMode || '—'}</TableCell>
                                         <TableCell><Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', e.statusCode === 'PAID' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200')}>{e.statusCode}</Badge></TableCell>
                                         <TableCell className="text-right font-mono font-bold text-slate-800 tabular-nums">{inr(e.amount)}</TableCell>
-                                        <TableCell className="text-right whitespace-nowrap pr-2">
+                                        <TableCell className="text-right whitespace-nowrap pr-2 print:hidden">
                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-brand-600" onClick={() => openEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button>
                                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-rose-600" onClick={() => setDeleteId(e.expenseId)}><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -217,6 +328,18 @@ export const ExpenseTab: React.FC = () => {
                                     </TableRow>
                                 ))}
                             </TableBody>
+                            <TableFooter className="hidden print:table-footer-group">
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-right font-bold text-slate-600">Total Expenses</TableCell>
+                                    <TableCell className="text-right font-bold text-slate-800 tabular-nums">{inr(summary.total)}</TableCell>
+                                    <TableCell className="print:hidden"></TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-right font-bold text-slate-600">Pending Payment</TableCell>
+                                    <TableCell className="text-right font-bold text-amber-600 tabular-nums">{inr(summary.pending)}</TableCell>
+                                    <TableCell className="print:hidden"></TableCell>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                     )}
                 </div>
@@ -235,7 +358,7 @@ export const ExpenseTab: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <Label className="text-xs font-semibold">Date</Label>
-                            <Input type="date" value={form.expenseDate} onChange={(e) => setForm(f => ({ ...f, expenseDate: e.target.value }))} className="h-9 mt-1" />
+                            <Input type="datetime-local" value={form.expenseDate} onChange={(e) => setForm(f => ({ ...f, expenseDate: e.target.value }))} className="h-9 mt-1" />
                         </div>
                         <div>
                             <Label className="text-xs font-semibold">Category</Label>

@@ -123,6 +123,18 @@ export interface DeactivateUserResponse {
   hospitalId: string;
 }
 
+export interface ReactivateUserRequest {
+  hospitalId: string;
+  userId: string;
+}
+
+export interface ReactivateUserResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+  hospitalId: string;
+}
+
 // User Management API service
 export const userManagementApi = {
   // Get all roles from the system
@@ -158,5 +170,10 @@ export const userManagementApi = {
   // Deactivate a user
   deactivateUser: (data: DeactivateUserRequest): Promise<DeactivateUserResponse> => {
     return apiClient.patch(API_ENDPOINTS.USER_MANAGEMENT.DEACTIVATE_USER, data);
+  },
+
+  // Reactivate a previously-deactivated user
+  reactivateUser: (data: ReactivateUserRequest): Promise<ReactivateUserResponse> => {
+    return apiClient.patch(API_ENDPOINTS.USER_MANAGEMENT.REACTIVATE_USER, data);
   },
 };

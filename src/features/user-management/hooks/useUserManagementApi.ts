@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userManagementApi, RolesResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, QuickAddUserRequest, QuickAddUserResponse, AdminUpdateUserRequest, AdminUpdateUserResponse, ShareCredentialsRequest, ShareCredentialsResponse, ResetCredentialsRequest, ResetCredentialsResponse } from '../services/userManagementApi';
+import { userManagementApi, RolesResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, ReactivateUserRequest, ReactivateUserResponse, QuickAddUserRequest, QuickAddUserResponse, AdminUpdateUserRequest, AdminUpdateUserResponse, ShareCredentialsRequest, ShareCredentialsResponse, ResetCredentialsRequest, ResetCredentialsResponse } from '../services/userManagementApi';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for user management API calls
@@ -74,6 +74,17 @@ export const useUserManagementApi = () => {
   const deactivateUser = useMutation<DeactivateUserResponse, Error, DeactivateUserRequest>({
     mutationFn: userManagementApi.deactivateUser,
     onSuccess: (data) => {
+      // The backend always returns HTTP 200 even when it rejects the request (e.g. caller
+      // isn't an admin, target isn't in this hospital, target is the hospital owner) — must
+      // check success explicitly instead of assuming a 200 means it happened.
+      if (!data.success) {
+        toast({
+          title: "Could not deactivate user",
+          description: data.message || "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "User Deactivated Successfully!",
         description: data.message || "The user has been deactivated and can no longer access the application.",
@@ -95,6 +106,36 @@ export const useUserManagementApi = () => {
     },
   });
 
+  // Reactivate a previously-deactivated user
+  const reactivateUser = useMutation<ReactivateUserResponse, Error, ReactivateUserRequest>({
+    mutationFn: userManagementApi.reactivateUser,
+    onSuccess: (data) => {
+      if (!data.success) {
+        toast({
+          title: "Could not reactivate user",
+          description: data.message || "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "User Reactivated",
+        description: data.message || "The user can now access the application again.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['user-management', 'all-users'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorsByDepartment'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorSlots'] });
+      queryClient.invalidateQueries({ queryKey: ['bookedSlots'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Reactivate User",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     getAllRoles,
     getAllUsers,
@@ -103,5 +144,6 @@ export const useUserManagementApi = () => {
     shareCredentials,
     resetCredentials,
     deactivateUser,
+    reactivateUser,
   };
 };

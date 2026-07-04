@@ -41,6 +41,7 @@ export const ChainManagement: React.FC = () => {
   const [deptOptions, setDeptOptions] = useState<Department[]>([]);
   const [deptLoading, setDeptLoading] = useState(false);
   const [docSaving, setDocSaving] = useState(false);
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -61,6 +62,22 @@ export const ChainManagement: React.FC = () => {
 
   const refreshSwitcher = async () => {
     try { useAuthStore.getState().setHospitals(await hospitalApi.getMyHospitals()); } catch { /* non-blocking */ }
+  };
+
+  const deactivateBranch = async (hospitalId: string, name: string) => {
+    if (!window.confirm(`Deactivate "${name}"? Staff will no longer be able to access this branch.`)) return;
+    setDeactivatingId(hospitalId);
+    try {
+      const res = await hospitalApi.deactivateHospital(hospitalId);
+      if (!res.success) throw new Error(res.message ?? 'Could not deactivate the hospital');
+      toast({ title: 'Hospital deactivated', description: res.message });
+      await load();
+      await refreshSwitcher();
+    } catch (e: any) {
+      toast({ title: 'Could not deactivate the hospital', description: e?.message ?? '', variant: 'destructive' });
+    } finally {
+      setDeactivatingId(null);
+    }
   };
 
   const createChain = async () => {
@@ -199,9 +216,25 @@ export const ChainManagement: React.FC = () => {
                 <div key={h.hospitalId} className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 p-3">
                   <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0"><Building2 className="h-4 w-4" /></div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-800 dark:text-gray-100 truncate">{h.name}</p>
+                    <p className="font-semibold text-slate-800 dark:text-gray-100 truncate flex items-center gap-2">
+                      {h.name}
+                      {h.isActive === false && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">Inactive</span>
+                      )}
+                    </p>
                     <p className="text-[11px] text-slate-500 flex items-center gap-1"><MapPin className="h-3 w-3" /> {[h.city, h.state].filter(Boolean).join(', ') || '—'}</p>
                   </div>
+                  {h.isActive !== false && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={deactivatingId === h.hospitalId}
+                      onClick={() => deactivateBranch(h.hospitalId, h.name)}
+                      className="h-8 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 shrink-0"
+                    >
+                      {deactivatingId === h.hospitalId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Deactivate'}
+                    </Button>
+                  )}
                 </div>
               ))}
             </CardContent>
