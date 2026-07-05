@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';
@@ -12,6 +12,7 @@ import { StoreMaster } from '@/features/hospital/components/masters/StoreMaster'
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { EquipmentMaster } from '@/features/hospital/components/masters/EquipmentMaster';
 import { VendorMaster } from '@/features/hospital/components/masters/VendorMaster';
+import { DischargeLetterheadConfig } from '@/features/ipd-redesign/components/DischargeLetterheadConfig';
 
 export const AdminConfigModule = () => {
     const [activeTab, setActiveTab] = useState('billing');
@@ -29,6 +30,12 @@ export const AdminConfigModule = () => {
             label: 'Prescriptions',
             description: 'Configure prescription layouts and fields',
             icon: FileText,
+        },
+        {
+            id: 'discharge-letterhead',
+            label: 'Discharge Letterhead',
+            description: 'Design the discharge summary letterhead and print layout',
+            icon: LogOut,
         },
         {
             id: 'charge-master',
@@ -158,6 +165,7 @@ export const AdminConfigModule = () => {
                 <div className="w-full h-full max-w-[1200px] mx-auto">
                     {activeTab === 'billing' && <BillingPolicyConfig />}
                     {activeTab === 'prescriptions' && <PrescriptionConfig />}
+                    {activeTab === 'discharge-letterhead' && <DischargeLetterheadConfig />}
                     {activeTab === 'charge-master' && <ChargeMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
                     {activeTab === 'doctor-fees' && <DoctorFees />}
