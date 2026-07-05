@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
+import { toast } from '@/hooks/use-toast';
 
 // API Configuration
 const API_TIMEOUT = 30000; // 30 seconds
@@ -95,11 +96,27 @@ axiosInstance.interceptors.response.use(
           }
           break;
           
+        case 402: {
+          // Subscription expired/blocked (HospitalAccessFilter.cs) — { message, subscriptionExpired: true }.
+          const body = data as { message?: string; subscriptionExpired?: boolean } | undefined;
+          const roles = useAuthStore.getState().getUserRoles() || [];
+          const isAdmin = roles.includes('Admin') || roles.includes('AdminDoctor');
+          toast({
+            title: 'Subscription required',
+            description: body?.message || 'Your trial or subscription has expired.',
+            variant: 'destructive',
+          });
+          if (isAdmin && window.location.pathname !== '/subscription') {
+            window.location.href = '/subscription';
+          }
+          break;
+        }
+
         case 403:
           // Forbidden - user doesn't have permission
           console.error('Access forbidden:', data);
           break;
-          
+
         case 404:
           // Not found
           console.error('Resource not found:', data);

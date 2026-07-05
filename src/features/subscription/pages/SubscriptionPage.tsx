@@ -1,69 +1,51 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useMemo, useState } from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { CheckCircle, AlertTriangle, Crown, CreditCard, ShieldCheck, Zap } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionApi } from '../hooks/useSubscriptionApi';
-import { motion } from 'framer-motion';
+import { SubscriptionPlanDrawer } from '../components/SubscriptionPlanDrawer';
+import type { BillingCycle, SubscriptionPlan } from '../services/subscriptionApi';
+import { motion, type Variants } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
+};
 
 export const SubscriptionPage = () => {
     const { toast } = useToast();
     const hospitalId = useAuthStore(state => state.hospitalId) || '';
-    
-    const { getStatus, getPlans, selectPlan, submitPayment } = useSubscriptionApi();
-    const { data: statusResponse, isLoading: isLoadingStatus } = getStatus(hospitalId);
+
+    const { getStatus, getPlans, selectPlan } = useSubscriptionApi();
+    const { data: status, isLoading: isLoadingStatus } = getStatus(hospitalId);
     const { data: plans = [], isLoading: isLoadingPlans } = getPlans();
 
-    const [paymentAmount, setPaymentAmount] = useState('');
-    const [paymentReference, setPaymentReference] = useState('');
+    const [cycle, setCycle] = useState<BillingCycle>('Monthly');
+    const [drawerPlan, setDrawerPlan] = useState<SubscriptionPlan | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const handleSelectPlan = async (planId: string) => {
+    const visiblePlans = useMemo(() => plans.filter(p => p.billingCycle === cycle), [plans, cycle]);
+
+    const handleSelectPlan = (plan: SubscriptionPlan) => {
         selectPlan.mutate(
-            { hospitalId, planId },
+            { hospitalId, planId: plan.id },
             {
                 onSuccess: () => {
-                    toast({
-                        title: 'Plan Selected',
-                        description: 'Your plan has been selected. Please submit your payment details.',
-                    });
+                    setDrawerPlan(plan);
+                    setDrawerOpen(true);
                 },
                 onError: (error: any) => {
                     toast({
                         title: 'Error',
                         description: error.response?.data?.message || 'Failed to select plan',
-                        variant: 'destructive'
-                    });
-                }
-            }
-        );
-    };
-
-    const handleSubmitPayment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!paymentAmount || !paymentReference) {
-            toast({ title: 'Validation Error', description: 'Please enter amount and reference.', variant: 'destructive' });
-            return;
-        }
-
-        submitPayment.mutate(
-            { hospitalId, amount: Number(paymentAmount), reference: paymentReference },
-            {
-                onSuccess: () => {
-                    toast({
-                        title: 'Payment Submitted',
-                        description: 'Your payment details have been submitted and are pending approval by CMS.',
-                    });
-                    setPaymentAmount('');
-                    setPaymentReference('');
-                },
-                onError: (error: any) => {
-                    toast({
-                        title: 'Error',
-                        description: error.response?.data?.message || 'Failed to submit payment',
                         variant: 'destructive'
                     });
                 }
@@ -82,23 +64,9 @@ export const SubscriptionPage = () => {
         );
     }
 
-    const status = statusResponse?.data || statusResponse;
     const isBlocked = status?.status === 'Expired' || status?.status === 'Blocked';
     const isPending = status?.status === 'Pending';
     const isPendingApproval = status?.status === 'PendingApproval';
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
-    };
 
     return (
         <div className="min-h-[calc(100vh-140px)] w-full relative overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl">
@@ -211,64 +179,52 @@ export const SubscriptionPage = () => {
 
                 {isPending && (
                     <motion.div variants={itemVariants} initial="hidden" animate="show" className="mb-12">
-                        <Card className="border-brand-200 dark:border-brand-800/50 bg-gradient-to-b from-white to-brand-50/30 dark:from-slate-900 dark:to-brand-900/10 shadow-xl overflow-hidden relative">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-brand-500" />
-                            <CardHeader>
-                                <CardTitle className="text-2xl text-slate-800 dark:text-slate-100">Complete Your Subscription</CardTitle>
-                                <CardDescription className="text-base">
-                                    You have selected a plan. Please transfer the amount and provide the transaction reference below to activate.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleSubmitPayment} className="space-y-6 max-w-xl">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="amount" className="font-semibold">Amount Paid (₹)</Label>
-                                        <Input 
-                                            id="amount" 
-                                            type="number" 
-                                            placeholder="e.g. 5000" 
-                                            value={paymentAmount}
-                                            onChange={e => setPaymentAmount(e.target.value)}
-                                            className="h-12 text-lg bg-white/50 dark:bg-slate-800/50 focus-visible:ring-brand-500"
-                                            required 
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="reference" className="font-semibold">Transaction Reference / UTR Number</Label>
-                                        <Input 
-                                            id="reference" 
-                                            type="text" 
-                                            placeholder="Enter bank reference number" 
-                                            value={paymentReference}
-                                            onChange={e => setPaymentReference(e.target.value)}
-                                            className="h-12 text-lg bg-white/50 dark:bg-slate-800/50 focus-visible:ring-brand-500"
-                                            required 
-                                        />
-                                    </div>
-                                    <Button type="submit" size="lg" disabled={submitPayment.isPending} className="w-full text-base font-semibold shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40 transition-shadow">
-                                        {submitPayment.isPending ? 'Submitting...' : 'Submit Payment Details'}
-                                    </Button>
-                                </form>
-                            </CardContent>
-                        </Card>
+                        <div className="bg-gradient-to-r from-brand-50 to-blue-50 dark:from-brand-900/20 dark:to-blue-900/20 border border-brand-200 dark:border-brand-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
+                            <div className="p-3 bg-brand-100 dark:bg-brand-800/50 rounded-full text-brand-600 dark:text-brand-300">
+                                <CreditCard className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-brand-900 dark:text-brand-300 font-bold text-xl">Complete Your Subscription</h3>
+                                <p className="text-brand-700 dark:text-brand-400 mt-2">
+                                    You have selected a plan. Open it below to submit your payment details.
+                                </p>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
 
-                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid lg:grid-cols-3 gap-8 mt-12 pb-12">
-                    {plans.map((plan) => {
-                        const isPremium = plan.billingCycle === 'Yearly';
+                <div className="flex justify-center mt-4 mb-8">
+                    <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
+                        {(['Monthly', 'Yearly'] as BillingCycle[]).map(c => (
+                            <button
+                                key={c}
+                                onClick={() => setCycle(c)}
+                                className={cn(
+                                    'px-6 py-2 rounded-full text-sm font-semibold transition-colors',
+                                    cycle === c ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                                )}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid lg:grid-cols-3 gap-8 mt-4 pb-12">
+                    {visiblePlans.map((plan) => {
+                        const isCurrentPlan = plan.id === status?.planId;
                         return (
                             <motion.div key={plan.id} variants={itemVariants} whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
                                 <Card className={cn(
                                     "relative h-full flex flex-col border-2 overflow-hidden transition-all duration-300",
-                                    isPremium 
-                                        ? "border-brand-500 shadow-2xl shadow-brand-500/10 bg-white dark:bg-slate-900" 
+                                    isCurrentPlan
+                                        ? "border-brand-500 shadow-2xl shadow-brand-500/10 bg-white dark:bg-slate-900"
                                         : "border-transparent bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-lg hover:shadow-xl dark:border-slate-800"
                                 )}>
-                                    {isPremium && (
+                                    {isCurrentPlan && (
                                         <>
                                             <div className="absolute top-0 right-0 bg-brand-500 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm z-10">
-                                                Best Value
+                                                Current Plan
                                             </div>
                                             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
                                         </>
@@ -283,14 +239,16 @@ export const SubscriptionPage = () => {
                                         <div className="mb-8 relative">
                                             <div className="flex items-end gap-2">
                                                 <span className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white">₹{plan.discountedPrice}</span>
-                                                <span className="text-muted-foreground mb-2 font-medium">/ month</span>
+                                                <span className="text-muted-foreground mb-2 font-medium">/ {plan.billingCycle === 'Yearly' ? 'year' : 'month'}</span>
                                             </div>
-                                            <div className="mt-3 flex items-center gap-3">
-                                                <div className="text-sm text-muted-foreground line-through decoration-slate-400">₹{plan.basePrice} / mo</div>
-                                                <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800">
-                                                    SAVE {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
+                                            {plan.discountedPrice < plan.basePrice && (
+                                                <div className="mt-3 flex items-center gap-3">
+                                                    <div className="text-sm text-muted-foreground line-through decoration-slate-400">₹{plan.basePrice}</div>
+                                                    <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800">
+                                                        SAVE {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                         <ul className="space-y-4">
                                             {plan.features.map((feature: string, idx: number) => (
@@ -304,14 +262,14 @@ export const SubscriptionPage = () => {
                                         </ul>
                                     </CardContent>
                                     <CardFooter className="pt-6 border-t border-slate-100 dark:border-slate-800/50 mt-auto">
-                                        <Button 
-                                            className="w-full text-base font-semibold transition-all shadow-md" 
-                                            size="lg" 
-                                            variant={isPremium ? 'default' : 'secondary'}
-                                            onClick={() => handleSelectPlan(plan.id)}
-                                            disabled={isPending || selectPlan.isPending}
+                                        <Button
+                                            className="w-full text-base font-semibold transition-all shadow-md"
+                                            size="lg"
+                                            variant={isCurrentPlan ? 'default' : 'secondary'}
+                                            onClick={() => handleSelectPlan(plan)}
+                                            disabled={selectPlan.isPending}
                                         >
-                                            {isPending ? 'Action Required' : 'Select Plan'}
+                                            {isCurrentPlan ? 'Manage / Pay' : 'Select Plan'}
                                         </Button>
                                     </CardFooter>
                                 </Card>
@@ -320,6 +278,13 @@ export const SubscriptionPage = () => {
                     })}
                 </motion.div>
             </div>
+
+            <SubscriptionPlanDrawer
+                hospitalId={hospitalId}
+                plan={drawerPlan}
+                open={drawerOpen}
+                onOpenChange={setDrawerOpen}
+            />
         </div>
     );
 };

@@ -10,12 +10,14 @@ export interface SubscriptionStatusResponse {
   planId?: string;
 }
 
+export type BillingCycle = 'Monthly' | 'Yearly';
+
 export interface SubscriptionPlan {
   id: string;
   name: string;
   basePrice: number;
   discountedPrice: number;
-  billingCycle: string;
+  billingCycle: BillingCycle;
   features: string[];
 }
 
@@ -36,17 +38,21 @@ export const subscriptionApi = {
     return apiClient.get(API_ENDPOINTS.SUBSCRIPTION.GET_STATUS(hospitalId));
   },
 
-  // Get all available plans (hits a separate microservice, hence direct axios call using the endpoint URL)
+  // Get all available plans (hits a separate microservice, hence direct axios call using the endpoint URL).
+  // CMSAPI's GetPlans() returns every plan for every product (1Rad + EasyHMS) and does not filter
+  // inactive rows server-side, so both filters below are required here, not optional.
   getPlans: async (): Promise<SubscriptionPlan[]> => {
     const response = await axios.get(API_ENDPOINTS.SUBSCRIPTION.GET_PLANS_URL);
-    return response.data.map((p: any) => ({
-      id: p.planId,
-      name: p.name,
-      basePrice: p.basePrice,
-      discountedPrice: p.discountPrice,
-      billingCycle: p.billingCycle,
-      features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
-    }));
+    return response.data
+      .filter((p: any) => p.applicationName === 'EasyHMS' && p.isActive !== false)
+      .map((p: any) => ({
+        id: p.planId,
+        name: p.name,
+        basePrice: p.basePrice,
+        discountedPrice: p.discountPrice,
+        billingCycle: p.billingCycle,
+        features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
+      }));
   },
 
   // Select a plan

@@ -27,9 +27,14 @@ import {
   X,
   CheckCircle2,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Crown,
+  CheckCircle
 } from 'lucide-react';
 import { HospitalBranding } from './HospitalBrandingConfig';
+import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
+import { subscriptionApi, type BillingCycle } from '@/features/subscription/services/subscriptionApi';
+import { cn } from '@/lib/utils';
 
 interface HospitalBrandingModalProps {
   isOpen: boolean;
@@ -85,7 +90,12 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
   const [branding, setBranding] = useState<HospitalBranding>(defaultBranding);
   const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof HospitalBranding, string>>>({});
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [planCycle, setPlanCycle] = useState<BillingCycle>('Monthly');
+  const { getPlans } = useSubscriptionApi();
+  const { data: onboardingPlans = [] } = getPlans();
+  const visibleOnboardingPlans = onboardingPlans.filter(p => p.billingCycle === planCycle);
 
   const fieldLabels: Record<keyof HospitalBranding, string> = useMemo(
     () => ({
@@ -341,6 +351,22 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
         queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
         queryClient.invalidateQueries({ queryKey: ['hospitalUserByUserId'] });
 
+        // Optional: the admin pre-selected a plan on step 4. The 14-day trial is already stamped
+        // unconditionally by the registration handler regardless of this — selecting a plan here
+        // just marks it for payment later; failing to record it should not undo the registration
+        // that already succeeded, so this is a soft, non-blocking follow-up call.
+        if (selectedPlanId) {
+          try {
+            await subscriptionApi.selectPlan({ hospitalId: response.hospitalId, planId: selectedPlanId });
+          } catch (planError) {
+            console.error('Post-registration plan selection failed', planError);
+            toast({
+              title: t('hospitalBranding.toast.successTitle'),
+              description: 'Hospital created, but we could not save your plan choice — pick it again from the Subscription page.',
+            });
+          }
+        }
+
         toast({
           title: t('hospitalBranding.toast.successTitle'),
           description: t('hospitalBranding.toast.successDescription')
@@ -383,14 +409,14 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
 
           {/* Progress Steps */}
           <div className="flex items-center gap-2">
-            {[1, 2, 3].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <React.Fragment key={step}>
                 <div className="flex items-center gap-2">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all ${
-                    step < currentStep 
-                      ? 'bg-primary text-white' 
-                      : step === currentStep 
-                        ? 'bg-primary text-white ring-4 ring-primary/20' 
+                    step < currentStep
+                      ? 'bg-primary text-white'
+                      : step === currentStep
+                        ? 'bg-primary text-white ring-4 ring-primary/20'
                         : 'bg-muted text-muted-foreground'
                   }`}>
                     {step < currentStep ? <CheckCircle2 className="h-5 w-5" /> : step}
@@ -398,7 +424,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                   <span className={`text-sm font-medium hidden sm:inline ${
                     step <= currentStep ? 'text-foreground' : 'text-muted-foreground'
                   }`}>
-                    {step === 1 ? t('hospitalBranding.modal.steps.basicInfo') : step === 2 ? t('hospitalBranding.modal.steps.location') : t('hospitalBranding.modal.steps.registration')}
+                    {step === 1 ? t('hospitalBranding.modal.steps.basicInfo') : step === 2 ? t('hospitalBranding.modal.steps.location') : step === 3 ? t('hospitalBranding.modal.steps.registration') : 'Choose Plan'}
                   </span>
                 </div>
                 {step < totalSteps && (
@@ -778,6 +804,82 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                     </Select>
                     <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.timeZone')}</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 4: Choose your plan (optional — the 14-day trial starts regardless) */}
+          {currentStep === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5" />
+                  Choose your plan
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Optional — you get a 14-day free trial either way. Pick a plan now if you'd like to pay early, or skip and choose one later from the Subscription page.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
+                    {(['Monthly', 'Yearly'] as BillingCycle[]).map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setPlanCycle(c)}
+                        className={cn(
+                          'px-5 py-1.5 rounded-full text-sm font-semibold transition-colors',
+                          planCycle === c ? 'bg-primary text-white shadow-sm' : 'text-slate-600 dark:text-slate-300'
+                        )}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedPlanId && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPlanId(null)}>
+                      Clear selection
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {visibleOnboardingPlans.map(plan => {
+                    const isSelected = plan.id === selectedPlanId;
+                    return (
+                      <button
+                        type="button"
+                        key={plan.id}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={cn(
+                          'text-left rounded-xl border-2 p-4 transition-all',
+                          isSelected ? 'border-primary shadow-md bg-primary/5' : 'border-border hover:border-primary/40'
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-foreground">{plan.name}</p>
+                          {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
+                        </div>
+                        <p className="text-2xl font-black text-foreground mt-2">
+                          ₹{plan.discountedPrice}
+                          <span className="text-sm font-medium text-muted-foreground"> / {plan.billingCycle === 'Yearly' ? 'year' : 'month'}</span>
+                        </p>
+                      </button>
+                    );
+                  })}
+                  {visibleOnboardingPlans.length === 0 && (
+                    <p className="text-sm text-muted-foreground col-span-full py-6 text-center">No {planCycle.toLowerCase()} plans available right now.</p>
+                  )}
+                </div>
+
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 px-4 py-3">
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    {selectedPlanId
+                      ? "You'll pay for this after your hospital is created — go to Subscription to mark your payment done."
+                      : "Skip this step and start your 14-day trial — you can pick a plan anytime later."}
+                  </p>
                 </div>
               </CardContent>
             </Card>
