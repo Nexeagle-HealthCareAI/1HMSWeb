@@ -126,6 +126,32 @@ export interface InventoryBoard {
     reorderAlerts: ReorderAlertRow[];
 }
 
+export interface StoreStockSummaryRow {
+    storeName: string;
+    itemCount: number;
+}
+
+export interface BloodStockSummaryRow {
+    storeName: string;
+    component: string;
+    bloodGroup: string;
+    status: string;
+    bagCount: number;
+    totalVolumeMl: number;
+}
+
+export interface CssdStockSummaryRow {
+    storeName: string;
+    currentStatus: string;
+    setCount: number;
+}
+
+export interface UnifiedStockVisibility {
+    inventoryByStore: StoreStockSummaryRow[];
+    bloodByStore: BloodStockSummaryRow[];
+    cssdByStore: CssdStockSummaryRow[];
+}
+
 export const inventoryApi = {
     getItems: (params: { category?: string; search?: string; activeOnly?: boolean } = {}, hospitalId?: string): Promise<InventoryItem[]> =>
         ipdApiClient
@@ -157,4 +183,11 @@ export const inventoryApi = {
                 '/inventory/board', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } },
             )
             .then(r => ({ stockByStore: r.stockByStore ?? [], expiryAlerts: r.expiryAlerts ?? [], reorderAlerts: r.reorderAlerts ?? [] })),
+
+    getUnifiedStock: (hospitalId?: string): Promise<UnifiedStockVisibility> =>
+        ipdApiClient
+            .get<{ inventoryByStore?: StoreStockSummaryRow[]; bloodByStore?: BloodStockSummaryRow[]; cssdByStore?: CssdStockSummaryRow[] }>(
+                '/inventory/unified-stock', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } },
+            )
+            .then(r => ({ inventoryByStore: r.inventoryByStore ?? [], bloodByStore: r.bloodByStore ?? [], cssdByStore: r.cssdByStore ?? [] })),
 };

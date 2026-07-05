@@ -3,17 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck } from 'lucide-react';
-import { inventoryApi, type InventoryBoard } from '../services/inventoryApi';
+import { ArrowLeft, Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2 } from 'lucide-react';
+import { inventoryApi, type InventoryBoard, type UnifiedStockVisibility } from '../services/inventoryApi';
 import { equipmentApi, type EquipmentItem } from '../services/equipmentApi';
 import { formatIstDateTime } from '../utils/istDate';
 import { ProcurementPanel } from '../components/ProcurementPanel';
+import { NarcoticCompliancePanel } from '../components/NarcoticCompliancePanel';
 
 interface Props {
     onBack: () => void;
 }
 
 const EMPTY_BOARD: InventoryBoard = { stockByStore: [], expiryAlerts: [], reorderAlerts: [] };
+const EMPTY_UNIFIED: UnifiedStockVisibility = { inventoryByStore: [], bloodByStore: [], cssdByStore: [] };
 
 const TIER_TONE: Record<number, string> = {
     30: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -21,7 +23,7 @@ const TIER_TONE: Record<number, string> = {
     90: 'bg-sky-50 text-sky-700 border-sky-200',
 };
 
-type Tab = 'stock' | 'expiry' | 'reorder' | 'equipment' | 'procurement';
+type Tab = 'stock' | 'expiry' | 'reorder' | 'equipment' | 'procurement' | 'compliance' | 'allstores';
 
 /**
  * Inventory Management board — hospital-wide, read-only v1 (stock-by-store overview, expiry
@@ -34,6 +36,9 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
     const { toast } = useToast();
     const [board, setBoard] = useState<InventoryBoard>(EMPTY_BOARD);
     const [dueEquipment, setDueEquipment] = useState<EquipmentItem[]>([]);
+    const [unified, setUnified] = useState<UnifiedStockVisibility>(EMPTY_UNIFIED);
+    const [unifiedLoaded, setUnifiedLoaded] = useState(false);
+    const [unifiedLoading, setUnifiedLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [tab, setTab] = useState<Tab>('stock');
@@ -47,6 +52,16 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
     };
 
     useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Lazy-loaded on first visit — a cross-module summary query, no need to fetch it eagerly.
+    useEffect(() => {
+        if (tab !== 'allstores' || unifiedLoaded) return;
+        setUnifiedLoading(true);
+        inventoryApi.getUnifiedStock()
+            .then(u => { setUnified(u); setUnifiedLoaded(true); })
+            .catch(() => toast({ title: 'Could not load the unified stock view', variant: 'destructive' }))
+            .finally(() => setUnifiedLoading(false));
+    }, [tab, unifiedLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const storeGroups = board.stockByStore.reduce<Record<string, typeof board.stockByStore>>((acc, r) => {
         (acc[r.storeName] ??= []).push(r);
@@ -89,6 +104,12 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                 </button>
                 <button onClick={() => setTab('procurement')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'procurement' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
                     <Truck className="h-3.5 w-3.5" /> Procurement
+                </button>
+                <button onClick={() => setTab('compliance')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'compliance' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                    <ShieldAlert className="h-3.5 w-3.5" /> Compliance
+                </button>
+                <button onClick={() => setTab('allstores')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'allstores' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                    <Package2 className="h-3.5 w-3.5" /> Blood Bank &amp; CSSD (by Store)
                 </button>
             </div>
 
@@ -197,6 +218,75 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                     )}
 
                     {tab === 'procurement' && <ProcurementPanel />}
+
+                    {tab === 'compliance' && <NarcoticCompliancePanel />}
+
+                    {tab === 'allstores' && (
+                        unifiedLoading ? (
+                            <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">Pharmacy/Consumable Stock</h2>
+                                    {unified.inventoryByStore.length === 0 ? (
+                                        <p className="text-sm text-slate-400 text-center py-4">No stock recorded.</p>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            {unified.inventoryByStore.map(r => (
+                                                <div key={r.storeName} className="flex items-center justify-between p-2 rounded-lg border border-slate-100">
+                                                    <span className="font-semibold text-slate-800 text-sm">{r.storeName}</span>
+                                                    <span className="text-xs text-slate-500">{r.itemCount} item(s) in stock</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5">
+                                        <Droplet className="h-3.5 w-3.5 text-rose-500" /> Blood Bank
+                                    </h2>
+                                    {unified.bloodByStore.length === 0 ? (
+                                        <p className="text-sm text-slate-400 text-center py-4">No blood units recorded.</p>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            {unified.bloodByStore.map((r, i) => (
+                                                <div key={i} className="flex items-center justify-between gap-3 p-2 rounded-lg border border-slate-100 flex-wrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-slate-800 text-sm">{r.storeName}</span>
+                                                        <Badge variant="outline" className="text-[9px] font-bold">{r.component} · {r.bloodGroup.replace('_', ' ')}</Badge>
+                                                        <Badge variant="outline" className="text-[9px] font-bold">{r.status}</Badge>
+                                                    </div>
+                                                    <span className="text-xs text-slate-500">{r.bagCount} bag(s) · {r.totalVolumeMl.toLocaleString('en-IN')} mL</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5">
+                                        <Package2 className="h-3.5 w-3.5 text-violet-500" /> CSSD
+                                    </h2>
+                                    {unified.cssdByStore.length === 0 ? (
+                                        <p className="text-sm text-slate-400 text-center py-4">No instrument sets recorded.</p>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            {unified.cssdByStore.map((r, i) => (
+                                                <div key={i} className="flex items-center justify-between gap-3 p-2 rounded-lg border border-slate-100 flex-wrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-slate-800 text-sm">{r.storeName}</span>
+                                                        <Badge variant="outline" className="text-[9px] font-bold">{r.currentStatus.replace('_', ' ')}</Badge>
+                                                    </div>
+                                                    <span className="text-xs text-slate-500">{r.setCount} set(s)</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    )}
                 </>
             )}
         </div>
