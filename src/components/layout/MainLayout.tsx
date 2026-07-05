@@ -219,6 +219,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
     { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-redesign' },
+    { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
   ];
 
   // Filter navigation items based on user role
@@ -235,7 +236,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (item.id === 'billing') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
     }
-    if (item.id === 'ipd-redesign') {
+    if (item.id === 'ipd-redesign' || item.id === 'inventory') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
     }
     return true;

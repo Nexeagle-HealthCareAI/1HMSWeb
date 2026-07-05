@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check, Warehouse } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,17 +58,17 @@ interface Props {
     onOpenCssdBoard: () => void;
     onOpenKpiDashboard: () => void;
     onOpenConsultantLedger: () => void;
-    onOpenInventoryBoard: () => void;
     onOpenWorkspace: (admission: ActiveAdmissionItem) => void;
     refreshSignal: number;
 }
 
 /**
- * IPD dashboard — the admitted-patient list only (the live bed board, CSSD board, KPI dashboard,
- * and Inventory board are their own screens; per-patient management — bed, medications, discharge,
+ * IPD dashboard — the admitted-patient list only (the live bed board, CSSD board, and KPI
+ * dashboard are their own screens; per-patient management — bed, medications, discharge,
  * surgery — is the Patient Workspace screen, opened by clicking a row). Backed by GET /admission/active.
+ * Inventory Management lives in the app's main side nav (/inventory), not here.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenInventoryBoard, onOpenWorkspace, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
@@ -171,9 +171,6 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     </Button>
                     <Button onClick={onOpenCssdBoard} variant="outline" className="h-10 font-semibold">
                         <Package className="h-4 w-4 mr-2" /> CSSD Board
-                    </Button>
-                    <Button onClick={onOpenInventoryBoard} variant="outline" className="h-10 font-semibold">
-                        <Warehouse className="h-4 w-4 mr-2" /> Inventory
                     </Button>
                     <Button onClick={onOpenKpiDashboard} variant="outline" className="h-10 font-semibold">
                         <Gauge className="h-4 w-4 mr-2" /> KPI Dashboard
