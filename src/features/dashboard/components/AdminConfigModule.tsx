@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';
@@ -7,6 +7,11 @@ import { PrescriptionConfig } from '@/features/prescription/components/Prescript
 import { ChargeMaster } from '@/features/hospital/components/masters/ChargeMaster';
 import { BedMaster } from '@/features/hospital/components/masters/BedMaster';
 import { DoctorFees } from '@/features/hospital/components/masters/DoctorFees';
+import { OtMaster } from '@/features/hospital/components/masters/OtMaster';
+import { StoreMaster } from '@/features/hospital/components/masters/StoreMaster';
+import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
+import { EquipmentMaster } from '@/features/hospital/components/masters/EquipmentMaster';
+import { VendorMaster } from '@/features/hospital/components/masters/VendorMaster';
 
 export const AdminConfigModule = () => {
     const [activeTab, setActiveTab] = useState('billing');
@@ -42,6 +47,36 @@ export const AdminConfigModule = () => {
             label: 'Doctor Fees',
             description: 'Set per-doctor OPD consult & IPD visit fees',
             icon: Stethoscope,
+        },
+        {
+            id: 'ot-master',
+            label: 'OT Master',
+            description: 'Set up theatres, pricing & the live surgery plan board',
+            icon: Scissors,
+        },
+        {
+            id: 'store-master',
+            label: 'Store Master',
+            description: 'Set up the inventory store hierarchy (wards, OT, pharmacy, CSSD...)',
+            icon: Warehouse,
+        },
+        {
+            id: 'item-master',
+            label: 'Item Master',
+            description: 'Set up drugs, consumables & implants with schedule/LASA/high-alert flags',
+            icon: Pill,
+        },
+        {
+            id: 'equipment-master',
+            label: 'Equipment Master',
+            description: 'Biomedical/ICT/facility asset register with AMC & PM scheduling',
+            icon: HardDrive,
+        },
+        {
+            id: 'vendor-master',
+            label: 'Vendor Master',
+            description: 'Set up suppliers/distributors for procurement',
+            icon: Truck,
         },
     ];
 
@@ -126,6 +161,11 @@ export const AdminConfigModule = () => {
                     {activeTab === 'charge-master' && <ChargeMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
                     {activeTab === 'doctor-fees' && <DoctorFees />}
+                    {activeTab === 'ot-master' && <OtMaster />}
+                    {activeTab === 'store-master' && <StoreMaster />}
+                    {activeTab === 'item-master' && <ItemMaster />}
+                    {activeTab === 'equipment-master' && <EquipmentMaster />}
+                    {activeTab === 'vendor-master' && <VendorMaster />}
                 </div>
             </main>
         </div>
