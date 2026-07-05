@@ -367,20 +367,30 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       
       const otpResponse = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
       console.log('✅ SendOTP API response:', otpResponse);
-      
+
       if (!otpResponse.success) {
-        throw new Error(otpResponse.message || 'Failed to send OTP');
-      }      
-      setOtpSent(true);      
+        // OTP delivery (WhatsApp/Email) can fail for infra reasons outside the user's control, but
+        // the code is generated and stored server-side before delivery is even attempted — so
+        // verification still works against that stored value. Don't block the step; just warn
+        // that delivery failed and still move to the OTP-entry screen.
+        console.warn('⚠️ OTP delivery failed, proceeding to verification step anyway:', otpResponse.message);
+        toast({
+          title: "Couldn't deliver the verification code",
+          description: otpResponse.message || "We couldn't send the OTP via WhatsApp or Email, but you can still enter it below.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Registration & OTP Sent!",
+          description: "Registration successful! Please check your mobile for the verification code"
+        });
+      }
+
+      setOtpSent(true);
       setResendTimer(30);
       // Reset mobile tracking after successful OTP send
       setOriginalMobile('');
-      setAllowSendOTP(true);     
-      
-      toast({
-        title: "Registration & OTP Sent!",
-        description: "Registration successful! Please check your mobile for the verification code"
-      });
+      setAllowSendOTP(true);
     } catch (error) {
       console.error('❌ Error in sendOTP flow:', error);
       toast({
