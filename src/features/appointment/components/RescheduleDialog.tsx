@@ -8,6 +8,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useDepartments } from '../hooks/useDepartments';
 import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
@@ -45,6 +46,10 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(appointment.doctorId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false); // New success state
+  const [refundOnReschedule, setRefundOnReschedule] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const hasPaidBalance = appointment.consultPaid && (appointment.consultAmount ?? 0) > 0;
 
   // New: Department and Doctor fetching
   const { data: departmentsResponse, isLoading: departmentsLoading } = useDepartments(hospitalId || '');
@@ -117,6 +122,8 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
       setSelectedDate(initialDate);
       setSelectedDoctorId(appointment.doctorId);
       setShowSuccess(false); // Reset success state
+      setRefundOnReschedule(false);
+      setSuccessMessage(null);
     }
   }, [open, appointment, disablePastAndToday]);
 
@@ -127,12 +134,18 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-      await appointmentApi.registerAppointment(hospitalId, {
+      const response = await appointmentApi.registerAppointment(hospitalId, {
         doctorId: selectedDoctorId,
         apptDate: dateStr,
         appointmentId: appointment.appointmentId,
+        voidExistingChargesAndRefund: hasPaidBalance ? refundOnReschedule : undefined,
       } as any);
 
+      setSuccessMessage(
+        response?.billRefunded
+          ? `Appointment rescheduled. ₹${(response.refundAmount ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} was refunded (receipt ${response.refundReceiptNo ?? '—'}).`
+          : null
+      );
       // Replaced toast with modal view
       setShowSuccess(true);
 
@@ -223,7 +236,7 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                   <div className="space-y-2">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Success</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Appointment registered successfully
+                      {successMessage ?? 'Appointment registered successfully'}
                     </p>
                   </div>
                   <Button onClick={handleSuccessClose} className="w-full mt-4 bg-green-600 hover:bg-green-700">
@@ -260,6 +273,21 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {hasPaidBalance && (
+                        <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <Checkbox
+                            id="refund-on-reschedule"
+                            checked={refundOnReschedule}
+                            onCheckedChange={(checked) => setRefundOnReschedule(checked === true)}
+                            className="mt-0.5"
+                          />
+                          <label htmlFor="refund-on-reschedule" className="text-xs text-amber-900 dark:text-amber-200 cursor-pointer">
+                            Refund the {(appointment.consultAmount ?? 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 })} already collected for this visit and void its bill.
+                            The new date will need a fresh charge if one applies.
+                          </label>
+                        </div>
+                      )}
 
                       {/* Hidden Department and Doctor Selection -> We rely on appointment.doctorId */}
                       {/* If we needed to show them readonly:

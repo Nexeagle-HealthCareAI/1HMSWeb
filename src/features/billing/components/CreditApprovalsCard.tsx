@@ -21,6 +21,15 @@ import {
 const inr = (n: number | undefined | null) =>
     `₹${(n ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
+const paymentTypeLabel = (paymentType: string) =>
+    paymentType === 'REFUND' ? 'Refund'
+        : paymentType === 'DISCOUNT' ? 'Discount'
+            : paymentType === 'DELETE_CHARGE' ? 'Delete Charge'
+                : paymentType === 'DELETE_PAYMENT' ? 'Delete Payment'
+                    : 'Advance';
+
+const isDeleteType = (paymentType: string) => paymentType === 'DELETE_CHARGE' || paymentType === 'DELETE_PAYMENT';
+
 const STATUS_TONE: Record<string, string> = {
     PENDING:  'bg-amber-50 text-amber-700 border-amber-200',
     APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -29,11 +38,16 @@ const STATUS_TONE: Record<string, string> = {
 
 interface Props {
     encounterId?: string;
-    /** When true, only PENDING items are loaded by default. */
+    /** When true, only PENDING items are loaded by default. Ignored when statusFilter is set. */
     pendingOnly?: boolean;
+    /** Explicit status to load — overrides pendingOnly. Undefined loads every status. */
+    statusFilter?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    /** When false, render an empty state instead of nothing — for a standalone approvals view
+     *  (hospital-wide, not embedded on a specific patient's billing page). */
+    hideWhenEmpty?: boolean;
 }
 
-export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly = true }) => {
+export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly = true, statusFilter, hideWhenEmpty = true }) => {
     const { toast } = useToast();
     const userRoles = useAuthStore(s => s.userRoles);
     const canDecide = userRoles?.includes('Admin') || userRoles?.includes('AdminDoctor');
@@ -53,7 +67,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
         try {
             const res = await creditApprovalService.list({
                 encounterId,
-                status: pendingOnly ? 'PENDING' : undefined,
+                status: statusFilter ?? (pendingOnly ? 'PENDING' : undefined),
                 take: 200,
             });
             if (!res.success) throw new Error(res.message ?? 'Failed to load');
@@ -64,7 +78,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
             setLoading(false);
             setRefreshing(false);
         }
-    }, [encounterId, pendingOnly]);
+    }, [encounterId, pendingOnly, statusFilter]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -84,7 +98,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
             if (!res.success) throw new Error(res.message ?? 'Could not decide');
             toast({
                 title: decideCtx.decision === 'APPROVED' ? 'Credit approved' : 'Credit request rejected',
-                description: `${decideCtx.item.paymentType === 'REFUND' ? 'Refund' : 'Advance'} · ${inr(decideCtx.item.requestedAmount)}`,
+                description: `${paymentTypeLabel(decideCtx.item.paymentType)} · ${inr(decideCtx.item.requestedAmount)}`,
             });
             setDecideCtx(null);
             setDecideNote('');
@@ -98,8 +112,26 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
 
     const pendingCount = useMemo(() => items.filter(i => i.status === 'PENDING').length, [items]);
 
+    const effectiveStatus = statusFilter ?? (pendingOnly ? 'PENDING' : undefined);
+
     if (!loading && !error && items.length === 0) {
-        return null;
+        if (hideWhenEmpty) return null;
+        const emptyText = effectiveStatus === 'PENDING'
+            ? 'Nothing is waiting on Admin/AdminDoctor sign-off right now.'
+            : effectiveStatus === 'APPROVED'
+                ? 'No credit requests have been approved yet.'
+                : effectiveStatus === 'REJECTED'
+                    ? 'No credit requests have been rejected yet.'
+                    : 'No credit approval requests have been raised yet.';
+        return (
+            <Card>
+                <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-2 text-slate-500">
+                    <PiggyBank className="h-6 w-6 text-slate-300" />
+                    <p className="text-sm font-medium">No {effectiveStatus ? effectiveStatus.toLowerCase() : ''} approvals</p>
+                    <p className="text-xs">{emptyText}</p>
+                </CardContent>
+            </Card>
+        );
     }
 
     return (
@@ -128,7 +160,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                 )}
                 {pendingCount > 0 && (
                     <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-                        Pending requests hold the money uncollected/unrefunded until an Admin decides.
+                        Pending requests hold the money uncollected/unrefunded, or keep the charge/payment in place, until an Admin decides.
                         {!canDecide && ' Only Admin/AdminDoctor can approve or reject.'}
                     </p>
                 )}
@@ -145,12 +177,14 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                         >
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-bold text-slate-900">{it.paymentType === 'REFUND' ? 'Refund' : 'Advance'}</p>
+                                    <p className="text-sm font-bold text-slate-900">{paymentTypeLabel(it.paymentType)}</p>
                                     <Badge variant="outline" className={cn('text-[10px] font-bold', tone)}>{it.status}</Badge>
                                     {it.paymentMode && <span className="text-[11px] text-slate-500">{it.paymentMode}</span>}
                                 </div>
                                 <p className="text-xs text-slate-700 mt-0.5">
-                                    Requested {inr(it.requestedAmount)} · would leave <strong>{inr(it.resultingCreditBalance)}</strong> in credit
+                                    {isDeleteType(it.paymentType)
+                                        ? <>Requesting deletion of a {inr(it.requestedAmount)} {it.paymentType === 'DELETE_CHARGE' ? 'charge' : 'payment'}</>
+                                        : <>Requested {inr(it.requestedAmount)} · would leave <strong>{inr(it.resultingCreditBalance)}</strong> in credit</>}
                                 </p>
                                 {it.reason && <p className="text-[11px] text-slate-600 mt-0.5">Reason: {it.reason}</p>}
                                 <p className="text-[10px] text-slate-400 mt-0.5">
@@ -194,9 +228,18 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                             {decideCtx?.decision === 'APPROVED' ? 'Approve credit request?' : 'Reject credit request?'}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            {decideCtx && (
+                            {decideCtx && isDeleteType(decideCtx.item.paymentType) && (
                                 <>
-                                    {decideCtx.item.paymentType === 'REFUND' ? 'Refund' : 'Advance'} of {inr(decideCtx.item.requestedAmount)}
+                                    {paymentTypeLabel(decideCtx.item.paymentType)} of {inr(decideCtx.item.requestedAmount)}.
+                                    {decideCtx.item.reason && <> Reason given: “{decideCtx.item.reason}”.</>}
+                                    {decideCtx.decision === 'APPROVED'
+                                        ? ` Approving will permanently remove this ${decideCtx.item.paymentType === 'DELETE_CHARGE' ? 'charge' : 'payment'}.`
+                                        : ' Rejecting keeps it in place — nothing is deleted.'}
+                                </>
+                            )}
+                            {decideCtx && !isDeleteType(decideCtx.item.paymentType) && (
+                                <>
+                                    {paymentTypeLabel(decideCtx.item.paymentType)} of {inr(decideCtx.item.requestedAmount)}
                                     {' — '}would leave {inr(decideCtx.item.resultingCreditBalance)} in credit.
                                     {decideCtx.decision === 'APPROVED'
                                         ? ' Approving will record this as a real payment now.'

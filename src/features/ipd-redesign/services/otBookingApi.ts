@@ -17,6 +17,9 @@ export interface OperationTheatre {
     theatreName: string;
     status: 'AVAILABLE' | 'IN_USE' | 'CLEANING' | 'UNAVAILABLE';
     isActive: boolean;
+    departmentId?: string | null;
+    departmentName?: string | null;
+    price: number;
 }
 
 export interface OTBookingItem {
@@ -32,19 +35,53 @@ export interface OTBookingItem {
     statusCode: string;
 }
 
+// Kanban plan-board card — the 6 SurgeryCase stages become the board's columns.
+export interface OtBoardCase {
+    surgeryCaseId: string;
+    statusCode: 'REQUESTED' | 'SCHEDULED' | 'PRE_OP' | 'IN_THEATRE' | 'POST_OP' | 'COMPLETED';
+    patientName?: string | null;
+    procedureName: string;
+    surgeonName?: string | null;
+    surgeryType: string;
+    urgency: string;
+    theatreId?: string | null;
+    theatreName?: string | null;
+    scheduledStart?: string | null;
+    scheduledEnd?: string | null;
+    preOpAssessmentComplete: boolean;
+    signInComplete: boolean;
+    timeOutComplete: boolean;
+    signOutComplete: boolean;
+}
+
+export interface UpsertTheatreInput {
+    theatreId?: string;
+    theatreCode: string;
+    theatreName: string;
+    departmentId?: string | null;
+    price: number;
+    status?: string;
+    isActive: boolean;
+}
+
 export const otBookingApi = {
-    getTheatres: (hospitalId?: string): Promise<OperationTheatre[]> =>
+    getTheatres: (hospitalId?: string, includeInactive = false): Promise<OperationTheatre[]> =>
         ipdApiClient
-            .get<{ theatres?: OperationTheatre[] }>('/ot-booking/theatres', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .get<{ theatres?: OperationTheatre[] }>('/ot-booking/theatres', { params: { hospitalId: hospitalIdOrThrow(hospitalId), includeInactive } })
             .then(r => r.theatres ?? []),
 
-    createTheatre: async (theatreCode: string, theatreName: string, hospitalId?: string) => {
+    upsertTheatre: async (input: UpsertTheatreInput, hospitalId?: string) => {
         try {
-            return await ipdApiClient.post('/ot-booking/theatre', { hospitalId: hospitalIdOrThrow(hospitalId), theatreCode, theatreName });
+            return await ipdApiClient.post('/ot-booking/theatre', { hospitalId: hospitalIdOrThrow(hospitalId), ...input });
         } catch (err) {
-            throw new Error(messageFrom(err, 'Could not create the theatre.'));
+            throw new Error(messageFrom(err, 'Could not save the theatre.'));
         }
     },
+
+    getBoard: (hospitalId?: string): Promise<OtBoardCase[]> =>
+        ipdApiClient
+            .get<{ cases?: OtBoardCase[] }>('/ot-booking/board', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .then(r => r.cases ?? []),
 
     getSchedule: (fromDate: string, toDate: string, hospitalId?: string): Promise<OTBookingItem[]> =>
         ipdApiClient

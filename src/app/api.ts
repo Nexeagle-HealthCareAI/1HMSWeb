@@ -219,8 +219,8 @@ export const IPD_API_ENDPOINTS = {
       `billing/get-events?encounterId=${encodeURIComponent(encounterId)}&patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     GET_PATIENT_EVENTS: (patientId: string, hospitalId: string) =>
       `billing/get-event?patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
-    DELETE_EVENT: (hospitalId: string, patientId: string, eventId: string, type: string) =>
-      `billing/delete-event?hospitalId=${encodeURIComponent(hospitalId)}&patientId=${encodeURIComponent(patientId)}&eventId=${encodeURIComponent(eventId)}&type=${encodeURIComponent(type)}`,
+    DELETE_EVENT: (hospitalId: string, patientId: string, eventId: string, type: string, reason?: string) =>
+      `billing/delete-event?hospitalId=${encodeURIComponent(hospitalId)}&patientId=${encodeURIComponent(patientId)}&eventId=${encodeURIComponent(eventId)}&type=${encodeURIComponent(type)}${reason ? `&reason=${encodeURIComponent(reason)}` : ''}`,
     DASHBOARD: (hospitalId: string) => `billing/dashboard?hospitalId=${encodeURIComponent(hospitalId)}`,
     CREATE_INVOICE: 'billing/invoice',
     FINALIZE: (type: string) => `billing/finalize?type=${encodeURIComponent(type)}`,
@@ -247,6 +247,13 @@ export const IPD_API_ENDPOINTS = {
       `bed/master/${encodeURIComponent(bedId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_MASTER: 'bed/master',
     BULK_CREATE: 'bed/master/bulk',
+  },
+  ROOM: {
+    GET_MASTERS: (hospitalId: string, page = 1, pageSize = 50) =>
+      `bed/room/master?hospitalId=${encodeURIComponent(hospitalId)}&page=${page}&pageSize=${pageSize}`,
+    GET_MASTER_BY_ID: (roomId: string, hospitalId: string) =>
+      `bed/room/master/${encodeURIComponent(roomId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
+    UPSERT_MASTER: 'bed/room/master',
   },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {

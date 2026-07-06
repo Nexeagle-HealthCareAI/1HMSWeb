@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Check, Download, Printer, LogOut, Clock3, AlertTriangle } from 'lucide-react';
+import { Loader2, Check, Download, Printer, LogOut, Clock3, AlertTriangle, Settings2 } from 'lucide-react';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
@@ -16,6 +16,12 @@ import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocu
 import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
 import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
+import { DischargeFieldLayoutEditor } from './DischargeFieldLayoutEditor';
+import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
+import type { DischargeFieldConfigItem } from '../services/dischargeFieldLayoutApi';
+import { dischargeSettingsApi } from '../services/dischargeSettingsApi';
+import { DischargePreviewModal } from '@/components/shared/discharge-preview/components/DischargePreviewModal';
+import type { DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
 import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 
@@ -59,6 +65,26 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [lamaOpen, setLamaOpen] = useState(false);
     const [lamaReason, setLamaReason] = useState('');
     const [lamaBusy, setLamaBusy] = useState(false);
+
+    const [customizeOpen, setCustomizeOpen] = useState(false);
+    const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout();
+    const layoutByKey = useMemo(() => new Map(layoutFields.map(f => [f.key, f])), [layoutFields]);
+    const isVisible = (key: string) => (hasSavedLayout ? layoutByKey.get(key)?.showInPad ?? true : true);
+
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewOptions, setPreviewOptions] = useState<DischargeTemplateBoundOptions | null>(null);
+
+    // Custom field values aren't backed by a DischargeSummary column yet (Phase 1/UI-only pass —
+    // real persistence lands with the rest of the backend). Kept per-admission in localStorage
+    // purely so a demo doesn't lose data on reload.
+    const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+    useEffect(() => {
+        const raw = localStorage.getItem(`discharge-custom-fields:${admission.admissionId}`);
+        setCustomFieldValues(raw ? JSON.parse(raw) : {});
+    }, [admission.admissionId]);
+    useEffect(() => {
+        localStorage.setItem(`discharge-custom-fields:${admission.admissionId}`, JSON.stringify(customFieldValues));
+    }, [customFieldValues, admission.admissionId]);
 
     const isCash = admission.payerType === 'CASH';
     const isDischarged = admission.statusCode === 'DISCHARGED';
@@ -242,46 +268,101 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         };
     };
 
+    // If this doctor+hospital has a Discharge letterhead configured (a template PDF actually
+    // uploaded, not just default settings), render through the new pdf-lib template-bound renderer
+    // — same personalized field layout that drives the workspace form. Otherwise return null so the
+    // caller falls back to today's generic HTML print, unchanged (no letterhead = no regression).
+    const buildLetterheadPreviewOptions = async (): Promise<DischargeTemplateBoundOptions | null> => {
+        if (!layoutDoctorId || !hospitalId) return null;
+        const settings = await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId);
+        if (!settings?.uri) return null;
+        const templateFile = await dischargeSettingsApi.fetchTemplateFile(settings.uri);
+        if (!templateFile) return null;
+
+        const data = buildPrintData();
+        const formatDateOnly = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined);
+
+        return {
+            templateFile,
+            margins: {
+                top: settings.headerHeight ?? 20,
+                bottom: settings.footerHeight ?? 20,
+                left: settings.contentLeftMargin ?? 20,
+                right: settings.contentRightMargin ?? 20,
+            },
+            overflowStrategy: settings.overFlowPage === false ? 'blank' : 'reuse-template',
+            typography: {
+                family: (settings.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
+                size: settings.fontSize ?? 11,
+                weight: (settings.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
+                color: settings.textColour ?? '#111827',
+            },
+            payload: {
+                admissionNo: data.admissionNo,
+                patientName: data.patientName,
+                patientId: data.patientId,
+                ageGender: data.ageGender,
+                admittedAt: data.admittedAt,
+                dischargedAt: data.dischargedAt,
+                conditionAtDischarge: data.conditionAtDischarge,
+                signedByDoctorName: data.signedByDoctorName,
+                signedAt: data.signedAt,
+                fields: {
+                    admittingDiagnosis: data.admittingDiagnosis,
+                    finalDiagnosis: data.finalDiagnosis,
+                    chiefComplaint: data.chiefComplaint,
+                    historyOfPresentIllness: data.historyOfPresentIllness,
+                    courseInHospital: data.courseInHospital,
+                    proceduresPerformed: data.proceduresPerformed,
+                    dischargeMedications: data.dischargeMedications,
+                    followUpInstructions: data.followUpInstructions,
+                    followUpDate: formatDateOnly(data.followUpDate),
+                    dietInstructions: data.dietInstructions,
+                    activityRestrictions: data.activityRestrictions,
+                    additionalNotes: data.additionalNotes,
+                },
+                customFieldValues,
+                tpaSplit: data.tpaSplit,
+            },
+            printFields: layoutFields.map(f => ({ key: f.key, label: f.label, showInPrint: f.showInPrint })),
+        };
+    };
+
+    const openLetterheadPreview = async () => {
+        const options = await buildLetterheadPreviewOptions();
+        if (!options) return false;
+        setPreviewOptions(options);
+        setPreviewOpen(true);
+        return true;
+    };
+
     const download = async () => {
+        if (await openLetterheadPreview()) return;
         const settings = buildPrintSettingsFromHospital(hospitalData);
         const html = buildDischargeSummaryA4(buildPrintData(), settings);
         await downloadHtmlAsPdf(html, `discharge-summary-${admission.admissionNo}.pdf`);
     };
-    const print = () => {
+    const print = async () => {
+        if (await openLetterheadPreview()) return;
         const settings = buildPrintSettingsFromHospital(hospitalData);
         openPrintHtml(buildDischargeSummaryA4(buildPrintData(), settings));
     };
 
-    if (loading) {
-        return <div className="py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
-    }
-
-    return (
-        <div className="space-y-5">
-            <div className="flex items-center justify-between">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Discharge Summary</h2>
-                {isSigned && (
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-9" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
-                    </div>
-                )}
-            </div>
-
-            {isSigned && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
-                </div>
-            )}
-
-            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field label="Admitting Diagnosis" value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} />
-                    <Field label="Final Diagnosis *" value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} />
-                    <Field label="Chief Complaint" value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} />
+    // One case per DEFAULT_DISCHARGE_FIELDS built-in key — visibility/label/order come from the
+    // doctor's saved layout (see isVisible/layoutByKey above); what's INSIDE each case is unchanged
+    // from before personalization existed.
+    const renderBuiltinField = (key: string, label: string): React.ReactNode => {
+        switch (key) {
+            case 'admittingDiagnosis':
+                return <Field label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} />;
+            case 'finalDiagnosis':
+                return <Field label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} />;
+            case 'chiefComplaint':
+                return <Field label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} />;
+            case 'conditionAtDischarge':
+                return (
                     <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Condition at Discharge *</Label>
+                        <Label className="text-[11px] font-semibold text-slate-600">{label} *</Label>
                         {isSigned ? (
                             <p className="text-sm mt-1 text-slate-800">{form.conditionAtDischarge ?? '—'}</p>
                         ) : (
@@ -292,29 +373,139 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                             </select>
                         )}
                     </div>
-                </div>
-
-                <TextField label="History of Present Illness" value={form.historyOfPresentIllness} readOnly={isSigned} onChange={v => setField({ historyOfPresentIllness: v })} />
-
-                <div>
-                    <TextField label="Course in Hospital" value={form.courseInHospital} readOnly={isSigned} onChange={v => setField({ courseInHospital: v })} rows={6} />
-                    {!isSigned && <DischargeNarrativeAssist admissionId={admission.admissionId} onApply={v => setField({ courseInHospital: v })} />}
-                </div>
-
-                <TextField label="Procedures Performed" value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} />
-                <TextField label="Discharge Medications" value={form.dischargeMedications} readOnly={isSigned} onChange={v => setField({ dischargeMedications: v })} />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <TextField label="Follow-up Instructions" value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} rows={2} />
+                );
+            case 'historyOfPresentIllness':
+                return <TextField label={label} value={form.historyOfPresentIllness} readOnly={isSigned} onChange={v => setField({ historyOfPresentIllness: v })} />;
+            case 'courseInHospital':
+                return (
                     <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Follow-up Date</Label>
+                        <TextField label={label} value={form.courseInHospital} readOnly={isSigned} onChange={v => setField({ courseInHospital: v })} rows={6} />
+                        {!isSigned && <DischargeNarrativeAssist admissionId={admission.admissionId} onApply={v => setField({ courseInHospital: v })} />}
+                    </div>
+                );
+            case 'proceduresPerformed':
+                return <TextField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} />;
+            case 'dischargeMedications':
+                return <TextField label={label} value={form.dischargeMedications} readOnly={isSigned} onChange={v => setField({ dischargeMedications: v })} />;
+            case 'followUpInstructions':
+                return <TextField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} rows={2} />;
+            case 'followUpDate':
+                return (
+                    <div>
+                        <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
                         <Input type="date" value={form.followUpDate ? form.followUpDate.substring(0, 10) : ''} onChange={e => setField({ followUpDate: e.target.value || undefined })}
                             className="h-9 mt-1" disabled={isSigned} />
                     </div>
-                    <TextField label="Diet Instructions" value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} rows={2} />
-                    <TextField label="Activity Restrictions" value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} rows={2} />
+                );
+            case 'dietInstructions':
+                return <TextField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} rows={2} />;
+            case 'activityRestrictions':
+                return <TextField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} rows={2} />;
+            case 'additionalNotes':
+                return <TextField label={label} value={form.additionalNotes} readOnly={isSigned} onChange={v => setField({ additionalNotes: v })} rows={2} />;
+            default:
+                return null;
+        }
+    };
+
+    const renderCustomField = (f: DischargeFieldConfigItem): React.ReactNode => {
+        const value = customFieldValues[f.key] ?? '';
+        const setValue = (v: string) => setCustomFieldValues(prev => ({ ...prev, [f.key]: v }));
+        if (isSigned) {
+            return (
+                <div>
+                    <Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label>
+                    <p className={cn('text-sm mt-1 text-slate-800 whitespace-pre-wrap', !value && 'text-slate-400')}>{value || '—'}</p>
                 </div>
-                <TextField label="Additional Notes" value={form.additionalNotes} readOnly={isSigned} onChange={v => setField({ additionalNotes: v })} rows={2} />
+            );
+        }
+        switch (f.type) {
+            case 'paragraph':
+                return <TextField label={f.label} value={value} readOnly={false} onChange={setValue} rows={3} />;
+            case 'number':
+                return <div><Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label><Input type="number" value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1" /></div>;
+            case 'date':
+                return <div><Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label><Input type="date" value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1" /></div>;
+            case 'boolean':
+                return (
+                    <div>
+                        <Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label>
+                        <select value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                            <option value="">— Select —</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                );
+            case 'select':
+                return (
+                    <div>
+                        <Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label>
+                        <select value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                            <option value="">— Select —</option>
+                            {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                    </div>
+                );
+            default:
+                return <Field label={f.label} value={value} readOnly={false} onChange={setValue} />;
+        }
+    };
+
+    if (loading) {
+        return <div className="py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+    }
+
+    return (
+        <div className="space-y-5">
+            <div className="flex items-center justify-between">
+                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Discharge Summary</h2>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-9" onClick={() => setCustomizeOpen(true)}>
+                        <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Customize
+                    </Button>
+                    {isSigned && (
+                        <>
+                            <Button variant="outline" size="sm" className="h-9" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                            <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <Dialog open={customizeOpen} onOpenChange={setCustomizeOpen}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Customize discharge summary fields</DialogTitle>
+                        <DialogDescription>Applies to every discharge summary you fill in or print, across all your hospitals.</DialogDescription>
+                    </DialogHeader>
+                    <DischargeFieldLayoutEditor />
+                </DialogContent>
+            </Dialog>
+
+            <DischargePreviewModal
+                open={previewOpen}
+                onOpenChange={setPreviewOpen}
+                options={previewOptions}
+                fileName={`discharge-summary-${admission.admissionNo}.pdf`}
+            />
+
+            {isSigned && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
+                </div>
+            )}
+
+            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <div className="flex flex-col gap-4">
+                    {layoutFields.filter(f => f.builtIn && f.key !== 'nonPayableAnnexure' && isVisible(f.key)).map(f => (
+                        <div key={f.key} style={{ order: f.order }}>{renderBuiltinField(f.key, f.label)}</div>
+                    ))}
+                    {layoutFields.filter(f => !f.builtIn && isVisible(f.key)).map(f => (
+                        <div key={f.key} style={{ order: f.order }}>{renderCustomField(f)}</div>
+                    ))}
+                </div>
 
                 {!isSigned && isActive && (
                     <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

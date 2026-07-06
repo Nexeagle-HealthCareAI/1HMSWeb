@@ -29,6 +29,7 @@ import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocu
 import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildAdmissionConfirmationA4 } from '@/printTemplates/admissionConfirmationA4';
 import { referrerApi, type Referrer } from '@/features/appointment/services/referrerApi';
+import { ipdBillingService, type PaymentMode } from '@/features/billing/services/ipdBillingService';
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
@@ -121,6 +122,7 @@ interface FormState {
     payerType: PayerTypeCode; depositExpected: string; bedId: string;
     payerName: string; policyOrBeneficiaryNo: string; preAuthNo: string; packageCode: string; sanctionedAmount: string;
     entitledRoomCategory: string;
+    collectAdvanceNow: boolean; advancePaymentMode: PaymentMode; advanceTransactionId: string;
 
     consentObtained: boolean; consentSignedByName: string; consentSignerRelation: string;
 }
@@ -142,6 +144,7 @@ const EMPTY_FORM: FormState = {
     payerType: 'CASH', depositExpected: '', bedId: '',
     payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
     entitledRoomCategory: '',
+    collectAdvanceNow: false, advancePaymentMode: 'CASH', advanceTransactionId: '',
     consentObtained: false, consentSignedByName: '', consentSignerRelation: 'Self',
 };
 
@@ -218,7 +221,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [loadingDetail, setLoadingDetail] = useState(false);
 
     const [submitting, setSubmitting] = useState(false);
-    const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string; admittedAt?: string } | null>(null);
+    const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string; admittedAt?: string; advanceReceiptNo?: string; advancePendingApproval?: boolean } | null>(null);
 
     // Live duplicate detection — replaces the old separate "Returning: search" step. Runs
     // continuously as name/mobile/DOB/Aadhaar are typed, unless an existing patient is already
@@ -479,6 +482,35 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         // Non-fatal — admission stands either way.
                     }
                 }
+                // Best-effort advance collection — the "Deposit expected" figure becomes a real
+                // BillingPayment(ADVANCE) right away when staff opt in, instead of only ever being
+                // a printed-slip reference number. Needs a billing encounter (skipped for
+                // pre-registrations / IPD billing disabled) and never undoes the admission if it fails.
+                if (!isPreRegistration && form.collectAdvanceNow && res.encounterId && res.patientId && form.depositExpected) {
+                    try {
+                        const payRes = await ipdBillingService.addPayment({
+                            patientId: res.patientId,
+                            encounterId: res.encounterId,
+                            payment: {
+                                paymentType: 'ADVANCE',
+                                paymentMode: form.advancePaymentMode,
+                                transactionId: form.advanceTransactionId.trim() || undefined,
+                                description: 'Advance collected at admission',
+                                amount: parseFloat(form.depositExpected),
+                            },
+                        });
+                        if (payRes.success) {
+                            setSuccess(prev => prev ? { ...prev, advanceReceiptNo: payRes.data?.receiptNo, advancePendingApproval: payRes.pendingApproval } : prev);
+                            toast(payRes.pendingApproval
+                                ? { title: 'Advance submitted for approval', description: 'This would leave a credit balance — an Admin/AdminDoctor needs to approve it.' }
+                                : { title: 'Advance collected', description: payRes.data?.receiptNo ? `Receipt ${payRes.data.receiptNo}` : undefined });
+                        } else {
+                            toast({ title: 'Admitted, but advance was not recorded', description: payRes.message ?? 'Record it from the billing page.', variant: 'destructive' });
+                        }
+                    } catch {
+                        toast({ title: 'Admitted, but advance was not recorded', description: 'Record it from the billing page.', variant: 'destructive' });
+                    }
+                }
             } else {
                 toast({ title: 'Could not admit', description: res.message ?? 'Please try again.', variant: 'destructive' });
             }
@@ -558,6 +590,16 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                 <p className="text-base font-bold text-slate-900 font-mono mt-0.5">{success.patientId}</p>
                             </div>
                         </div>
+                        {success.advanceReceiptNo && (
+                            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 font-semibold">
+                                Advance collected · Receipt {success.advanceReceiptNo}
+                            </div>
+                        )}
+                        {success.advancePendingApproval && (
+                            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 font-semibold">
+                                Advance submitted for Admin/AdminDoctor approval (would leave a credit balance).
+                            </div>
+                        )}
                         <div className="mt-5 flex items-center gap-2">
                             <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print confirmation</Button>
                             <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
@@ -1101,6 +1143,50 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <Input type="number" min={0} value={form.depositExpected} onChange={e => set('depositExpected', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
                                             </Field>
                                         </div>
+
+                                        {!!form.depositExpected && parseFloat(form.depositExpected) > 0 && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
+                                            <div className="mt-3 pt-3 border-t border-slate-100">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-[11px] font-semibold text-slate-700">Collect this deposit now?</p>
+                                                        <p className="text-[10px] text-slate-400">Records it as a real advance payment against this admission.</p>
+                                                    </div>
+                                                    <div className="inline-flex p-0.5 bg-slate-100 rounded-lg shrink-0">
+                                                        <button type="button" onClick={() => set('collectAdvanceNow', false)}
+                                                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', !form.collectAdvanceNow ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
+                                                            Later
+                                                        </button>
+                                                        <button type="button" onClick={() => set('collectAdvanceNow', true)}
+                                                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', form.collectAdvanceNow ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500')}>
+                                                            Now
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {form.collectAdvanceNow && (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                                                        <Field label="Payment mode">
+                                                            <select value={form.advancePaymentMode} onChange={e => set('advancePaymentMode', e.target.value as PaymentMode)} className={SELECT_CLS}>
+                                                                <option value="CASH">Cash</option>
+                                                                <option value="UPI">UPI</option>
+                                                                <option value="CARD">Card</option>
+                                                                <option value="BANK">Bank Transfer</option>
+                                                                <option value="INSURANCE">Insurance</option>
+                                                            </select>
+                                                        </Field>
+                                                        {form.advancePaymentMode !== 'CASH' && (
+                                                            <Field label="Transaction ID">
+                                                                <Input value={form.advanceTransactionId} onChange={e => set('advanceTransactionId', e.target.value)} className={INPUT_CLS} placeholder="Optional" />
+                                                            </Field>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {!!form.depositExpected && parseFloat(form.depositExpected) > 0 && form.admissionType === 'ELECTIVE' && form.isPreRegistration && (
+                                            <p className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                                                Advance collection isn't available for a pre-registration — record it once the patient arrives.
+                                            </p>
+                                        )}
 
                                         {form.payerType !== 'CASH' && (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">

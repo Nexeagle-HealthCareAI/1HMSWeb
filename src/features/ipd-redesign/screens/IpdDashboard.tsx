@@ -66,6 +66,7 @@ interface Props {
  * IPD dashboard — the admitted-patient list only (the live bed board, CSSD board, and KPI
  * dashboard are their own screens; per-patient management — bed, medications, discharge,
  * surgery — is the Patient Workspace screen, opened by clicking a row). Backed by GET /admission/active.
+ * Inventory Management lives in the app's main side nav (/inventory), not here.
  */
 export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();

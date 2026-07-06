@@ -11,15 +11,15 @@ import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 
-type TriggerKey = 'opdConsultTrigger' | 'ipdBedChargeMode' | 'pharmacyIpdTrigger' | 'labPathTrigger' | 'labRadTrigger';
+type TriggerKey = 'opdConsultTrigger' | 'ipdBedChargeMode';
 
 // Per-module auto-billing rules. onValue = the trigger value that means "auto-post"; 'OFF' = manual.
+// Pharmacy/Lab (Path & Rad) triggers are intentionally not listed here — those fields exist on
+// BillingPolicy but nothing in the backend reads them to auto-post a charge, so exposing a toggle
+// for them would promise automation that doesn't exist.
 const AUTO_BILLING_RULES: { key: TriggerKey; label: string; desc: string; onValue: string }[] = [
     { key: 'opdConsultTrigger', label: 'OPD Consultation', desc: 'Post the consult fee automatically when an appointment is booked.', onValue: 'AUTO' },
-    { key: 'ipdBedChargeMode', label: 'IPD Bed Charge', desc: 'Post the daily bed charge automatically each midnight.', onValue: 'AUTO' },
-    { key: 'pharmacyIpdTrigger', label: 'IPD Pharmacy', desc: 'Post the charge automatically when medicines are issued to an IPD patient.', onValue: 'ISSUED' },
-    { key: 'labPathTrigger', label: 'Pathology (Lab)', desc: 'Post the charge automatically when a pathology test is released.', onValue: 'RELEASED' },
-    { key: 'labRadTrigger', label: 'Radiology', desc: 'Post the charge automatically when a radiology study is released.', onValue: 'RELEASED' },
+    { key: 'ipdBedChargeMode', label: 'IPD Bed Charge', desc: 'Post the daily bed charge automatically each midnight.', onValue: 'DAILY_AUTO' },
 ];
 
 export const BillingPolicyConfig = () => {

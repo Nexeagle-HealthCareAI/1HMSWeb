@@ -217,12 +217,19 @@ export interface RegisterAppointmentRequest {
   // Present => update this existing appointment in place instead of creating a new one
   // (RegisterAppointmentHandler routes on this).
   appointmentId?: string;
+  // Reschedule-only opt-in: void this visit's posted charges/invoice and auto-refund whatever
+  // was already collected. Ignored when appointmentId is absent (new-appointment creation).
+  voidExistingChargesAndRefund?: boolean;
 }
 
 export interface RegisterAppointmentResponse {
   appointmentId: string;
   patientId: string;
   tokenNumber: string;
+  message?: string;
+  billRefunded?: boolean;
+  refundAmount?: number;
+  refundReceiptNo?: string;
 }
 
 export interface PatientSearchRequest {

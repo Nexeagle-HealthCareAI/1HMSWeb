@@ -105,6 +105,9 @@ export const EncounterBillingPage: React.FC = () => {
     const [reopenOpen, setReopenOpen] = useState(false);
     const [reopenReason, setReopenReason] = useState('');
     const [printing, setPrinting] = useState(false);
+    const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
+    const [voidReason, setVoidReason] = useState('');
+    const [voidBusy, setVoidBusy] = useState(false);
 
     const load = useCallback(async (silent = false) => {
         if (!encounterId || !patientId) {
@@ -212,25 +215,37 @@ export const EncounterBillingPage: React.FC = () => {
         }
     };
 
-    const handleCancelCharge = async (row: BillingChargeRow) => {
-        if (!encounterId || !patientId) return;
-        try {
-            await ipdBillingService.deleteEvent(row.chargeEventId, 'Charges', patientId);
-            toast({ title: 'Charge removed' });
-            await load(true);
-        } catch (e: any) {
-            toast({ title: 'Could not remove charge', description: e?.message ?? '', variant: 'destructive' });
-        }
+    const handleCancelCharge = (row: BillingChargeRow) => {
+        setVoidConfirm({ kind: 'charge', id: row.chargeEventId, label: row.displayName ?? 'Charge' });
     };
 
-    const handleDeletePayment = async (row: BillingPaymentRow) => {
-        if (!encounterId || !patientId) return;
+    const handleDeletePayment = (row: BillingPaymentRow) => {
+        setVoidConfirm({ kind: 'payment', id: row.paymentId, label: `${row.paymentType ?? 'Payment'} · ${inr(row.amount)}` });
+    };
+
+    const handleVoid = async () => {
+        if (!voidConfirm || !patientId || voidBusy) return;
+        if (!voidReason.trim()) {
+            toast({ title: 'Reason required', description: 'Explain why this entry should be deleted.', variant: 'destructive' });
+            return;
+        }
+        setVoidBusy(true);
         try {
-            await ipdBillingService.deleteEvent(row.paymentId, 'Payment', patientId);
-            toast({ title: 'Payment removed' });
+            const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
+            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, patientId, voidReason.trim());
+            if (res?.success === false) throw new Error(res.message ?? 'Could not delete');
+            toast(
+                res?.pendingApproval
+                    ? { title: 'Submitted for approval', description: `An Admin/AdminDoctor needs to approve this ${voidConfirm.kind} deletion.` }
+                    : { title: voidConfirm.kind === 'charge' ? 'Charge removed' : 'Payment removed' }
+            );
+            setVoidConfirm(null);
+            setVoidReason('');
             await load(true);
         } catch (e: any) {
-            toast({ title: 'Could not remove payment', description: e?.message ?? '', variant: 'destructive' });
+            toast({ title: 'Could not delete', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setVoidBusy(false);
         }
     };
 
@@ -791,6 +806,39 @@ export const EncounterBillingPage: React.FC = () => {
                         >
                             {finalizing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Unlock className="h-4 w-4 mr-1" />}
                             Reopen
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!voidConfirm} onOpenChange={(o) => { if (!o) { setVoidConfirm(null); setVoidReason(''); } }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit.
+                            This needs Admin/AdminDoctor approval before it takes effect.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700">Reason (required)</label>
+                        <Textarea
+                            value={voidReason}
+                            onChange={e => setVoidReason(e.target.value)}
+                            rows={2}
+                            placeholder="Why should this be deleted?"
+                            className="text-sm"
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={voidBusy}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => { e.preventDefault(); handleVoid(); }}
+                            disabled={voidBusy || !voidReason.trim()}
+                            className="bg-rose-600 hover:bg-rose-700"
+                        >
+                            {voidBusy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Ban className="h-4 w-4 mr-1" />}
+                            Request Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

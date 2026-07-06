@@ -528,6 +528,15 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       page.drawText(vV, { x: vX_Val - valW, y: vY, size: sizeBase, font: boldFont, color: COLORS.TextMain });
       vY -= (lineHeight + 2);
     });
+
+    // The vitals box is positioned at a fixed offset from the page top, independent of cursorY —
+    // when the patient-header block above is short, cursorY can still be above the box's bottom
+    // edge, so the clinical sections below would draw text directly over the box. Clamp cursorY
+    // down to clear it, regardless of how many vitals fields are populated or how short the header is.
+    const vitalsBottomY = page.getHeight() - activeHeaderPad - topOffset - vH + (lineHeight + 4);
+    if (cursorY > vitalsBottomY - 6) {
+      cursorY = vitalsBottomY - 6;
+    }
   }
 
 

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { IndianRupee, TrendingUp, TrendingDown, Gift } from 'lucide-react';
+import { IndianRupee, TrendingUp, TrendingDown, Gift, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { RevenueTab } from '../components/tabs/RevenueTab';
 import { ExpenseTab } from '../components/tabs/ExpenseTab';
 import { IncentiveTab } from '../components/tabs/IncentiveTab';
+import { ApprovalsTab } from '../components/tabs/ApprovalsTab';
 
 // Card-style nav matching the Admin / Appointment board: icon chip + label + description,
 // blue→indigo gradient when active.
@@ -13,6 +14,7 @@ const TABS = [
     { id: 'revenue', label: 'Revenue', description: 'Bills & collections', icon: TrendingUp },
     { id: 'expense', label: 'Expense', description: 'Operational spend', icon: TrendingDown },
     { id: 'incentive', label: 'Incentive', description: 'Referral payouts', icon: Gift },
+    { id: 'approvals', label: 'Approvals', description: 'Pending credit requests', icon: ShieldCheck },
 ] as const;
 
 const TAB_TRIGGER = cn(
@@ -78,6 +80,11 @@ export const BillingDashboard: React.FC = () => {
                 <TabsContent value="incentive" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
                     <motion.div key="incentive" {...fadeIn} className="h-full">
                         <IncentiveTab />
+                    </motion.div>
+                </TabsContent>
+                <TabsContent value="approvals" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
+                    <motion.div key="approvals" {...fadeIn} className="h-full">
+                        <ApprovalsTab />
                     </motion.div>
                 </TabsContent>
             </Tabs>

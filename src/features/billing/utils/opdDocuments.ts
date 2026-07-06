@@ -73,7 +73,15 @@ export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): In
         };
     });
     const subTotal = charges.reduce((s, c) => s + (c.grossAmount ?? 0), 0);
-    const discountTotal = charges.reduce((s, c) => s + (c.discountAmount ?? 0), 0);
+    const lineDiscountTotal = charges.reduce((s, c) => s + (c.discountAmount ?? 0), 0);
+    // Overall (invoice-level) discount = the invoice's total discount minus the per-line
+    // discounts of charges already linked to it — mirrors BillingPage.tsx's `overallDiscount`,
+    // since that discount is otherwise invisible on the printed document (bug fix).
+    const linkedLineDiscount = charges
+        .filter(c => c.isInvoiced)
+        .reduce((s, c) => s + (Number(c.discountAmount) || 0), 0);
+    const overallDiscount = Math.max(0, (inv?.discountAmount ?? 0) - linkedLineDiscount);
+    const discountTotal = lineDiscountTotal + overallDiscount;
     const taxTotal = inv?.taxAmount ?? charges.reduce((s, c) => s + (c.taxAmount ?? 0), 0);
     return {
         invoiceNo: inv?.invoiceNo ?? '—',
@@ -89,7 +97,10 @@ export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): In
         subTotal,
         discountTotal,
         taxTotal,
-        grandTotal: data.totalBilledAmount ?? inv?.netAmount ?? 0,
+        // The invoice's real net amount already accounts for the overall discount — prefer it
+        // over totalBilledAmount (pre-discount), which was always defined and silently masked
+        // any overall discount from ever appearing on the printed grand total.
+        grandTotal: inv?.netAmount ?? data.totalBilledAmount ?? 0,
         amountPaid: data.amountReceived ?? 0,
         balanceDue: data.netBalance ?? 0,
     };
