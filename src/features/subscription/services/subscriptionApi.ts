@@ -1,5 +1,4 @@
 import { apiClient } from '@/services/axiosClient';
-import axios from 'axios';
 import { API_ENDPOINTS } from '@/app/api';
 
 export interface SubscriptionStatusResponse {
@@ -38,21 +37,20 @@ export const subscriptionApi = {
     return apiClient.get(API_ENDPOINTS.SUBSCRIPTION.GET_STATUS(hospitalId));
   },
 
-  // Get all available plans (hits a separate microservice, hence direct axios call using the endpoint URL).
-  // CMSAPI's GetPlans() returns every plan for every product (1Rad + EasyHMS) and does not filter
-  // inactive rows server-side, so both filters below are required here, not optional.
+  // Get all available plans. Proxied through easyHMSAPI's GET api/v1/Subscription/plans
+  // (server-to-server to CMSAPI with a shared service key) — the browser has no CMS credential,
+  // and CMSAPI's plan endpoints require CMS auth, so this can no longer hit CMS directly.
+  // The EasyHMS + active-only filtering happens server-side in CMSAPI's service endpoint now.
   getPlans: async (): Promise<SubscriptionPlan[]> => {
-    const response = await axios.get(API_ENDPOINTS.SUBSCRIPTION.GET_PLANS_URL);
-    return response.data
-      .filter((p: any) => p.applicationName === 'EasyHMS' && p.isActive !== false)
-      .map((p: any) => ({
-        id: p.planId,
-        name: p.name,
-        basePrice: p.basePrice,
-        discountedPrice: p.discountPrice,
-        billingCycle: p.billingCycle,
-        features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
-      }));
+    const response = await apiClient.get<any[]>(API_ENDPOINTS.SUBSCRIPTION.GET_PLANS);
+    return (response ?? []).map((p: any) => ({
+      id: p.planId,
+      name: p.name,
+      basePrice: p.basePrice,
+      discountedPrice: p.discountPrice,
+      billingCycle: p.billingCycle,
+      features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
+    }));
   },
 
   // Select a plan
