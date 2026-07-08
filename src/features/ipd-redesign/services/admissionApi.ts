@@ -207,6 +207,8 @@ export interface ActiveAdmissionItem {
     patientName?: string | null;
     patientAge?: number | null;
     patientSex?: string | null;
+    patientAddress?: string | null;
+    mobile?: string | null;
     bedCode?: string | null;      // null => no bed assigned yet
     wardName?: string | null;
     encounterId?: string | null;

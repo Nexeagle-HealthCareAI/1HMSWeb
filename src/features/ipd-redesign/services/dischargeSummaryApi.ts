@@ -83,6 +83,14 @@ export const dischargeSummaryApi = {
         }
     },
 
+    unsign: async (admissionId: string, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/discharge-summary/unsign', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not revoke signature on the discharge summary.'));
+        }
+    },
+
     generateNarrative: async (admissionId: string, hospitalId?: string): Promise<string> => {
         try {
             const r = await ipdApiClient.post<GenerateDischargeNarrativeResponse>('/discharge-summary/narrate', {

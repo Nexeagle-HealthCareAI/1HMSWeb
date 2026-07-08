@@ -153,16 +153,51 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     <div className="h-11 w-11 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-sm font-bold shrink-0 shadow">
                         {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-lg font-black text-slate-900">{current.patientName || current.patientId}</h1>
-                            <Badge variant="outline" className={cn('text-[10px] font-bold', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600')}>
-                                {current.statusCode}
+                    <div className="w-full">
+                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                            <h1 className="text-2xl font-black text-slate-900 capitalize tracking-tight">{current.patientName || current.patientId}</h1>
+                            {current.patientAge != null && (
+                                <Badge variant="secondary" className="text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 px-2 py-0.5">
+                                    {current.patientAge}{current.patientSex ?? ''}
+                                </Badge>
+                            )}
+                            <Badge variant="outline" className={cn('text-xs font-bold px-2 py-0.5', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600')}>
+                                {current.statusCode.replace(/_/g, ' ')}
                             </Badge>
                         </div>
-                        <p className="text-xs text-slate-500">
-                            {current.patientId}{current.patientAge != null ? ` · ${current.patientAge}${current.patientSex ?? ''}` : ''} · {current.admissionNo} · {current.admissionType ?? '—'} · {current.payerType}
-                        </p>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-4">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Patient ID</p>
+                                <p className="text-sm font-semibold text-slate-700">{current.patientId}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Admission No</p>
+                                <p className="text-sm font-semibold text-slate-700">{current.admissionNo}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Admitting Doctor</p>
+                                <p className="text-sm font-semibold text-slate-700 truncate" title={current.primaryDoctorName ?? ''}>{current.primaryDoctorName ?? '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Payer</p>
+                                <p className="text-sm font-semibold text-slate-700 truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
+                                    {current.payerType} {current.payerName ? <span className="text-slate-500 font-medium">({current.payerName})</span> : ''}
+                                </p>
+                            </div>
+                            {current.admittedAt && (
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Admitted</p>
+                                    <p className="text-sm font-semibold text-slate-700">{formatIstDateTime(current.admittedAt)}</p>
+                                </div>
+                            )}
+                            {(current as any).dischargedAt && (
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Discharged</p>
+                                    <p className="text-sm font-semibold text-slate-700">{formatIstDateTime((current as any).dischargedAt)}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

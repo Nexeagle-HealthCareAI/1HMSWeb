@@ -109,6 +109,7 @@ export interface DischargeSummaryPrintData {
     patientId: string;
     ageGender: string;
     mobile: string;
+    patientAddress?: string;
     admittedAt: string;
     dischargedAt: string;
     admittingDiagnosis?: string;

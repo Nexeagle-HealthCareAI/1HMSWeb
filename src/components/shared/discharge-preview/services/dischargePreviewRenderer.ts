@@ -59,6 +59,8 @@ export interface DischargePrintPayload {
     patientName: string;
     patientId: string;
     ageGender?: string;
+    mobile?: string;
+    patientAddress?: string;
     admittedAt: string;
     dischargedAt: string;
     conditionAtDischarge: string;
@@ -183,10 +185,43 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
     };
 
     // --- Structural header (not a toggleable field, matches the HTML template's own header treatment) ---
-    const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    await drawParagraph(payload.patientName, boldFont, sizeBase + 2, accentColor);
-    await drawParagraph(`Patient ID: ${payload.patientId}${payload.ageGender ? `  ·  ${payload.ageGender}` : ''}`, regularFont, sizeBase - 1);
-    await drawParagraph(`Admission No: ${payload.admissionNo}  ·  Admitted: ${formatDate(payload.admittedAt)}  ·  Discharged: ${formatDate(payload.dischargedAt)}`, regularFont, sizeBase - 1);
+    const formatDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    
+    page.drawText(payload.patientName || 'Unknown Patient', { x: leftPad, y: cursorY, size: sizeBase + 2, font: boldFont, color: textColor });
+    
+    const rightColX = pageWidth - rightPad - 190;
+    
+    page.drawText('Admission No:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
+    page.drawText(payload.admissionNo || '—', { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
+    
+    cursorY -= lineHeight * 1.2;
+    
+    page.drawText(`Patient ID: ${payload.patientId}`, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+    
+    page.drawText('Admitted:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
+    page.drawText(formatDate(payload.admittedAt), { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
+    
+    cursorY -= lineHeight * 1.2;
+    
+    const demoParts = [];
+    if (payload.ageGender) demoParts.push(payload.ageGender);
+    if (payload.mobile) demoParts.push(`Ph: ${payload.mobile}`);
+    if (demoParts.length > 0) {
+        page.drawText(demoParts.join('  ·  '), { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+    }
+    
+    if (payload.dischargedAt) {
+        page.drawText('Discharged:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
+        page.drawText(formatDate(payload.dischargedAt), { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
+    }
+    
+    if (payload.patientAddress) {
+        cursorY -= lineHeight * 1.2;
+        page.drawText(payload.patientAddress, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+    }
+    
+    cursorY -= lineHeight * 1.5;
+    page.drawLine({ start: { x: leftPad, y: cursorY + 4 }, end: { x: pageWidth - rightPad, y: cursorY + 4 }, thickness: 1, color: hexToPdfRgb('#e2e8f0') });
     cursorY -= 8;
 
     // --- Body: the doctor's merged field layout drives order/labels/visibility entirely ---
@@ -198,13 +233,7 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         await drawSection(f.label, valueByKey[f.key]);
     }
 
-    // --- Structural footer (signature block, not toggleable) ---
-    await ensureRoom(lineHeight * 3);
-    cursorY -= 20;
-    page.drawLine({ start: { x: leftPad, y: cursorY }, end: { x: leftPad + 180, y: cursorY }, thickness: 1, color: hexToPdfRgb('#94a3b8') });
-    cursorY -= lineHeight;
-    await drawParagraph(payload.signedByDoctorName ?? 'Authorised Signatory', regularFont, sizeBase - 1);
-    if (payload.signedAt) await drawParagraph(formatDate(payload.signedAt), regularFont, sizeBase - 2, hexToPdfRgb('#64748b'));
+    // --- Signature block removed from preview per user request ---
 
     return outputDoc.save();
 };
