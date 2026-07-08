@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { PrintDischargeButton } from '../components/PrintDischargeButton';
 import { PrintAdmissionButton } from '../components/PrintAdmissionButton';
+import { PrintTokenButton } from '../components/PrintTokenButton';
 import { EditAdmissionSheet } from '../components/EditAdmissionSheet';
 import { admissionApi, type ActiveAdmissionItem, type AdmissionStatusFilter } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -293,6 +294,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                 </div>
                                 {a.statusCode === 'ADMITTED' && (
                                     <div className="flex justify-end gap-1.5 mt-1">
+                                        <PrintTokenButton admission={a} className="h-7 text-[10px]" />
                                         <PrintAdmissionButton admission={a} className="h-7 text-[10px]" />
                                         <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
                                             <Pencil className="h-3 w-3 mr-1" /> Edit details
@@ -304,6 +306,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                 )}
                                 {a.statusCode === 'PRE_ADMIT' && (
                                     <div className="flex justify-end gap-1.5 mt-1">
+                                        <PrintTokenButton admission={a} className="h-7 text-[10px]" />
                                         <PrintAdmissionButton admission={a} className="h-7 text-[10px]" />
                                         <Button size="sm" variant="outline" className="h-7 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
                                             <X className="h-3 w-3 mr-1" /> Cancel
@@ -372,6 +375,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                             <Badge variant="outline" className={cn('text-[10px] font-bold', statusTone(a.statusCode))}>{a.statusCode}</Badge>
                                             {a.statusCode === 'PRE_ADMIT' && (
                                                 <>
+                                                    <PrintTokenButton admission={a} className="h-6 px-2 text-[10px]" />
                                                     <PrintAdmissionButton admission={a} className="h-6 px-2 text-[10px]" />
                                                     <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
                                                         onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
@@ -385,6 +389,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                             )}
                                             {a.statusCode === 'ADMITTED' && (
                                                 <>
+                                                    <PrintTokenButton admission={a} className="h-6 px-2 text-[10px]" />
                                                     <PrintAdmissionButton admission={a} className="h-6 px-2 text-[10px]" />
                                                     <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
                                                         onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>

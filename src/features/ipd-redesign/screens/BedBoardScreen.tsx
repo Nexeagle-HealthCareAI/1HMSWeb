@@ -210,12 +210,13 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                                                         <span className="font-mono text-[10px] font-bold">{b.bedCode}</span>
                                                         <span className="text-[10px] font-bold uppercase tracking-wider">{occupied ? 'OCCUPIED' : (b.statusCode ?? 'AVAILABLE')}</span>
                                                     </div>
-                                                    {occupied ? (
-                                                        <div className="mt-1">
-                                                            <p className="text-xs font-bold truncate">{b.patientName || '—'}</p>
-                                                            <p className="text-[10px] opacity-80 truncate">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
-                                                        </div>
-                                                    ) : (
+                                                      {occupied ? (
+                                                          <div className="mt-1">
+                                                              <p className="text-xs font-bold truncate">{b.patientName || '?'}</p>
+                                                              <p className="text-[10px] opacity-80 truncate">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
+                                                              {b.admissionToken && <p className="text-[10px] font-bold text-rose-800 mt-0.5 truncate">Token: {b.admissionToken}</p>}
+                                                          </div>
+                                                      ) : (
                                                         <p className="text-[10px] mt-1 opacity-70">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
                                                     )}
                                                 </motion.button>
@@ -235,7 +236,10 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                         <>
                             <DialogHeader>
                                 <DialogTitle>{selected.patientName || 'Patient'} · {selected.bedCode}</DialogTitle>
-                                <DialogDescription>{selected.admissionNo} · {selected.admissionType ?? ''} · {selected.payerType ?? 'CASH'}</DialogDescription>
+                                <DialogDescription>
+                                    {selected.admissionNo} · {selected.admissionType ?? ''} · {selected.payerType ?? 'CASH'}
+                                    {selected.admissionToken && ` · Token: ${selected.admissionToken}`}
+                                </DialogDescription>
                             </DialogHeader>
 
                             {actionMode === 'menu' && (

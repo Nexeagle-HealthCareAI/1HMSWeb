@@ -115,6 +115,7 @@ export interface AdmitPatientPayload {
     expectedDischargeAt?: string | null;
     admissionReason?: string;
     diagnosis?: string;
+    admissionToken?: string;
     // Elective only: patient hasn't physically arrived yet — creates a PRE_ADMIT admission instead
     // of a completed one; confirm arrival later via admissionApi.confirmArrival.
     isPreRegistration?: boolean;
@@ -188,6 +189,7 @@ export type AdmissionStatusFilter = 'ACTIVE' | 'DISCHARGED' | 'ALL';
 export interface ActiveAdmissionItem {
     admissionId: string;
     admissionNo: string;
+    admissionToken?: string | null;
     admissionType?: string | null;
     statusCode: string;
     payerType: string;
