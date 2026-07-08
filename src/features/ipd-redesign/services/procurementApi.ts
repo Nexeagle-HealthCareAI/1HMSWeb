@@ -7,7 +7,7 @@ const hospitalIdOrThrow = (override?: string) => {
     return id;
 };
 
-export type IndentStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'ISSUED' | 'CANCELLED';
+export type IndentStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'PARTIALLY_ISSUED' | 'ISSUED' | 'CANCELLED';
 export type PurchaseOrderStatus = 'DRAFT' | 'APPROVED' | 'SENT' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
 export type GrnMatchStatus = 'MATCHED' | 'MISMATCH' | 'PENDING';
 
@@ -31,6 +31,7 @@ export interface IndentLineItem {
     itemName: string;
     unit: string;
     qty: number;
+    issuedQty: number;
     notes?: string | null;
 }
 

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 const INDENT_TONE: Record<string, string> = {
     DRAFT: 'bg-slate-100 text-slate-600 border-slate-200',
     SUBMITTED: 'bg-sky-50 text-sky-700 border-sky-200',
+    PARTIALLY_ISSUED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     ISSUED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200',
 };
@@ -109,7 +110,9 @@ export const InternalRequestsPanel: React.FC = () => {
             }
             setAvailableBatches(batchesMap);
             
-            setIssueLines(detail.lines.map(l => ({ indentLineId: l.indentLineId, batchId: '', qty: l.qty })));
+            // Filter out lines that are already fully issued
+            const remainingLines = detail.lines.filter(l => l.qty > l.issuedQty);
+            setIssueLines(remainingLines.map(l => ({ indentLineId: l.indentLineId, batchId: '', qty: l.qty - l.issuedQty })));
         } catch (e) {
             toast({ title: 'Error', description: 'Failed to load details.', variant: 'destructive' });
             setIssueTarget(null);
@@ -220,7 +223,7 @@ export const InternalRequestsPanel: React.FC = () => {
                                             {req.lineCount} items • {new Date(req.requestedAt).toLocaleString()}
                                         </div>
                                     </div>
-                                    {req.status === 'SUBMITTED' && (
+                                    {(req.status === 'SUBMITTED' || req.status === 'PARTIALLY_ISSUED') && (
                                         <Button size="sm" onClick={() => openIssue(req)} className="bg-brand-600 hover:bg-brand-700">
                                             <PackageCheck className="h-4 w-4 mr-2" /> Fulfill
                                         </Button>
@@ -324,25 +327,35 @@ export const InternalRequestsPanel: React.FC = () => {
                     ) : (
                         <div className="space-y-4 py-4">
                             <div className="border rounded-md divide-y max-h-[400px] overflow-y-auto">
-                                {issueDetail.lines.map((line, idx) => {
+                                {issueDetail.lines.filter(l => l.qty > l.issuedQty).map((line) => {
                                     const batches = availableBatches[line.inventoryItemId] || [];
-                                    const currentLine = issueLines[idx];
+                                    const lineIndex = issueLines.findIndex(il => il.indentLineId === line.indentLineId);
+                                    const currentLine = issueLines[lineIndex];
+                                    if (!currentLine) return null;
+                                    
+                                    const remainingQty = line.qty - line.issuedQty;
+
                                     return (
                                         <div key={line.indentLineId} className="p-4 space-y-3 bg-slate-50/50">
                                             <div className="flex justify-between items-center">
                                                 <div className="font-medium">{line.itemName}</div>
-                                                <div className="text-sm font-semibold text-brand-700 bg-brand-50 px-2 py-1 rounded">
-                                                    Requested: {line.qty} {line.unit}
+                                                <div className="flex items-center gap-2">
+                                                    <div className="text-xs text-slate-500">
+                                                        Requested: {line.qty} | Issued: {line.issuedQty}
+                                                    </div>
+                                                    <div className="text-sm font-semibold text-brand-700 bg-brand-50 px-2 py-1 rounded">
+                                                        Remaining: {remainingQty} {line.unit}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <div className="flex-1">
                                                     <Label className="text-xs">Issue From Batch</Label>
                                                     <Select
-                                                        value={currentLine?.batchId || ''}
+                                                        value={currentLine.batchId || ''}
                                                         onValueChange={v => {
                                                             const copy = [...issueLines];
-                                                            copy[idx] = { ...copy[idx], batchId: v };
+                                                            copy[lineIndex] = { ...copy[lineIndex], batchId: v };
                                                             setIssueLines(copy);
                                                         }}
                                                     >
@@ -364,11 +377,11 @@ export const InternalRequestsPanel: React.FC = () => {
                                                         className="h-8 text-sm"
                                                         type="number"
                                                         min="1"
-                                                        max={line.qty}
-                                                        value={currentLine?.qty || ''}
+                                                        max={remainingQty}
+                                                        value={currentLine.qty || ''}
                                                         onChange={e => {
                                                             const copy = [...issueLines];
-                                                            copy[idx] = { ...copy[idx], qty: Number(e.target.value) };
+                                                            copy[lineIndex] = { ...copy[lineIndex], qty: Number(e.target.value) };
                                                             setIssueLines(copy);
                                                         }}
                                                     />
