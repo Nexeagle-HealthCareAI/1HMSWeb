@@ -155,7 +155,9 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                                              : tokenData.referrerType === 'AGENT' ? 'Ref. Agent'
                                              : 'Ref. By'}
                                         </span>
-                                        <span className="font-bold text-[11px] text-right truncate pl-2">{tokenData.referrerName}</span>
+                                        <span className="font-bold text-[11px] text-right truncate pl-2">
+                                            {tokenData.referrerType === 'DOCTOR' ? `Dr. ${tokenData.referrerName}` : tokenData.referrerName}
+                                        </span>
                                     </div>
                                 )}
                             </div>
