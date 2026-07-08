@@ -32,6 +32,7 @@ const AdminConfigModule = lazy(() => import('@/features/dashboard/components/Adm
 const IpdWorkflowApp = lazy(() => import('@/features/ipd-redesign/IpdWorkflowApp').then(module => ({ default: module.default })));
 const InventoryManagementPage = lazy(() => import('@/features/ipd-redesign/pages/InventoryManagementPage').then(module => ({ default: module.default })));
 const OtBoardPage = lazy(() => import('@/features/ipd-redesign/pages/OtBoardPage').then(module => ({ default: module.default })));
+const IcuBoardPage = lazy(() => import('@/features/ipd-redesign/pages/IcuBoardPage').then(module => ({ default: module.default })));
 const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
@@ -220,6 +221,17 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
                   <MainLayout>
                     <OtBoardPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/icu-board"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <IcuBoardPage />
                   </MainLayout>
                 </RouteGuard>
               }

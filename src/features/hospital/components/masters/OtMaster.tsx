@@ -43,14 +43,12 @@ const BOARD_COLUMNS: { key: OtBoardCase['statusCode']; label: string }[] = [
 
 type EditingTheatre = Partial<UpsertTheatreInput> & { theatreId?: string };
 
-type TheatreErrors = { theatreCode?: string; theatreName?: string; price?: string };
+type TheatreErrors = { theatreCode?: string; theatreName?: string; };
 const validateTheatre = (rec: EditingTheatre | null): TheatreErrors => {
     const e: TheatreErrors = {};
     if (!rec) return e;
     if (!String(rec.theatreCode ?? '').trim()) e.theatreCode = 'Theatre code is required';
     if (!String(rec.theatreName ?? '').trim()) e.theatreName = 'Theatre name is required';
-    const price = Number(rec.price);
-    if (rec.price == null || isNaN(price) || price < 0) e.price = 'Price must be 0 or more';
     return e;
 };
 
@@ -114,7 +112,7 @@ export const OtMaster: React.FC = () => {
                 isActive: theatre.isActive,
             });
         } else {
-            setEditingTheatre({ theatreCode: '', theatreName: '', price: 0, isActive: true });
+            setEditingTheatre({ theatreCode: '', theatreName: '', isActive: true });
         }
         setIsDrawerOpen(true);
     };
@@ -124,7 +122,7 @@ export const OtMaster: React.FC = () => {
 
     const handleSave = async () => {
         const errs = validateTheatre(editingTheatre);
-        const firstErr = errs.theatreCode || errs.theatreName || errs.price;
+        const firstErr = errs.theatreCode || errs.theatreName;
         if (firstErr || !editingTheatre) {
             toast({ title: 'Validation Error', description: firstErr, variant: 'destructive' });
             return;
@@ -136,7 +134,7 @@ export const OtMaster: React.FC = () => {
                 theatreCode: editingTheatre.theatreCode!.trim(),
                 theatreName: editingTheatre.theatreName!.trim(),
                 departmentId: editingTheatre.departmentId || null,
-                price: Number(editingTheatre.price ?? 0),
+                price: 0,
                 status: editingTheatre.status,
                 isActive: editingTheatre.isActive ?? true,
             });
@@ -217,8 +215,6 @@ export const OtMaster: React.FC = () => {
                                                 </div>
                                                 <div className="mt-auto flex items-end justify-between">
                                                     <div className="flex flex-col">
-                                                        <div className="text-[10px] text-gray-400 uppercase font-semibold">OT Usage Price</div>
-                                                        <div className="text-sm font-semibold font-mono text-gray-900 dark:text-gray-100">₹{t.price.toLocaleString('en-IN')}</div>
                                                     </div>
                                                     {!t.isActive && (
                                                         <Badge variant="secondary" className="text-[10px]">Inactive</Badge>
@@ -304,18 +300,7 @@ export const OtMaster: React.FC = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                        <Label>OT Usage Price (₹) <span className="text-red-500">*</span></Label>
-                                        <Input
-                                            type="number" min={0}
-                                            className={formErrors.price ? 'border-red-500' : ''}
-                                            value={editingTheatre.price ?? ''}
-                                            onChange={e => setEditingTheatre(p => ({ ...p!, price: Number(e.target.value) }))}
-                                        />
-                                        {formErrors.price
-                                            ? <p className="text-[10px] text-red-500">{formErrors.price}</p>
-                                            : <p className="text-[10px] text-muted-foreground">Flat fee billed once a surgery finishes in this theatre.</p>}
-                                    </div>
+
                                     <div className="grid gap-2 col-span-2 sm:col-span-1">
                                         <Label>Status</Label>
                                         <Select value={editingTheatre.status ?? 'AVAILABLE'} onValueChange={v => setEditingTheatre(p => ({ ...p!, status: v }))}>
