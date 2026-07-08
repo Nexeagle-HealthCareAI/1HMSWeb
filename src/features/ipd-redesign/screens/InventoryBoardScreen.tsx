@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight } from 'lucide-react';
+import { Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight, Camera, Upload } from 'lucide-react';
 import { inventoryApi, type InventoryBoard, type UnifiedStockVisibility } from '../services/inventoryApi';
 import { equipmentApi, type EquipmentItem } from '../services/equipmentApi';
 import { ProcurementPanel } from '../components/ProcurementPanel';
 import { NarcoticCompliancePanel } from '../components/NarcoticCompliancePanel';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { TransferStockPanel } from '../components/TransferStockPanel';
+import { BulkStockUpload } from '../components/BulkStockUpload';
 
 interface Props {
     onBack: () => void;
@@ -24,7 +25,7 @@ const TIER_TONE: Record<number, string> = {
     90: 'bg-sky-50 text-sky-700 border-sky-200',
 };
 
-type Tab = 'stock' | 'items' | 'transfer' | 'expiry' | 'reorder' | 'equipment' | 'procurement' | 'compliance' | 'allstores';
+type Tab = 'stock' | 'items' | 'transfer' | 'expiry' | 'reorder' | 'equipment' | 'procurement' | 'compliance' | 'allstores' | 'bulk';
 
 /**
  * Inventory Management board — hospital-wide, read-only v1 (stock-by-store overview, expiry
@@ -40,6 +41,8 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
     const [unified, setUnified] = useState<UnifiedStockVisibility>(EMPTY_UNIFIED);
     const [unifiedLoaded, setUnifiedLoaded] = useState(false);
     const [unifiedLoading, setUnifiedLoading] = useState(false);
+    const [capturing, setCapturing] = useState(false);
+    const boardRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [tab, setTab] = useState<Tab>('stock');
@@ -54,7 +57,6 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
 
     useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Lazy-loaded on first visit — a cross-module summary query, no need to fetch it eagerly.
     useEffect(() => {
         if (tab !== 'allstores' || unifiedLoaded) return;
         setUnifiedLoading(true);
@@ -64,16 +66,36 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
             .finally(() => setUnifiedLoading(false));
     }, [tab, unifiedLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const captureBoard = async () => {
+        if (!boardRef.current) return;
+        try {
+            setCapturing(true);
+            const { default: html2canvas } = await import('html2canvas');
+            const canvas = await html2canvas(boardRef.current, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#f8fafc'
+            });
+            const link = document.createElement('a');
+            link.download = `inventory-board-${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            toast({ title: 'Failed to capture board', variant: 'destructive' });
+        } finally {
+            setCapturing(false);
+        }
+    };
+
     const storeGroups = board.stockByStore.reduce<Record<string, typeof board.stockByStore>>((acc, r) => {
         (acc[r.storeName] ??= []).push(r);
         return acc;
     }, {});
 
     return (
-        <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
+        <div ref={boardRef} className="w-full px-6 py-6 space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
                     <div className="h-10 w-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm">
                         <Warehouse className="h-5 w-5 text-white" />
                     </div>
@@ -82,9 +104,14 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                         <p className="text-xs text-slate-500">Stock by store, expiry alerts, reorder alerts.</p>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" className="h-9" onClick={() => load(true)} disabled={refreshing || loading}>
-                    <RefreshCw className={cn('h-4 w-4 mr-1.5', refreshing && 'animate-spin')} /> Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-9" onClick={captureBoard} disabled={capturing}>
+                        {capturing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Camera className="h-4 w-4 mr-1.5" />} Capture
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-9" onClick={() => load(true)} disabled={refreshing || loading}>
+                        <RefreshCw className={cn('h-4 w-4 mr-1.5', refreshing && 'animate-spin')} /> Refresh
+                    </Button>
+                </div>
             </div>
 
             <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
@@ -114,6 +141,9 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                 </button>
                 <button onClick={() => setTab('compliance')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'compliance' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
                     <ShieldAlert className="h-3.5 w-3.5" /> Compliance
+                </button>
+                <button onClick={() => setTab('bulk')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'bulk' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                    <Upload className="h-3.5 w-3.5" /> Bulk Upload
                 </button>
                 <button onClick={() => setTab('allstores')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'allstores' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
                     <Package2 className="h-3.5 w-3.5" /> Blood Bank &amp; CSSD (by Store)
@@ -150,6 +180,8 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                             </div>
                         )
                     )}
+
+                    {tab === 'bulk' && <BulkStockUpload onSuccess={() => load(true)} />}
 
                     {tab === 'items' && (
                         <div className="h-[70vh] rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">

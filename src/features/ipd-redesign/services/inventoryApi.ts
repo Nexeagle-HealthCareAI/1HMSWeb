@@ -183,6 +183,9 @@ export const inventoryApi = {
     }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/batches', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
+    bulkUploadBatches: (input: { rows: any[] }, hospitalId?: string) =>
+        ipdApiClient.post('/inventory/batches/bulk', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
     recordMovement: (input: RecordMovementInput, hospitalId?: string) =>
         ipdApiClient.post('/inventory/items/movement', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
