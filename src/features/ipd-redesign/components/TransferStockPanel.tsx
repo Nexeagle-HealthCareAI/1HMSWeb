@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowRightRight, AlertCircle, Package2 } from 'lucide-react';
+import { Loader2, ArrowLeftRight, AlertCircle, Package2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
 import { inventoryApi, type StockOverviewRow, type BatchItem } from '../services/inventoryApi';
@@ -117,7 +117,7 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess })
             <div className="flex-1 p-6 space-y-6 bg-slate-50/50">
                 <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
                     <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                        <ArrowRightRight className="h-5 w-5 text-indigo-600" />
+                        <ArrowLeftRight className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
                         <h2 className="text-sm font-bold text-slate-800">Inter-Store Transfer</h2>
@@ -224,7 +224,7 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess })
                         disabled={transferring || !fromStoreId || !toStoreId || !inventoryItemId || !qty}
                         className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto"
                     >
-                        {transferring ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRightRight className="h-4 w-4 mr-2" />}
+                        {transferring ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowLeftRight className="h-4 w-4 mr-2" />}
                         Execute Transfer
                     </Button>
                 </div>

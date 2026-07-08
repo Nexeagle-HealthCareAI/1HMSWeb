@@ -38,6 +38,8 @@ export interface OTBookingItem {
 // Kanban plan-board card — the 6 SurgeryCase stages become the board's columns.
 export interface OtBoardCase {
     surgeryCaseId: string;
+    encounterId?: string;
+    admissionId?: string;
     statusCode: 'REQUESTED' | 'SCHEDULED' | 'PRE_OP' | 'IN_THEATRE' | 'POST_OP' | 'COMPLETED';
     patientName?: string | null;
     procedureName: string;
