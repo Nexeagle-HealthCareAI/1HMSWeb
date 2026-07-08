@@ -471,6 +471,15 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         }
     };
 
+    const getBuiltInSpan = (key: string) => {
+        const fullWidth = ['courseInHospital', 'historyOfPresentIllness', 'dischargeMedications', 'proceduresPerformed', 'followUpInstructions', 'dietInstructions', 'activityRestrictions', 'additionalNotes'];
+        return fullWidth.includes(key) ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1';
+    };
+
+    const getCustomSpan = (f: DischargeFieldConfigItem) => {
+        return f.type === 'paragraph' ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1';
+    };
+
     if (loading) {
         return <div className="py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
     }
@@ -526,13 +535,17 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 </div>
             )}
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-                <div className="flex flex-col gap-4">
+            <div className="rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {layoutFields.filter(f => f.builtIn && f.key !== 'nonPayableAnnexure' && isVisible(f.key)).map(f => (
-                        <div key={f.key} style={{ order: f.order }}>{renderBuiltinField(f.key, f.label)}</div>
+                        <div key={f.key} style={{ order: f.order }} className={getBuiltInSpan(f.key)}>
+                            {renderBuiltinField(f.key, f.label)}
+                        </div>
                     ))}
                     {layoutFields.filter(f => !f.builtIn && isVisible(f.key)).map(f => (
-                        <div key={f.key} style={{ order: f.order }}>{renderCustomField(f)}</div>
+                        <div key={f.key} style={{ order: f.order }} className={getCustomSpan(f)}>
+                            {renderCustomField(f)}
+                        </div>
                     ))}
                 </div>
 
@@ -736,17 +749,36 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 };
 
 const Field: React.FC<{ label: string; value?: string; readOnly: boolean; onChange: (v: string) => void }> = ({ label, value, readOnly, onChange }) => (
-    <div>
-        <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
-        {readOnly ? <p className="text-sm mt-1 text-slate-800">{value || '—'}</p> : <Input value={value ?? ''} onChange={e => onChange(e.target.value)} className="h-9 mt-1" />}
+    <div className="flex flex-col h-full">
+        <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</Label>
+        {readOnly ? (
+            <div className="flex-1 bg-slate-50/50 border border-slate-100 rounded-xl p-3 shadow-sm">
+                <p className="text-sm text-slate-800 font-medium">{value || '—'}</p>
+            </div>
+        ) : (
+            <Input 
+                value={value ?? ''} 
+                onChange={e => onChange(e.target.value)} 
+                className="h-10 bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl" 
+            />
+        )}
     </div>
 );
 
 const TextField: React.FC<{ label: string; value?: string; readOnly: boolean; onChange: (v: string) => void; rows?: number }> = ({ label, value, readOnly, onChange, rows = 3 }) => (
-    <div>
-        <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
-        {readOnly
-            ? <p className={cn('text-sm mt-1 text-slate-800 whitespace-pre-wrap', !value && 'text-slate-400')}>{value || '—'}</p>
-            : <Textarea rows={rows} value={value ?? ''} onChange={e => onChange(e.target.value)} className="text-sm mt-1" />}
+    <div className="flex flex-col h-full">
+        <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</Label>
+        {readOnly ? (
+            <div className="flex-1 bg-slate-50/50 border border-slate-100 rounded-xl p-4 shadow-sm">
+                <p className={cn('text-sm text-slate-800 whitespace-pre-wrap font-medium', !value && 'text-slate-400 italic')}>{value || '—'}</p>
+            </div>
+        ) : (
+            <Textarea 
+                rows={rows} 
+                value={value ?? ''} 
+                onChange={e => onChange(e.target.value)} 
+                className="text-sm bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl" 
+            />
+        )}
     </div>
 );

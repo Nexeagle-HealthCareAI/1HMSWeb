@@ -337,4 +337,16 @@ export const admissionApi = {
             })
             .then(r => r.matches ?? [])
             .catch(() => []),
+
+    updateStatus: async (admissionId: string, toStatus: string, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/admission/status', {
+                hospitalId: hospitalIdOrThrow(hospitalId),
+                admissionId,
+                toStatus,
+            });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not update admission status.'));
+        }
+    },
 };

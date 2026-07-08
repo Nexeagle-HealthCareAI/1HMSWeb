@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2 } from 'lucide-react';
+import { ArrowLeft, Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight } from 'lucide-react';
 import { inventoryApi, type InventoryBoard, type UnifiedStockVisibility } from '../services/inventoryApi';
 import { equipmentApi, type EquipmentItem } from '../services/equipmentApi';
-import { formatIstDateTime } from '../utils/istDate';
 import { ProcurementPanel } from '../components/ProcurementPanel';
 import { NarcoticCompliancePanel } from '../components/NarcoticCompliancePanel';
+import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
+import { TransferStockPanel } from '../components/TransferStockPanel';
 
 interface Props {
     onBack: () => void;
@@ -23,7 +24,7 @@ const TIER_TONE: Record<number, string> = {
     90: 'bg-sky-50 text-sky-700 border-sky-200',
 };
 
-type Tab = 'stock' | 'expiry' | 'reorder' | 'equipment' | 'procurement' | 'compliance' | 'allstores';
+type Tab = 'stock' | 'items' | 'transfer' | 'expiry' | 'reorder' | 'equipment' | 'procurement' | 'compliance' | 'allstores';
 
 /**
  * Inventory Management board — hospital-wide, read-only v1 (stock-by-store overview, expiry
@@ -90,6 +91,12 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                 <button onClick={() => setTab('stock')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'stock' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
                     <Warehouse className="h-3.5 w-3.5" /> Stock by Store
                 </button>
+                <button onClick={() => setTab('items')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'items' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                    <Package2 className="h-3.5 w-3.5" /> Item Master
+                </button>
+                <button onClick={() => setTab('transfer')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'transfer' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                    <ArrowLeftRight className="h-3.5 w-3.5" /> Transfer Stock
+                </button>
                 <button onClick={() => setTab('expiry')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', tab === 'expiry' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
                     <Clock className="h-3.5 w-3.5" /> Expiry Alerts
                     {board.expiryAlerts.length > 0 && <Badge variant="outline" className="ml-1 text-[10px] font-bold bg-white">{board.expiryAlerts.length}</Badge>}
@@ -142,6 +149,16 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                                 ))}
                             </div>
                         )
+                    )}
+
+                    {tab === 'items' && (
+                        <div className="h-[70vh] rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                            <ItemMaster />
+                        </div>
+                    )}
+
+                    {tab === 'transfer' && (
+                        <TransferStockPanel stockByStore={board.stockByStore} onSuccess={() => load(true)} />
                     )}
 
                     {tab === 'expiry' && (

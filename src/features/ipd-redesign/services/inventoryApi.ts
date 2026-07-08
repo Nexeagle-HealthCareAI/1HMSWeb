@@ -152,6 +152,15 @@ export interface UnifiedStockVisibility {
     cssdByStore: CssdStockSummaryRow[];
 }
 
+export interface TransferStockInput {
+    inventoryItemId: string;
+    fromStoreId: string;
+    toStoreId: string;
+    batchId?: string;
+    qty: number;
+    notes?: string;
+}
+
 export const inventoryApi = {
     getItems: (params: { category?: string; search?: string; activeOnly?: boolean } = {}, hospitalId?: string): Promise<InventoryItem[]> =>
         ipdApiClient
@@ -176,6 +185,9 @@ export const inventoryApi = {
 
     recordMovement: (input: RecordMovementInput, hospitalId?: string) =>
         ipdApiClient.post('/inventory/items/movement', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
+    transferStock: (input: TransferStockInput, hospitalId?: string) =>
+        ipdApiClient.post('/inventory/transfer', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
     getBoard: (hospitalId?: string): Promise<InventoryBoard> =>
         ipdApiClient

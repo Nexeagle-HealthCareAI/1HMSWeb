@@ -135,65 +135,86 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     };
 
     const navItemClass = (isCurrent: boolean, extra?: string) => cn(
-        'w-full h-10 px-3 rounded-lg text-sm font-bold transition-all flex items-center gap-2',
-        isCurrent ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+        'group w-auto lg:w-full h-10 px-4 lg:px-3 rounded-full lg:rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2.5 outline-none shrink-0 snap-center',
+        isCurrent
+            ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 lg:hover:translate-x-0.5',
         extra,
     );
+
     const subNavItemClass = (isCurrent: boolean) => cn(
-        'w-full h-9 pl-3 pr-2.5 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-2',
-        isCurrent ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+        'group relative w-auto lg:w-full h-9 px-4 lg:pl-4 lg:pr-2.5 rounded-full lg:rounded-r-lg lg:rounded-l-none text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 outline-none lg:border-l-2 shrink-0 snap-center',
+        isCurrent
+            ? 'lg:border-brand-500 bg-brand-50 lg:bg-brand-50/50 text-brand-700'
+            : 'lg:border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/80 lg:hover:border-slate-300',
     );
 
     return (
         <div className="px-6 py-6 space-y-5">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
-                    <div className="h-11 w-11 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-sm font-bold shrink-0 shadow">
+            {/* Premium Header Card */}
+            <div className="relative rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-6 overflow-hidden">
+                {/* Subtle top-right decorative gradient (optional touch of premium) */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-400/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative flex items-start gap-5">
+                    {/* Gradient Avatar */}
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-lg font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50 mt-1">
                         {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
-                    <div className="w-full">
-                        <div className="flex items-center gap-2 flex-wrap mb-3">
-                            <h1 className="text-2xl font-black text-slate-900 capitalize tracking-tight">{current.patientName || current.patientId}</h1>
-                            {current.patientAge != null && (
-                                <Badge variant="secondary" className="text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 px-2 py-0.5">
-                                    {current.patientAge}{current.patientSex ?? ''}
+
+                    <div className="flex-1 min-w-0">
+                        {/* Name & Badges */}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h1 className="text-2xl font-black text-slate-900 capitalize tracking-tight truncate max-w-md">
+                                    {current.patientName || current.patientId}
+                                </h1>
+                                {current.patientAge != null && (
+                                    <Badge variant="outline" className="text-xs font-bold bg-white text-slate-700 shadow-sm px-2.5 py-0.5 rounded-full border-slate-200">
+                                        {current.patientAge}{current.patientSex ?? ''}
+                                    </Badge>
+                                )}
+                                <Badge variant="outline" className={cn('text-xs font-bold px-3 py-0.5 rounded-full shadow-sm', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-500/10' : 'bg-slate-50 text-slate-600 border-slate-200')}>
+                                    {current.statusCode.replace(/_/g, ' ')}
                                 </Badge>
-                            )}
-                            <Badge variant="outline" className={cn('text-xs font-bold px-2 py-0.5', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600')}>
-                                {current.statusCode.replace(/_/g, ' ')}
-                            </Badge>
+                            </div>
+                            
+                            <Button variant="outline" size="sm" className="h-9 rounded-full bg-white/50 hover:bg-white shadow-sm border-slate-200" onClick={onBack}>
+                                <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
+                            </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-4">
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Patient ID</p>
-                                <p className="text-sm font-semibold text-slate-700">{current.patientId}</p>
+                        {/* Details Row */}
+                        <div className="flex flex-wrap items-center gap-x-8 gap-y-5 mt-6 pt-5 border-t border-slate-200/60">
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Patient ID</p>
+                                <p className="text-sm font-bold text-slate-800">{current.patientId}</p>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Admission No</p>
-                                <p className="text-sm font-semibold text-slate-700">{current.admissionNo}</p>
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
+                                <p className="text-sm font-bold text-slate-800">{current.admissionNo}</p>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Admitting Doctor</p>
-                                <p className="text-sm font-semibold text-slate-700 truncate" title={current.primaryDoctorName ?? ''}>{current.primaryDoctorName ?? '—'}</p>
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitting Doctor</p>
+                                <p className="text-sm font-semibold text-slate-700 max-w-[160px] truncate" title={current.primaryDoctorName ?? ''}>
+                                    {current.primaryDoctorName ?? '—'}
+                                </p>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Payer</p>
-                                <p className="text-sm font-semibold text-slate-700 truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
-                                    {current.payerType} {current.payerName ? <span className="text-slate-500 font-medium">({current.payerName})</span> : ''}
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer</p>
+                                <p className="text-sm font-semibold text-slate-700 max-w-[180px] truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
+                                    <span className="font-bold text-slate-800">{current.payerType}</span> {current.payerName ? <span className="text-slate-500 text-xs">({current.payerName})</span> : ''}
                                 </p>
                             </div>
                             {current.admittedAt && (
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Admitted</p>
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitted</p>
                                     <p className="text-sm font-semibold text-slate-700">{formatIstDateTime(current.admittedAt)}</p>
                                 </div>
                             )}
                             {(current as any).dischargedAt && (
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Discharged</p>
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discharged</p>
                                     <p className="text-sm font-semibold text-slate-700">{formatIstDateTime((current as any).dischargedAt)}</p>
                                 </div>
                             )}
@@ -203,74 +224,75 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
             </div>
 
             {/* Side nav + content */}
-            <div className="flex items-start gap-5">
-                <aside className="w-60 shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm p-2 space-y-0.5 sticky top-6">
+            {/* Side nav + content */}
+            <div className="flex flex-col lg:flex-row items-start gap-5">
+                <aside className="w-full lg:w-60 shrink-0 lg:rounded-2xl bg-white/80 backdrop-blur-xl border-b lg:border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-2.5 flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible sticky top-6 z-10 snap-x lg:space-y-0.5 gap-2 lg:gap-0 no-scrollbar -mx-6 px-6 lg:mx-0">
                     <button type="button" onClick={() => setActiveSection('overview')} className={navItemClass(activeSection === 'overview')}>
-                        <BedDouble className="h-4 w-4" /> Overview
+                        <BedDouble className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Overview</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('admissionDetails')} className={navItemClass(activeSection === 'admissionDetails')}>
-                        <FileBadge2 className="h-4 w-4" /> Admission Details
+                        <FileBadge2 className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Admission Details</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('cpoe')} className={navItemClass(activeSection === 'cpoe')}>
-                        <ClipboardList className="h-4 w-4" /> CPOE
+                        <ClipboardList className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">CPOE</span>
                     </button>
                     {activeSection === 'cpoe' && (
-                        <div className="pl-2 space-y-0.5">
+                        <div className="flex flex-row lg:flex-col gap-2 lg:gap-0 lg:ml-4 lg:pl-2 lg:border-l-2 lg:border-slate-100 lg:space-y-0.5 lg:my-1 lg:py-1 shrink-0 items-center">
                             {CPOE_TABS.map(({ key, label, icon: Icon }) => (
                                 <button key={key} type="button" onClick={() => setActiveCpoeTab(key)} className={subNavItemClass(activeCpoeTab === key)}>
-                                    <Icon className="h-3.5 w-3.5" /> {label}
+                                    <Icon className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">{label}</span>
                                 </button>
                             ))}
                         </div>
                     )}
 
                     <button type="button" onClick={() => setActiveSection('mar')} className={navItemClass(activeSection === 'mar')}>
-                        <ClipboardCheck className="h-4 w-4" /> MAR
+                        <ClipboardCheck className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">MAR</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('nursing')} className={navItemClass(activeSection === 'nursing')}>
-                        <HeartPulse className="h-4 w-4" /> Nursing
+                        <HeartPulse className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Nursing</span>
                     </button>
                     {activeSection === 'nursing' && (
-                        <div className="pl-2 space-y-0.5">
+                        <div className="flex flex-row lg:flex-col gap-2 lg:gap-0 lg:ml-4 lg:pl-2 lg:border-l-2 lg:border-slate-100 lg:space-y-0.5 lg:my-1 lg:py-1 shrink-0 items-center">
                             {NURSING_TABS.map(({ key, label, icon: Icon }) => (
                                 <button key={key} type="button" onClick={() => setActiveNursingTab(key)} className={subNavItemClass(activeNursingTab === key)}>
-                                    <Icon className="h-3.5 w-3.5" /> {label}
+                                    <Icon className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">{label}</span>
                                 </button>
                             ))}
                         </div>
                     )}
 
                     <button type="button" onClick={() => setActiveSection('roundNotes')} className={navItemClass(activeSection === 'roundNotes')}>
-                        <FileText className="h-4 w-4" /> Round Notes
+                        <FileText className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Round Notes</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('sbarHandover')} className={navItemClass(activeSection === 'sbarHandover')}>
-                        <MessageSquareText className="h-4 w-4" /> SBAR Handover
+                        <MessageSquareText className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">SBAR Handover</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('consent')} className={navItemClass(activeSection === 'consent')}>
-                        <FileCheck2 className="h-4 w-4" /> Consent
+                        <FileCheck2 className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Consent</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('bloodBank')} className={navItemClass(activeSection === 'bloodBank')}>
-                        <Droplet className="h-4 w-4" /> Blood Bank
+                        <Droplet className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Blood Bank</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('surgery')} className={navItemClass(activeSection === 'surgery')}>
-                        <Scissors className="h-4 w-4" /> Surgery
+                        <Scissors className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Surgery</span>
                     </button>
 
                     <button type="button" onClick={() => setActiveSection('criticalCare')} className={navItemClass(activeSection === 'criticalCare')}>
-                        <Siren className="h-4 w-4" /> Critical Care
+                        <Siren className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Critical Care</span>
                     </button>
 
                     {/* Always visible, unlike every other section — staff need to reopen a signed
                         summary and re-download the PDF after the admission has already closed. */}
                     <button type="button" onClick={() => setActiveSection('discharge')} className={navItemClass(activeSection === 'discharge')}>
-                        <LogOut className="h-4 w-4" /> Discharge
+                        <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Discharge</span>
                     </button>
                 </aside>
 

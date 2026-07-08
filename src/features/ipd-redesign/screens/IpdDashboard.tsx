@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check, Pencil, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { PrintDischargeButton } from '../components/PrintDischargeButton';
+import { PrintAdmissionButton } from '../components/PrintAdmissionButton';
+import { EditAdmissionSheet } from '../components/EditAdmissionSheet';
 import { admissionApi, type ActiveAdmissionItem, type AdmissionStatusFilter } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 
@@ -79,6 +82,8 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const [dateFilter, setDateFilter] = useState<DateFilterMode>('ALL');
     const [rangeFrom, setRangeFrom] = useState('');
     const [rangeTo, setRangeTo] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 5;
 
     // Confirm-arrival: a PRE_ADMIT (elective pre-registration) admission has physically arrived.
     const [confirmArrivalTarget, setConfirmArrivalTarget] = useState<ActiveAdmissionItem | null>(null);
@@ -86,15 +91,33 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const [arrivalBedId, setArrivalBedId] = useState('');
     const [confirmingArrival, setConfirmingArrival] = useState(false);
 
+    const [editingAdmissionTarget, setEditingAdmissionTarget] = useState<ActiveAdmissionItem | null>(null);
+    const [cancelAdmissionTarget, setCancelAdmissionTarget] = useState<ActiveAdmissionItem | null>(null);
+    const [cancellingAdmission, setCancellingAdmission] = useState(false);
+
     const load = () => {
         setLoading(true);
-        Promise.all([
-            admissionApi.getActiveAdmissions(statusFilter),
-            admissionApi.getActiveAdmissions('ACTIVE'),
-        ])
-            .then(([list, active]) => { setAdmissions(list); setActiveAdmissions(active); })
-            .catch(() => toast({ title: 'Could not load admissions', variant: 'destructive' }))
-            .finally(() => setLoading(false));
+        
+        if (statusFilter === 'ACTIVE') {
+            admissionApi.getActiveAdmissions('ACTIVE')
+                .then(active => {
+                    setAdmissions(active);
+                    setActiveAdmissions(active);
+                })
+                .catch(() => toast({ title: 'Could not load admissions', variant: 'destructive' }))
+                .finally(() => setLoading(false));
+        } else {
+            Promise.all([
+                admissionApi.getActiveAdmissions(statusFilter),
+                admissionApi.getActiveAdmissions('ACTIVE'),
+            ])
+                .then(([list, active]) => {
+                    setAdmissions(list);
+                    setActiveAdmissions(active);
+                })
+                .catch(() => toast({ title: 'Could not load admissions', variant: 'destructive' }))
+                .finally(() => setLoading(false));
+        }
     };
 
     useEffect(() => { load(); }, [refreshSignal, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -126,6 +149,21 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
         }
     };
 
+    const submitCancelAdmission = async () => {
+        if (!cancelAdmissionTarget) return;
+        setCancellingAdmission(true);
+        try {
+            await admissionApi.updateStatus(cancelAdmissionTarget.admissionId, 'CANCELLED');
+            toast({ title: 'Admission cancelled.' });
+            setCancelAdmissionTarget(null);
+            load();
+        } catch (err) {
+            toast({ title: 'Could not cancel admission', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setCancellingAdmission(false);
+        }
+    };
+
     const kpis = useMemo(() => ({
         admittedCount: activeAdmissions.length,
         unassigned: activeAdmissions.filter(a => !a.bedCode).length,
@@ -149,40 +187,44 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
         });
     }, [admissions, search, dateFilter, rangeFrom, rangeTo]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, dateFilter, rangeFrom, rangeTo, statusFilter]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredAdmissions.length / PAGE_SIZE));
+    const paginatedAdmissions = filteredAdmissions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
     return (
-        <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-brand-600 flex items-center justify-center shadow-md">
-                        <Hotel className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900">IPD</h1>
-                        <p className="text-sm text-slate-500 mt-0.5">Click a patient to manage their bed, medications, and discharge.</p>
-                    </div>
+        <div className="w-full max-w-full pb-6 space-y-6 bg-slate-50/50 min-h-screen">
+            {/* Header Banner */}
+            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 px-4 sm:px-8 xl:px-12 py-6 sm:py-8 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-lg shadow-brand-900/5 relative overflow-hidden">
+                {/* Decorative background flare */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+                
+                <div className="relative z-10">
+                    <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-sm">Inpatient Department</h1>
+                    <p className="text-brand-100 text-sm font-medium mt-1 drop-shadow-sm">Click a patient to manage their bed, medications, and discharge.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" className="h-10" onClick={load} disabled={loading}>
-                        <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} /> Refresh
-                    </Button>
-                    <Button onClick={onOpenBedBoard} variant="outline" className="h-10 font-semibold">
-                        <LayoutGrid className="h-4 w-4 mr-2" /> Live Bed Board
-                    </Button>
-                    <Button onClick={onOpenCssdBoard} variant="outline" className="h-10 font-semibold">
-                        <Package className="h-4 w-4 mr-2" /> CSSD Board
-                    </Button>
-                    <Button onClick={onOpenKpiDashboard} variant="outline" className="h-10 font-semibold">
-                        <Gauge className="h-4 w-4 mr-2" /> KPI Dashboard
-                    </Button>
-                    <Button onClick={onOpenConsultantLedger} variant="outline" className="h-10 font-semibold">
-                        <Stethoscope className="h-4 w-4 mr-2" /> Consultant Ledger
-                    </Button>
-                    <Button onClick={onAdmit} className="h-10 bg-brand-600 hover:bg-brand-700 font-semibold">
+                
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
+                    <div className="flex items-center flex-wrap gap-1.5 p-1.5 bg-black/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-inner w-full sm:w-auto">
+                        <button onClick={onOpenBedBoard} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
+                            <LayoutGrid className="h-4 w-4 mr-2 text-brand-200" /> Live Bed Board
+                        </button>
+                        <button onClick={onOpenKpiDashboard} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
+                            <Gauge className="h-4 w-4 mr-2 text-brand-200" /> KPI Dashboard
+                        </button>
+                        <button onClick={onOpenConsultantLedger} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
+                            <Stethoscope className="h-4 w-4 mr-2 text-brand-200" /> Consultant Ledger
+                        </button>
+                    </div>
+                    <button onClick={onAdmit} className="flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10 w-full sm:w-auto">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient
-                    </Button>
+                    </button>
                 </div>
             </div>
+
+            <div className="px-4 sm:px-8 xl:px-12 space-y-6">
 
             {/* KPI tiles — always the active census, regardless of the list's status filter below */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -195,41 +237,113 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             <section className="space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admissions</h2>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100">
+                    <div className="flex items-center gap-2 flex-wrap w-full">
+                        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
                             {(['ACTIVE', 'DISCHARGED', 'ALL'] as AdmissionStatusFilter[]).map(s => (
                                 <button key={s} type="button" onClick={() => setStatusFilter(s)}
-                                    className={cn('h-7 px-3 rounded-md text-[11px] font-bold transition-all',
-                                        statusFilter === s ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    className={cn('h-8 px-4 rounded-lg text-xs font-bold transition-all duration-200',
+                                        statusFilter === s ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
                                     {s === 'ACTIVE' ? 'Active' : s === 'DISCHARGED' ? 'Discharged' : 'All'}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100">
+                        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
                             {(['TODAY', 'ALL', 'RANGE'] as DateFilterMode[]).map(m => (
                                 <button key={m} type="button" onClick={() => setDateFilter(m)}
-                                    className={cn('h-7 px-3 rounded-md text-[11px] font-bold transition-all',
-                                        dateFilter === m ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    className={cn('h-8 px-4 rounded-lg text-xs font-bold transition-all duration-200',
+                                        dateFilter === m ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
                                     {m === 'TODAY' ? 'Today' : m === 'ALL' ? 'All' : 'Range'}
                                 </button>
                             ))}
                         </div>
                         {dateFilter === 'RANGE' && (
-                            <div className="flex items-center gap-1.5">
-                                <Input type="date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-9 text-xs w-36 bg-white" />
-                                <span className="text-slate-400 text-xs">to</span>
-                                <Input type="date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-9 text-xs w-36 bg-white" />
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <Input type="date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-10 rounded-xl text-xs w-32 sm:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
+                                <span className="text-slate-400 text-xs font-semibold">to</span>
+                                <Input type="date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-10 rounded-xl text-xs w-32 sm:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
                             </div>
                         )}
-                        <div className="relative">
-                            <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, UHID, admission #, bed…" className="h-9 text-sm pl-8 w-64 bg-white" />
+                        <div className="relative w-full sm:w-auto flex-1 min-w-[200px]">
+                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, UHID, admission #, bed…" className="h-10 rounded-xl text-sm pl-9 w-full bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20 transition-all hover:border-slate-300" />
                         </div>
+                        <Button variant="outline" onClick={load} disabled={loading} className="h-10 rounded-xl px-4 shadow-sm shrink-0 border-slate-200/60 hover:bg-slate-50 transition-all text-slate-600 font-semibold">
+                            <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} /> Refresh
+                        </Button>
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                    <table className="w-full text-sm">
+                <div className="md:rounded-2xl md:border md:border-slate-200/60 md:bg-white md:shadow-sm md:overflow-hidden">
+                    {/* Mobile Card Layout */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
+                        {paginatedAdmissions.map(a => (
+                            <div key={a.admissionId} className="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm flex flex-col gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]" onClick={() => onOpenWorkspace(a)}>
+                                <div className="flex justify-between items-start gap-3">
+                                    <div>
+                                        <p className="font-bold text-slate-900 text-base leading-tight">{a.patientName || '—'}</p>
+                                        <p className="text-xs text-slate-500 mt-1 font-medium">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
+                                    </div>
+                                    <Badge variant="outline" className={cn('text-[10px] font-bold px-2.5 py-0.5 shrink-0 rounded-full',
+                                        a.statusCode === 'ADMITTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                            a.statusCode === 'DISCHARGED' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                                'bg-amber-50 text-amber-700 border-amber-200'
+                                    )}>
+                                        {a.statusCode}
+                                    </Badge>
+                                </div>
+                                {a.statusCode === 'ADMITTED' && (
+                                    <div className="flex justify-end gap-1.5 mt-1">
+                                        <PrintAdmissionButton admission={a} className="h-7 text-[10px]" />
+                                        <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
+                                            <Pencil className="h-3 w-3 mr-1" /> Edit details
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                            <X className="h-3 w-3 mr-1" /> Cancel
+                                        </Button>
+                                    </div>
+                                )}
+                                {a.statusCode === 'PRE_ADMIT' && (
+                                    <div className="flex justify-end gap-1.5 mt-1">
+                                        <PrintAdmissionButton admission={a} className="h-7 text-[10px]" />
+                                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                            <X className="h-3 w-3 mr-1" /> Cancel
+                                        </Button>
+                                    </div>
+                                )}
+                                {a.statusCode === 'DISCHARGED' && (
+                                    <div className="flex justify-end mt-1">
+                                        <PrintDischargeButton admission={a} />
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Admission #</span>
+                                        <span className="font-mono text-brand-700 font-bold">{a.admissionNo}</span>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Bed</span>
+                                        <span className="text-slate-800 font-semibold truncate">{a.wardName ? `${a.wardName} - ${a.bedName}` : 'Unassigned'}</span>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Payer</span>
+                                        <span className="text-slate-800 font-semibold truncate">{a.payerType} {a.payerName && <span className="text-slate-500 font-medium">({a.payerName})</span>}</span>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Admitted</span>
+                                        <span className="text-slate-800 font-semibold truncate">{formatIstDateTime(a.admittedAt).split(',')[0]}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {filteredAdmissions.length === 0 && (
+                            <div className="p-8 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200 border-dashed">
+                                No admissions found matching filters.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Desktop Table Layout */}
+                    <table className="w-full text-sm hidden md:table">
                         <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
                             <tr>
                                 <th className="text-left px-3 py-2.5 font-bold">Patient</th>
@@ -241,8 +355,8 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAdmissions.map(a => (
-                                <tr key={a.admissionId} className="border-t border-slate-100 hover:bg-brand-50/40 cursor-pointer" onClick={() => onOpenWorkspace(a)}>
+                            {paginatedAdmissions.map(a => (
+                                <tr key={a.admissionId} className="border-t border-slate-100 hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => onOpenWorkspace(a)}>
                                     <td className="px-3 py-2">
                                         <p className="font-semibold text-slate-900">{a.patientName || '—'}</p>
                                         <p className="text-[11px] text-slate-500">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
@@ -257,10 +371,33 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                         <div className="flex items-center gap-1.5">
                                             <Badge variant="outline" className={cn('text-[10px] font-bold', statusTone(a.statusCode))}>{a.statusCode}</Badge>
                                             {a.statusCode === 'PRE_ADMIT' && (
-                                                <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
-                                                    onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
-                                                    <CalendarCheck className="h-3 w-3 mr-1" /> Confirm arrival
-                                                </Button>
+                                                <>
+                                                    <PrintAdmissionButton admission={a} className="h-6 px-2 text-[10px]" />
+                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
+                                                        onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
+                                                        <CalendarCheck className="h-3 w-3 mr-1" /> Confirm arrival
+                                                    </Button>
+                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
+                                                        onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                                        <X className="h-3 w-3 mr-1" /> Cancel
+                                                    </Button>
+                                                </>
+                                            )}
+                                            {a.statusCode === 'ADMITTED' && (
+                                                <>
+                                                    <PrintAdmissionButton admission={a} className="h-6 px-2 text-[10px]" />
+                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
+                                                        onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
+                                                        <Pencil className="h-3 w-3 mr-1" /> Edit details
+                                                    </Button>
+                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
+                                                        onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                                        <X className="h-3 w-3 mr-1" /> Cancel
+                                                    </Button>
+                                                </>
+                                            )}
+                                            {a.statusCode === 'DISCHARGED' && (
+                                                <PrintDischargeButton admission={a} />
                                             )}
                                         </div>
                                     </td>
@@ -274,6 +411,38 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                             )}
                         </tbody>
                     </table>
+                    
+                    {/* Pagination Controls */}
+                    {filteredAdmissions.length > 0 && (
+                        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-white">
+                            <span className="text-xs font-semibold text-slate-500">
+                                Showing <span className="text-slate-800">{(currentPage - 1) * PAGE_SIZE + 1}</span> to <span className="text-slate-800">{Math.min(currentPage * PAGE_SIZE, filteredAdmissions.length)}</span> of <span className="text-slate-800">{filteredAdmissions.length}</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg text-slate-600 disabled:opacity-50"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-xs font-bold text-slate-700 px-2 bg-slate-50 h-8 flex items-center rounded-lg border border-slate-200">
+                                    {currentPage} / {totalPages}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg text-slate-600 disabled:opacity-50"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -305,6 +474,36 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     )}
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={!!cancelAdmissionTarget} onOpenChange={o => { if (!o) setCancelAdmissionTarget(null); }}>
+                <DialogContent className="max-w-sm">
+                    {cancelAdmissionTarget && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Cancel Admission?</DialogTitle>
+                                <DialogDescription>
+                                    Are you sure you want to cancel the admission for <strong className="text-slate-800">{cancelAdmissionTarget.patientName || cancelAdmissionTarget.patientId}</strong>?
+                                    This will release any assigned bed and mark the admission as cancelled. This action cannot be undone.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex justify-end gap-2 mt-4">
+                                <Button variant="ghost" onClick={() => setCancelAdmissionTarget(null)}>No, keep it</Button>
+                                <Button disabled={cancellingAdmission} className="bg-rose-600 hover:bg-rose-700" onClick={submitCancelAdmission}>
+                                    {cancellingAdmission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Yes, cancel admission
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <EditAdmissionSheet
+                open={!!editingAdmissionTarget}
+                onOpenChange={open => !open && setEditingAdmissionTarget(null)}
+                admission={editingAdmissionTarget}
+                onUpdated={() => { setEditingAdmissionTarget(null); load(); }}
+            />
+            </div>
         </div>
     );
 };
@@ -318,10 +517,10 @@ const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.Rea
         amber: 'bg-amber-50 border-amber-100 text-amber-700',
     };
     return (
-        <div className={cn('rounded-xl border p-4', tones[tone])}>
-            <div className="flex items-center gap-1.5 opacity-80">{icon}<p className="text-[10px] font-bold uppercase tracking-widest">{label}</p></div>
-            <p className="text-2xl font-black mt-1 text-slate-900">{value}</p>
-            {sub && <p className="text-[10px] mt-0.5 opacity-70">{sub}</p>}
+        <div className={cn('rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md', tones[tone])}>
+            <div className="flex items-center gap-2 opacity-80 mb-2">{icon}<p className="text-[11px] font-bold uppercase tracking-widest">{label}</p></div>
+            <p className="text-3xl font-black text-slate-900">{value}</p>
+            {sub && <p className="text-xs font-semibold mt-1 opacity-75">{sub}</p>}
         </div>
     );
 };
