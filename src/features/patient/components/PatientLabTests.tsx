@@ -389,27 +389,37 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
     const pagedAttachments = displayAttachments.slice(start, end);
 
     return (
-      <div className="rounded-lg border border-brand-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-800 dark:text-slate-100">Uploaded files</div>
-          <div className="text-[11px] text-gray-500 dark:text-slate-400">Page {page} of {totalPages} • Total: {displayAttachments.length}</div>
+      <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm h-full flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <FileImage className="h-4 w-4 text-brand-500" />
+              Uploaded Documents
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">Manage all lab reports and attachments</p>
+          </div>
+          <div className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            {displayAttachments.length} items total
+          </div>
         </div>
-        <div className="overflow-auto max-h-[360px] border border-gray-100 dark:border-slate-800 rounded-md">
-          <table className="min-w-full text-xs">
-            <thead className="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-200">
+        <div className="flex-1 overflow-auto rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 sticky top-0 backdrop-blur-sm">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold">S.No</th>
-                <th className="px-3 py-2 text-left font-semibold">File name</th>
-                <th className="px-3 py-2 text-left font-semibold">Report type</th>
-                <th className="px-3 py-2 text-left font-semibold">Uploaded at</th>
-                <th className="px-3 py-2 text-left font-semibold">Uploaded by</th>
-                <th className="px-3 py-2 text-left font-semibold text-right">Action</th>
+                <th className="px-4 py-3 text-left font-medium text-xs uppercase tracking-wider">File Details</th>
+                <th className="px-4 py-3 text-left font-medium text-xs uppercase tracking-wider hidden sm:table-cell">Uploaded At</th>
+                <th className="px-4 py-3 text-right font-medium text-xs uppercase tracking-wider">Action</th>
               </tr >
             </thead >
-            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {pagedAttachments.length === 0 && (
                 <tr>
-                  <td className="px-3 py-3 text-center text-gray-500 dark:text-slate-400" colSpan={5}>No files yet</td>
+                  <td className="px-4 py-12 text-center text-slate-500" colSpan={3}>
+                    <div className="flex flex-col items-center justify-center">
+                      <FileImage className="h-10 w-10 text-slate-300 mb-2" />
+                      <p>No documents uploaded yet</p>
+                    </div>
+                  </td>
                 </tr>
               )}
               {pagedAttachments.map((att, idx) => {
@@ -420,7 +430,6 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
                 let uploadedBy = '';
                 let id: string | undefined = undefined;
 
-                // Check if it's an API AttachmentItem
                 if ('attachmentId' in att || 'storageUrl' in att) {
                   const item = att as AttachmentItem;
                   attName = item.fileName;
@@ -430,7 +439,6 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
                   uploadedBy = item.uploadedBy;
                   id = item.attachmentId;
                 } else {
-                  // Assume it's a local AttachmentFile
                   const file = att as AttachmentFile;
                   attName = file.name;
                   href = file.url;
@@ -440,48 +448,58 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
                 }
 
                 return (
-                  <tr key={`${attName}-${start + idx}`} className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-800 text-gray-800 dark:text-slate-100">
-                    <td className="px-3 py-2 align-top">{start + idx + 1}</td>
-                    <td className="px-3 py-2 align-top">
-                      {href ? (
-                        <div
-                          onClick={() => handleView(href)}
-                          className="font-semibold text-[12px] text-brand-700 dark:text-brand-300 hover:underline cursor-pointer"
-                          title={attName}
-                        >
-                          {attName}
+                  <tr key={`${attName}-${start + idx}`} className="group hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 h-8 w-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
+                          <FileImage className="h-4 w-4" />
                         </div>
-                      ) : (
-                        <div className="font-semibold text-[12px]" title={attName}>{attName}</div>
-                      )}
-                      <div className="text-[11px] text-gray-500 dark:text-slate-400">{type || "—"}</div>
+                        <div>
+                          {href ? (
+                            <div
+                              onClick={() => handleView(href)}
+                              className="font-medium text-sm text-slate-900 dark:text-slate-100 hover:text-brand-600 cursor-pointer line-clamp-1 transition-colors"
+                              title={attName}
+                            >
+                              {attName}
+                            </div>
+                          ) : (
+                            <div className="font-medium text-sm text-slate-900 dark:text-slate-100 line-clamp-1" title={attName}>{attName}</div>
+                          )}
+                          <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">{type || "Document"}</span>
+                            <span className="sm:hidden text-slate-400">• {uploadedAt ? new Date(uploadedAt).toLocaleDateString() : ""}</span>
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-3 py-2 align-top text-[11px] text-gray-700 dark:text-slate-300">
-                      {type || "•"}
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <div className="text-sm text-slate-600 dark:text-slate-300">
+                        {uploadedAt ? new Date(uploadedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : "—"}
+                      </div>
+                      <div className="text-xs text-slate-400">{uploadedBy || "Unknown"}</div>
                     </td>
-                    <td className="px-3 py-2 align-top text-[11px] text-gray-700 dark:text-slate-300">
-                      {uploadedAt ? new Date(uploadedAt).toLocaleString() : "•"}
-                    </td>
-                    <td className="px-3 py-2 align-top text-[11px] text-gray-700 dark:text-slate-300">{uploadedBy || "•"}</td>
-                    <td className="px-3 py-2 align-top text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-gray-500 dark:text-slate-300 hover:text-brand-600"
-                        onClick={() => handleView(href)}
-                        aria-label="View attachment"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-gray-500 dark:text-slate-300 hover:text-red-600"
-                        onClick={() => handleDeleteClick(start + idx, attName, id)}
-                        aria-label="Delete attachment"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-700 rounded-lg"
+                          onClick={() => handleView(href)}
+                          title="View"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg"
+                          onClick={() => handleDeleteClick(start + idx, attName, id)}
+                          title="Delete"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -491,22 +509,22 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
         </div >
         {
           displayAttachments.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between px-1 text-sm text-gray-600">
+            <div className="flex items-center justify-between px-2 pt-2 pb-1 text-sm text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
               <button
-                className="flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={() => setPage(prev => Math.max(1, prev - 1))}
                 disabled={page === 1}
               >
                 <ChevronLeft className="h-4 w-4" /> Prev
               </button>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }).map((_, idx) => {
                   const pageNumber = idx + 1;
                   const isActive = pageNumber === page;
                   return (
                     <button
                       key={pageNumber}
-                      className={`min-w-[32px] rounded px-2 py-1 text-xs font-medium ${isActive ? "bg-primary text-white" : "border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      className={`min-w-[32px] h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${isActive ? "bg-brand-500 text-white shadow-sm scale-110" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                         }`}
                       onClick={() => setPage(pageNumber)}
                     >
@@ -516,7 +534,7 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
                 })}
               </div>
               <button
-                className="flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={page === totalPages}
               >
@@ -531,63 +549,89 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
 
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="pt-6 space-y-6">
         <Tabs defaultValue="upload" className="w-full">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-              <TabsList className="grid grid-cols-2 w-full md:w-auto bg-gray-50 dark:bg-slate-800 p-1 rounded-md self-start md:self-end gap-1">
+          <div className="flex flex-col gap-6">
+            <div className="flex justify-center w-full">
+              <TabsList className="grid grid-cols-2 w-full max-w-md bg-slate-100/80 dark:bg-slate-800/80 p-1.5 rounded-xl shadow-inner border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-md">
                 <TabsTrigger
                   value="upload"
-                  className="text-sm gap-2 px-4 py-2 font-semibold data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="text-sm gap-2 px-6 py-2.5 rounded-lg font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-brand-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-brand-400"
                 >
-                  <Upload className="h-4 w-4" /> Upload report
+                  <Upload className="h-4 w-4" /> Upload Report
                 </TabsTrigger>
                 <TabsTrigger
                   value="view"
-                  className="text-sm gap-2 px-4 py-2 font-semibold data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="text-sm gap-2 px-6 py-2.5 rounded-lg font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-brand-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-brand-400"
                 >
-                  <Eye className="h-4 w-4" /> View uploaded
+                  <Eye className="h-4 w-4" /> View Documents
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="upload" className="pt-1 space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/80 p-4 space-y-3 shadow-sm lg:col-span-1 min-h-[440px]">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-gray-600 dark:text-slate-300">Report type</Label>
-                    <select
-                      value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
-                      className="h-10 text-sm border border-gray-300 dark:border-slate-600 rounded-md px-3 bg-white dark:bg-slate-900 dark:text-slate-100 focus:border-brand-400 focus:ring-1 focus:ring-brand-100 dark:focus:border-brand-500 dark:focus:ring-brand-900/50"
+            <TabsContent value="upload" className="animate-in fade-in zoom-in-95 duration-200">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-6 shadow-sm lg:col-span-1 min-h-[440px] flex flex-col justify-between">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Document Type</Label>
+                      <div className="relative">
+                        <select
+                          value={selectedType}
+                          onChange={(e) => setSelectedType(e.target.value)}
+                          className="w-full h-11 appearance-none border border-slate-200 dark:border-slate-700 rounded-xl px-4 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+                        >
+                          {reportTypes.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                          <ChevronRight className="h-4 w-4 rotate-90" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Upload File</Label>
+                      <label className="relative flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 cursor-pointer bg-slate-50/50 dark:bg-slate-900/50 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 hover:border-brand-400 transition-all group overflow-hidden">
+                        <input
+                          id="file-upload-input"
+                          type="file"
+                          accept="application/pdf,image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform">
+                          <Upload className="h-6 w-6" />
+                        </div>
+                        <div className="text-center">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200 block">
+                            Click to browse or drag file here
+                          </span>
+                          <span className="text-xs text-slate-500 mt-1 block">
+                            Supports PDF, JPG, PNG
+                          </span>
+                        </div>
+                        {fileName && (
+                          <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 border border-brand-200 dark:border-brand-800 rounded-xl animate-in fade-in duration-200">
+                            <FileImage className="h-8 w-8 text-brand-500 mb-2" />
+                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 text-center line-clamp-2">{fileName}</span>
+                            <span className="text-xs text-brand-600 dark:text-brand-400 mt-2 font-medium cursor-pointer hover:underline">Change File</span>
+                          </div>
+                        )}
+                      </label>
+                      {error && <div className="text-xs text-red-500 font-medium flex items-center gap-1 mt-2"><XCircle className="h-3 w-3" /> {error}</div>}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+                    <Button 
+                      onClick={handleAddAttachment} 
+                      className="w-full h-11 rounded-xl shadow-md hover:shadow-lg transition-all"
+                      disabled={!fileUrl}
                     >
-                      {reportTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs text-gray-600 dark:text-slate-300">Upload file</Label>
-                    <label className="border-2 border-dashed border-gray-300 dark:border-slate-600 hover:border-brand-300 dark:hover:border-brand-400 rounded-md p-4 flex flex-col items-center gap-2 text-sm text-gray-600 dark:text-slate-200 cursor-pointer transition-colors bg-gray-50 dark:bg-slate-900">
-                      <input
-                        id="file-upload-input"
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                      <Upload className="h-5 w-5 text-gray-500" />
-                      <span>Drop a file here or click to browse</span>
-                      {fileName && <span className="text-[11px] text-gray-700 dark:text-slate-200">Selected: {fileName}</span>}
-                    </label>
-                    {error && <div className="text-[11px] text-red-400">{error}</div>}
-                  </div>
-
-                  <div className="flex justify-center">
-                    <Button onClick={handleAddAttachment} className="h-9 text-sm">
                       <Upload className="h-4 w-4 mr-2" />
-                      Save attachment
+                      Save Document
                     </Button>
                   </div>
                 </div>
@@ -595,74 +639,58 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="view" className="pt-1 space-y-3">
+            <TabsContent value="view" className="animate-in fade-in zoom-in-95 duration-200">
               {displayAttachments.length === 0 && (
-                <div className="text-sm text-gray-600 dark:text-slate-300">No attachments yet. Upload a report to view it here.</div>
+                <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 min-h-[400px]">
+                  <FileImage className="h-16 w-16 text-slate-300 dark:text-slate-600 mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No Documents Found</h3>
+                  <p className="text-sm text-slate-500 max-w-sm mt-2">Upload a report or attachment in the upload tab to view it here.</p>
+                </div>
               )}
               {displayAttachments.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm text-gray-700 dark:text-slate-200">Attachment {viewIndex + 1} of {displayAttachments.length}</div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setViewIndex((idx) => Math.max(0, idx - 1))}
-                        disabled={viewIndex === 0}
-                        className="h-8 text-xs"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Prev
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setViewIndex((idx) => Math.min(displayAttachments.length - 1, idx + 1))}
-                        disabled={viewIndex >= displayAttachments.length - 1}
-                        className="h-8 text-xs"
-                      >
-                        Next <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm flex items-start gap-3">
-                    <Eye className="h-5 w-5 text-gray-500 dark:text-slate-300 mt-0.5" />
-                    <div className="w-full space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-semibold text-gray-800 dark:text-slate-100">{currentAttachmentName}</div>
-                          <div className="text-xs text-gray-500 dark:text-slate-400">{currentAttachmentType}</div>
+                <div className="space-y-4">
+                  <div className="rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-900 shadow-xl flex flex-col relative group h-[600px]">
+                    
+                    {/* Top Floating Header */}
+                    <div className="absolute top-0 inset-x-0 bg-gradient-to-b from-black/60 to-transparent p-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-between text-white">
+                      <div className="flex items-center gap-3 drop-shadow-md">
+                        <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                          <FileImage className="h-5 w-5" />
                         </div>
-                        {previewUrl && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs"
-                            onClick={() => window.open(previewUrl, "_blank")}
-                          >
-                            Full screen
-                          </Button>
-                        )}
+                        <div>
+                          <div className="text-base font-semibold line-clamp-1 leading-tight">{currentAttachmentName}</div>
+                          <div className="text-xs text-white/80">{currentAttachmentType}</div>
+                        </div>
                       </div>
+                      {previewUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border-none"
+                          onClick={() => window.open(previewUrl, "_blank")}
+                        >
+                          Open in New Tab
+                        </Button>
+                      )}
+                    </div>
 
+                    {/* Viewer Area */}
+                    <div className="flex-1 w-full h-full flex items-center justify-center relative bg-slate-100 dark:bg-slate-900">
                       {previewLoading && (
-                        <div className="h-[50vh] w-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 rounded-md">
-                          <span className="text-sm text-gray-500">Loading preview...</span>
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="h-8 w-8 rounded-full border-4 border-brand-500 border-t-transparent animate-spin"></div>
+                          <span className="text-sm font-medium text-slate-500">Loading document...</span>
                         </div>
                       )}
 
                       {!previewLoading && previewUrl && (
-                        <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50 dark:bg-slate-800">
-                          {/* Auto-detect type based on extension or mime if possible, or just try img and iframe */}
-                          {/* Auto-detect type based on extension or mime if possible, or just try img and iframe */}
-                          {/* For simplicity, we can try to infer from type or just render iframe which handles most */}
+                        <div className="w-full h-full flex items-center justify-center">
                           {currentAttachmentType.toLowerCase().includes('image') || previewUrl.startsWith('blob:') ? (
                             <img
                               src={previewUrl}
                               alt={currentAttachmentName}
-                              className="w-full max-h-[50vh] object-contain bg-white"
+                              className="max-w-full max-h-full object-contain p-2 drop-shadow-lg"
                               onError={(e) => {
-                                // Fallback or hide
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
@@ -670,39 +698,46 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
                             <iframe
                               title={`Preview ${currentAttachmentName}`}
                               src={previewUrl}
-                              className="w-full h-[50vh] bg-white"
+                              className="w-full h-full bg-white"
                             />
                           )}
                         </div>
                       )}
                       {!previewLoading && !previewUrl && (
-                        <div className="h-[100px] flex items-center justify-center text-xs text-gray-500 dark:text-slate-300 border border-dashed rounded-md flex-col gap-1">
+                        <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
+                          <XCircle className="h-12 w-12 opacity-50" />
                           <span>Preview not available</span>
-                          {previewError && <span className="text-red-500">{previewError}</span>}
+                          {previewError && <span className="text-red-400 text-sm">{previewError}</span>}
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-center gap-2 pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setViewIndex((idx) => Math.max(0, idx - 1))}
-                      disabled={viewIndex === 0}
-                      className="h-8 text-xs"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-1" /> Prev
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setViewIndex((idx) => Math.min(displayAttachments.length - 1, idx + 1))}
-                      disabled={viewIndex >= displayAttachments.length - 1}
-                      className="h-8 text-xs"
-                    >
-                      Next <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
+                    {/* Left/Right Floating Navigation */}
+                    {displayAttachments.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setViewIndex((idx) => Math.max(0, idx - 1))}
+                          disabled={viewIndex === 0}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white flex items-center justify-center transition-all disabled:opacity-0 opacity-0 group-hover:opacity-100 disabled:pointer-events-none hover:scale-110 active:scale-95"
+                        >
+                          <ChevronLeft className="h-6 w-6" />
+                        </button>
+                        <button
+                          onClick={() => setViewIndex((idx) => Math.min(displayAttachments.length - 1, idx + 1))}
+                          disabled={viewIndex >= displayAttachments.length - 1}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white flex items-center justify-center transition-all disabled:opacity-0 opacity-0 group-hover:opacity-100 disabled:pointer-events-none hover:scale-110 active:scale-95"
+                        >
+                          <ChevronRight className="h-6 w-6" />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Bottom Indicator */}
+                    <div className="absolute bottom-4 inset-x-0 flex justify-center z-10 pointer-events-none">
+                      <div className="bg-black/50 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-medium text-white shadow-sm">
+                        {viewIndex + 1} / {displayAttachments.length}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
