@@ -48,12 +48,14 @@ export const PrintTokenButton: React.FC<Props> = ({
         openPrintHtml(html);
     };
 
-    if (!admission.admissionToken) {
-        return null;
-    }
-
     return (
-        <Button variant={variant} size={size} className={className} onClick={handlePrint}>
+        <Button 
+            variant={variant} 
+            size={size} 
+            className={className} 
+            onClick={handlePrint}
+            title={!admission.admissionToken ? "No token assigned" : ""}
+        >
             <Printer className={showLabel ? "h-3 w-3 mr-1" : "h-4 w-4"} />
             {showLabel && 'Print Token'}
         </Button>
