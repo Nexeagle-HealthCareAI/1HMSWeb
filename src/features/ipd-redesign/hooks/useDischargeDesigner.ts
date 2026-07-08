@@ -92,14 +92,16 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
     const [margins, setMargins] = useState<MarginConfig>(defaultMargins);
     const [typography, setTypography] = useState<TypographySettings>(defaultTypography);
     const [overflowStrategy, setOverflowStrategy] = useState<'reuse-template' | 'blank'>('reuse-template');
-    const [validUpto, setValidUpto] = useState(0);
-
     const [templateMeta, setTemplateMeta] = useState<TemplateMetadata | null>(null);
     const [templateError, setTemplateError] = useState<string | null>(null);
     const [isAnalyzingTemplate, setIsAnalyzingTemplate] = useState(false);
     const [templateFile, setTemplateFile] = useState<File | null>(null);
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    // Ref that always holds the *current* previewUrl so callbacks that close over it
+    // can revoke the correct blob URL without a stale-closure bug.
+    const previewUrlRef = useRef<string | null>(null);
+    useEffect(() => { previewUrlRef.current = previewUrl; }, [previewUrl]);
     const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
 
     const [isSavingLayout, setIsSavingLayout] = useState(false);
@@ -236,7 +238,8 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
             setTemplateFile(compatibleFile);
 
             const objectUrl = URL.createObjectURL(compatibleFile);
-            revokePreviewUrl(previewUrl);
+            // Use the ref so we revoke the current URL, not the stale closure value.
+            revokePreviewUrl(previewUrlRef.current);
             setPreviewUrl(objectUrl);
 
             await dischargeSettingsApi.uploadTemplate({ file: compatibleFile, doctorId, hospitalId });
@@ -249,7 +252,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
         } finally {
             setIsAnalyzingTemplate(false);
         }
-    }, [doctorId, hospitalId, ensureA4Compatibility, margins, previewUrl, revokePreviewUrl, refetchSettings, toast]);
+    }, [doctorId, hospitalId, ensureA4Compatibility, margins, revokePreviewUrl, refetchSettings, toast]);
 
     const generatePreview = useCallback(async () => {
         setIsGeneratingPreview(true);
@@ -345,8 +348,6 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
         updateTypography,
         overflowStrategy,
         setOverflowStrategy,
-        validUpto,
-        setValidUpto,
         templateMeta,
         templateError,
         isAnalyzingTemplate,

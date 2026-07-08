@@ -64,9 +64,12 @@ export const dischargeSettingsApi = {
         formData.append('File', input.file);
         formData.append('DoctorId', input.doctorId);
         formData.append('HospitalId', input.hospitalId);
-        return ipdApiClient.post<UploadDischargeTemplateResponse>('/discharge-settings/upload-template', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const response = await ipdApiClient.post<UploadDischargeTemplateResponse>(
+            '/discharge-settings/upload-template',
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        return response.data;
     },
 
     // Presigned template URLs (S3/MinIO) expire, so the template is always fetched fresh by URL
