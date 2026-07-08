@@ -7,7 +7,6 @@ import { PrescriptionConfig } from '@/features/prescription/components/Prescript
 import { ChargeMaster } from '@/features/hospital/components/masters/ChargeMaster';
 import { BedMaster } from '@/features/hospital/components/masters/BedMaster';
 import { DoctorFees } from '@/features/hospital/components/masters/DoctorFees';
-import { OtMaster } from '@/features/hospital/components/masters/OtMaster';
 import { StoreMaster } from '@/features/hospital/components/masters/StoreMaster';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { EquipmentMaster } from '@/features/hospital/components/masters/EquipmentMaster';
@@ -54,12 +53,6 @@ export const AdminConfigModule = () => {
             label: 'Doctor Fees',
             description: 'Set per-doctor OPD consult & IPD visit fees',
             icon: Stethoscope,
-        },
-        {
-            id: 'ot-master',
-            label: 'OT Master',
-            description: 'Set up theatres, pricing & the live surgery plan board',
-            icon: Scissors,
         },
         {
             id: 'store-master',
@@ -169,7 +162,6 @@ export const AdminConfigModule = () => {
                     {activeTab === 'charge-master' && <ChargeMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
                     {activeTab === 'doctor-fees' && <DoctorFees />}
-                    {activeTab === 'ot-master' && <OtMaster />}
                     {activeTab === 'store-master' && <StoreMaster />}
                     {activeTab === 'item-master' && <ItemMaster />}
                     {activeTab === 'equipment-master' && <EquipmentMaster />}

@@ -187,16 +187,32 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <Label>Font weight</Label>
-                                        <Select value={designer.typography.weight} onValueChange={(v) => designer.updateTypography({ weight: v as TypographySettings['weight'] })}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="regular">Regular</SelectItem>
-                                                <SelectItem value="medium">Medium</SelectItem>
-                                                <SelectItem value="bold">Bold</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label>Font weight</Label>
+                                            <Select value={designer.typography.weight} onValueChange={(v) => designer.updateTypography({ weight: v as TypographySettings['weight'] })}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="regular">Regular</SelectItem>
+                                                    <SelectItem value="medium">Medium</SelectItem>
+                                                    <SelectItem value="bold">Bold</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="font-size">Font size (pt)</Label>
+                                            <Input
+                                                id="font-size"
+                                                type="number"
+                                                min={8}
+                                                max={24}
+                                                value={designer.typography.size}
+                                                onChange={(e) => {
+                                                    const v = Number(e.target.value);
+                                                    if (!Number.isNaN(v)) designer.updateTypography({ size: Math.min(Math.max(v, 8), 24) });
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="font-color">Text color</Label>

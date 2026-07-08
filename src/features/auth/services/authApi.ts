@@ -28,7 +28,7 @@ export interface SendOTPRequest {
 
 export interface SendOTPResponse {
   success: boolean;
-  isSmsSent: boolean;
+  isWhatsappSent: boolean;
   isEmailSent: boolean;
   message: string;
   userId: string;

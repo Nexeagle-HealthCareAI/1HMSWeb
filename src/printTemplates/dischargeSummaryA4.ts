@@ -101,7 +101,8 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
                 <div class="pmeta">
                     Patient ID: ${data.patientId}<br/>
                     ${data.ageGender ? `${data.ageGender}<br/>` : ''}
-                    ${data.mobile ? `Mobile: ${data.mobile}` : ''}
+                    ${data.mobile ? `Mobile: ${data.mobile}<br/>` : ''}
+                    ${data.patientAddress ? `${data.patientAddress}` : ''}
                 </div>
             </div>
             <div class="box" style="text-align:right;">
@@ -133,7 +134,7 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
                 ${settings.footerText || 'This is a computer-generated discharge summary.'}
             </div>
             <div class="sign">
-                <div class="line">${data.signedByDoctorName ?? 'Authorised Signatory'}${data.signedAt ? `<br/>${format(new Date(data.signedAt), 'dd MMM yyyy, HH:mm')}` : ''}</div>
+                <div class="line">${data.signedByDoctorName ?? ''}${data.signedAt ? `<br/>${format(new Date(data.signedAt), 'dd MMM yyyy, HH:mm')}` : ''}</div>
             </div>
         </div>
     </body>

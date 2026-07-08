@@ -34,6 +34,7 @@ export interface BedBoardItem {
     bedAssignmentId?: string | null;
     admissionId?: string | null;
     admissionNo?: string | null;
+    admissionToken?: string | null;
     admissionType?: string | null;
     payerType?: string | null;
     assignedAt?: string | null;

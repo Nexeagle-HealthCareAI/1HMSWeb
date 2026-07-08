@@ -112,7 +112,7 @@ interface FormState {
     flatHouse: string; street: string; city: string; district: string; state: string; pincode: string;
     aadhaarNumber: string; panNumber: string; abhaId: string;
     admissionType: AdmissionTypeCode; primaryDoctorId: string;
-    admissionReason: string; diagnosis: string; expectedDischargeAt: string;
+    admissionReason: string; diagnosis: string; expectedDischargeAt: string; admissionToken: string;
     isPreRegistration: boolean;
     referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL' | 'OTHER'; referralName: string;
     referredByReferrerId: string;
@@ -135,7 +135,7 @@ const EMPTY_FORM: FormState = {
     flatHouse: '', street: '', city: '', district: '', state: '', pincode: '',
     aadhaarNumber: '', panNumber: '', abhaId: '',
     admissionType: 'ELECTIVE', primaryDoctorId: '',
-    admissionReason: '', diagnosis: '', expectedDischargeAt: '',
+    admissionReason: '', diagnosis: '', expectedDischargeAt: '', admissionToken: '',
     isPreRegistration: false,
     referralSource: '', referralName: '',
     referredByReferrerId: '',
@@ -440,7 +440,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             panNumber: t(form.panNumber), abhaId: t(form.abhaId),
             admissionType: form.admissionType,
             primaryDoctorId: form.primaryDoctorId || undefined,
-            admissionReason: t(form.admissionReason), diagnosis: t(form.diagnosis),
+            admissionReason: t(form.admissionReason), diagnosis: t(form.diagnosis), admissionToken: t(form.admissionToken),
             expectedDischargeAt: t(form.expectedDischargeAt),
             isPreRegistration,
             referralSource: form.referralSource || undefined,
@@ -659,6 +659,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 </motion.button>
                                             );
                                         })}
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <Field label="Admission Token" className="max-w-xs">
+                                            <Input
+                                                placeholder="e.g. Q-105 or physical token number"
+                                                value={form.admissionToken}
+                                                onChange={e => set('admissionToken', e.target.value)}
+                                                className={INPUT_CLS}
+                                            />
+                                        </Field>
                                     </div>
 
                                     <AnimatePresence mode="wait">

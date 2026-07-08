@@ -115,6 +115,7 @@ export interface AdmitPatientPayload {
     expectedDischargeAt?: string | null;
     admissionReason?: string;
     diagnosis?: string;
+    admissionToken?: string;
     // Elective only: patient hasn't physically arrived yet — creates a PRE_ADMIT admission instead
     // of a completed one; confirm arrival later via admissionApi.confirmArrival.
     isPreRegistration?: boolean;
@@ -188,6 +189,7 @@ export type AdmissionStatusFilter = 'ACTIVE' | 'DISCHARGED' | 'ALL';
 export interface ActiveAdmissionItem {
     admissionId: string;
     admissionNo: string;
+    admissionToken?: string | null;
     admissionType?: string | null;
     statusCode: string;
     payerType: string;
@@ -207,6 +209,8 @@ export interface ActiveAdmissionItem {
     patientName?: string | null;
     patientAge?: number | null;
     patientSex?: string | null;
+    patientAddress?: string | null;
+    mobile?: string | null;
     bedCode?: string | null;      // null => no bed assigned yet
     wardName?: string | null;
     encounterId?: string | null;
@@ -335,4 +339,16 @@ export const admissionApi = {
             })
             .then(r => r.matches ?? [])
             .catch(() => []),
+
+    updateStatus: async (admissionId: string, toStatus: string, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/admission/status', {
+                hospitalId: hospitalIdOrThrow(hospitalId),
+                admissionId,
+                toStatus,
+            });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not update admission status.'));
+        }
+    },
 };

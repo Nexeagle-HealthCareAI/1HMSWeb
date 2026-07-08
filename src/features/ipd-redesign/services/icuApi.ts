@@ -97,7 +97,24 @@ export interface SofaScoreEntry {
     notes?: string | null;
 }
 
+export interface IcuBoardCase {
+    admissionId: string;
+    encounterId: string;
+    patientName?: string | null;
+    bedCode?: string | null;
+    wardCode?: string | null;
+    icuLevel?: string | null;
+    apacheScore?: number | null;
+    sofaScore?: number | null;
+    onVentilator: boolean;
+    primaryDiagnosis?: string | null;
+}
+
 export const icuApi = {
+    getBoard: (hospitalId?: string): Promise<IcuBoardCase[]> =>
+        ipdApiClient
+            .get<{ cases?: IcuBoardCase[] }>('/icu/board', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .then(r => r.cases ?? []),
     getLevelOfCareHistory: (admissionId: string, hospitalId?: string): Promise<IcuLevelOfCareEntry[]> =>
         ipdApiClient
             .get<{ history?: IcuLevelOfCareEntry[] }>('/icu/level-of-care/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
