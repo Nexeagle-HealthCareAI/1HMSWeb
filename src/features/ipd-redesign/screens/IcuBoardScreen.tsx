@@ -2,18 +2,20 @@ import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Loader2, RefreshCw, AlertCircle, HeartPulse, Activity, Wind, BedDouble, Info
+    Loader2, RefreshCw, AlertCircle, HeartPulse, Activity, Wind, BedDouble, Info, LayoutGrid, Package2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { icuApi, type IcuBoardCase } from '../services/icuApi';
 import { cn } from '@/lib/utils';
+import { BoardInventoryPanel } from '../components/BoardInventoryPanel';
 
 export const IcuBoardScreen: React.FC = () => {
     const navigate = useNavigate();
     const [board, setBoard] = useState<IcuBoardCase[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [tab, setTab] = useState<'patients' | 'inventory'>('patients');
 
     const fetchBoard = useCallback(async () => {
         try {
@@ -48,56 +50,37 @@ export const IcuBoardScreen: React.FC = () => {
         { id: 'UNASSIGNED', title: 'Pending / Unassigned', color: 'border-slate-500', bg: 'bg-slate-500/10' }
     ];
 
-    if (loading && board.length === 0) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
-                <p>Loading ICU Board...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 h-full">
-                <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-                <p className="text-slate-800 font-medium mb-2">Error Loading Board</p>
-                <p className="text-sm mb-6 text-center max-w-md">{error}</p>
-                <Button onClick={fetchBoard} variant="outline"><RefreshCw className="h-4 w-4 mr-2" /> Retry</Button>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50">
-            {/* Header */}
-            <div className="flex-none p-4 md:p-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <HeartPulse className="h-6 w-6 text-rose-500" />
-                        ICU Plan Board
-                    </h1>
-                    <p className="text-sm text-slate-500 mt-1 hidden sm:block">Centralized monitoring of all critical care patients.</p>
+    const renderPatients = () => {
+        if (loading && board.length === 0) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 h-full w-full absolute inset-0">
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
+                    <p>Loading ICU Board...</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button onClick={fetchBoard} variant="outline" size="sm" className="bg-white/50 backdrop-blur-sm">
-                        <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-                        Refresh
-                    </Button>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 h-full w-full absolute inset-0">
+                    <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
+                    <p className="text-slate-800 font-medium mb-2">Error Loading Board</p>
+                    <p className="text-sm mb-6 text-center max-w-md">{error}</p>
+                    <Button onClick={fetchBoard} variant="outline"><RefreshCw className="h-4 w-4 mr-2" /> Retry</Button>
                 </div>
-            </div>
+            );
+        }
 
-            {/* Kanban Board */}
-            <div className="flex-1 overflow-x-auto p-4 md:p-6 custom-scrollbar">
-                <div className="flex gap-6 h-full items-start min-w-max">
-                    {columns.map(col => {
-                        const colCases = groupedCases[col.id as keyof typeof groupedCases] || [];
-                        if (col.id === 'UNASSIGNED' && colCases.length === 0) return null; // Hide unassigned if empty
+        return (
+            <div className="flex gap-6 h-full items-start min-w-max p-4 md:p-6">
+                {columns.map(col => {
+                    const colCases = groupedCases[col.id as keyof typeof groupedCases] || [];
+                    if (col.id === 'UNASSIGNED' && colCases.length === 0) return null; // Hide unassigned if empty
 
-                        return (
-                            <div key={col.id} className="w-80 flex flex-col h-full max-h-full flex-shrink-0">
-                                <div className={cn("flex items-center justify-between pb-3 border-b-2 mb-4", col.color)}>
-                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">{col.title}</h3>
+                    return (
+                        <div key={col.id} className="w-80 flex flex-col h-full max-h-full flex-shrink-0">
+                            <div className={cn("flex items-center justify-between pb-3 border-b-2 mb-4", col.color)}>
+                                <h3 className="font-semibold text-slate-800 dark:text-slate-200">{col.title}</h3>
                                     <Badge variant="secondary" className={cn(col.bg)}>{colCases.length}</Badge>
                                 </div>
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3 pb-4">
@@ -157,9 +140,48 @@ export const IcuBoardScreen: React.FC = () => {
                                     </AnimatePresence>
                                 </div>
                             </div>
-                        );
-                    })}
+                    );
+                })}
+            </div>
+        );
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50">
+            {/* Header */}
+            <div className="flex-none p-4 md:p-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <HeartPulse className="h-6 w-6 text-rose-500" />
+                            ICU Plan Board
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-1 hidden sm:block">Centralized monitoring of all critical care patients.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                            <button onClick={() => setTab('patients')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 transition-all', tab === 'patients' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                                <LayoutGrid className="h-3.5 w-3.5" /> Patients Board
+                            </button>
+                            <button onClick={() => setTab('inventory')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 transition-all', tab === 'inventory' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
+                                <Package2 className="h-3.5 w-3.5" /> ICU Stock / Inventory
+                            </button>
+                        </div>
+                        <Button onClick={fetchBoard} variant="outline" size="sm" className="bg-white/50 backdrop-blur-sm h-8">
+                            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+                            Refresh
+                        </Button>
+                    </div>
                 </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative">
+                {tab === 'patients' ? renderPatients() : (
+                    <div className="p-4 md:p-6 h-full">
+                        <BoardInventoryPanel boardType="ICU" />
+                    </div>
+                )}
             </div>
         </div>
     );
