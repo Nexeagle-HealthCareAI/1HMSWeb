@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { bedService, type BedMasterItem, type UpsertBedMasterRequest } from '@/features/hospital/services/bedService';
@@ -158,6 +159,10 @@ export const BedMaster = () => {
     const [editingBed, setEditingBed] = useState<Partial<BedRecord> | null>(null);
     const [isSavingBed, setIsSavingBed] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    // Result popup for deactivate/delete outcomes (modal instead of a toast, since these can
+    // carry a list of blocked bed codes that's easy to miss in a toast that auto-dismisses).
+    const [resultModal, setResultModal] = useState<{ title: string; description: string; variant?: 'default' | 'destructive' } | null>(null);
 
     // Multi-select for bulk deactivation, scoped to whichever bed list is currently on screen
     // (a single room's beds, or the unassigned-beds list) — cleared whenever navigation changes.
@@ -461,9 +466,9 @@ export const BedMaster = () => {
                 statusCode: bed.statusCode, genderRestriction: bed.genderRestriction, isActive: false,
             });
             setBeds(prev => prev.map(b => b.id === bedId ? { ...b, isActive: false } : b));
-            toast({ title: 'Bed deactivated', description: 'Hidden from active list.' });
+            setResultModal({ title: 'Bed deactivated', description: 'Hidden from active list.' });
         } catch (e) {
-            toast({ title: 'Could not deactivate', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
+            setResultModal({ title: 'Could not deactivate', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
         } finally {
             setBusyId(null);
         }
@@ -482,10 +487,10 @@ export const BedMaster = () => {
                 setBeds(prev => prev.map(b => deactivatedSet.has(b.id) ? { ...b, isActive: false } : b));
             }
             if (result.blocked.length === 0) {
-                toast({ title: `${result.deactivated.length} bed(s) deactivated`, description: 'Hidden from active list.' });
+                setResultModal({ title: `${result.deactivated.length} bed(s) deactivated`, description: 'Hidden from active list.' });
             } else {
                 const blockedCodes = result.blocked.map(b => b.bedCode || b.bedId).join(', ');
-                toast({
+                setResultModal({
                     title: `${result.deactivated.length} deactivated, ${result.blocked.length} blocked`,
                     description: `Still occupied or unavailable: ${blockedCodes}`,
                     variant: 'destructive',
@@ -493,7 +498,7 @@ export const BedMaster = () => {
             }
             setSelectedBedIds(new Set());
         } catch (e) {
-            toast({ title: 'Could not deactivate selected beds', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
+            setResultModal({ title: 'Could not deactivate selected beds', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
         } finally {
             setBulkDeleting(false);
         }
@@ -515,10 +520,10 @@ export const BedMaster = () => {
                 setBeds(prev => prev.filter(b => !deletedSet.has(b.id)));
             }
             if (result.blocked.length === 0) {
-                toast({ title: `${result.deleted.length} bed(s) permanently deleted` });
+                setResultModal({ title: `${result.deleted.length} bed(s) permanently deleted`, description: '' });
             } else {
                 const blockedCodes = result.blocked.map(b => b.bedCode || b.bedId).join(', ');
-                toast({
+                setResultModal({
                     title: `${result.deleted.length} deleted, ${result.blocked.length} blocked`,
                     description: `Occupied or has assignment history: ${blockedCodes}`,
                     variant: 'destructive',
@@ -526,7 +531,7 @@ export const BedMaster = () => {
             }
             setSelectedBedIds(new Set());
         } catch (e) {
-            toast({ title: 'Could not permanently delete selected beds', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
+            setResultModal({ title: 'Could not permanently delete selected beds', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
         } finally {
             setBulkDeleting(false);
         }
@@ -1134,6 +1139,22 @@ export const BedMaster = () => {
                     </>
                 )}
             </AnimatePresence>
+
+            <Dialog open={!!resultModal} onOpenChange={(open) => !open && setResultModal(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className={resultModal?.variant === 'destructive' ? 'text-red-600' : undefined}>
+                            {resultModal?.title}
+                        </DialogTitle>
+                        {resultModal?.description ? (
+                            <DialogDescription>{resultModal.description}</DialogDescription>
+                        ) : null}
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={() => setResultModal(null)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
