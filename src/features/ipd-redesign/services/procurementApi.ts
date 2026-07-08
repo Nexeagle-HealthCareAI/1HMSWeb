@@ -7,7 +7,7 @@ const hospitalIdOrThrow = (override?: string) => {
     return id;
 };
 
-export type IndentStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'CANCELLED';
+export type IndentStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'ISSUED' | 'CANCELLED';
 export type PurchaseOrderStatus = 'DRAFT' | 'APPROVED' | 'SENT' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
 export type GrnMatchStatus = 'MATCHED' | 'MISMATCH' | 'PENDING';
 
@@ -16,6 +16,8 @@ export interface IndentItem {
     indentNumber: string;
     requestingStoreId: string;
     requestingStoreName?: string | null;
+    targetStoreId?: string | null;
+    targetStoreName?: string | null;
     status: IndentStatus;
     isSystemGenerated: boolean;
     requestedBy?: string | null;
@@ -89,8 +91,11 @@ export const procurementApi = {
             .get<{ indent: IndentItem; lines: IndentLineItem[] }>(`/inventory/indents/${indentId}`, { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
             .then(r => ({ indent: r.indent, lines: r.lines })),
 
-    createIndent: (input: { requestingStoreId: string; isSystemGenerated?: boolean; notes?: string; lines: { inventoryItemId: string; qty: number; notes?: string }[] }, hospitalId?: string) =>
+    createIndent: (input: { requestingStoreId: string; targetStoreId?: string; isSystemGenerated?: boolean; notes?: string; lines: { inventoryItemId: string; qty: number; notes?: string }[] }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/indents', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
+    issueIndent: (indentId: string, lines: { indentLineId: string; batchId: string; qty: number }[], hospitalId?: string) =>
+        ipdApiClient.post(`/inventory/indents/${indentId}/issue`, { hospitalId: hospitalIdOrThrow(hospitalId), lines }),
 
     decideIndent: (indentId: string, approve: boolean, reason?: string, hospitalId?: string) =>
         ipdApiClient.post(`/inventory/indents/${indentId}/decide`, { hospitalId: hospitalIdOrThrow(hospitalId), approve, reason }),

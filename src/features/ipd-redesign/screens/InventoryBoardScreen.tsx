@@ -10,7 +10,9 @@ import { ProcurementPanel } from '../components/ProcurementPanel';
 import { NarcoticCompliancePanel } from '../components/NarcoticCompliancePanel';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { TransferStockPanel } from '../components/TransferStockPanel';
+import { InternalRequestsPanel } from '../components/InternalRequestsPanel';
 import { BulkStockUpload } from '../components/BulkStockUpload';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface Props {
     onBack: () => void;
@@ -187,7 +189,18 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                             )}
 
                             {tab === 'transfer' && (
-                                <TransferStockPanel stockByStore={board.stockByStore} onSuccess={() => load(true)} />
+                                <Tabs defaultValue="requests" className="space-y-4">
+                                    <TabsList>
+                                        <TabsTrigger value="requests">Internal Requests</TabsTrigger>
+                                        <TabsTrigger value="manual">Manual Transfer</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="requests" className="mt-0">
+                                        <InternalRequestsPanel />
+                                    </TabsContent>
+                                    <TabsContent value="manual" className="mt-0">
+                                        <TransferStockPanel stockByStore={board.stockByStore} onSuccess={() => load(true)} />
+                                    </TabsContent>
+                                </Tabs>
                             )}
 
                             {tab === 'expiry' && (
