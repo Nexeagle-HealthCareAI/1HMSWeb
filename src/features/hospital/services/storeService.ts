@@ -18,6 +18,7 @@ export interface StoreItem {
     storeCode: string;
     storeName: string;
     storeType: StoreType;
+    assignedBoard?: string | null;
     parentStoreId?: string | null;
     parentStoreName?: string | null;
     minTempCelsius?: number | null;
@@ -30,6 +31,7 @@ export interface UpsertStoreInput {
     storeCode: string;
     storeName: string;
     storeType: StoreType;
+    assignedBoard?: string | null;
     parentStoreId?: string | null;
     minTempCelsius?: number | null;
     maxTempCelsius?: number | null;

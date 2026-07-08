@@ -23,6 +23,12 @@ const STORE_TYPE_LABELS: Record<StoreType, string> = {
     CSSD: 'CSSD',
 };
 
+const ASSIGNED_BOARD_LABELS: Record<string, string> = {
+    OT: 'OT Board',
+    ICU: 'ICU Board',
+    WARD: 'Ward Board',
+};
+
 const STORE_TYPE_COLORS: Record<StoreType, string> = {
     MAIN: 'bg-brand-100 text-brand-800 dark:bg-brand-500/20 dark:text-brand-300 border-brand-200 dark:border-brand-800',
     SUB: 'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-300 border-slate-200 dark:border-slate-800',
@@ -89,6 +95,7 @@ export const StoreMaster: React.FC = () => {
                 storeCode: store.storeCode,
                 storeName: store.storeName,
                 storeType: store.storeType,
+                assignedBoard: store.assignedBoard ?? undefined,
                 parentStoreId: store.parentStoreId ?? undefined,
                 minTempCelsius: store.minTempCelsius ?? undefined,
                 maxTempCelsius: store.maxTempCelsius ?? undefined,
@@ -117,6 +124,7 @@ export const StoreMaster: React.FC = () => {
                 storeCode: editingStore.storeCode!.trim(),
                 storeName: editingStore.storeName!.trim(),
                 storeType: (editingStore.storeType ?? 'SUB') as StoreType,
+                assignedBoard: editingStore.assignedBoard || null,
                 parentStoreId: editingStore.parentStoreId || null,
                 minTempCelsius: editingStore.minTempCelsius ?? null,
                 maxTempCelsius: editingStore.maxTempCelsius ?? null,
@@ -192,9 +200,16 @@ export const StoreMaster: React.FC = () => {
                                                     {s.storeCode} {s.parentStoreName ? `• under ${s.parentStoreName}` : ''}
                                                 </p>
                                             </div>
-                                            <Badge variant="outline" className={`ml-2 text-[10px] font-bold uppercase tracking-wider shrink-0 ${STORE_TYPE_COLORS[s.storeType]}`}>
-                                                {STORE_TYPE_LABELS[s.storeType]}
-                                            </Badge>
+                                            <div className="flex gap-1.5 ml-2">
+                                                {s.assignedBoard && (
+                                                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider shrink-0 bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                                                        {ASSIGNED_BOARD_LABELS[s.assignedBoard] || s.assignedBoard}
+                                                    </Badge>
+                                                )}
+                                                <Badge variant="outline" className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${STORE_TYPE_COLORS[s.storeType]}`}>
+                                                    {STORE_TYPE_LABELS[s.storeType]}
+                                                </Badge>
+                                            </div>
                                         </div>
                                         <div className="mt-auto flex items-end justify-between">
                                             {(s.minTempCelsius != null || s.maxTempCelsius != null) ? (
@@ -292,6 +307,18 @@ export const StoreMaster: React.FC = () => {
                                                 <SelectItem value="NONE">None</SelectItem>
                                                 {parentCandidates.map(s => (
                                                     <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid gap-2 col-span-2 sm:col-span-1">
+                                        <Label>Assigned Board <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
+                                        <Select value={editingStore.assignedBoard ?? 'NONE'} onValueChange={v => setEditingStore(p => ({ ...p!, assignedBoard: v === 'NONE' ? undefined : v }))}>
+                                            <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="NONE">None</SelectItem>
+                                                {Object.entries(ASSIGNED_BOARD_LABELS).map(([key, label]) => (
+                                                    <SelectItem key={key} value={key}>{label}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
