@@ -245,6 +245,10 @@ export const IPD_API_ENDPOINTS = {
       `bed/master/${encodeURIComponent(bedId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_MASTER: 'bed/master',
     BULK_CREATE: 'bed/master/bulk',
+    BULK_DELETE: 'bed/master/bulk-delete',
+    HARD_DELETE: (bedId: string, hospitalId: string) =>
+      `bed/master/${encodeURIComponent(bedId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
+    BULK_HARD_DELETE: 'bed/master/bulk-hard-delete',
   },
   ROOM: {
     GET_MASTERS: (hospitalId: string, page = 1, pageSize = 50) =>

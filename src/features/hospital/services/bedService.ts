@@ -99,6 +99,31 @@ export interface BulkCreateBedMasterResponse {
     message?: string;
 }
 
+export interface BedDeleteFailure {
+    bedId: string;
+    bedCode?: string;
+    reason: string;
+}
+
+export interface BulkDeleteBedMasterResponse {
+    success: boolean;
+    message?: string;
+    deactivated: string[];
+    blocked: BedDeleteFailure[];
+}
+
+export interface HardDeleteBedMasterResponse {
+    success: boolean;
+    message?: string;
+}
+
+export interface BulkHardDeleteBedMasterResponse {
+    success: boolean;
+    message?: string;
+    deleted: string[];
+    blocked: BedDeleteFailure[];
+}
+
 const hospitalIdOrThrow = (override?: string) => {
     const id = override ?? useAuthStore.getState().getHospitalId();
     if (!id) throw new Error('Hospital ID is not available on the current user session.');
@@ -126,5 +151,22 @@ export const bedService = {
         ipdApiClient.post(IPD_API_ENDPOINTS.BED.BULK_CREATE, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
+    bulkDelete: (bedIds: string[], hospitalId?: string): Promise<BulkDeleteBedMasterResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BED.BULK_DELETE, {
+            bedIds,
+            hospitalId: hospitalIdOrThrow(hospitalId),
+        }),
+
+    // True hard delete — only succeeds for a bed with no assignment history; otherwise the
+    // backend rejects it and the bed must be deactivated instead (bulkDelete/upsert above).
+    hardDelete: (bedId: string, hospitalId?: string): Promise<HardDeleteBedMasterResponse> =>
+        ipdApiClient.delete(IPD_API_ENDPOINTS.BED.HARD_DELETE(bedId, hospitalIdOrThrow(hospitalId))),
+
+    bulkHardDelete: (bedIds: string[], hospitalId?: string): Promise<BulkHardDeleteBedMasterResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BED.BULK_HARD_DELETE, {
+            bedIds,
+            hospitalId: hospitalIdOrThrow(hospitalId),
         }),
 };

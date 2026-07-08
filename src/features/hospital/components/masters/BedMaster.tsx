@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Filter, Plus, Edit2, Bed, DoorOpen, BedDouble, Archive, User, AlertCircle, X,
@@ -122,6 +123,9 @@ const validateBed = (rec: Partial<BedRecord> | null): BedErrors => {
 
 const UNASSIGNED_FLOOR = 'UNASSIGNED';
 
+const extractErrorMessage = (e: unknown, fallback: string): string =>
+    (axios.isAxiosError(e) && (e.response?.data as { message?: string } | undefined)?.message) || fallback;
+
 export const BedMaster = () => {
     // --- Data ---
     const [rooms, setRooms] = useState<RoomItem[]>([]);
@@ -132,6 +136,9 @@ export const BedMaster = () => {
     const [busyId, setBusyId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterWardType, setFilterWardType] = useState('ALL');
+    // Deactivated beds are hidden from the bed lists by default — they're kept for history but
+    // shouldn't look "still there" after being deactivated. Toggle to bring them back into view.
+    const [showInactive, setShowInactive] = useState(false);
 
     // Left-panel navigation: 'ALL' | `floor:<floorNo>` | `room:<roomId>` | 'UNASSIGNED'
     const [selectedNode, setSelectedNode] = useState('ALL');
@@ -152,6 +159,18 @@ export const BedMaster = () => {
     const [isSavingBed, setIsSavingBed] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    // Multi-select for bulk deactivation, scoped to whichever bed list is currently on screen
+    // (a single room's beds, or the unassigned-beds list) — cleared whenever navigation changes.
+    const [selectedBedIds, setSelectedBedIds] = useState<Set<string>>(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const toggleBedSelection = (bedId: string) => {
+        setSelectedBedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(bedId)) next.delete(bedId); else next.add(bedId);
+            return next;
+        });
+    };
+
     const loadAll = useCallback(async (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
         setLoadError(null);
@@ -171,6 +190,7 @@ export const BedMaster = () => {
     }, []);
 
     useEffect(() => { loadAll(); }, [loadAll]);
+    useEffect(() => { setSelectedBedIds(new Set()); }, [selectedNode]);
 
     // --- Derived data ---
     const existingFloors = useMemo(
@@ -202,13 +222,14 @@ export const BedMaster = () => {
 
     const filteredUnassignedBeds = useMemo(() => {
         return unassignedBeds.filter(b => {
+            if (!showInactive && !b.isActive) return false;
             const matchesSearch = b.bedCode.toLowerCase().includes(searchTerm.toLowerCase())
                 || b.wardCode.toLowerCase().includes(searchTerm.toLowerCase())
                 || (b.roomCode && b.roomCode.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchesWardType = filterWardType === 'ALL' || b.wardType === filterWardType;
             return matchesSearch && matchesWardType;
         });
-    }, [unassignedBeds, searchTerm, filterWardType]);
+    }, [unassignedBeds, searchTerm, filterWardType, showInactive]);
 
     const parsedNode = useMemo(() => {
         if (selectedNode === 'ALL' || selectedNode === 'UNASSIGNED') return { kind: selectedNode as 'ALL' | 'UNASSIGNED' };
@@ -218,7 +239,7 @@ export const BedMaster = () => {
     }, [selectedNode]);
 
     const selectedRoom = parsedNode.kind === 'room' ? rooms.find(r => r.roomId === parsedNode.roomId) ?? null : null;
-    const selectedRoomBeds = selectedRoom ? beds.filter(b => b.roomId === selectedRoom.roomId) : [];
+    const selectedRoomBeds = selectedRoom ? beds.filter(b => b.roomId === selectedRoom.roomId && (showInactive || b.isActive)) : [];
 
     const roomsForRightPanel = useMemo(() => {
         if (parsedNode.kind === 'floor') return rooms.filter(r => (r.floorNo || UNASSIGNED_FLOOR) === parsedNode.floorNo && matchesFilters(r));
@@ -441,10 +462,73 @@ export const BedMaster = () => {
             });
             setBeds(prev => prev.map(b => b.id === bedId ? { ...b, isActive: false } : b));
             toast({ title: 'Bed deactivated', description: 'Hidden from active list.' });
-        } catch (e: any) {
-            toast({ title: 'Could not deactivate', description: e?.message ?? '', variant: 'destructive' });
+        } catch (e) {
+            toast({ title: 'Could not deactivate', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
         } finally {
             setBusyId(null);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const ids = Array.from(selectedBedIds);
+        if (ids.length === 0 || bulkDeleting) return;
+        if (!window.confirm(`Mark ${ids.length} selected bed(s) as inactive? Occupied beds will be skipped. This hides them from the active list but retains history.`)) return;
+
+        setBulkDeleting(true);
+        try {
+            const result = await bedService.bulkDelete(ids);
+            if (result.deactivated.length > 0) {
+                const deactivatedSet = new Set(result.deactivated);
+                setBeds(prev => prev.map(b => deactivatedSet.has(b.id) ? { ...b, isActive: false } : b));
+            }
+            if (result.blocked.length === 0) {
+                toast({ title: `${result.deactivated.length} bed(s) deactivated`, description: 'Hidden from active list.' });
+            } else {
+                const blockedCodes = result.blocked.map(b => b.bedCode || b.bedId).join(', ');
+                toast({
+                    title: `${result.deactivated.length} deactivated, ${result.blocked.length} blocked`,
+                    description: `Still occupied or unavailable: ${blockedCodes}`,
+                    variant: 'destructive',
+                });
+            }
+            setSelectedBedIds(new Set());
+        } catch (e) {
+            toast({ title: 'Could not deactivate selected beds', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
+
+    // Permanent hard delete — only actually removes beds with zero assignment history; anything
+    // else (occupied, or ever assigned to a patient) is reported back as blocked, not silently
+    // skipped, since "permanently delete" carries a stronger expectation than deactivate.
+    const handleBulkHardDelete = async () => {
+        const ids = Array.from(selectedBedIds);
+        if (ids.length === 0 || bulkDeleting) return;
+        if (!window.confirm(`Permanently delete ${ids.length} selected bed(s)? This cannot be undone. Beds that are occupied or have ever been assigned to a patient will be skipped — deactivate those instead.`)) return;
+
+        setBulkDeleting(true);
+        try {
+            const result = await bedService.bulkHardDelete(ids);
+            if (result.deleted.length > 0) {
+                const deletedSet = new Set(result.deleted);
+                setBeds(prev => prev.filter(b => !deletedSet.has(b.id)));
+            }
+            if (result.blocked.length === 0) {
+                toast({ title: `${result.deleted.length} bed(s) permanently deleted` });
+            } else {
+                const blockedCodes = result.blocked.map(b => b.bedCode || b.bedId).join(', ');
+                toast({
+                    title: `${result.deleted.length} deleted, ${result.blocked.length} blocked`,
+                    description: `Occupied or has assignment history: ${blockedCodes}`,
+                    variant: 'destructive',
+                });
+            }
+            setSelectedBedIds(new Set());
+        } catch (e) {
+            toast({ title: 'Could not permanently delete selected beds', description: extractErrorMessage(e, 'Please try again.'), variant: 'destructive' });
+        } finally {
+            setBulkDeleting(false);
         }
     };
 
@@ -452,11 +536,23 @@ export const BedMaster = () => {
     const renderBedCard = (bed: BedRecord) => {
         const effectiveRate = bed.bedDailyRateOverride ?? bed.wardRoomDailyRate;
         const isOverridden = bed.bedDailyRateOverride !== null && bed.bedDailyRateOverride !== undefined;
+        const isChecked = selectedBedIds.has(bed.id);
         return (
             <motion.div
                 layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key={bed.id}
-                className={`relative bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md ${!bed.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                className={`relative bg-white dark:bg-slate-900 rounded-xl border shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md ${isChecked ? 'border-brand-400 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-gray-200 dark:border-gray-800'} ${!bed.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
             >
+                {bed.isActive && (
+                    <button
+                        type="button"
+                        onClick={() => toggleBedSelection(bed.id)}
+                        className={`absolute top-2.5 left-2 z-10 h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-brand-600 border-brand-600' : 'bg-white/90 dark:bg-slate-900/90 border-gray-300 dark:border-gray-600 opacity-0 group-hover:opacity-100'}`}
+                        title={isChecked ? 'Deselect bed' : 'Select bed'}
+                        aria-label={isChecked ? 'Deselect bed' : 'Select bed'}
+                    >
+                        {isChecked && <CheckSquare className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />}
+                    </button>
+                )}
                 <div className={`h-1.5 w-full ${STATUS_COLORS[bed.statusCode].split(' ')[0]}`} />
                 <div className="p-4 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-2">
@@ -586,6 +682,10 @@ export const BedMaster = () => {
                             ))}
                         </SelectContent>
                     </Select>
+                    <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 shrink-0 pl-1 cursor-pointer">
+                        <Switch checked={showInactive} onCheckedChange={setShowInactive} />
+                        Show inactive
+                    </label>
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -671,6 +771,25 @@ export const BedMaster = () => {
                     <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-500 dark:text-gray-400">
                         <Building2 className="h-4 w-4" /> {rightPanelTitle}
                     </div>
+
+                    {selectedBedIds.size > 0 && (
+                        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 dark:bg-brand-900/20 dark:border-brand-800 px-4 py-2.5">
+                            <span className="text-sm font-semibold text-brand-800 dark:text-brand-300">{selectedBedIds.size} bed(s) selected</span>
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedBedIds(new Set())} disabled={bulkDeleting}>
+                                    Clear
+                                </Button>
+                                <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                                    {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+                                    Deactivate Selected
+                                </Button>
+                                <Button variant="destructive" size="sm" className="h-8 gap-1.5" onClick={handleBulkHardDelete} disabled={bulkDeleting} title="Permanently delete — only works for beds with no assignment history">
+                                    {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                    Delete Permanently
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {loading && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
