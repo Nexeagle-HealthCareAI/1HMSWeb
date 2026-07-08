@@ -146,10 +146,9 @@ export const ValidationUtils = {
       cleaned = cleaned.slice(-10);
     }
     
-    // Ensure it's exactly 10 digits
+    // Return empty string if less than 10 digits — callers check isValidMobile before sending
     if (cleaned.length < 10) {
-      // Pad with zeros if less than 10 digits (though this shouldn't happen for valid mobile numbers)
-      cleaned = cleaned.padStart(10, '0');
+      return '';
     }
     
     return cleaned;
