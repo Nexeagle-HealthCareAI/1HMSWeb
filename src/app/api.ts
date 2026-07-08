@@ -8,11 +8,7 @@ const join = (base: string, path: string) => `${trimEnd(base)}/${trimStart(path)
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL
   || 'http://151.185.45.77:5001';
 
-const rawSubscriptionUrl = import.meta.env.VITE_SUBSCRIPTION_API_URL
-  || 'http://151.185.45.77:5002';
-
 export const API_BASE_URL = ensureProtocol(rawApiUrl);
-export const SUBSCRIPTION_BASE_URL = ensureProtocol(rawSubscriptionUrl);
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -139,7 +135,9 @@ export const API_ENDPOINTS = {
     GET_STATUS: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}`,
     SELECT_PLAN: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/select-plan`,
     SUBMIT_PAYMENT: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/submit-payment`,
-    GET_PLANS_URL: `${SUBSCRIPTION_BASE_URL}/api/v1/SubscriptionPlans`,
+    // Proxied through easyHMSAPI (server-to-server to CMSAPI) — the browser has no CMS
+    // credential, and CMSAPI's plan endpoints require CMS auth, so this can't hit CMS directly.
+    GET_PLANS: '/api/v1/Subscription/plans',
   },
   APPOINTMENTS: {
     SAVE_VITALS: 'appointments/patient-vitals',
@@ -247,6 +245,10 @@ export const IPD_API_ENDPOINTS = {
       `bed/master/${encodeURIComponent(bedId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_MASTER: 'bed/master',
     BULK_CREATE: 'bed/master/bulk',
+    BULK_DELETE: 'bed/master/bulk-delete',
+    HARD_DELETE: (bedId: string, hospitalId: string) =>
+      `bed/master/${encodeURIComponent(bedId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
+    BULK_HARD_DELETE: 'bed/master/bulk-hard-delete',
   },
   ROOM: {
     GET_MASTERS: (hospitalId: string, page = 1, pageSize = 50) =>
