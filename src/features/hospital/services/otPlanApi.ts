@@ -5,13 +5,17 @@ import { useAuthStore } from '@/store/authStore';
 export type RoomCategory = 'GENERAL' | 'SEMI_PRIVATE' | 'PRIVATE';
 export type IcuLevel = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
 
+export interface PackageTypeRef {
+    packageTypeId: string;
+    name: string;
+    price?: number | null;
+}
+
 export interface OTPlanItem {
     otPlanId: string;
     departmentId?: string | null;
     departmentName?: string | null;
-    packageTypeId?: string | null;
-    packageTypeName?: string | null;
-    packageTypePrice?: number | null;
+    packageTypes: PackageTypeRef[];
     planName: string;
     procedureName: string;
     defaultRoomCategory?: RoomCategory | null;
@@ -32,7 +36,7 @@ export interface UpsertOTPlanRequest {
     otPlanId?: string;
     hospitalId?: string;
     departmentId?: string | null;
-    packageTypeId?: string | null;
+    packageTypeIds?: string[];
     planName: string;
     procedureName: string;
     defaultRoomCategory?: RoomCategory | null;

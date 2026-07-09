@@ -13,13 +13,13 @@ import { toast } from '@/hooks/use-toast';
 import { otPlanApi, OTPlanItem, RoomCategory, IcuLevel } from '@/features/hospital/services/otPlanApi';
 import { departmentApi, Department } from '@/features/hospital/services/departmentApi';
 import { packageTypeApi, PackageTypeItem } from '@/features/hospital/services/packageTypeApi';
-import { PackageTypePicker } from '@/features/hospital/components/masters/PackageTypePicker';
+import { PackageTypeMultiPicker } from '@/features/hospital/components/masters/PackageTypeMultiPicker';
 import { useAuthStore } from '@/store/authStore';
 
 const ROOM_CATEGORIES: RoomCategory[] = ['GENERAL', 'SEMI_PRIVATE', 'PRIVATE'];
 const ICU_LEVELS: IcuLevel[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
 
-type EditingPlan = Partial<OTPlanItem>;
+type EditingPlan = Partial<Omit<OTPlanItem, 'packageTypes'>> & { packageTypeIds?: string[] };
 type EditingPackageType = Partial<PackageTypeItem> & { componentsText?: string };
 
 export const OtPlanMaster: React.FC = () => {
@@ -106,8 +106,8 @@ export const OtPlanMaster: React.FC = () => {
     }, [plans, searchTerm, filterDepartment, filterActive]);
 
     const handleOpenDrawer = (plan: OTPlanItem | null = null) => {
-        setEditingPlan(plan ? { ...plan } : {
-            planName: '', procedureName: '', departmentId: null, packageTypeId: null,
+        setEditingPlan(plan ? { ...plan, packageTypeIds: plan.packageTypes.map(pt => pt.packageTypeId) } : {
+            planName: '', procedureName: '', departmentId: null, packageTypeIds: [],
             defaultRoomCategory: null, suggestedIcuLevel: null,
             isActive: true, displayOrder: (plans.length + 1) * 10,
         });
@@ -126,7 +126,7 @@ export const OtPlanMaster: React.FC = () => {
                 otPlanId: editingPlan.otPlanId,
                 hospitalId,
                 departmentId: editingPlan.departmentId || null,
-                packageTypeId: editingPlan.packageTypeId || null,
+                packageTypeIds: editingPlan.packageTypeIds ?? [],
                 planName: editingPlan.planName.trim(),
                 procedureName: editingPlan.procedureName.trim(),
                 defaultRoomCategory: editingPlan.defaultRoomCategory || null,
@@ -160,7 +160,7 @@ export const OtPlanMaster: React.FC = () => {
             const res = await otPlanApi.upsert({
                 otPlanId: plan.otPlanId, hospitalId,
                 departmentId: plan.departmentId || null,
-                packageTypeId: plan.packageTypeId || null,
+                packageTypeIds: plan.packageTypes.map(pt => pt.packageTypeId),
                 planName: plan.planName, procedureName: plan.procedureName,
                 defaultRoomCategory: plan.defaultRoomCategory || null,
                 suggestedIcuLevel: plan.suggestedIcuLevel || null,
@@ -312,6 +312,7 @@ export const OtPlanMaster: React.FC = () => {
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Plan Name</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Department</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Procedure</th>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Package Types</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Default Room</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">ICU</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-center">Active</th>
@@ -321,12 +322,12 @@ export const OtPlanMaster: React.FC = () => {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {loading && Array.from({ length: 4 }).map((_, i) => (
                                 <tr key={`sk-${i}`}>
-                                    <td colSpan={7} className="px-4 py-3"><Skeleton className="h-9 w-full" /></td>
+                                    <td colSpan={8} className="px-4 py-3"><Skeleton className="h-9 w-full" /></td>
                                 </tr>
                             ))}
                             {!loading && loadError && (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center">
+                                    <td colSpan={8} className="px-4 py-12 text-center">
                                         <div className="flex flex-col items-center gap-2 text-rose-600">
                                             <AlertCircle className="h-8 w-8" />
                                             <p className="font-semibold">{loadError}</p>
@@ -354,6 +355,17 @@ export const OtPlanMaster: React.FC = () => {
                                         ) : <span className="text-gray-300 dark:text-gray-600">General</span>}
                                     </td>
                                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{plan.procedureName}</td>
+                                    <td className="px-4 py-3">
+                                        {plan.packageTypes.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1">
+                                                {plan.packageTypes.map(pt => (
+                                                    <Badge key={pt.packageTypeId} variant="outline" className="bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-normal border-brand-200 dark:border-brand-800">
+                                                        {pt.name}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                                    </td>
                                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{plan.defaultRoomCategory?.replace('_', ' ') ?? '—'}</td>
                                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{plan.suggestedIcuLevel?.replace('_', ' ') ?? '—'}</td>
                                     <td className="px-4 py-3 text-center">
@@ -372,7 +384,7 @@ export const OtPlanMaster: React.FC = () => {
                             ))}
                             {!loading && !loadError && filteredPlans.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                         <div className="flex flex-col items-center gap-2">
                                             <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
                                             <p className="font-medium text-base">{plans.length === 0 ? 'No OT Plans configured yet' : 'No plans match your filters'}</p>
@@ -433,10 +445,10 @@ export const OtPlanMaster: React.FC = () => {
                                     </Select>
                                 </div>
 
-                                <PackageTypePicker
+                                <PackageTypeMultiPicker
                                     hospitalId={hospitalId}
-                                    value={editingPlan?.packageTypeId}
-                                    onChange={v => setEditingPlan(p => ({ ...p!, packageTypeId: v }))}
+                                    value={editingPlan?.packageTypeIds ?? []}
+                                    onChange={v => setEditingPlan(p => ({ ...p!, packageTypeIds: v }))}
                                 />
 
                                 <div className="grid gap-2">
