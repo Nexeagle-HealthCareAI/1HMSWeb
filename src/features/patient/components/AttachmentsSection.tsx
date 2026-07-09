@@ -36,6 +36,7 @@ interface AttachmentsSectionProps {
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode | null;
   appointmentId?: string;
+  doctorId?: string;
 }
 
 type AttachmentFile = {
@@ -56,7 +57,7 @@ const reportTypes = [
   'Other'
 ];
 
-const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, onChange, patientId, patientName, open: controlledOpen, onOpenChange, trigger, appointmentId }) => {
+const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, onChange, patientId, patientName, open: controlledOpen, onOpenChange, trigger, appointmentId, doctorId: propDoctorId }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState(reportTypes[0]);
   const [fileName, setFileName] = useState('');
@@ -84,7 +85,9 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
 
   const { hospitalId: storedHospitalId, doctorId: storedDoctorId } = useAuthStore();
   const hospitalId = storedHospitalId || ""; // Fallback handled by store usually
-  const doctorId = storedDoctorId || "";
+  // Prefer the appointment's own doctor (passed in by the caller) over the logged-in user's
+  // doctor profile — the uploader (front desk/admin) often isn't the treating doctor themselves.
+  const doctorId = propDoctorId || storedDoctorId || "";
 
   // Delete modal state
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);

@@ -43,6 +43,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -121,6 +122,7 @@ export const AppointmentDashboard = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<AppointmentDetail | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
   const [showAddBillModal, setShowAddBillModal] = useState(false);
@@ -140,7 +142,7 @@ export const AppointmentDashboard = () => {
   const [docBusy, setDocBusy] = useState(false);
   // Per-doctor OPD consult fee, shown in the Case column. Loaded once per hospital.
   const [doctorFeeMap, setDoctorFeeMap] = useState<Record<string, number>>({});
-  const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string }>({ open: false });
+  const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string; doctorId?: string }>({ open: false });
   const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
   const [patientProfileId, setPatientProfileId] = useState<string | null>(null);
@@ -201,6 +203,7 @@ export const AppointmentDashboard = () => {
       patientId: appointment.patientId,
       patientName: appointment.patientFullName,
       appointmentId: appointment.appointmentId,
+      doctorId: appointment.doctorId,
     });
   };
 
@@ -1057,20 +1060,35 @@ export const AppointmentDashboard = () => {
   const handleCancelConfirm = async () => {
     if (!appointmentToCancel) return;
 
+    if (!hospitalId) return;
+
     setIsCancelling(true);
     try {
-      console.log('Cancelling appointment:', appointmentToCancel.appointmentId);
-
       const response = await appointmentApi.cancelAppointment({
         appointmentId: appointmentToCancel.appointmentId,
-        patientId: appointmentToCancel.patientId
+        patientId: appointmentToCancel.patientId,
+        hospitalId,
+        reason: cancelReason.trim() || undefined,
       });
 
-      console.log('Cancel API response:', response);
+      if (!response.success) {
+        toast({
+          title: 'Could not cancel appointment',
+          description: response.message,
+          variant: 'destructive',
+        });
+        return;
+      }
 
       // Close dialog and reset state
       setCancelDialogOpen(false);
       setAppointmentToCancel(null);
+      setCancelReason('');
+
+      toast({
+        title: 'Appointment cancelled',
+        description: response.message,
+      });
 
       // Invalidate appointment details queries to refresh dashboard data
       queryClient.invalidateQueries({
@@ -1081,11 +1099,13 @@ export const AppointmentDashboard = () => {
       if (refetch) {
         refetch();
       }
-
-      console.log('Appointment cancelled successfully - status should be CANCELLED');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling appointment:', error);
-      // TODO: Show error message
+      toast({
+        title: 'Could not cancel appointment',
+        description: error?.response?.data?.message || error?.message,
+        variant: 'destructive',
+      });
     } finally {
       setIsCancelling(false);
     }
@@ -1094,6 +1114,7 @@ export const AppointmentDashboard = () => {
   const handleCancelDialogClose = () => {
     setCancelDialogOpen(false);
     setAppointmentToCancel(null);
+    setCancelReason('');
   };
 
   const handlePrintPrescription = (appointment: AppointmentDetail) => {
@@ -2085,6 +2106,8 @@ export const AppointmentDashboard = () => {
         onChange={handleLabAttachmentsChange}
         patientId={labAttachmentModal.patientId}
         patientName={labAttachmentModal.patientName}
+        appointmentId={labAttachmentModal.appointmentId}
+        doctorId={labAttachmentModal.doctorId}
       />
 
       {/* Add Bill Modal Side Panel */}
@@ -2418,6 +2441,27 @@ export const AppointmentDashboard = () => {
                     </div>
                   </div>
                 )}
+
+                {appointmentToCancel && ['VITALS_REQUIRED', 'READY'].includes(appointmentToCancel.finalStatusCode) && (
+                  <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-800 dark:text-amber-300">
+                    This patient has already checked in today.
+                  </div>
+                )}
+
+                <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs text-gray-500 dark:text-gray-400">
+                  If a payment was already collected for this appointment, it will be automatically refunded. If this visit has a pending admission referral, it won't be cancelled automatically — check the Referred Admissions board.
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Reason (optional)</label>
+                  <Textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Why is this appointment being cancelled?"
+                    rows={2}
+                    className="mt-1 text-sm resize-none"
+                  />
+                </div>
               </div>
 
               <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
@@ -2457,6 +2501,7 @@ export const AppointmentDashboard = () => {
         patientId={labAttachmentModal.patientId}
         patientName={labAttachmentModal.patientName}
         appointmentId={labAttachmentModal.appointmentId}
+        doctorId={labAttachmentModal.doctorId}
       />
 
       <PatientProfileModal

@@ -233,7 +233,9 @@ export interface RegisterAppointmentResponse {
 }
 
 export interface PatientSearchRequest {
-  by: 'patientId' | 'name' | 'appointmentId' | 'contact';
+  // Not sent to the backend — /patient/search matches name/UHID/mobile/aadhaar/abha
+  // together regardless of "by", so this is purely a caller-side hint, optional.
+  by?: 'patientId' | 'name' | 'appointmentId' | 'contact';
   q: string;
   scope?: 'local' | 'global';
 }
@@ -439,7 +441,9 @@ export const appointmentApi = {
   cancelAppointment: (request: {
     appointmentId: string;
     patientId: string;
-  }): Promise<ApiResponse<any>> => {
+    hospitalId: string;
+    reason?: string;
+  }): Promise<{ success: boolean; message?: string; finalStatus?: string; isReminderSent?: boolean }> => {
     const url = `/appointments/patient-cancel`;
     return apiClient.patch(url, request);
   },

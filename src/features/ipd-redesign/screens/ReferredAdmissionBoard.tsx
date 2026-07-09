@@ -210,6 +210,11 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                                         {r.statusCode === 'FOLLOW_UP' && r.followUpDate && (
                                             <div className="text-[11px] text-slate-400 mt-0.5">on {formatDate(r.followUpDate)}</div>
                                         )}
+                                        {r.sourceAppointmentCancelled && (
+                                            <Badge variant="outline" className="mt-1 text-[10px] font-semibold text-amber-700 border-amber-300 bg-amber-50">
+                                                Source appointment cancelled
+                                            </Badge>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3">
                                         {(r.statusCode === 'PENDING' || r.statusCode === 'FOLLOW_UP') && (
