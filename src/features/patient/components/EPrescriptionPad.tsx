@@ -32,7 +32,8 @@ import {
   Trash2,
   User,
   Settings,
-  TestTube
+  TestTube,
+  PenTool
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
@@ -41,6 +42,7 @@ import { PatientTimeline } from './PatientTimeline';
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
 import { VoiceRxSheet } from './VoiceRxSheet';
 import type { VoiceRxFields } from '../services/voiceRxApi';
+import { DrawingGallerySection } from './DrawingBoard/DrawingGallerySection';
 
 // Fix: Add missing Select import for Immunizations section
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
@@ -1191,6 +1193,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   // Build the self-describing custom-field payload (key + label + value) for save/submit.
   const buildCustomFieldsPayload = () =>
     customFields.map(f => ({ key: f.key, label: f.label, value: customFieldValues[f.key] ?? '' }));
+
+  // Drawing Board (shown in an inline sheet). The gallery fetches its own list whenever it opens.
+  const [drawingBoardOpen, setDrawingBoardOpen] = useState(false);
 
   // Patient timeline (shown in an inline sheet). Lazily fetched the first time the sheet opens.
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -2360,6 +2365,29 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     </SheetHeader>
                     <div className="flex-1 overflow-y-auto w-full custom-scrollbar p-4 md:p-6">
                       <PatientLabTests patientId={resolvedPatientId} appointmentId={resolvedAppointmentId} />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                <Sheet open={drawingBoardOpen} onOpenChange={setDrawingBoardOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
+                      <PenTool className="w-4 h-4" />
+                      Drawing Board
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[90vw] sm:w-[600px] md:w-[800px] lg:w-[900px] sm:max-w-none p-0 flex flex-col h-full bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-gray-800 [&>button]:right-6 [&>button]:top-4 [&>button]:text-gray-500 hover:[&>button]:text-gray-700">
+                    <SheetHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60 bg-white dark:bg-slate-900">
+                      <SheetTitle className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-brand-700 to-brand-500 dark:from-brand-400 dark:to-brand-300">Drawing Board</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+                      <DrawingGallerySection
+                        open={drawingBoardOpen}
+                        appointmentId={resolvedAppointmentId}
+                        patientId={resolvedPatientId}
+                        hospitalId={getHospitalId?.() || ''}
+                        doctorId={getDoctorId() || ''}
+                      />
                     </div>
                   </SheetContent>
                 </Sheet>

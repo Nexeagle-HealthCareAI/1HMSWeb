@@ -184,6 +184,12 @@ export const API_ENDPOINTS = {
       `e-prescription/attachments/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
     DELETE: (attachmentId: string) => `e-prescription/attachments/delete?AttachmentId=${encodeURIComponent(attachmentId)}`,
   },
+  DRAWINGS: {
+    UPLOAD: 'e-prescription/drawings/upload',
+    LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
+      `e-prescription/drawings/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
+    DELETE: (drawingId: string) => `e-prescription/drawings/delete?DrawingId=${encodeURIComponent(drawingId)}`,
+  },
   BILLING: {
     CREATE_CHARGE: 'billing/config/changes',
     GET_CHARGES: (hospitalId: string) => `billing/config/charges/hospitalId=${encodeURIComponent(hospitalId)}`,

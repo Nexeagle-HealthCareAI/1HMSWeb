@@ -999,6 +999,37 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     }
   }
 
+  // --- Doctor's freehand drawings — each one gets its own full page, appended after all other
+  //     content, in the order they were saved. Mirrors the QR code's embedPng/drawImage pattern
+  //     above; a broken/unreachable image is skipped rather than failing the whole PDF. ---
+  for (const drawing of payload.drawings ?? []) {
+    try {
+      page = await acquirePage();
+      cursorY = page.getHeight() - activeHeaderPad;
+
+      if (drawing.label) {
+        page.drawText(toUpper(drawing.label), { x: leftPad, y: cursorY, size: sizeBase, font: boldFont, color: COLORS.Primary });
+        cursorY -= (lineHeight + 8);
+      }
+
+      const res = await fetch(drawing.url);
+      if (!res.ok) throw new Error(`Failed to fetch drawing image (${res.status})`);
+      const imageBytes = await res.arrayBuffer();
+      const image = await outputDoc.embedPng(imageBytes);
+
+      const availableWidth = contentWidth;
+      const availableHeight = cursorY - activeFooterPad;
+      const scale = Math.min(availableWidth / image.width, availableHeight / image.height, 1);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const x = leftPad + (availableWidth - drawWidth) / 2;
+      const y = activeFooterPad + (availableHeight - drawHeight) / 2;
+      page.drawImage(image, { x, y, width: drawWidth, height: drawHeight });
+    } catch (error) {
+      console.warn('Failed to embed a drawing into the prescription PDF, skipping it.', error);
+    }
+  }
+
   const outputBytes = await outputDoc.save();
   const byteArray = Uint8Array.from(outputBytes);
   return new Blob([byteArray], { type: 'application/pdf' });
