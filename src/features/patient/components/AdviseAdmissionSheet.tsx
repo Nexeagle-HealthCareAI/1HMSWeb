@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BedDouble, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { otPlanApi, OTPlanItem } from '@/features/hospital/services/otPlanApi';
+import { PackageTypePicker } from '@/features/hospital/components/masters/PackageTypePicker';
 import { admissionReferralApi, CaseType } from '@/features/ipd-redesign/services/admissionReferralApi';
 
 interface Props {
@@ -35,6 +36,7 @@ export const AdviseAdmissionSheet: React.FC<Props> = ({ hospitalId, doctorId, pa
     const [plansLoaded, setPlansLoaded] = useState(false);
 
     const [otPlanId, setOtPlanId] = useState<string>('');
+    const [packageTypeId, setPackageTypeId] = useState<string | null>(null);
     const [procedureName, setProcedureName] = useState('');
     const [probableAdmissionDate, setProbableAdmissionDate] = useState('');
     const [caseType, setCaseType] = useState<CaseType>('PLANNED');
@@ -44,7 +46,7 @@ export const AdviseAdmissionSheet: React.FC<Props> = ({ hospitalId, doctorId, pa
     const [success, setSuccess] = useState(false);
 
     const reset = () => {
-        setOtPlanId(''); setProcedureName(''); setProbableAdmissionDate('');
+        setOtPlanId(''); setPackageTypeId(null); setProcedureName(''); setProbableAdmissionDate('');
         setCaseType('PLANNED'); setNotes(''); setSuccess(false);
     };
 
@@ -80,6 +82,7 @@ export const AdviseAdmissionSheet: React.FC<Props> = ({ hospitalId, doctorId, pa
                 referringDoctorId: doctorId,
                 appointmentId,
                 otPlanId: otPlanId && otPlanId !== 'NONE' ? otPlanId : undefined,
+                packageTypeId: packageTypeId ?? undefined,
                 procedureName: procedureName.trim(),
                 probableAdmissionDate: probableAdmissionDate || undefined,
                 caseType,
@@ -130,6 +133,8 @@ export const AdviseAdmissionSheet: React.FC<Props> = ({ hospitalId, doctorId, pa
                         </Select>
                         <p className="text-xs text-muted-foreground">Picking a plan fills the procedure name below — still editable.</p>
                     </div>
+
+                    <PackageTypePicker hospitalId={hospitalId} value={packageTypeId} onChange={setPackageTypeId} />
 
                     <div className="grid gap-2">
                         <Label>Procedure <span className="text-red-500">*</span></Label>

@@ -12,15 +12,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { otPlanApi, OTPlanItem, RoomCategory, IcuLevel } from '@/features/hospital/services/otPlanApi';
 import { departmentApi, Department } from '@/features/hospital/services/departmentApi';
+import { packageTypeApi, PackageTypeItem } from '@/features/hospital/services/packageTypeApi';
+import { PackageTypePicker } from '@/features/hospital/components/masters/PackageTypePicker';
 import { useAuthStore } from '@/store/authStore';
 
 const ROOM_CATEGORIES: RoomCategory[] = ['GENERAL', 'SEMI_PRIVATE', 'PRIVATE'];
 const ICU_LEVELS: IcuLevel[] = ['LEVEL_1', 'LEVEL_2', 'LEVEL_3'];
 
 type EditingPlan = Partial<OTPlanItem>;
+type EditingPackageType = Partial<PackageTypeItem> & { componentsText?: string };
 
 export const OtPlanMaster: React.FC = () => {
     const hospitalId = useAuthStore(s => s.getHospitalId?.() || '');
+
+    const [activeTab, setActiveTab] = useState<'PLANS' | 'PACKAGE_TYPES'>('PLANS');
 
     const [plans, setPlans] = useState<OTPlanItem[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -35,6 +40,14 @@ export const OtPlanMaster: React.FC = () => {
     const [editingPlan, setEditingPlan] = useState<EditingPlan | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    const [packageTypes, setPackageTypes] = useState<PackageTypeItem[]>([]);
+    const [loadingPackageTypes, setLoadingPackageTypes] = useState(true);
+    const [pkgLoadError, setPkgLoadError] = useState<string | null>(null);
+    const [isPkgDrawerOpen, setIsPkgDrawerOpen] = useState(false);
+    const [editingPkg, setEditingPkg] = useState<EditingPackageType | null>(null);
+    const [isPkgSaving, setIsPkgSaving] = useState(false);
+    const [isPkgSuccess, setIsPkgSuccess] = useState(false);
 
     const loadDepartments = useCallback(async () => {
         if (!hospitalId) return;
@@ -61,8 +74,23 @@ export const OtPlanMaster: React.FC = () => {
         }
     }, [hospitalId]);
 
+    const loadPackageTypes = useCallback(async (silent = false) => {
+        if (!hospitalId) return;
+        if (!silent) setLoadingPackageTypes(true);
+        setPkgLoadError(null);
+        try {
+            const res = await packageTypeApi.list({ hospitalId, includeInactive: true });
+            setPackageTypes(res?.packageTypes ?? []);
+        } catch (e: any) {
+            setPkgLoadError(e?.message ?? 'Failed to load Package Types');
+        } finally {
+            setLoadingPackageTypes(false);
+        }
+    }, [hospitalId]);
+
     useEffect(() => { loadDepartments(); }, [loadDepartments]);
     useEffect(() => { loadPlans(); }, [loadPlans]);
+    useEffect(() => { loadPackageTypes(); }, [loadPackageTypes]);
 
     const filteredPlans = useMemo(() => {
         return plans.filter(p => {
@@ -79,7 +107,7 @@ export const OtPlanMaster: React.FC = () => {
 
     const handleOpenDrawer = (plan: OTPlanItem | null = null) => {
         setEditingPlan(plan ? { ...plan } : {
-            planName: '', procedureName: '', departmentId: null,
+            planName: '', procedureName: '', departmentId: null, packageTypeId: null,
             defaultRoomCategory: null, suggestedIcuLevel: null,
             isActive: true, displayOrder: (plans.length + 1) * 10,
         });
@@ -98,6 +126,7 @@ export const OtPlanMaster: React.FC = () => {
                 otPlanId: editingPlan.otPlanId,
                 hospitalId,
                 departmentId: editingPlan.departmentId || null,
+                packageTypeId: editingPlan.packageTypeId || null,
                 planName: editingPlan.planName.trim(),
                 procedureName: editingPlan.procedureName.trim(),
                 defaultRoomCategory: editingPlan.defaultRoomCategory || null,
@@ -131,6 +160,7 @@ export const OtPlanMaster: React.FC = () => {
             const res = await otPlanApi.upsert({
                 otPlanId: plan.otPlanId, hospitalId,
                 departmentId: plan.departmentId || null,
+                packageTypeId: plan.packageTypeId || null,
                 planName: plan.planName, procedureName: plan.procedureName,
                 defaultRoomCategory: plan.defaultRoomCategory || null,
                 suggestedIcuLevel: plan.suggestedIcuLevel || null,
@@ -143,8 +173,91 @@ export const OtPlanMaster: React.FC = () => {
         }
     };
 
+    const handleOpenPkgDrawer = (pkg: PackageTypeItem | null = null) => {
+        setEditingPkg(pkg ? { ...pkg, componentsText: pkg.components?.join(', ') ?? '' } : {
+            name: '', price: null, componentsText: '', isActive: true,
+        });
+        setIsPkgDrawerOpen(true);
+    };
+
+    const handleSavePkgDrawer = async () => {
+        if (!editingPkg?.name?.trim()) {
+            toast({ title: 'Validation Error', description: 'Name is required.', variant: 'destructive' });
+            return;
+        }
+
+        setIsPkgSaving(true);
+        try {
+            const components = (editingPkg.componentsText ?? '').split(',').map(c => c.trim()).filter(Boolean);
+            const res = await packageTypeApi.upsert({
+                packageTypeId: editingPkg.packageTypeId,
+                hospitalId,
+                name: editingPkg.name.trim(),
+                price: editingPkg.price ?? null,
+                components,
+                isActive: editingPkg.isActive ?? true,
+            });
+            if (!res?.success) throw new Error(res?.message ?? 'Could not save');
+
+            setIsPkgSaving(false);
+            setIsPkgSuccess(true);
+            confetti({ particleCount: 90, spread: 70, origin: { y: 0.8 }, colors: ['#3b82f6', '#10b981', '#8b5cf6'], ticks: 200 });
+            toast({ title: 'Success', description: `Package Type ${editingPkg.packageTypeId ? 'updated' : 'created'} successfully.` });
+
+            setTimeout(() => {
+                setIsPkgSuccess(false);
+                setIsPkgDrawerOpen(false);
+                setEditingPkg(null);
+            }, 900);
+            await loadPackageTypes(true);
+        } catch (e: any) {
+            setIsPkgSaving(false);
+            toast({ title: 'Save failed', description: e?.message ?? '', variant: 'destructive' });
+        }
+    };
+
+    const handleTogglePkgActive = async (pkg: PackageTypeItem) => {
+        const next = !pkg.isActive;
+        setPackageTypes(prev => prev.map(p => p.packageTypeId === pkg.packageTypeId ? { ...p, isActive: next } : p));
+        try {
+            const res = await packageTypeApi.upsert({
+                packageTypeId: pkg.packageTypeId, hospitalId,
+                name: pkg.name, price: pkg.price ?? null,
+                components: pkg.components, isActive: next,
+            });
+            if (!res?.success) throw new Error(res?.message ?? 'Could not update');
+        } catch (e: any) {
+            setPackageTypes(prev => prev.map(p => p.packageTypeId === pkg.packageTypeId ? { ...p, isActive: !next } : p));
+            toast({ title: 'Could not update status', description: e?.message ?? '', variant: 'destructive' });
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-slate-950 font-sans relative overflow-hidden">
+            {/* TAB SWITCHER */}
+            <div className="flex gap-1 px-4 pt-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                <button
+                    onClick={() => setActiveTab('PLANS')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors ${activeTab === 'PLANS'
+                        ? 'bg-white dark:bg-slate-950 text-brand-600 dark:text-brand-400 border border-b-0 border-gray-100 dark:border-gray-800'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        }`}
+                >
+                    Plans
+                </button>
+                <button
+                    onClick={() => setActiveTab('PACKAGE_TYPES')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors ${activeTab === 'PACKAGE_TYPES'
+                        ? 'bg-white dark:bg-slate-950 text-brand-600 dark:text-brand-400 border border-b-0 border-gray-100 dark:border-gray-800'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        }`}
+                >
+                    Package Types
+                </button>
+            </div>
+
+            {activeTab === 'PLANS' && (
+            <>
             {/* TOOLBAR */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
                 <div className="flex-1 w-full flex flex-col sm:flex-row gap-3">
@@ -320,6 +433,12 @@ export const OtPlanMaster: React.FC = () => {
                                     </Select>
                                 </div>
 
+                                <PackageTypePicker
+                                    hospitalId={hospitalId}
+                                    value={editingPlan?.packageTypeId}
+                                    onChange={v => setEditingPlan(p => ({ ...p!, packageTypeId: v }))}
+                                />
+
                                 <div className="grid gap-2">
                                     <Label>Procedure Name <span className="text-red-500">*</span></Label>
                                     <Input
@@ -391,6 +510,196 @@ export const OtPlanMaster: React.FC = () => {
                     </>
                 )}
             </AnimatePresence>
+            </>
+            )}
+
+            {activeTab === 'PACKAGE_TYPES' && (
+            <>
+            {/* TOOLBAR */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Reusable billing package labels (e.g. Full Package, Non Package) — optionally attach a price and included components.</p>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    <Button variant="outline" size="sm" onClick={() => loadPackageTypes(true)} disabled={loadingPackageTypes} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
+                        <RefreshCw className={`h-4 w-4 ${loadingPackageTypes ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
+                    <Button onClick={() => handleOpenPkgDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
+                        <Plus className="h-4 w-4" /> New Package Type
+                    </Button>
+                </div>
+            </div>
+
+            {/* TABLE */}
+            <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
+                <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
+                            <tr>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Name</th>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Price</th>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Components</th>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-center">Active</th>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {loadingPackageTypes && Array.from({ length: 3 }).map((_, i) => (
+                                <tr key={`pkg-sk-${i}`}>
+                                    <td colSpan={5} className="px-4 py-3"><Skeleton className="h-9 w-full" /></td>
+                                </tr>
+                            ))}
+                            {!loadingPackageTypes && pkgLoadError && (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-2 text-rose-600">
+                                            <AlertCircle className="h-8 w-8" />
+                                            <p className="font-semibold">{pkgLoadError}</p>
+                                            <Button size="sm" variant="outline" onClick={() => loadPackageTypes(true)} className="mt-2 h-7 text-xs">
+                                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                            {!loadingPackageTypes && !pkgLoadError && packageTypes.map(pkg => (
+                                <motion.tr
+                                    layout
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    key={pkg.packageTypeId}
+                                    className="hover:bg-brand-50/30 dark:hover:bg-slate-800/50 transition-colors group"
+                                >
+                                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{pkg.name}</td>
+                                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{pkg.price != null ? `₹${pkg.price.toLocaleString('en-IN')}` : '—'}</td>
+                                    <td className="px-4 py-3">
+                                        {pkg.components?.length ? (
+                                            <div className="flex flex-wrap gap-1">
+                                                {pkg.components.map((c, i) => (
+                                                    <Badge key={i} variant="outline" className="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300 font-normal border-gray-200 dark:border-gray-700">
+                                                        {c}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <Switch
+                                            checked={pkg.isActive}
+                                            onCheckedChange={() => handleTogglePkgActive(pkg)}
+                                            className="data-[state=checked]:bg-green-500 dark:data-[state=checked]:bg-green-600"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800" onClick={() => handleOpenPkgDrawer(pkg)}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                    </td>
+                                </motion.tr>
+                            ))}
+                            {!loadingPackageTypes && !pkgLoadError && packageTypes.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
+                                            <p className="font-medium text-base">No Package Types configured yet</p>
+                                            <p className="text-sm">Click "New Package Type" to add your first one, e.g. "Full Package".</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* RIGHT DRAWER: CREATE/EDIT PACKAGE TYPE */}
+            <AnimatePresence>
+                {isPkgDrawerOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
+                            onClick={() => setIsPkgDrawerOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                        >
+                            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                                    {editingPkg?.packageTypeId ? 'Edit Package Type' : 'New Package Type'}
+                                </h2>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsPkgDrawerOpen(false)}>
+                                    <X className="h-5 w-5" />
+                                </Button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                <div className="grid gap-2">
+                                    <Label>Name <span className="text-red-500">*</span></Label>
+                                    <Input
+                                        placeholder="e.g. Full Package"
+                                        value={editingPkg?.name || ''}
+                                        onChange={e => setEditingPkg(p => ({ ...p!, name: e.target.value }))}
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Price (optional)</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="e.g. 50000"
+                                        value={editingPkg?.price ?? ''}
+                                        onChange={e => setEditingPkg(p => ({ ...p!, price: e.target.value === '' ? null : Number(e.target.value) }))}
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Components (optional)</Label>
+                                    <Input
+                                        placeholder="Comma separated — e.g. OT Med, Ward Med, Room Rent, Procedure"
+                                        value={editingPkg?.componentsText || ''}
+                                        onChange={e => setEditingPkg(p => ({ ...p!, componentsText: e.target.value }))}
+                                    />
+                                    <p className="text-xs text-muted-foreground">Free-text labels of what's bundled — for reference only, no per-item pricing.</p>
+                                </div>
+
+                                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                    <div>
+                                        <Label className="font-semibold cursor-pointer">Active</Label>
+                                        <p className="text-xs text-muted-foreground mt-0.5">Available for selection on OT Plans / Advise Admission</p>
+                                    </div>
+                                    <Switch
+                                        checked={editingPkg?.isActive ?? true}
+                                        onCheckedChange={v => setEditingPkg(p => ({ ...p!, isActive: v }))}
+                                        className="data-[state=checked]:bg-green-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2">
+                                <Button variant="ghost" onClick={() => setIsPkgDrawerOpen(false)} className="text-gray-500">Cancel</Button>
+                                <motion.button
+                                    disabled={isPkgSaving || isPkgSuccess}
+                                    onClick={handleSavePkgDrawer}
+                                    className={`flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all min-w-[100px] h-10 px-4 ${isPkgSuccess
+                                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
+                                        }`}
+                                    animate={isPkgSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    {isPkgSaving ? 'Saving...' : isPkgSuccess ? (<><CheckCircle2 className="h-4 w-4" /> Saved!</>) : 'Save'}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+            </>
+            )}
         </div>
     );
 };

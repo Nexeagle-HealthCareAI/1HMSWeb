@@ -285,6 +285,14 @@ export const IPD_API_ENDPOINTS = {
     },
     UPSERT: 'ot-plan/upsert',
   },
+  PACKAGE_TYPE: {
+    LIST: (hospitalId: string, includeInactive?: boolean) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (includeInactive) parts.push(`includeInactive=true`);
+      return `package-type/list?${parts.join('&')}`;
+    },
+    UPSERT: 'package-type/upsert',
+  },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {
       const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];

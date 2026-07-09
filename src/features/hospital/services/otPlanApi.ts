@@ -9,6 +9,9 @@ export interface OTPlanItem {
     otPlanId: string;
     departmentId?: string | null;
     departmentName?: string | null;
+    packageTypeId?: string | null;
+    packageTypeName?: string | null;
+    packageTypePrice?: number | null;
     planName: string;
     procedureName: string;
     defaultRoomCategory?: RoomCategory | null;
@@ -29,6 +32,7 @@ export interface UpsertOTPlanRequest {
     otPlanId?: string;
     hospitalId?: string;
     departmentId?: string | null;
+    packageTypeId?: string | null;
     planName: string;
     procedureName: string;
     defaultRoomCategory?: RoomCategory | null;

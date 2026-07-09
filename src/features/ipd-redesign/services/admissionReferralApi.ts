@@ -11,6 +11,7 @@ export interface AdviseAdmissionRequest {
     referringDoctorId: string;
     appointmentId?: string;
     otPlanId?: string;
+    packageTypeId?: string;
     procedureName?: string;
     probableAdmissionDate?: string;
     caseType: CaseType;
@@ -32,6 +33,9 @@ export interface AdmissionReferralItem {
     referringDoctorName?: string;
     otPlanId?: string;
     otPlanName?: string;
+    packageTypeId?: string;
+    packageTypeName?: string;
+    packageTypePrice?: number;
     procedureName?: string;
     probableAdmissionDate?: string;
     caseType: CaseType;
