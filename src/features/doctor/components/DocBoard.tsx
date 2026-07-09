@@ -35,6 +35,7 @@ import {
   Archive,
   ArrowLeft,
   ArrowRight,
+  BedDouble,
   Bell,
   BarChart,
   Calendar,
@@ -101,6 +102,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
+import { AdviseAdmissionSheet } from '@/features/patient/components/AdviseAdmissionSheet';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
@@ -1582,6 +1584,22 @@ export const ClinicalDashboard: React.FC = () => {
                                 appointment.finalStatusCode
                               ) && (
                                   <>
+                                    <AdviseAdmissionSheet
+                                      hospitalId={hospitalId || ''}
+                                      doctorId={doctorId || ''}
+                                      patientId={appointment.patientId}
+                                      appointmentId={appointment.appointmentId}
+                                      trigger={
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 mr-2"
+                                        >
+                                          <BedDouble className="h-3 w-3 mr-1" />
+                                          Advise Admission
+                                        </Button>
+                                      }
+                                    />
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -1756,6 +1774,22 @@ export const ClinicalDashboard: React.FC = () => {
                                           </Button>
                                           {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT'].includes(appointment.finalStatusCode) && (
                                             <>
+                                              <AdviseAdmissionSheet
+                                                hospitalId={hospitalId || ''}
+                                                doctorId={doctorId || ''}
+                                                patientId={appointment.patientId}
+                                                appointmentId={appointment.appointmentId}
+                                                trigger={
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 px-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 rounded-lg transition-colors mr-1"
+                                                    title="Advise Admission"
+                                                  >
+                                                    <BedDouble className="h-4 w-4" />
+                                                  </Button>
+                                                }
+                                              />
                                               <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -2266,6 +2300,22 @@ export const ClinicalDashboard: React.FC = () => {
                                   appointment.finalStatusCode
                                 ) && (
                                     <>
+                                      <AdviseAdmissionSheet
+                                        hospitalId={hospitalId || ''}
+                                        doctorId={doctorId || ''}
+                                        patientId={appointment.patientId}
+                                        appointmentId={appointment.appointmentId}
+                                        trigger={
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 mr-2"
+                                          >
+                                            <BedDouble className="h-3.5 w-3.5 mr-1" />
+                                            Advise Admission
+                                          </Button>
+                                        }
+                                      />
                                       <Button
                                         variant="outline"
                                         size="sm"
@@ -2396,6 +2446,22 @@ export const ClinicalDashboard: React.FC = () => {
                                           appointment.finalStatusCode
                                         ) && (
                                             <>
+                                              <AdviseAdmissionSheet
+                                                hospitalId={hospitalId || ''}
+                                                doctorId={doctorId || ''}
+                                                patientId={appointment.patientId}
+                                                appointmentId={appointment.appointmentId}
+                                                trigger={
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 px-3 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 mr-1"
+                                                  >
+                                                    <BedDouble className="h-3.5 w-3.5 mr-1" />
+                                                    Advise Admission
+                                                  </Button>
+                                                }
+                                              />
                                               <Button
                                                 variant="ghost"
                                                 size="sm"

@@ -145,6 +145,13 @@ export interface AdmitPatientPayload {
     packageCode?: string;
     sanctionedAmount?: number | null;
     entitledRoomCategory?: string;     // drives the bed-entitlement warning + TPA-split proration
+
+    // Optional OT Plan picked in the wizard — pre-fills EntitledRoomCategory server-side (when not
+    // explicitly supplied) and snapshots ProcedureName/SuggestedIcuLevel onto the admission.
+    otPlanId?: string;
+    // Set when admitting from a Referred Admissions board row — that referral is atomically marked
+    // CONVERTED server-side, in the same transaction that creates this admission.
+    referralId?: string;
 }
 
 export interface AdmitPatientResponse {
@@ -220,6 +227,11 @@ export interface ActiveAdmissionItem {
     packageCode?: string | null;
     sanctionedAmount?: number | null;
     entitledRoomCategory?: string | null;   // drives the bed-entitlement warning at assign/transfer
+
+    // OT Plan picked at admit time, if any — frozen snapshot, not live. Feeds the Surgery Case
+    // procedure-name pre-fill and ICU hint.
+    otPlanProcedureNameSnapshot?: string | null;
+    otPlanSuggestedIcuLevel?: string | null;
 }
 
 export interface UpdateAdmissionDetailsPayload {

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';
 import { PrescriptionConfig } from '@/features/prescription/components/PrescriptionConfig';
 import { ChargeMaster } from '@/features/hospital/components/masters/ChargeMaster';
 import { BedMaster } from '@/features/hospital/components/masters/BedMaster';
+import { OtPlanMaster } from '@/features/hospital/components/masters/OtPlanMaster';
 import { DoctorFees } from '@/features/hospital/components/masters/DoctorFees';
 import { StoreMaster } from '@/features/hospital/components/masters/StoreMaster';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
@@ -47,6 +48,12 @@ export const AdminConfigModule = () => {
             label: 'Bed Master',
             description: 'Set up floors, rooms and the beds each one holds',
             icon: Bed,
+        },
+        {
+            id: 'ot-plans',
+            label: 'OT Plans',
+            description: 'Reusable procedure templates by department (e.g. PCNL, Hysterectomy)',
+            icon: ClipboardList,
         },
         {
             id: 'doctor-fees',
@@ -161,6 +168,7 @@ export const AdminConfigModule = () => {
                     {activeTab === 'discharge-letterhead' && <DischargeLetterheadConfig />}
                     {activeTab === 'charge-master' && <ChargeMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
+                    {activeTab === 'ot-plans' && <OtPlanMaster />}
                     {activeTab === 'doctor-fees' && <DoctorFees />}
                     {activeTab === 'store-master' && <StoreMaster />}
                     {activeTab === 'item-master' && <ItemMaster />}

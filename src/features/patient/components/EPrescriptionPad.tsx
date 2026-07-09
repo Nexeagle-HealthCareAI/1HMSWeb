@@ -41,6 +41,7 @@ import { PatientLabTests } from './PatientLabTests';
 import { PatientTimeline } from './PatientTimeline';
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
 import { VoiceRxSheet } from './VoiceRxSheet';
+import { AdviseAdmissionSheet } from './AdviseAdmissionSheet';
 import type { VoiceRxFields } from '../services/voiceRxApi';
 import { DrawingGallerySection } from './DrawingBoard/DrawingGallerySection';
 
@@ -2328,6 +2329,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   doctorId={getDoctorId() || ''}
                   patientId={resolvedPatientId}
                   onApply={applyVoiceRx}
+                />
+                <AdviseAdmissionSheet
+                  hospitalId={getHospitalId?.() || ''}
+                  doctorId={getDoctorId() || ''}
+                  patientId={resolvedPatientId}
+                  appointmentId={resolvedAppointmentId}
                 />
                 <Sheet open={timelineOpen} onOpenChange={(o) => { setTimelineOpen(o); if (o) fetchTimeline(); }}>
                   <SheetTrigger asChild>

@@ -18,6 +18,10 @@ import { formatIstDateTime } from '../utils/istDate';
 interface Props {
     admissionId: string;
     isActive: boolean;
+    // Frozen at admit time from the OT Plan picked in the wizard, if any — pre-fills the new
+    // request's procedure name and surfaces an ICU hint. Not a live join (see Admission entity).
+    otPlanProcedureNameSnapshot?: string | null;
+    otPlanSuggestedIcuLevel?: string | null;
 }
 
 const WHO_ITEMS: Record<'signIn' | 'timeOut' | 'signOut', { key: string; label: string }[]> = {
@@ -72,7 +76,7 @@ const NEXT_STATUS_LABEL: Partial<Record<SurgeryStatus, string>> = {
     POST_OP: 'Complete case',
 };
 
-export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive }) => {
+export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPlanProcedureNameSnapshot, otPlanSuggestedIcuLevel }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [cases, setCases] = useState<SurgeryCaseSummary[]>([]);
@@ -367,7 +371,16 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive }) => 
                 <div className="flex items-center justify-between">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Surgery cases</h2>
                     {isActive && (
-                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowNewRequest(o => !o)}>
+                        <Button
+                            size="sm" variant="outline" className="h-8 text-xs"
+                            onClick={() => setShowNewRequest(o => {
+                                const next = !o;
+                                if (next && !procedureName.trim() && otPlanProcedureNameSnapshot) {
+                                    setProcedureName(otPlanProcedureNameSnapshot);
+                                }
+                                return next;
+                            })}
+                        >
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New request
                         </Button>
                     )}
@@ -379,6 +392,11 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive }) => 
                             <Label className="text-[11px] font-semibold text-slate-600">Procedure name</Label>
                             <Input value={procedureName} onChange={e => setProcedureName(e.target.value)} className="h-9 mt-1" />
                         </div>
+                        {otPlanSuggestedIcuLevel && (
+                            <p className="text-[11px] text-amber-600 flex items-center gap-1.5">
+                                <AlertTriangle className="h-3.5 w-3.5" /> ICU likely for this plan — {otPlanSuggestedIcuLevel.replace('_', ' ')}. Arrange a bed post-op.
+                            </p>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <Label className="text-[11px] font-semibold text-slate-600">Surgery type</Label>

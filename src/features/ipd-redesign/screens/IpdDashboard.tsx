@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check, Pencil, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check, Pencil, X, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,6 +62,7 @@ interface Props {
     onOpenCssdBoard: () => void;
     onOpenKpiDashboard: () => void;
     onOpenConsultantLedger: () => void;
+    onOpenReferredAdmissions: () => void;
     onOpenWorkspace: (admission: ActiveAdmissionItem) => void;
     refreshSignal: number;
 }
@@ -72,7 +73,7 @@ interface Props {
  * surgery — is the Patient Workspace screen, opened by clicking a row). Backed by GET /admission/active.
  * Inventory Management lives in the app's main side nav (/inventory), not here.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenWorkspace, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenReferredAdmissions, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
@@ -217,6 +218,9 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                         </button>
                         <button onClick={onOpenConsultantLedger} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
                             <Stethoscope className="h-4 w-4 mr-2 text-brand-200" /> Consultant Ledger
+                        </button>
+                        <button onClick={onOpenReferredAdmissions} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
+                            <UserPlus className="h-4 w-4 mr-2 text-brand-200" /> Referred Admissions
                         </button>
                     </div>
                     <button onClick={onAdmit} className="flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10 w-full sm:w-auto">

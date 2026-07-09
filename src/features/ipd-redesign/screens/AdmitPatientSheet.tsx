@@ -30,6 +30,7 @@ import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildAdmissionConfirmationA4 } from '@/printTemplates/admissionConfirmationA4';
 import { referrerApi, type Referrer } from '@/features/appointment/services/referrerApi';
 import { ipdBillingService, type PaymentMode } from '@/features/billing/services/ipdBillingService';
+import { otPlanApi, type OTPlanItem } from '@/features/hospital/services/otPlanApi';
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
@@ -122,6 +123,7 @@ interface FormState {
     payerType: PayerTypeCode; depositExpected: string; bedId: string;
     payerName: string; policyOrBeneficiaryNo: string; preAuthNo: string; packageCode: string; sanctionedAmount: string;
     entitledRoomCategory: string;
+    otPlanId: string;
     collectAdvanceNow: boolean; advancePaymentMode: PaymentMode; advanceTransactionId: string;
 
     consentObtained: boolean; consentSignedByName: string; consentSignerRelation: string;
@@ -144,6 +146,7 @@ const EMPTY_FORM: FormState = {
     payerType: 'CASH', depositExpected: '', bedId: '',
     payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
     entitledRoomCategory: '',
+    otPlanId: '',
     collectAdvanceNow: false, advancePaymentMode: 'CASH', advanceTransactionId: '',
     consentObtained: false, consentSignedByName: '', consentSignerRelation: 'Self',
 };
@@ -152,6 +155,13 @@ interface Props {
     open: boolean;
     onOpenChange: (v: boolean) => void;
     onAdmitted: (admissionId: string) => void;
+    // Pre-fill when opened from a Referred Admissions board row — an already-known patient/doctor/
+    // plan. referralId is threaded through to the admit call so that referral is atomically marked
+    // CONVERTED in the same transaction that creates the admission.
+    initialPatientId?: string;
+    initialDoctorId?: string;
+    initialOtPlanId?: string;
+    referralId?: string;
 }
 
 const CHIP_TONES: Record<string, string> = {
@@ -201,7 +211,7 @@ const initials = (name?: string | null) => {
     return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 };
 
-export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmitted }) => {
+export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmitted, initialPatientId, initialDoctorId, initialOtPlanId, referralId }) => {
     const { toast } = useToast();
     const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
     const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
@@ -235,6 +245,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [availableBeds, setAvailableBeds] = useState<BedBoardItem[]>([]);
     // Admitting-consultant picker.
     const [doctors, setDoctors] = useState<HospitalDoctorItem[]>([]);
+    // OT Plan picker (optional) — pre-fills entitledRoomCategory and shows an ICU hint.
+    const [otPlans, setOtPlans] = useState<OTPlanItem[]>([]);
     // Active GENERAL_ADMISSION consent template, if the hospital has configured one — the consent
     // checkbox only renders when this is non-null (never blocks admission on missing config).
     const [generalConsentTemplate, setGeneralConsentTemplate] = useState<ConsentTemplateItem | null>(null);
@@ -254,7 +266,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
     const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Load the live bed picker, doctor list, and general-consent template whenever the sheet opens.
+    // Load the live bed picker, doctor list, OT Plans, and general-consent template whenever the sheet opens.
     useEffect(() => {
         if (!open) return;
         bedBoardApi.getBoard()
@@ -264,7 +276,31 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         consentApi.getTemplates('GENERAL_ADMISSION')
             .then(templates => setGeneralConsentTemplate(templates.find(t => t.isActive) ?? null))
             .catch(() => setGeneralConsentTemplate(null));
+        otPlanApi.list().then(res => setOtPlans(res?.plans ?? [])).catch(() => setOtPlans([]));
     }, [open]);
+
+    // Pre-fill from a Referred Admissions board row: known patient/doctor. Patient detail is
+    // fetched via the same path as picking a live-duplicate match below.
+    useEffect(() => {
+        if (!open) return;
+        if (initialPatientId) selectPatient(initialPatientId);
+        if (initialDoctorId) set('primaryDoctorId', initialDoctorId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialPatientId, initialDoctorId]);
+
+    // OT Plan pre-fill needs the plans list loaded first — applies the plan's default room
+    // category only if the doctor/desk hasn't already set one (never clobbers an explicit choice).
+    useEffect(() => {
+        if (!open || !initialOtPlanId || otPlans.length === 0) return;
+        const plan = otPlans.find(p => p.otPlanId === initialOtPlanId);
+        if (!plan) return;
+        setForm(f => ({
+            ...f,
+            otPlanId: plan.otPlanId,
+            entitledRoomCategory: f.entitledRoomCategory || plan.defaultRoomCategory || f.entitledRoomCategory,
+        }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialOtPlanId, otPlans]);
 
     // Debounced duplicate probe while typing name/mobile/DOB/Aadhaar — stops once an existing
     // patient has been picked below (selectedPatientId set).
@@ -443,6 +479,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             admissionReason: t(form.admissionReason), diagnosis: t(form.diagnosis), admissionToken: t(form.admissionToken),
             expectedDischargeAt: t(form.expectedDischargeAt),
             isPreRegistration,
+            otPlanId: form.otPlanId || undefined,
+            referralId: referralId || undefined,
             referralSource: form.referralSource || undefined,
             referralName: referralNameForPayload,
             referredByReferrerId,
@@ -949,6 +987,34 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                     <option value="">— Not specified —</option>
                                                     {doctors.map(d => <option key={d.doctorId} value={d.doctorId}>{d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}</option>)}
                                                 </select>
+                                            </Field>
+                                            <Field label="OT Plan" className="sm:col-span-2">
+                                                <select
+                                                    value={form.otPlanId}
+                                                    onChange={e => {
+                                                        const plan = otPlans.find(p => p.otPlanId === e.target.value);
+                                                        set('otPlanId', e.target.value);
+                                                        if (plan && !form.entitledRoomCategory && plan.defaultRoomCategory) {
+                                                            set('entitledRoomCategory', plan.defaultRoomCategory);
+                                                        }
+                                                    }}
+                                                    className={SELECT_CLS}
+                                                >
+                                                    <option value="">— No plan — free text below —</option>
+                                                    {otPlans.map(p => (
+                                                        <option key={p.otPlanId} value={p.otPlanId}>
+                                                            {p.planName}{p.departmentName ? ` (${p.departmentName})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {(() => {
+                                                    const selectedPlan = otPlans.find(p => p.otPlanId === form.otPlanId);
+                                                    return selectedPlan?.suggestedIcuLevel ? (
+                                                        <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1">
+                                                            <AlertTriangle className="h-3 w-3" /> ICU likely — {selectedPlan.suggestedIcuLevel.replace('_', ' ')}
+                                                        </p>
+                                                    ) : null;
+                                                })()}
                                             </Field>
                                             <Field label="Provisional diagnosis">
                                                 <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
