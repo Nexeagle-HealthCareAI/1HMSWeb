@@ -398,15 +398,18 @@ const AutoSaveHandler: React.FC<{
           doseNumber: Number(i.doseNumber) || 0,
           remarks: '',
         }))),
-        customFields: JSON.stringify(customFields),
       };
+      // Custom (doctor-added) fields are tracked individually, keyed by field.key, so each
+      // one gets its own save-status pill instead of all sharing one generic "customFields" status.
+      customFields.forEach(cf => {
+        lastSavedRefs.current[cf.key] = JSON.stringify(cf.value);
+      });
       initialized.current = true;
     }
 
     if (!patientId || !appointmentId) return;
 
     const timeoutId = setTimeout(async () => {
-      try {
         const payload: Partial<EPrescriptionDraftReq> = {
           // Use draftPrescriptionId if available, otherwise null (server will create new)
           prescriptionId: draftPrescriptionId || null,
@@ -482,11 +485,11 @@ const AutoSaveHandler: React.FC<{
             doseNumber: Number(i.doseNumber) || 0,
             remarks: '',
           })),
-          customFields: customFields,
         };
 
         const changedSections: Partial<EPrescriptionDraftReq> = {};
         let hasChanges = false;
+        const statusKeys: string[] = [];
 
         Object.keys(currentSections).forEach(key => {
           const currentJson = JSON.stringify(currentSections[key]);
@@ -494,34 +497,59 @@ const AutoSaveHandler: React.FC<{
             // @ts-ignore
             changedSections[key] = currentSections[key];
             hasChanges = true;
+            statusKeys.push(key);
           }
         });
 
-        if (hasChanges) {
-          if (onSectionStatusChange) {
-            Object.keys(changedSections).forEach(key => onSectionStatusChange(key, 'saving'));
-          }
+        // Custom (doctor-added) fields are always sent together as one array (see `payload`
+        // above — `saveDraft` doesn't support a partial custom-field update), but each one is
+        // diffed and reported individually here so its own save-status pill reflects reality
+        // instead of every custom field sharing one generic "customFields" status.
+        const changedCustomFieldKeys = customFields
+          .filter(cf => JSON.stringify(cf.value) !== lastSavedRefs.current[cf.key])
+          .map(cf => cf.key);
+        if (changedCustomFieldKeys.length > 0) {
+          hasChanges = true;
+          statusKeys.push(...changedCustomFieldKeys);
+        }
 
+        if (!hasChanges) return;
+
+        if (onSectionStatusChange) {
+          statusKeys.forEach(key => onSectionStatusChange(key, 'saving'));
+        }
+
+        try {
           const finalPayload = { ...payload, ...changedSections };
-          await eprescriptionApi.saveDraft(finalPayload as EPrescriptionDraftReq);
+          const response = await eprescriptionApi.saveDraft(finalPayload as EPrescriptionDraftReq);
 
-          if (onSectionStatusChange) {
-            Object.keys(changedSections).forEach(key => onSectionStatusChange(key, 'saved'));
+          if (!response?.success) {
+            throw new Error(response?.message || 'Draft save was rejected by the server');
           }
 
-          // Update last saved refs only for successfully sent sections
+          if (onSectionStatusChange) {
+            statusKeys.forEach(key => onSectionStatusChange(key, 'saved'));
+          }
+
+          // Update last saved refs only for successfully sent sections. Sections that failed
+          // keep their stale ref so the next edit (to any section) re-includes and retries them.
           Object.keys(changedSections).forEach(key => {
             lastSavedRefs.current[key] = JSON.stringify(currentSections[key]);
+          });
+          changedCustomFieldKeys.forEach(key => {
+            const cf = customFields.find(f => f.key === key);
+            if (cf) lastSavedRefs.current[key] = JSON.stringify(cf.value);
           });
           // Trigger success callback to refresh draft
           if (onSaveSuccess) {
             onSaveSuccess();
           }
+        } catch (err) {
+          console.error('Failed to auto-save draft', err);
+          if (onSectionStatusChange) {
+            statusKeys.forEach(key => onSectionStatusChange(key, 'error'));
+          }
         }
-
-      } catch (err) {
-        console.error('Failed to auto-save draft', err);
-      }
     }, 2000); // 2 seconds debounce
 
     return () => clearTimeout(timeoutId);
@@ -2072,6 +2100,15 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
                 <CheckCircle className="h-3 w-3" />
                 Saved
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span
+                className="ml-2 flex items-center gap-1 text-[10px] font-normal text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-full"
+                title="Could not save this section. It will retry automatically on your next edit."
+              >
+                <AlertCircle className="h-3 w-3" />
+                Save failed
               </span>
             )}
           </div>
