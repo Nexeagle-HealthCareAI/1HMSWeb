@@ -32,7 +32,8 @@ import {
   Trash2,
   User,
   Settings,
-  TestTube
+  TestTube,
+  PenTool
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
@@ -40,7 +41,9 @@ import { PatientLabTests } from './PatientLabTests';
 import { PatientTimeline } from './PatientTimeline';
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
 import { VoiceRxSheet } from './VoiceRxSheet';
+import { AdviseAdmissionSheet } from './AdviseAdmissionSheet';
 import type { VoiceRxFields } from '../services/voiceRxApi';
+import { DrawingGallerySection } from './DrawingBoard/DrawingGallerySection';
 
 // Fix: Add missing Select import for Immunizations section
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
@@ -398,15 +401,18 @@ const AutoSaveHandler: React.FC<{
           doseNumber: Number(i.doseNumber) || 0,
           remarks: '',
         }))),
-        customFields: JSON.stringify(customFields),
       };
+      // Custom (doctor-added) fields are tracked individually, keyed by field.key, so each
+      // one gets its own save-status pill instead of all sharing one generic "customFields" status.
+      customFields.forEach(cf => {
+        lastSavedRefs.current[cf.key] = JSON.stringify(cf.value);
+      });
       initialized.current = true;
     }
 
     if (!patientId || !appointmentId) return;
 
     const timeoutId = setTimeout(async () => {
-      try {
         const payload: Partial<EPrescriptionDraftReq> = {
           // Use draftPrescriptionId if available, otherwise null (server will create new)
           prescriptionId: draftPrescriptionId || null,
@@ -482,11 +488,11 @@ const AutoSaveHandler: React.FC<{
             doseNumber: Number(i.doseNumber) || 0,
             remarks: '',
           })),
-          customFields: customFields,
         };
 
         const changedSections: Partial<EPrescriptionDraftReq> = {};
         let hasChanges = false;
+        const statusKeys: string[] = [];
 
         Object.keys(currentSections).forEach(key => {
           const currentJson = JSON.stringify(currentSections[key]);
@@ -494,34 +500,59 @@ const AutoSaveHandler: React.FC<{
             // @ts-ignore
             changedSections[key] = currentSections[key];
             hasChanges = true;
+            statusKeys.push(key);
           }
         });
 
-        if (hasChanges) {
-          if (onSectionStatusChange) {
-            Object.keys(changedSections).forEach(key => onSectionStatusChange(key, 'saving'));
-          }
+        // Custom (doctor-added) fields are always sent together as one array (see `payload`
+        // above — `saveDraft` doesn't support a partial custom-field update), but each one is
+        // diffed and reported individually here so its own save-status pill reflects reality
+        // instead of every custom field sharing one generic "customFields" status.
+        const changedCustomFieldKeys = customFields
+          .filter(cf => JSON.stringify(cf.value) !== lastSavedRefs.current[cf.key])
+          .map(cf => cf.key);
+        if (changedCustomFieldKeys.length > 0) {
+          hasChanges = true;
+          statusKeys.push(...changedCustomFieldKeys);
+        }
 
+        if (!hasChanges) return;
+
+        if (onSectionStatusChange) {
+          statusKeys.forEach(key => onSectionStatusChange(key, 'saving'));
+        }
+
+        try {
           const finalPayload = { ...payload, ...changedSections };
-          await eprescriptionApi.saveDraft(finalPayload as EPrescriptionDraftReq);
+          const response = await eprescriptionApi.saveDraft(finalPayload as EPrescriptionDraftReq);
 
-          if (onSectionStatusChange) {
-            Object.keys(changedSections).forEach(key => onSectionStatusChange(key, 'saved'));
+          if (!response?.success) {
+            throw new Error(response?.message || 'Draft save was rejected by the server');
           }
 
-          // Update last saved refs only for successfully sent sections
+          if (onSectionStatusChange) {
+            statusKeys.forEach(key => onSectionStatusChange(key, 'saved'));
+          }
+
+          // Update last saved refs only for successfully sent sections. Sections that failed
+          // keep their stale ref so the next edit (to any section) re-includes and retries them.
           Object.keys(changedSections).forEach(key => {
             lastSavedRefs.current[key] = JSON.stringify(currentSections[key]);
+          });
+          changedCustomFieldKeys.forEach(key => {
+            const cf = customFields.find(f => f.key === key);
+            if (cf) lastSavedRefs.current[key] = JSON.stringify(cf.value);
           });
           // Trigger success callback to refresh draft
           if (onSaveSuccess) {
             onSaveSuccess();
           }
+        } catch (err) {
+          console.error('Failed to auto-save draft', err);
+          if (onSectionStatusChange) {
+            statusKeys.forEach(key => onSectionStatusChange(key, 'error'));
+          }
         }
-
-      } catch (err) {
-        console.error('Failed to auto-save draft', err);
-      }
     }, 2000); // 2 seconds debounce
 
     return () => clearTimeout(timeoutId);
@@ -1163,6 +1194,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   // Build the self-describing custom-field payload (key + label + value) for save/submit.
   const buildCustomFieldsPayload = () =>
     customFields.map(f => ({ key: f.key, label: f.label, value: customFieldValues[f.key] ?? '' }));
+
+  // Drawing Board (shown in an inline sheet). The gallery fetches its own list whenever it opens.
+  const [drawingBoardOpen, setDrawingBoardOpen] = useState(false);
 
   // Patient timeline (shown in an inline sheet). Lazily fetched the first time the sheet opens.
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -2074,6 +2108,15 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 Saved
               </span>
             )}
+            {saveStatus === 'error' && (
+              <span
+                className="ml-2 flex items-center gap-1 text-[10px] font-normal text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-full"
+                title="Could not save this section. It will retry automatically on your next edit."
+              >
+                <AlertCircle className="h-3 w-3" />
+                Save failed
+              </span>
+            )}
           </div>
         </div>
 
@@ -2287,6 +2330,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   patientId={resolvedPatientId}
                   onApply={applyVoiceRx}
                 />
+                <AdviseAdmissionSheet
+                  hospitalId={getHospitalId?.() || ''}
+                  doctorId={getDoctorId() || ''}
+                  patientId={resolvedPatientId}
+                  appointmentId={resolvedAppointmentId}
+                />
                 <Sheet open={timelineOpen} onOpenChange={(o) => { setTimelineOpen(o); if (o) fetchTimeline(); }}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
@@ -2323,6 +2372,29 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     </SheetHeader>
                     <div className="flex-1 overflow-y-auto w-full custom-scrollbar p-4 md:p-6">
                       <PatientLabTests patientId={resolvedPatientId} appointmentId={resolvedAppointmentId} />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                <Sheet open={drawingBoardOpen} onOpenChange={setDrawingBoardOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
+                      <PenTool className="w-4 h-4" />
+                      Drawing Board
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[90vw] sm:w-[600px] md:w-[800px] lg:w-[900px] sm:max-w-none p-0 flex flex-col h-full bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-gray-800 [&>button]:right-6 [&>button]:top-4 [&>button]:text-gray-500 hover:[&>button]:text-gray-700">
+                    <SheetHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60 bg-white dark:bg-slate-900">
+                      <SheetTitle className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-brand-700 to-brand-500 dark:from-brand-400 dark:to-brand-300">Drawing Board</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+                      <DrawingGallerySection
+                        open={drawingBoardOpen}
+                        appointmentId={resolvedAppointmentId}
+                        patientId={resolvedPatientId}
+                        hospitalId={getHospitalId?.() || ''}
+                        doctorId={getDoctorId() || ''}
+                      />
                     </div>
                   </SheetContent>
                 </Sheet>

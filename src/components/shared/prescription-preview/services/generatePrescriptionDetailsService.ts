@@ -148,6 +148,7 @@ export interface GeneratePrescriptionDetailsPayload {
   validUpto?: number; // Number of days the prescription is valid
   validUptoDate?: string; // Pre-calculated date from server
   qrCodeData?: string;
+  drawings?: { url: string; label?: string }[];
 }
 
 export interface GeneratePrescriptionDetailsResponse {

@@ -184,6 +184,12 @@ export const API_ENDPOINTS = {
       `e-prescription/attachments/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
     DELETE: (attachmentId: string) => `e-prescription/attachments/delete?AttachmentId=${encodeURIComponent(attachmentId)}`,
   },
+  DRAWINGS: {
+    UPLOAD: 'e-prescription/drawings/upload',
+    LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
+      `e-prescription/drawings/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
+    DELETE: (drawingId: string) => `e-prescription/drawings/delete?DrawingId=${encodeURIComponent(drawingId)}`,
+  },
   BILLING: {
     CREATE_CHARGE: 'billing/config/changes',
     GET_CHARGES: (hospitalId: string) => `billing/config/charges/hospitalId=${encodeURIComponent(hospitalId)}`,
@@ -235,6 +241,19 @@ export const IPD_API_ENDPOINTS = {
       `admission?hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
     ADMIT: 'admission',
   },
+  ADMISSION_REFERRAL: {
+    ADVISE: 'admission-referral/advise',
+    LIST: (hospitalId: string, opts?: { statusCode?: string; caseType?: string; referringDoctorId?: string; fromDate?: string; toDate?: string }) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (opts?.statusCode) parts.push(`statusCode=${encodeURIComponent(opts.statusCode)}`);
+      if (opts?.caseType) parts.push(`caseType=${encodeURIComponent(opts.caseType)}`);
+      if (opts?.referringDoctorId) parts.push(`referringDoctorId=${encodeURIComponent(opts.referringDoctorId)}`);
+      if (opts?.fromDate) parts.push(`fromDate=${encodeURIComponent(opts.fromDate)}`);
+      if (opts?.toDate) parts.push(`toDate=${encodeURIComponent(opts.toDate)}`);
+      return `admission-referral/list?${parts.join('&')}`;
+    },
+    UPDATE_STATUS: 'admission-referral/status',
+  },
   PAYMENT: {
     ADD_EVENT: 'payment/add-event',
   },
@@ -256,6 +275,15 @@ export const IPD_API_ENDPOINTS = {
     GET_MASTER_BY_ID: (roomId: string, hospitalId: string) =>
       `bed/room/master/${encodeURIComponent(roomId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_MASTER: 'bed/room/master',
+  },
+  OT_PLAN: {
+    LIST: (hospitalId: string, departmentId?: string, includeInactive?: boolean) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (departmentId) parts.push(`departmentId=${encodeURIComponent(departmentId)}`);
+      if (includeInactive) parts.push(`includeInactive=true`);
+      return `ot-plan/list?${parts.join('&')}`;
+    },
+    UPSERT: 'ot-plan/upsert',
   },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {

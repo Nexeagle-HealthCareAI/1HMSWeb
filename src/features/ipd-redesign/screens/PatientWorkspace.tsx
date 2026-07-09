@@ -512,7 +512,12 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     )}
 
                     {activeSection === 'surgery' && (
-                        <SurgeryCasePanel admissionId={current.admissionId} isActive={isActive} />
+                        <SurgeryCasePanel
+                            admissionId={current.admissionId}
+                            isActive={isActive}
+                            otPlanProcedureNameSnapshot={current.otPlanProcedureNameSnapshot}
+                            otPlanSuggestedIcuLevel={current.otPlanSuggestedIcuLevel}
+                        />
                     )}
 
                     {activeSection === 'criticalCare' && (

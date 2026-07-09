@@ -1619,7 +1619,8 @@ export const AppointmentDashboard = () => {
                                 )}
                                 {appointment.referrerName && (
                                   <div className="text-[10px] text-brand-500 dark:text-brand-300 truncate leading-tight font-medium">
-                                    <span className="font-semibold text-brand-600 dark:text-brand-400">Ref:</span> {appointment.referrerName}
+                                    <span className="font-semibold text-brand-600 dark:text-brand-400">Ref:</span>{' '}
+                                    {appointment.referrerType === 'DOCTOR' ? `Dr. ${appointment.referrerName}` : appointment.referrerName}
                                   </div>
                                 )}
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
@@ -1896,7 +1897,8 @@ export const AppointmentDashboard = () => {
                             </div>
                             {appointment.referrerName && (
                               <div className="text-[11px] text-brand-500 dark:text-brand-300 truncate leading-tight font-medium mt-0.5">
-                                {(appointment.referrerRelation || 'C/O')} {appointment.referrerName}
+                                <span className="font-semibold">Ref:</span>{' '}
+                                {appointment.referrerType === 'DOCTOR' ? `Dr. ${appointment.referrerName}` : appointment.referrerName}
                               </div>
                             )}
                             <div className="text-xs text-slate-500 flex items-center gap-2.5 mt-1.5">

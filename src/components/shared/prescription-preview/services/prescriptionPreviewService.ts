@@ -9,6 +9,7 @@ import {
 } from './generatePrescriptionDetailsService';
 import { mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
 import { prescriptionFieldLayoutApi, mergeFieldsWithDefaults } from '@/features/prescription/services/prescriptionFieldLayoutApi';
+import { drawingApi } from '@/features/patient/services/drawingApi';
 
 export interface PrescriptionPreviewPayload {
   layout: TemplateBoundLayoutConfig;
@@ -40,13 +41,21 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
   // The doctor's personalized field layout is the SOLE driver of print order / labels / visibility.
   // Always resolved against defaults (mergeFieldsWithDefaults) so it's never empty — even on a
   // fetch error we use the same default arrangement, never a separate fixed print order.
-  let layoutFields: Awaited<ReturnType<typeof prescriptionFieldLayoutApi.getFieldLayout>>['fields'] = [];
-  try {
-    const layoutResp = await prescriptionFieldLayoutApi.getFieldLayout(request.doctorId);
-    layoutFields = layoutResp.fields;
-  } catch {
-    layoutFields = [];
-  }
+  // Drawings are fetched alongside it — a fetch failure here must never block the rest of the
+  // preview, it just means no drawing pages get appended this time.
+  const [layoutFields, drawings] = await Promise.all([
+    prescriptionFieldLayoutApi.getFieldLayout(request.doctorId)
+      .then(resp => resp.fields)
+      .catch(() => [] as Awaited<ReturnType<typeof prescriptionFieldLayoutApi.getFieldLayout>>['fields']),
+    drawingApi.getDrawings({
+      appointmentId: request.appointmentId,
+      patientId: request.patientId,
+      hospitalId: request.hospitalId,
+      doctorId: request.doctorId,
+    })
+      .then(resp => (resp?.drawings ?? []).map(d => ({ url: d.storageUrl, label: d.label })))
+      .catch(() => [] as { url: string; label?: string }[]),
+  ]);
   const printFields: PrintFieldConfig[] = mergeFieldsWithDefaults(layoutFields).map(f => ({
     key: f.key,
     label: f.label,
@@ -59,7 +68,8 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
     payload: {
       ...payload,
       qrCodeData: `${import.meta.env.VITE_APP_URL || window.location.origin}/verify/${response.appointmentId}`,
-      validUptoDate: response.validUptoDate
+      validUptoDate: response.validUptoDate,
+      drawings,
     },
     templateUrl: templateConfig.templateUrl,
     printFields,
