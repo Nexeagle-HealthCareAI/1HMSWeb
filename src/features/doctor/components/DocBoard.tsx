@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
@@ -171,6 +172,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
   const [appointmentToMarkDone, setAppointmentToMarkDone] = useState<PatientAppointment | null>(null);
   const [isMarkingDone, setIsMarkingDone] = useState(false);
@@ -768,21 +770,38 @@ export const ClinicalDashboard: React.FC = () => {
   };
 
   const handleCancelConfirm = async () => {
-    if (!appointmentToCancel) return;
+    if (!appointmentToCancel || !hospitalId) return;
     setIsCancelling(true);
     try {
-      await appointmentApi.cancelAppointment({
+      const response = await appointmentApi.cancelAppointment({
         appointmentId: appointmentToCancel.appointmentId,
-        patientId: appointmentToCancel.patientId
+        patientId: appointmentToCancel.patientId,
+        hospitalId,
+        reason: cancelReason.trim() || undefined,
       });
+
+      if (!response.success) {
+        toast({
+          title: 'Could not cancel appointment',
+          description: response.message,
+          variant: 'destructive',
+        });
+        return;
+      }
 
       // Close dialog + refresh immediately (more reliable than invalidating a guessed key)
       setCancelDialogOpen(false);
       setAppointmentToCancel(null);
+      setCancelReason('');
+      toast({ title: 'Appointment cancelled', description: response.message });
       await refetch?.();
-      console.log('Appointment cancelled successfully.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling appointment:', error);
+      toast({
+        title: 'Could not cancel appointment',
+        description: error?.response?.data?.message || error?.message,
+        variant: 'destructive',
+      });
     } finally {
       setIsCancelling(false);
     }
@@ -817,6 +836,7 @@ export const ClinicalDashboard: React.FC = () => {
   const handleCancelDialogClose = () => {
     setCancelDialogOpen(false);
     setAppointmentToCancel(null);
+    setCancelReason('');
   };
 
   const handleRescheduleClick = (appointment: PatientAppointment) => {
@@ -2693,6 +2713,7 @@ export const ClinicalDashboard: React.FC = () => {
         patientId={labAttachmentModal.patientId}
         patientName={labAttachmentModal.patientName}
         appointmentId={labAttachmentModal.appointmentId}
+        doctorId={doctorId}
       />
 
       <PrescriptionPreviewModal
@@ -2799,6 +2820,27 @@ export const ClinicalDashboard: React.FC = () => {
                     <span className="font-medium">{t('docBoard.cancelDialog.appointmentId')}:</span> {appointmentToCancel.appointmentId}
                   </div>
                 </div>
+              </div>
+
+              {['VITALS_REQUIRED', 'READY'].includes(appointmentToCancel.finalStatusCode) && (
+                <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-800 dark:text-amber-300">
+                  This patient has already checked in today.
+                </div>
+              )}
+
+              <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs text-gray-500 dark:text-gray-400">
+                If a payment was already collected for this appointment, it will be automatically refunded. If this visit has a pending admission referral, it won't be cancelled automatically — check the Referred Admissions board.
+              </div>
+
+              <div className="mt-3">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Reason (optional)</label>
+                <Textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Why is this appointment being cancelled?"
+                  rows={2}
+                  className="mt-1 text-sm resize-none"
+                />
               </div>
             </div>
           )}

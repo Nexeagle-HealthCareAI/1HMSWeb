@@ -31,6 +31,8 @@ export interface AdmissionReferralItem {
     patientMobile?: string;
     referringDoctorId: string;
     referringDoctorName?: string;
+    appointmentId?: string;
+    sourceAppointmentCancelled?: boolean;
     otPlanId?: string;
     otPlanName?: string;
     packageTypeId?: string;

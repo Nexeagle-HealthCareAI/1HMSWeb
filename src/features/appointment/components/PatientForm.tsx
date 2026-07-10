@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -190,6 +190,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Fuzzy duplicate detection (only while entering a brand-new patient).
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
@@ -372,26 +373,26 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       return;
     }
 
+    let active = true;
     setIsSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const response = await searchPatients({
-          by: 'name',
-          q: query,
-          scope: 'local'
-        });
+        const response = await searchPatients({ q: query });
+        if (!active) return;
         setSearchResults(response.items);
+        setSelectedIndex(0);
         setShowSearchResults(true);
       } catch (error) {
+        if (!active) return;
         console.error('Search error:', error);
         setSearchResults([]);
         setShowSearchResults(false);
       } finally {
-        setIsSearching(false);
+        if (active) setIsSearching(false);
       }
     }, 400);
 
-    return () => clearTimeout(timer);
+    return () => { active = false; clearTimeout(timer); };
   }, [formData.name, formData.patientId, searchPatients]);
 
   // Handle patient selection from search results
@@ -462,9 +463,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setDupMatches([]);
   };
 
-  // Keyboard navigation for search results
+  // Keyboard navigation for search results — scoped to the search field/dropdown container so it
+  // doesn't intercept Enter/Arrow keys typed into other fields while the dropdown happens to be open.
   React.useEffect(() => {
     if (!showSearchResults || searchResults.length === 0) return;
+    const container = searchContainerRef.current;
+    if (!container) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
@@ -475,12 +479,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         setSelectedIndex((prev) => (prev - 1 + searchResults.length) % searchResults.length);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        handlePatientSelect(searchResults[selectedIndex]);
+        const candidate = searchResults[selectedIndex];
+        if (candidate) handlePatientSelect(candidate);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    container.addEventListener('keydown', handleKeyDown);
+    return () => container.removeEventListener('keydown', handleKeyDown);
   }, [showSearchResults, searchResults, selectedIndex]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -789,7 +794,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     <Label htmlFor="name" className="text-sm md:text-base font-medium dark:text-gray-300">
                       {t('patientForm.personal.name')} <span className="text-red-500">*</span>
                     </Label>
-                    <div className="relative">
+                    <div className="relative" ref={searchContainerRef}>
                       <div className="relative flex items-center">
                         <Input
                           id="name"
@@ -861,6 +866,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           ))}
                         </div>
                       )}
+                      {showSearchResults && !isSearching && searchResults.length === 0 && !formData.patientId && formData.name.trim().length >= 2 && (
+                        <div className="absolute z-50 left-0 right-0 mt-1 rounded-md border bg-popover shadow-lg px-3 py-2.5 text-xs text-muted-foreground">
+                          No matching patient found — you'll be adding <span className="font-semibold text-foreground">"{formData.name.trim()}"</span> as a new patient.
+                        </div>
+                      )}
                     </div>
                     {errors.name && (
                       <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.name)}</p>
@@ -894,10 +904,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
                   </div>
 
-                  {/* MEDICAL REFERRAL (Doctor / Agent) */}
+                  {/* MEDICAL REFERRAL (Doctor / Other) */}
                   <div className="md:col-span-2">
                     <Label className="text-sm md:text-base font-medium dark:text-gray-300">
-                      Referred By <span className="text-xs text-muted-foreground font-normal">(Doctor / Agent)</span>
+                      Referred By <span className="text-xs text-muted-foreground font-normal">(Doctor / Other)</span>
                     </Label>
                     <div className="flex">
                       {selectedReferrer ? (
@@ -960,7 +970,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             onChange={(e) => setReferrerSearch(e.target.value)}
                             onFocus={() => setReferrerFocused(true)}
                             onBlur={() => setTimeout(() => setReferrerFocused(false), 150)}
-                            placeholder="Search doctor / agent referrer…"
+                            placeholder="Search doctor / referrer…"
                             className="h-10 text-sm md:text-base mt-1.5 focus:z-10"
                           />
                           {(referrerFocused || referrerSearch.trim()) && (
@@ -1048,20 +1058,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         <div className="p-3 space-y-3">
                           {/* Type selector pills */}
                           <div className="flex gap-2">
-                            {(['DOCTOR', 'AGENT', 'REFERRER'] as const).map(opt => {
+                            {(['DOCTOR', 'REFERRER'] as const).map(opt => {
                               const active = newReferrer.type === opt;
                               const inactive = opt === 'DOCTOR'
                                 ? 'border-blue-200 text-blue-600 hover:bg-blue-50/60 dark:border-blue-800 dark:text-blue-400'
-                                : opt === 'AGENT'
-                                ? 'border-purple-200 text-purple-600 hover:bg-purple-50/60 dark:border-purple-800 dark:text-purple-400'
                                 : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50/60 dark:border-emerald-800 dark:text-emerald-400';
                               const activeStyle = opt === 'DOCTOR'
                                 ? 'bg-blue-600 text-white border-blue-600'
-                                : opt === 'AGENT'
-                                ? 'bg-purple-600 text-white border-purple-600'
                                 : 'bg-emerald-600 text-white border-emerald-600';
-                              const icon = opt === 'DOCTOR' ? '🩺' : opt === 'AGENT' ? '🤝' : '👤';
-                              const label = opt === 'DOCTOR' ? 'Doctor' : opt === 'AGENT' ? 'Agent' : 'Other';
+                              const icon = opt === 'DOCTOR' ? '🩺' : '👤';
+                              const label = opt === 'DOCTOR' ? 'Doctor' : 'Other';
                               return (
                                 <button
                                   key={opt}

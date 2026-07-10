@@ -13,6 +13,17 @@ const messageFrom = (err: unknown, fallback: string): string =>
 
 export type ConditionAtDischarge = 'STABLE' | 'IMPROVED' | 'RECOVERED' | 'REFERRED' | 'LAMA' | 'EXPIRED';
 
+export interface DischargeMedicationItem {
+    medicineName?: string;
+    dosage?: string;
+    route?: string;
+    frequency?: string;
+    durations?: string;
+    instructions?: string;
+    saltName?: string;
+    displayOrder?: number;
+}
+
 export interface DischargeSummaryDraft {
     dischargeSummaryId?: string | null;
     isSigned: boolean;
@@ -26,6 +37,7 @@ export interface DischargeSummaryDraft {
     proceduresPerformed?: string | null;
     conditionAtDischarge?: string | null;
     dischargeMedications?: string | null;
+    medications?: DischargeMedicationItem[];
     followUpInstructions?: string | null;
     followUpDate?: string | null;
     dietInstructions?: string | null;
@@ -42,6 +54,7 @@ export interface SaveDischargeSummaryFields {
     proceduresPerformed?: string;
     conditionAtDischarge?: ConditionAtDischarge;
     dischargeMedications?: string;
+    medications?: DischargeMedicationItem[];
     followUpInstructions?: string;
     followUpDate?: string;
     dietInstructions?: string;

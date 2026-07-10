@@ -320,7 +320,3 @@ export function useDeleteOverride() {
     mutationFn: overrideApi.deleteDoctorOverride,
   });
 }
-
-
-// Export the appointment cancellation hook
-export { useAppointmentCancel } from './useAppointmentCancel';

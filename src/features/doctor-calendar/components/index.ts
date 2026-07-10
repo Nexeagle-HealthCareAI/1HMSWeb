@@ -9,6 +9,5 @@ export * from './CancelOverrideDialog';
 export * from './OverrideActionDialog';
 export * from './ShiftDetailsCard';
 export * from './DateRangeSelectionPopup';
-export * from './AppointmentCancelDialog';
 export * from './CalendarEventContent';
 export * from './GamifiedHeader';
