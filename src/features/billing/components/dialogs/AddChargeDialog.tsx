@@ -26,6 +26,12 @@ export interface AddChargeDialogProps {
 type Source = 'catalog' | 'bed' | 'manual';
 const MANUAL_CATEGORIES = ['OTHER', 'PROCEDURE', 'LAB', 'RADIOLOGY', 'PHARMACY', 'CONSUMABLE', 'CONSULT'];
 
+interface StagedItem {
+    key: string;
+    charge: AddChargeEventRequest['charges'][number];
+    net: number;
+}
+
 export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenChange, patientId, encounterId, onSaved, onOptimistic }) => {
     const { toast } = useToast();
     const [source, setSource] = useState<Source>('catalog');
@@ -58,6 +64,10 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
     const [discountValue, setDiscountValue] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    // Items staged via "+ Add another" — submitted together with whatever's currently configured
+    // in the form, in one API call, instead of needing a separate "add multiple" flow.
+    const [stagedItems, setStagedItems] = useState<StagedItem[]>([]);
+
     // Reset + load catalog on open
     useEffect(() => {
         if (!open) return;
@@ -76,6 +86,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
         setRate(0);
         setDiscountKind('amount');
         setDiscountValue('');
+        setStagedItems([]);
         let cancelled = false;
         (async () => {
             setLoadingMasters(true);
@@ -185,41 +196,77 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
     const net = gross - discountAmount;
     const needsApproval = discountPercent > cap + 0.001;
 
+    // Builds the charge for whatever is currently configured in the form — shared by "Add
+    // another" (stages it and resets for the next pick) and the final submit (includes it
+    // alongside anything already staged). Returns null when the current selection is incomplete.
+    const buildCurrentCharge = (): AddChargeEventRequest['charges'][number] | null => {
+        if (!canSubmit || qty <= 0 || rate < 0) return null;
+        const manualGst = parseFloat(manualGstRate || '');
+        const manualInc = parseFloat(manualIncentive || '');
+        if (source === 'bed' && selectedBed) {
+            return {
+                displayName: bedLabel,
+                qty,
+                rate,
+                discountPercent,
+                categoryCode: 'BED',
+                incentiveAmount: selectedBed.incentiveAmount ? selectedBed.incentiveAmount * qty : undefined,
+            };
+        }
+        if (source === 'manual') {
+            return {
+                displayName: manualName.trim(), qty, rate, discountPercent, categoryCode: manualCategory,
+                gstRate: Number.isFinite(manualGst) && manualGst > 0 ? manualGst : undefined,
+                incentiveAmount: Number.isFinite(manualInc) && manualInc > 0 ? manualInc : undefined,
+            };
+        }
+        if (source === 'catalog' && selectedMaster) {
+            return { chargeId: selectedMaster.chargeId, displayName: selectedMaster.displayName ?? '', qty, rate, discountPercent, categoryCode: selectedMaster.categoryCode ?? 'OTHER' };
+        }
+        return null;
+    };
+
+    // Stages the current selection and clears just the pick/amount fields (keeps the current
+    // source tab) so the next item can be configured without losing what's already staged.
+    const addAnother = () => {
+        const charge = buildCurrentCharge();
+        if (!charge) {
+            toast({
+                title: source === 'manual' ? 'Enter a charge name' : source === 'bed' ? 'Pick a bed and a valid date range' : 'Pick a charge from the catalog',
+                variant: 'destructive',
+            });
+            return;
+        }
+        setStagedItems(prev => [...prev, { key: `${prev.length}-${charge.displayName}-${Date.now()}`, charge, net }]);
+        setSelectedMaster(null);
+        setSelectedBed(null);
+        setBedFrom('');
+        setBedTo('');
+        setManualName('');
+        setShowAdvanced(false);
+        setQty(1);
+        setRate(0);
+        setDiscountKind('amount');
+        setDiscountValue('');
+    };
+
+    const removeStaged = (key: string) => setStagedItems(prev => prev.filter(s => s.key !== key));
+
     const submit = async () => {
         if (submitting) return;
-        if (source === 'manual' && !manualName.trim()) { toast({ title: 'Enter a charge name', variant: 'destructive' }); return; }
-        if (source === 'bed' && (!selectedBed || bedDays <= 0)) { toast({ title: 'Pick a bed and a valid date range', variant: 'destructive' }); return; }
-        if (source === 'catalog' && !selectedMaster) { toast({ title: 'Pick a charge from the catalog', variant: 'destructive' }); return; }
-        if (qty <= 0) { toast({ title: 'Quantity / days must be > 0', variant: 'destructive' }); return; }
-        if (rate < 0) { toast({ title: 'Rate cannot be negative', variant: 'destructive' }); return; }
+        const currentCharge = buildCurrentCharge();
+        const charges = [...stagedItems.map(s => s.charge), ...(currentCharge ? [currentCharge] : [])];
+        if (charges.length === 0) {
+            toast({ title: 'Add at least one item', variant: 'destructive' });
+            return;
+        }
 
         setSubmitting(true);
         try {
-            const manualGst = parseFloat(manualGstRate || '');
-            const manualInc = parseFloat(manualIncentive || '');
-            let charge: AddChargeEventRequest['charges'][number];
-            if (source === 'bed' && selectedBed) {
-                charge = {
-                    displayName: bedLabel,
-                    qty,
-                    rate,
-                    discountPercent,
-                    categoryCode: 'BED',
-                    incentiveAmount: selectedBed.incentiveAmount ? selectedBed.incentiveAmount * qty : undefined,
-                };
-            } else if (source === 'manual') {
-                charge = {
-                    displayName: manualName.trim(), qty, rate, discountPercent, categoryCode: manualCategory,
-                    gstRate: Number.isFinite(manualGst) && manualGst > 0 ? manualGst : undefined,
-                    incentiveAmount: Number.isFinite(manualInc) && manualInc > 0 ? manualInc : undefined,
-                };
-            } else {
-                charge = { chargeId: selectedMaster!.chargeId, displayName: selectedMaster!.displayName ?? '', qty, rate, discountPercent, categoryCode: selectedMaster!.categoryCode ?? 'OTHER' };
-            }
             const hospitalId = useAuthStore.getState().getHospitalId() ?? undefined;
-            // Optimistic UI (online): show the charge in the ledger immediately; roll back on failure.
+            // Optimistic UI (online): show the charge(s) in the ledger instantly; roll back on failure.
             const rollback = isReachable()
-                ? onOptimistic?.([{ displayName: charge.displayName, qty, rate, discountPercent, categoryCode: charge.categoryCode }])
+                ? onOptimistic?.(charges.map(c => ({ displayName: c.displayName, qty: c.qty, rate: c.rate, discountPercent: c.discountPercent, categoryCode: c.categoryCode })))
                 : undefined;
             // Add-charge is safe to queue offline (it targets an existing, already-synced encounter
             // and the backend appends). Payments/finalize stay online-only.
@@ -230,17 +277,17 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                     client: 'ipd',
                     method: 'post',
                     url: 'charge/add-event',
-                    data: { patientId, encounterId, charges: [charge], hospitalId },
-                    label: `Charge · ${charge.displayName}`,
+                    data: { patientId, encounterId, charges, hospitalId },
+                    label: charges.length > 1 ? `${charges.length} charges` : `Charge · ${charges[0].displayName}`,
                     hospitalId,
-                    run: () => ipdBillingService.addChargeEvents({ patientId, encounterId, charges: [charge] }),
+                    run: () => ipdBillingService.addChargeEvents({ patientId, encounterId, charges }),
                     synthetic: () => ({ success: true, message: 'Queued offline' }),
                 });
                 if (queued) {
-                    toast({ title: 'Saved offline', description: `${charge.displayName} will be added when you're back online.` });
+                    toast({ title: 'Saved offline', description: `${charges.length} item${charges.length === 1 ? '' : 's'} will be added when you're back online.` });
                 } else {
                     if (!res?.success) throw new Error(res?.message ?? 'Could not add charge');
-                    toast({ title: 'Charge added', description: charge.displayName });
+                    toast({ title: charges.length > 1 ? `${charges.length} items added` : 'Charge added', description: charges.length === 1 ? charges[0].displayName : undefined });
                 }
             } catch (mutErr) {
                 rollback?.();
@@ -268,7 +315,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                         </div>
                         <div>
                             <SheetTitle className="text-white text-lg font-bold">Add Item</SheetTitle>
-                            <p className="text-brand-50/90 text-xs mt-0.5">Pick from the catalog, a bed by date range, or type a custom item</p>
+                            <p className="text-brand-50/90 text-xs mt-0.5">Pick from the catalog, a bed by date range, or a custom item — add as many as you need</p>
                         </div>
                     </div>
                 </div>
@@ -447,12 +494,34 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                             </div>
                         )}
                     </div>
+
+                    {/* Stage this item and keep picking — submitted together as one batch. */}
+                    <Button type="button" variant="outline" onClick={addAnother} disabled={!canSubmit || submitting} className="w-full rounded-xl border-brand-200 text-brand-700 hover:bg-brand-50">
+                        <Plus className="h-4 w-4 mr-1.5" /> Add another item
+                    </Button>
+
+                    {stagedItems.length > 0 && (
+                        <div className="rounded-xl border border-brand-200 bg-brand-50/40 p-2 space-y-1.5">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700 px-1">Staged ({stagedItems.length})</p>
+                            {stagedItems.map(item => (
+                                <div key={item.key} className="flex items-center justify-between gap-2 bg-white rounded-lg border border-slate-200 px-2.5 py-1.5">
+                                    <span className="text-xs font-medium text-slate-700 truncate">{item.charge.displayName}</span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-xs font-bold tabular-nums text-slate-700">₹{item.net.toFixed(2)}</span>
+                                        <button type="button" onClick={() => removeStaged(item.key)} className="text-slate-400 hover:text-rose-600 text-sm leading-none" title="Remove">✕</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting || !canSubmit} className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20">
-                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Item</>}
+                    <Button onClick={submit} disabled={submitting || (stagedItems.length === 0 && !canSubmit)} className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20">
+                        {submitting
+                            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</>
+                            : <><Plus className="h-4 w-4 mr-2" />{stagedItems.length > 0 ? `Add ${stagedItems.length + (canSubmit ? 1 : 0)} Items` : 'Add Item'}</>}
                     </Button>
                 </div>
             </SheetContent>
