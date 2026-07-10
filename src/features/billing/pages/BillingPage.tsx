@@ -28,7 +28,7 @@ import { debounce } from 'lodash';
 import { patientService } from '../services/patientService';
 import {
     ipdBillingService,
-    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse,
+    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse, type PaymentMode,
 } from '../services/ipdBillingService';
 import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import { offlineCachedRead, isReachable } from '@/offline';
@@ -118,6 +118,7 @@ export const BillingPage: React.FC = () => {
     const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
     const [voidReason, setVoidReason] = useState('');
     const [voidBusy, setVoidBusy] = useState(false);
+    const [instantRefundBusy, setInstantRefundBusy] = useState(false);
 
     // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
     const [showDayWise, setShowDayWise] = useState(false);
@@ -266,6 +267,41 @@ export const BillingPage: React.FC = () => {
             toast({ title: 'Could not delete', description: e?.message ?? '', variant: 'destructive' });
         } finally {
             setVoidBusy(false);
+        }
+    };
+
+    // One-click refund of the whole available credit, straight from the top-of-ledger badge.
+    // Uses the RAW ledger balance (totals.balance), never `due` — `due` nets out an invoice-level
+    // discount, which was never real cash collected and so can never be refunded (see the
+    // AddPaymentDialog netBalance fix above for the same distinction).
+    const handleInstantRefund = async () => {
+        if (!selectedPatient || !selectedEncounterId || instantRefundBusy) return;
+        const creditAmount = -totals.balance;
+        if (creditAmount <= 0) return;
+        if (!window.confirm(`Refund ₹${creditAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} to the patient now?`)) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Processing a refund requires an internet connection.', variant: 'destructive' }); return; }
+        setInstantRefundBusy(true);
+        try {
+            // Mirror the mode of the most recent real payment (same convention as the
+            // auto-refund-on-cancel flow), so the receipt makes sense — default to CASH.
+            const priorPayments = (eventsData?.payments ?? [])
+                .filter(p => p.paymentType !== 'REFUND')
+                .slice()
+                .sort((a, b) => new Date(b.createdDateTime).getTime() - new Date(a.createdDateTime).getTime());
+            const lastMode = (priorPayments[0]?.paymentMode as PaymentMode) || 'CASH';
+
+            const res: any = await ipdBillingService.addPayment({
+                patientId: selectedPatient.patientId,
+                encounterId: selectedEncounterId,
+                payment: { paymentType: 'REFUND', paymentMode: lastMode, amount: creditAmount },
+            });
+            if (!res?.success) throw new Error(res?.message ?? 'Could not process refund');
+            toast({ title: 'Refund processed', description: `₹${creditAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} refunded (${lastMode}).` });
+            loadEvents();
+        } catch (e: any) {
+            toast({ title: 'Could not process refund', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setInstantRefundBusy(false);
         }
     };
 
@@ -550,18 +586,36 @@ export const BillingPage: React.FC = () => {
                                 </Button>
                             </div>
 
-                            {due !== 0 && (
-                                <div className={cn(
-                                    'flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2',
-                                    due < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'
-                                )}>
-                                    {due < 0 ? <Wallet className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                            {totals.balance < 0 ? (
+                                // Real, refundable credit (raw ledger — never the discount-adjusted
+                                // `due`, which can show a phantom credit that was never real cash
+                                // collected and so can never actually be refunded).
+                                <button
+                                    type="button"
+                                    onClick={handleInstantRefund}
+                                    disabled={instantRefundBusy}
+                                    title="Click to refund this credit instantly"
+                                    className={cn(
+                                        'flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2 transition-colors',
+                                        'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400',
+                                        'disabled:opacity-60 disabled:cursor-wait'
+                                    )}
+                                >
+                                    {instantRefundBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-[11px] font-bold tracking-wider uppercase">Credit · tap to refund</span>
+                                        <span className="text-sm font-bold tabular-nums">₹ {Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </button>
+                            ) : due > 0 ? (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2 bg-rose-50 border-rose-300 text-rose-700">
+                                    <TrendingDown className="h-4 w-4" />
                                     <div className="flex flex-col">
-                                        <span className="text-[11px] font-bold tracking-wider uppercase">{due < 0 ? 'Credit' : 'Due'}</span>
-                                        <span className="text-sm font-bold tabular-nums">₹ {Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        <span className="text-[11px] font-bold tracking-wider uppercase">Due</span>
+                                        <span className="text-sm font-bold tabular-nums">₹ {due.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
                     )}
                 </div>
