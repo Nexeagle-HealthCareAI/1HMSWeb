@@ -61,6 +61,7 @@ import { TokenPrintModal } from './TokenPrintModal';
 import { DashboardQuickGuide } from './DashboardQuickGuide';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
+import { ConfirmPreAppointmentDialog } from './ConfirmPreAppointmentDialog';
 import { PatientForm } from './PatientForm';
 import { format as dateFnsFormat } from 'date-fns';
 
@@ -149,6 +150,8 @@ export const AppointmentDashboard = () => {
   const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
+  const [showConfirmPreAppointmentDialog, setShowConfirmPreAppointmentDialog] = useState(false);
+  const [appointmentToConfirm, setAppointmentToConfirm] = useState<AppointmentDetail | null>(null);
   const [showEditAppointment, setShowEditAppointment] = useState(false);
   const [appointmentToEdit, setAppointmentToEdit] = useState<AppointmentDetail | null>(null);
   const [showQuickGuide, setShowQuickGuide] = useState(false);
@@ -228,6 +231,16 @@ export const AppointmentDashboard = () => {
     if (refetch) refetch();
   };
 
+  const handleConfirmPreAppointmentClick = (appointment: AppointmentDetail) => {
+    setAppointmentToConfirm(appointment);
+    setShowConfirmPreAppointmentDialog(true);
+  };
+
+  const handleConfirmPreAppointmentSuccess = () => {
+    // Refresh list after successfully confirming a pre-appointment
+    if (refetch) refetch();
+  };
+
   const handleEditClick = (appointment: AppointmentDetail) => {
     setAppointmentToEdit(appointment);
     setShowEditAppointment(true);
@@ -249,9 +262,19 @@ export const AppointmentDashboard = () => {
       COMPLETED: t('appointmentDashboard.statusLabels.completed'),
       SCHEDULED: t('appointmentDashboard.statusLabels.scheduled'),
       CANCELLED: t('appointmentDashboard.statusLabels.cancelled'),
+      PRE_APPOINTMENT: t('appointmentDashboard.statusLabels.preAppointment', { defaultValue: 'Pre-Appointment' }),
     } as Record<string, string>;
 
     switch (status) {
+      case 'PRE_APPOINTMENT':
+        return (
+          <Badge
+            className="bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
+            onClick={() => appointment && handleConfirmPreAppointmentClick(appointment)}
+          >
+            {statusLabels.PRE_APPOINTMENT}
+          </Badge>
+        );
       case 'VITALS_REQUIRED':
         return (
           <Badge
@@ -965,6 +988,7 @@ export const AppointmentDashboard = () => {
       total: 0,
       vitalsRequired: 0,
       completed: 0,
+      preAppointment: 0,
       doctorStats: [] as { name: string; count: number; noShowCount: number }[]
     };
 
@@ -997,6 +1021,7 @@ export const AppointmentDashboard = () => {
       total: currentViewAppointments.length,
       vitalsRequired: currentViewAppointments.filter(apt => apt.finalStatusCode === 'VITALS_REQUIRED').length,
       completed: currentViewAppointments.filter(apt => apt.finalStatusCode === 'COMPLETED').length,
+      preAppointment: currentViewAppointments.filter(apt => apt.finalStatusCode === 'PRE_APPOINTMENT').length,
       doctorStats
     };
   }, [appointments]);
@@ -1291,6 +1316,23 @@ export const AppointmentDashboard = () => {
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
           </div>
 
+          {/* Pre-Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
+          {kpiStats.preAppointment > 0 && (
+            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                <CalendarClock className="h-20 w-20 text-amber-500 -rotate-12" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-4 mb-3 relative z-10">
+                <div className="p-2.5 bg-amber-100 dark:bg-amber-500/20 rounded-xl shadow-inner ring-1 ring-amber-500/30 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 text-amber-600 dark:text-amber-400">
+                  <CalendarClock className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' })}</span>
+              </div>
+              <div className="text-4xl font-mono font-black text-amber-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all">{kpiStats.preAppointment}</div>
+            </div>
+          )}
+
           {activeTab !== 'future' && (
             <>
               {/* Vitals Required (No Show for Past) */}
@@ -1451,7 +1493,8 @@ export const AppointmentDashboard = () => {
                     { key: 'LAB_REQUIRED', label: t('appointmentDashboard.statusFilters.labRequired'), color: 'bg-orange-100 text-orange-700 border-orange-200/50 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800/50 hover:bg-orange-200' },
                     { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200/50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 hover:bg-yellow-200' },
                     { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-200' },
-                    { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300/50 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 hover:bg-gray-200' }
+                    { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300/50 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 hover:bg-gray-200' },
+                    { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
                       const appointmentStartDate = new Date(a.startAt);
@@ -1805,6 +1848,17 @@ export const AppointmentDashboard = () => {
                                       {t('appointmentDashboard.actionButtons.vitals')}
                                     </Button>
                                   )}
+                                  {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleConfirmPreAppointmentClick(appointment)}
+                                      className="h-7 px-2.5 text-xs font-bold text-amber-600 border-amber-200 dark:border-amber-800/50 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-amber-300 dark:hover:border-amber-700 transition-all duration-300"
+                                    >
+                                      <CheckCircle2 className="h-3 w-3 mr-1.5 opacity-80" />
+                                      {t('appointmentDashboard.actionButtons.confirmPreAppointment', { defaultValue: 'Confirm' })}
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1963,6 +2017,12 @@ export const AppointmentDashboard = () => {
                           {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                             <Button variant="outline" size="sm" onClick={() => handleVitalsClick(appointment)} className="h-9 text-xs font-bold rounded-xl border-fuchsia-200 text-fuchsia-700 bg-white hover:bg-fuchsia-50 hover:border-fuchsia-300 transition-all shadow-sm">
                               <Heart className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Vitals
+                            </Button>
+                          )}
+
+                          {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
+                            <Button variant="outline" size="sm" onClick={() => handleConfirmPreAppointmentClick(appointment)} className="h-9 text-xs font-bold rounded-xl border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm">
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Confirm
                             </Button>
                           )}
 
@@ -2526,6 +2586,16 @@ export const AppointmentDashboard = () => {
             appointment={appointmentToReschedule}
             onSuccess={handleRescheduleSuccess}
             enableDoctorSelection={true}
+          />
+        )
+      }
+      {
+        appointmentToConfirm && (
+          <ConfirmPreAppointmentDialog
+            open={showConfirmPreAppointmentDialog}
+            onOpenChange={setShowConfirmPreAppointmentDialog}
+            appointment={appointmentToConfirm}
+            onSuccess={handleConfirmPreAppointmentSuccess}
           />
         )
       }

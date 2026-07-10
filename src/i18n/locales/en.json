@@ -585,7 +585,8 @@
       "labRequired": "Lab Required",
       "awaitingReconsult": "Awaiting Reconsult",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "preAppointment": "Pre-Appointment"
     },
     "statusLabels": {
       "vitalsRequired": "Vitals",
@@ -595,7 +596,8 @@
       "awaitingReconsult": "Reconsult",
       "completed": "Done",
       "scheduled": "Scheduled",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "preAppointment": "Pre-Appointment"
     },
     "refreshNow": "Refresh Now",
     "loadingAppointments": "Loading appointments...",
@@ -667,7 +669,8 @@
       "vitals": "Vitals",
       "preparing": "Preparing",
       "notApplicable": "NA",
-      "completed": "Completed"
+      "completed": "Completed",
+      "confirmPreAppointment": "Confirm"
     },
     "toast": {
       "missingHospitalTitle": "Missing hospital context",
@@ -3193,6 +3196,7 @@
       "completed": "Completed",
       "scheduled": "Scheduled",
       "cancelled": "Cancelled",
+      "preAppointment": "Pre-Appointment",
       "default": "{{status}}"
     },
     "sync": {

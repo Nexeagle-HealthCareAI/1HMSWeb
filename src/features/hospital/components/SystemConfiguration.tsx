@@ -6,11 +6,13 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard
+  LayoutDashboard,
+  KeyRound
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
+import { PublicApiClientConfig } from './PublicApiClientConfig';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,6 +44,12 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         label: t('systemConfiguration.navigation.branding.label'),
         description: t('systemConfiguration.navigation.branding.description'),
         icon: Palette,
+      },
+      {
+        id: 'publicApi',
+        label: t('systemConfiguration.navigation.publicApi.label', { defaultValue: 'Public API' }),
+        description: t('systemConfiguration.navigation.publicApi.description', { defaultValue: 'External booking integrations' }),
+        icon: KeyRound,
       }
     ] as const,
     [t]
@@ -156,6 +164,10 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 branding={hospitalBranding}
                 onBrandingChange={handleBrandingChange}
               />
+            </TabsContent>
+
+            <TabsContent value="publicApi">
+              <PublicApiClientConfig />
             </TabsContent>
           </Tabs>
         </div>

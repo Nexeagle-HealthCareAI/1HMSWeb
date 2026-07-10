@@ -147,7 +147,8 @@ interface PatientAppointment {
   | 'AWAITING_RECONSULT'
   | 'COMPLETED'
   | 'SCHEDULED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'PRE_APPOINTMENT';
   appointmentType: string | null;
   phone?: string;
 }
@@ -483,6 +484,8 @@ export const ClinicalDashboard: React.FC = () => {
         return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.scheduled')}</Badge>;
       case 'CANCELLED':
         return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.cancelled')}</Badge>;
+      case 'PRE_APPOINTMENT':
+        return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.preAppointment')}</Badge>;
       default:
         return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.default', { status })}</Badge>;
     }

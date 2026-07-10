@@ -472,4 +472,17 @@ export const appointmentApi = {
     const url = `/appointments/reschedule`;
     return apiClient.put(url, request);
   },
+
+  // Front-desk "Confirm" action for a PRE_APPOINTMENT row created via the public (Nexeagle)
+  // booking API — picks a real time slot (from actual availability) and allocates a token.
+  // Nothing was reserved when the pre-appointment was first submitted publicly.
+  confirmPreAppointment: (request: {
+    appointmentId: string;
+    hospitalId: string;
+    startAt: string; // ISO datetime — the receptionist-chosen slot
+    slotTimeInMinutes?: number;
+  }): Promise<{ success: boolean; message?: string; appointmentId?: string; status?: string; tokenNumber?: number }> => {
+    const url = `/appointments/confirm-pre-appointment`;
+    return apiClient.put(url, request);
+  },
 };
