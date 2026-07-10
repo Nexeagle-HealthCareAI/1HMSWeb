@@ -9,21 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, UserPlus, Loader2, RefreshCw, BedDouble, XCircle, CalendarClock, Search } from 'lucide-react';
 import { admissionReferralApi, AdmissionReferralItem, CaseType, ReferralStatus } from '../services/admissionReferralApi';
+import { STATUS_TONE, STATUS_LABEL } from '../utils/referralStatus';
 
 interface Props {
     onBack: () => void;
     onAdmitReferral: (referral: AdmissionReferralItem) => void;
 }
 
-const STATUS_TONE: Record<ReferralStatus, string> = {
-    PENDING: 'border-sky-200 bg-sky-50 text-sky-700',
-    CONVERTED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    NOT_ADMITTED: 'border-slate-200 bg-slate-100 text-slate-500',
-    FOLLOW_UP: 'border-amber-200 bg-amber-50 text-amber-700',
-};
-const STATUS_LABEL: Record<ReferralStatus, string> = {
-    PENDING: 'Pending', CONVERTED: 'Converted', NOT_ADMITTED: 'Not Admitted', FOLLOW_UP: 'Follow-up',
-};
 const CASE_TONE: Record<CaseType, string> = {
     EMERGENCY: 'border-rose-200 bg-rose-50 text-rose-700',
     URGENT: 'border-amber-200 bg-amber-50 text-amber-700',

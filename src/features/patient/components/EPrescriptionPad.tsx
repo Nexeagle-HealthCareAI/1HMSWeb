@@ -42,6 +42,7 @@ import { PatientTimeline } from './PatientTimeline';
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
 import { VoiceRxSheet } from './VoiceRxSheet';
 import { AdviseAdmissionSheet } from './AdviseAdmissionSheet';
+import { AdmissionStatusBanner } from './AdmissionStatusBanner';
 import type { VoiceRxFields } from '../services/voiceRxApi';
 import { DrawingGallerySection } from './DrawingBoard/DrawingGallerySection';
 
@@ -2322,6 +2323,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           <div className="flex-1 overflow-visible">
             {/* flex-col + per-section CSS `order` lets the doctor's personalized field order drive layout */}
             <div className="w-full flex flex-col gap-4">
+              <AdmissionStatusBanner hospitalId={getHospitalId?.() || ''} patientId={resolvedPatientId} />
               {/* Top Action Bar — pinned above all sections */}
               <div className="flex justify-end gap-2 mb-2" style={{ order: -1 }}>
                 <VoiceRxSheet
