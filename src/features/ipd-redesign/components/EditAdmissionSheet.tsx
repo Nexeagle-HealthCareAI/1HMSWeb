@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Loader2, Stethoscope, Wallet } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem } from '../services/admissionApi';
+import { useAuthStore } from '@/store/authStore';
 
 export const PAYER_TYPES = [
     { value: 'CASH', label: 'Cash' },
@@ -82,14 +83,21 @@ interface Props {
 
 export const EditAdmissionSheet: React.FC<Props> = ({ open, onOpenChange, admission, onUpdated }) => {
     const { toast } = useToast();
+    const { getHospitalId } = useAuthStore();
     const [form, setForm] = useState<DetailsFormState | null>(null);
     const set = <K extends keyof DetailsFormState>(k: K, v: DetailsFormState[K]) => setForm(f => f ? ({ ...f, [k]: v }) : null);
     const [saving, setSaving] = useState(false);
     const [doctors, setDoctors] = useState<HospitalDoctorItem[]>([]);
 
+    // Only fetch once the sheet is actually opened (it's always mounted by the dashboard, even
+    // when closed) — and skip if hospitalId isn't ready yet, so this can never throw synchronously
+    // past the .catch() below and crash the whole dashboard tree.
     useEffect(() => {
-        admissionApi.getHospitalDoctors().then(setDoctors).catch(() => setDoctors([]));
-    }, []);
+        if (!open) return;
+        const hospitalId = getHospitalId?.();
+        if (!hospitalId) return;
+        admissionApi.getHospitalDoctors(hospitalId).then(setDoctors).catch(() => setDoctors([]));
+    }, [open, getHospitalId]);
 
     useEffect(() => {
         if (open && admission) {

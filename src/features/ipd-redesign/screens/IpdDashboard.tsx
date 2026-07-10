@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/authStore';
 import { PrintDischargeButton } from '../components/PrintDischargeButton';
 import { PrintAdmissionButton } from '../components/PrintAdmissionButton';
 import { PrintTokenButton } from '../components/PrintTokenButton';
@@ -75,6 +76,10 @@ interface Props {
  */
 export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenReferredAdmissions, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
+    // Reactive (not a one-off getHospitalId() grab) so that if this screen mounts before the
+    // persisted auth store finishes hydrating hospitalId, load() below re-runs automatically the
+    // moment it becomes available instead of throwing synchronously and crashing the dashboard.
+    const { hospitalId } = useAuthStore();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
     const [activeAdmissions, setActiveAdmissions] = useState<ActiveAdmissionItem[]>([]);
@@ -98,10 +103,13 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const [cancellingAdmission, setCancellingAdmission] = useState(false);
 
     const load = () => {
+        // hospitalId isn't ready yet (e.g. auth store still hydrating on first mount) — skip for
+        // now; the effect below re-runs load() automatically once hospitalId becomes available.
+        if (!hospitalId) return;
         setLoading(true);
-        
+
         if (statusFilter === 'ACTIVE') {
-            admissionApi.getActiveAdmissions('ACTIVE')
+            admissionApi.getActiveAdmissions('ACTIVE', hospitalId)
                 .then(active => {
                     setAdmissions(active);
                     setActiveAdmissions(active);
@@ -110,8 +118,8 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                 .finally(() => setLoading(false));
         } else {
             Promise.all([
-                admissionApi.getActiveAdmissions(statusFilter),
-                admissionApi.getActiveAdmissions('ACTIVE'),
+                admissionApi.getActiveAdmissions(statusFilter, hospitalId),
+                admissionApi.getActiveAdmissions('ACTIVE', hospitalId),
             ])
                 .then(([list, active]) => {
                     setAdmissions(list);
@@ -122,7 +130,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
         }
     };
 
-    useEffect(() => { load(); }, [refreshSignal, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { load(); }, [refreshSignal, statusFilter, hospitalId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openConfirmArrival = (a: ActiveAdmissionItem) => {
         setConfirmArrivalTarget(a);

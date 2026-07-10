@@ -91,6 +91,11 @@ export interface ReceiptPrintData {
     invoiceTotal: number;
     invoiceBalanceBefore: number;
     invoiceBalanceAfter: number;
+    // Services billed on the invoice this receipt belongs to, with per-line + overall discount —
+    // shown on the receipt so the patient can see what they paid for, not just the total.
+    items: PrintItem[];
+    subTotal: number;
+    discountTotal: number;
 }
 
 export interface BillCumReceiptPrintData {
