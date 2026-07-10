@@ -90,16 +90,25 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
         });
     }, [catalog, search, appliesToFilter]);
 
-    const pickFromCatalog = (c: ChargeMaster, lineKey: string) => {
-        setLines(prev => prev.map(l => l.key === lineKey ? {
-            ...l,
-            chargeId: c.chargeId,
-            displayName: c.displayName ?? '',
-            categoryCode: c.categoryCode ?? 'OTHER',
-            qty: c.defaultQty || 1,
-            rate: c.defaultRate || 0,
-            discountPercent: 0,
-        } : l));
+    // Fills the last row if it's still empty; otherwise appends a new row — so clicking several
+    // catalog items in a row builds up a multi-charge batch instead of each pick silently
+    // overwriting the previous one.
+    const pickFromCatalog = (c: ChargeMaster) => {
+        setLines(prev => {
+            const last = prev[prev.length - 1];
+            const filled: Partial<DraftLine> = {
+                chargeId: c.chargeId,
+                displayName: c.displayName ?? '',
+                categoryCode: c.categoryCode ?? 'OTHER',
+                qty: c.defaultQty || 1,
+                rate: c.defaultRate || 0,
+                discountPercent: 0,
+            };
+            if (last && !last.displayName.trim()) {
+                return prev.map(l => l.key === last.key ? { ...l, ...filled } : l);
+            }
+            return [...prev, { ...newLine(), ...filled }];
+        });
     };
 
     const updateLine = (key: string, patch: Partial<DraftLine>) => {
@@ -205,7 +214,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                                 <button
                                     key={c.chargeId}
                                     type="button"
-                                    onClick={() => pickFromCatalog(c, lines[lines.length - 1].key)}
+                                    onClick={() => pickFromCatalog(c)}
                                     className="w-full text-left rounded-lg p-2.5 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors group"
                                 >
                                     <div className="flex items-start justify-between gap-2">

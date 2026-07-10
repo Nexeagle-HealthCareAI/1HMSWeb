@@ -34,6 +34,7 @@ import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import { offlineCachedRead, isReachable } from '@/offline';
 import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
+import { AddChargesModal } from '../components/AddChargesModal';
 import { EditChargeDialog } from '../components/dialogs/EditChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
 import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
@@ -110,6 +111,7 @@ export const BillingPage: React.FC = () => {
 
     // Dialogs
     const [showAddCharge, setShowAddCharge] = useState(false);
+    const [showAddChargesModal, setShowAddChargesModal] = useState(false);
     const [editChargeTarget, setEditChargeTarget] = useState<{ chargeEventId: string; displayName?: string; qty: number; rate: number; discountAmount: number } | null>(null);
     const [showAddPayment, setShowAddPayment] = useState(false);
     const [showNewVisit, setShowNewVisit] = useState(false);
@@ -986,6 +988,10 @@ export const BillingPage: React.FC = () => {
                             <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]">
                                 <Plus className="h-4 w-4 mr-1" /> Add Item
                             </Button>
+                            {/* Bulk entry: pick several catalog items (or type one-off lines) and post them together. */}
+                            <Button onClick={() => setShowAddChargesModal(true)} disabled={!selectedEncounterId || isFinalized} variant="outline" className="h-10 rounded-xl border-brand-200 text-brand-700 hover:bg-brand-50">
+                                <Plus className="h-4 w-4 mr-1" /> Add Multiple
+                            </Button>
                             {/* Payments are decoupled from finalize: a finalized invoice can still be
                                 collected against until the balance is settled (charges stay locked). */}
                             <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || (isFinalized && due <= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
@@ -1077,6 +1083,15 @@ export const BillingPage: React.FC = () => {
                     encounterId={selectedEncounterId}
                     onSaved={handleChargeSaved}
                     onOptimistic={applyOptimisticCharges}
+                />
+            )}
+            {selectedPatient && selectedEncounterId && (
+                <AddChargesModal
+                    open={showAddChargesModal}
+                    onOpenChange={setShowAddChargesModal}
+                    patientId={selectedPatient.patientId}
+                    encounterId={selectedEncounterId}
+                    onCharged={handleChargeSaved}
                 />
             )}
             <EditChargeDialog
