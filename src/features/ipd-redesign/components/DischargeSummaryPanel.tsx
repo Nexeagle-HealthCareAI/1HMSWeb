@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocu
 import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
 import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
+import { DischargeMedicationsEditor } from './DischargeMedicationsEditor';
 import { DischargeFieldLayoutEditor } from './DischargeFieldLayoutEditor';
 import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import type { DischargeFieldConfigItem } from '../services/dischargeFieldLayoutApi';
@@ -38,6 +39,7 @@ const EMPTY_FORM: SaveDischargeSummaryFields = {};
 export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, onDischarged }) => {
     const { toast } = useToast();
     const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
+    const medicationSearchDoctorId = admission.primaryDoctorId || useAuthStore.getState().doctorId || '';
     const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
 
     const [loading, setLoading] = useState(true);
@@ -46,6 +48,8 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [signedAt, setSignedAt] = useState<string | null>(null);
     const [form, setForm] = useState<SaveDischargeSummaryFields>({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
+    const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const lastSavedRef = useRef<string>('');
     const [signOpen, setSignOpen] = useState(false);
     const [signing, setSigning] = useState(false);
     const [unsigning, setUnsigning] = useState(false);
@@ -108,6 +112,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     proceduresPerformed: draft.proceduresPerformed ?? undefined,
                     conditionAtDischarge: (draft.conditionAtDischarge as ConditionAtDischarge) ?? undefined,
                     dischargeMedications: draft.dischargeMedications ?? undefined,
+                    medications: draft.medications ?? [],
                     followUpInstructions: draft.followUpInstructions ?? undefined,
                     followUpDate: draft.followUpDate ?? undefined,
                     dietInstructions: draft.dietInstructions ?? undefined,
@@ -120,6 +125,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     };
 
     useEffect(() => { load(); }, [admission.admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Snapshot the just-loaded draft as "already saved" once loading settles, so the auto-save
+    // effect below doesn't immediately fire for data that just came from the server.
+    useEffect(() => {
+        if (!loading) lastSavedRef.current = JSON.stringify(form);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading]);
 
     const reloadCoverageUtilization = () =>
         irdaiDischargeApi.getCoverageUtilization(admission.admissionId).then(setCoverageUtilization).catch(() => setCoverageUtilization(null));
@@ -137,6 +149,8 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         setSaving(true);
         try {
             await dischargeSummaryApi.save(admission.admissionId, form);
+            lastSavedRef.current = JSON.stringify(form);
+            setAutoSaveStatus('saved');
             toast({ title: 'Discharge summary saved.' });
         } catch (err) {
             toast({ title: 'Could not save', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
@@ -144,6 +158,29 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             setSaving(false);
         }
     };
+
+    // Auto-save — same design as the e-prescription pad's AutoSaveHandler (2s debounce, only fires
+    // when something actually changed since the last save), reimplemented locally here rather than
+    // shared, since EPrescriptionPad's version is hand-rolled around its own data shape.
+    useEffect(() => {
+        if (loading || isSigned) return;
+        const snapshot = JSON.stringify(form);
+        if (snapshot === lastSavedRef.current) return;
+
+        const timer = setTimeout(async () => {
+            setAutoSaveStatus('saving');
+            try {
+                await dischargeSummaryApi.save(admission.admissionId, form);
+                lastSavedRef.current = snapshot;
+                setAutoSaveStatus('saved');
+            } catch {
+                setAutoSaveStatus('error');
+            }
+        }, 2000);
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form, loading, isSigned, admission.admissionId]);
 
     const confirmSign = async () => {
         setSigning(true);
@@ -405,7 +442,15 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             case 'proceduresPerformed':
                 return <TextField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} />;
             case 'dischargeMedications':
-                return <TextField label={label} value={form.dischargeMedications} readOnly={isSigned} onChange={v => setField({ dischargeMedications: v })} />;
+                return (
+                    <DischargeMedicationsEditor
+                        value={form.medications ?? []}
+                        onChange={meds => setField({ medications: meds })}
+                        hospitalId={hospitalId}
+                        doctorId={medicationSearchDoctorId}
+                        disabled={isSigned}
+                    />
+                );
             case 'followUpInstructions':
                 return <TextField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} rows={2} />;
             case 'followUpDate':
@@ -550,7 +595,16 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 </div>
 
                 {!isSigned && isActive && (
-                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <div className="flex justify-end items-center gap-3 pt-2 border-t border-slate-100">
+                        {!saving && autoSaveStatus === 'saving' && (
+                            <span className="text-xs text-slate-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>
+                        )}
+                        {!saving && autoSaveStatus === 'saved' && (
+                            <span className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> Saved</span>
+                        )}
+                        {!saving && autoSaveStatus === 'error' && (
+                            <span className="text-xs text-red-500" title="Could not save. It will retry automatically on your next edit.">Save failed</span>
+                        )}
                         <Button variant="outline" disabled={saving} onClick={save}>
                             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Save draft
                         </Button>
