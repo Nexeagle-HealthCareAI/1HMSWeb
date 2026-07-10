@@ -443,7 +443,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                         {needsApproval && (
                             <div className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
                                 <span>⚠</span>
-                                <span>Discount {discountPercent.toFixed(1)}% exceeds the {cap}% cap for this charge — it will need approval before the bill can be finalized.</span>
+                                <span>Discount {discountPercent.toFixed(1)}% exceeds the usual {cap}% cap for this charge.</span>
                             </div>
                         )}
                     </div>

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
-    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, Check,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, Check, Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import { offlineCachedRead, isReachable } from '@/offline';
 import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
+import { EditChargeDialog } from '../components/dialogs/EditChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
 import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 import { VISIT_TYPES, visitTypeLabel } from '../utils/constants';
@@ -109,6 +110,7 @@ export const BillingPage: React.FC = () => {
 
     // Dialogs
     const [showAddCharge, setShowAddCharge] = useState(false);
+    const [editChargeTarget, setEditChargeTarget] = useState<{ chargeEventId: string; displayName?: string; qty: number; rate: number; discountAmount: number } | null>(null);
     const [showAddPayment, setShowAddPayment] = useState(false);
     const [showNewVisit, setShowNewVisit] = useState(false);
     const [newVisitType, setNewVisitType] = useState<'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'>('OPD');
@@ -251,20 +253,12 @@ export const BillingPage: React.FC = () => {
 
     const handleVoid = async () => {
         if (!voidConfirm || !selectedPatient || voidBusy) return;
-        if (!voidReason.trim()) {
-            toast({ title: 'Reason required', description: 'Explain why this entry should be deleted.', variant: 'destructive' });
-            return;
-        }
         setVoidBusy(true);
         try {
             const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
-            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId, voidReason.trim());
+            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId, voidReason.trim() || undefined);
             if (res?.success === false) throw new Error(res.message ?? 'Could not delete');
-            toast(
-                res?.pendingApproval
-                    ? { title: 'Submitted for approval', description: `An Admin/AdminDoctor needs to approve this ${voidConfirm.kind} deletion.` }
-                    : { title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` }
-            );
+            toast({ title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` });
             setVoidConfirm(null);
             setVoidReason('');
             loadEvents();
@@ -804,11 +798,16 @@ export const BillingPage: React.FC = () => {
                                                     {row.c.statusCode === 'VOID' ? <span className="text-slate-400 line-through font-medium">₹{Number(row.c.netAmount).toFixed(2)}</span> : `₹${Number(row.c.netAmount).toFixed(2)}`}
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
-                                                <td className="px-2 py-2 text-right">
+                                                <td className="px-2 py-2 text-right whitespace-nowrap">
                                                     {!isFinalized && row.c.statusCode !== 'VOID' && (
-                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
+                                                        <div className="inline-flex items-center gap-0.5">
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 })}>
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
@@ -1026,13 +1025,27 @@ export const BillingPage: React.FC = () => {
                     onOptimistic={applyOptimisticCharges}
                 />
             )}
+            <EditChargeDialog
+                open={!!editChargeTarget}
+                onOpenChange={(o) => { if (!o) setEditChargeTarget(null); }}
+                charge={editChargeTarget}
+                onSaved={handleChargeSaved}
+            />
             {selectedPatient && selectedEncounterId && (
                 <AddPaymentDialog
                     open={showAddPayment}
                     onOpenChange={setShowAddPayment}
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
-                    netBalance={due}
+                    // netBalance must be the RAW ledger balance (billed vs. actually collected),
+                    // matching what the backend's REFUND validation checks — `due` additionally
+                    // nets out an invoice-level discount, which was never real cash collected and so
+                    // can never be refunded. Passing `due` as netBalance made the "Credit available"
+                    // quick-fill show a discount as refundable credit, which the backend then
+                    // correctly rejected ("Available credit: 0"). `due` is still passed separately
+                    // as dueAmount so the "Balance Due" quick-fill keeps reflecting the discount.
+                    netBalance={totals.balance}
+                    dueAmount={due}
                     onSaved={handlePaymentSaved}
                 />
             )}
@@ -1160,22 +1173,22 @@ export const BillingPage: React.FC = () => {
                     </div>
                     <div className="px-5 py-4 space-y-3">
                         <AlertDialogDescription className="text-sm text-slate-600">
-                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This needs Admin/AdminDoctor approval before it takes effect.
+                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This takes effect immediately.
                         </AlertDialogDescription>
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-700">Reason (required)</label>
+                            <label className="text-xs font-semibold text-slate-700">Note <span className="text-slate-400 font-normal">(optional)</span></label>
                             <Textarea
                                 value={voidReason}
                                 onChange={(e) => setVoidReason(e.target.value)}
                                 rows={2}
-                                placeholder="Why should this be deleted?"
+                                placeholder="Why is this being deleted?"
                                 className="text-sm"
                             />
                         </div>
                     </div>
                     <AlertDialogFooter className="px-5 pb-5 pt-0">
                         <AlertDialogCancel disabled={voidBusy} className="rounded-xl">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handleVoid(); }} disabled={voidBusy || !voidReason.trim()} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
+                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handleVoid(); }} disabled={voidBusy} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
                             {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Request Delete</>}
                         </AlertDialogAction>
                     </AlertDialogFooter>

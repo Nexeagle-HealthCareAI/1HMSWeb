@@ -225,20 +225,12 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleVoid = async () => {
         if (!voidConfirm || !patientId || voidBusy) return;
-        if (!voidReason.trim()) {
-            toast({ title: 'Reason required', description: 'Explain why this entry should be deleted.', variant: 'destructive' });
-            return;
-        }
         setVoidBusy(true);
         try {
             const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
-            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, patientId, voidReason.trim());
+            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, patientId, voidReason.trim() || undefined);
             if (res?.success === false) throw new Error(res.message ?? 'Could not delete');
-            toast(
-                res?.pendingApproval
-                    ? { title: 'Submitted for approval', description: `An Admin/AdminDoctor needs to approve this ${voidConfirm.kind} deletion.` }
-                    : { title: voidConfirm.kind === 'charge' ? 'Charge removed' : 'Payment removed' }
-            );
+            toast({ title: voidConfirm.kind === 'charge' ? 'Charge removed' : 'Payment removed' });
             setVoidConfirm(null);
             setVoidReason('');
             await load(true);
@@ -817,16 +809,16 @@ export const EncounterBillingPage: React.FC = () => {
                         <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit.
-                            This needs Admin/AdminDoctor approval before it takes effect.
+                            This takes effect immediately.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-700">Reason (required)</label>
+                        <label className="text-xs font-semibold text-slate-700">Note <span className="text-slate-400 font-normal">(optional)</span></label>
                         <Textarea
                             value={voidReason}
                             onChange={e => setVoidReason(e.target.value)}
                             rows={2}
-                            placeholder="Why should this be deleted?"
+                            placeholder="Why is this being deleted?"
                             className="text-sm"
                         />
                     </div>
@@ -834,11 +826,11 @@ export const EncounterBillingPage: React.FC = () => {
                         <AlertDialogCancel disabled={voidBusy}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(e) => { e.preventDefault(); handleVoid(); }}
-                            disabled={voidBusy || !voidReason.trim()}
+                            disabled={voidBusy}
                             className="bg-rose-600 hover:bg-rose-700"
                         >
                             {voidBusy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Ban className="h-4 w-4 mr-1" />}
-                            Request Delete
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

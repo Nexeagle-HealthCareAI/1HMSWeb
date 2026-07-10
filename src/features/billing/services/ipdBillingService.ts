@@ -203,6 +203,36 @@ export interface AddChargeEventResponse {
     };
 }
 
+export interface UpdateChargeEventRequest {
+    hospitalId?: string;
+    patientId?: string;
+    chargeEventId: string;
+    displayName?: string;
+    qty: number;
+    rate: number;
+    discountPercent: number;
+}
+
+export interface UpdateChargeEventResponse {
+    success: boolean;
+    message?: string;
+    data?: {
+        charge?: {
+            chargeEventId: string;
+            displayName?: string;
+            qty: number;
+            unitPrice: number;
+            grossAmount: number;
+            discountAmount: number;
+            netAmount: number;
+        };
+        invoiceId?: string;
+        invoiceGrossAmount?: number;
+        invoiceDiscountAmount?: number;
+        invoiceNetAmount?: number;
+    };
+}
+
 export interface CancelChargeEventRequest {
     hospitalId?: string;
     patientId: string;
@@ -520,6 +550,14 @@ export const ipdBillingService = {
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),
 
+    // Corrects an already-posted charge line (qty/rate/discount/name) in place — no admin
+    // approval / discount-cap gate, that workflow was removed.
+    updateChargeEvent: (req: UpdateChargeEventRequest): Promise<UpdateChargeEventResponse> =>
+        ipdApiClient.put(IPD_API_ENDPOINTS.CHARGE.UPDATE_EVENT, {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
     cancelChargeEvent: (req: CancelChargeEventRequest): Promise<CancelChargeEventResponse> =>
         ipdApiClient.patch(IPD_API_ENDPOINTS.CHARGE.CANCEL_EVENT, {
             ...req,
@@ -553,7 +591,8 @@ export const ipdBillingService = {
     getPatientEvents: (patientId: string, hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.GET_PATIENT_EVENTS(patientId, hospitalIdOrThrow(hospitalId))),
 
-    deleteEvent: (eventId: string, type: 'Charges' | 'Payment', patientId: string, reason: string, hospitalId?: string): Promise<{ success: boolean; message?: string; pendingApproval?: boolean; creditApprovalId?: string }> =>
+    // Approval gating removed — deletion is immediate. reason is an optional audit note.
+    deleteEvent: (eventId: string, type: 'Charges' | 'Payment', patientId: string, reason?: string, hospitalId?: string): Promise<{ success: boolean; message?: string }> =>
         ipdApiClient.delete(IPD_API_ENDPOINTS.BILLING.DELETE_EVENT(hospitalIdOrThrow(hospitalId), patientId, eventId, type, reason)),
 
     dashboard: (hospitalId?: string) =>

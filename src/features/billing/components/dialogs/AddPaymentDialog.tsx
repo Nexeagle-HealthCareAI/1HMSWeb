@@ -16,13 +16,20 @@ export interface AddPaymentDialogProps {
     onOpenChange: (v: boolean) => void;
     patientId: string;
     encounterId: string;
-    // Raw signed balance for this encounter: positive = amount due, negative = credit
-    // already held on the account (available to refund).
+    // Raw signed ledger balance for this encounter (billed vs. actually collected), matching what
+    // the backend's REFUND validation checks against: positive = amount due, negative = credit
+    // already held (real, collected money — available to refund). Must NOT have a discount netted
+    // out here — a discount was never actual cash collected, so it can never be "refunded"; passing
+    // a discount-adjusted value made this button show a phantom credit the backend then rejected.
     netBalance: number;
+    // What to prefill "Balance Due · tap to fill" with — may differ from netBalance when an
+    // invoice-level discount applies (this is genuinely what the patient still owes to pay).
+    // Defaults to netBalance when omitted.
+    dueAmount?: number;
     onSaved: () => void;
 }
 
-export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, onSaved }) => {
+export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, dueAmount, onSaved }) => {
     const { toast } = useToast();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
@@ -31,6 +38,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
     const [transactionId, setTransactionId] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    const effectiveDue = dueAmount ?? netBalance;
     const availableCredit = netBalance < 0 ? Math.abs(netBalance) : 0;
     const exceedsCredit = paymentType === 'REFUND' && availableCredit > 0 && amount > availableCredit;
 
@@ -38,11 +46,11 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
         if (open) {
             setPaymentType('PAYMENT');
             setPaymentMode('CASH');
-            setAmount(Math.max(0, netBalance));
+            setAmount(Math.max(0, effectiveDue));
             setDescription('');
             setTransactionId('');
         }
-    }, [open, netBalance]);
+    }, [open, effectiveDue]);
 
     const submit = async () => {
         if (submitting) return;
@@ -98,14 +106,14 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {netBalance > 0 && (
+                    {effectiveDue > 0 && (
                         <button
                             type="button"
-                            onClick={() => setAmount(Math.max(0, netBalance))}
+                            onClick={() => setAmount(Math.max(0, effectiveDue))}
                             className="w-full flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-left hover:bg-emerald-50 transition-colors"
                         >
                             <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Balance Due · tap to fill</span>
-                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{netBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{effectiveDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </button>
                     )}
 
