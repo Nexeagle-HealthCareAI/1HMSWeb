@@ -978,10 +978,37 @@ export const BillingPage: React.FC = () => {
                             </div>
                             {isFinalized && (
                                 <div className="mt-3 flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — charges locked.{due > 0 ? ' Payments can still be collected until settled.' : ' Fully settled.'}
+                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — charges locked.
+                                    {due > 0 ? ' Payments can still be collected until settled.' : totals.balance < 0 ? ' Patient is in credit — refund available below.' : ' Fully settled.'}
                                 </div>
                             )}
                         </div>
+
+                        {/* Real, refundable credit — raw ledger balance (totals.balance), never the
+                            discount-adjusted `due` above, which can sit near zero even while real
+                            cash credit remains (see handleInstantRefund). Shown prominently here
+                            (not just the small header pill) so it's impossible to miss. */}
+                        {totals.balance < 0 && (
+                            <button
+                                type="button"
+                                onClick={handleInstantRefund}
+                                disabled={instantRefundBusy}
+                                className={cn(
+                                    'w-full flex items-center justify-between gap-2 rounded-2xl border px-4 py-3 text-left transition-colors',
+                                    'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 hover:from-emerald-100 hover:to-teal-100',
+                                    'disabled:opacity-60 disabled:cursor-wait',
+                                )}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    {instantRefundBusy ? <Loader2 className="h-5 w-5 text-emerald-700 animate-spin" /> : <Wallet className="h-5 w-5 text-emerald-700" />}
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Patient in credit</p>
+                                        <p className="text-[10px] text-emerald-600">Tap to refund instantly</p>
+                                    </div>
+                                </div>
+                                <span className="text-lg font-black tabular-nums text-emerald-700">₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </button>
+                        )}
 
                         {/* Action buttons */}
                         <div className="grid grid-cols-1 gap-2">
@@ -993,8 +1020,11 @@ export const BillingPage: React.FC = () => {
                                 <Plus className="h-4 w-4 mr-1" /> Add Multiple
                             </Button>
                             {/* Payments are decoupled from finalize: a finalized invoice can still be
-                                collected against until the balance is settled (charges stay locked). */}
-                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || (isFinalized && due <= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                                collected against until the balance is settled (charges stay locked) —
+                                and, separately, a real credit (totals.balance < 0, raw ledger) must
+                                still be refundable even once due <= 0, since due <= 0 is also true
+                                for a credit balance (it was disabling refunds on finalized bills). */}
+                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || (isFinalized && due <= 0 && totals.balance >= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Take Payment
                             </Button>
                             {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
