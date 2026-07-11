@@ -28,7 +28,7 @@ import { debounce } from 'lodash';
 import { patientService } from '../services/patientService';
 import {
     ipdBillingService,
-    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse, type PaymentMode,
+    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse, type PaymentMode, type PaymentType,
 } from '../services/ipdBillingService';
 import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import { offlineCachedRead, isReachable } from '@/offline';
@@ -112,13 +112,15 @@ export const BillingPage: React.FC = () => {
     const [showAddCharge, setShowAddCharge] = useState(false);
     const [editChargeTarget, setEditChargeTarget] = useState<{ chargeEventId: string; displayName?: string; qty: number; rate: number; discountAmount: number } | null>(null);
     const [showAddPayment, setShowAddPayment] = useState(false);
+    // Which tab AddPaymentDialog opens on — 'REFUND' when navigated to from the credit banner
+    // below, so the patient's credit is front-and-center instead of an extra click away.
+    const [addPaymentInitialType, setAddPaymentInitialType] = useState<PaymentType>('PAYMENT');
     const [showNewVisit, setShowNewVisit] = useState(false);
     const [newVisitType, setNewVisitType] = useState<'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'>('OPD');
     const [creatingVisit, setCreatingVisit] = useState(false);
     const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
     const [voidReason, setVoidReason] = useState('');
     const [voidBusy, setVoidBusy] = useState(false);
-    const [instantRefundBusy, setInstantRefundBusy] = useState(false);
 
     // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
     const [showDayWise, setShowDayWise] = useState(false);
@@ -270,39 +272,15 @@ export const BillingPage: React.FC = () => {
         }
     };
 
-    // One-click refund of the whole available credit, straight from the top-of-ledger badge.
-    // Uses the RAW ledger balance (totals.balance), never `due` — `due` nets out an invoice-level
-    // discount, which was never real cash collected and so can never be refunded (see the
-    // AddPaymentDialog netBalance fix above for the same distinction).
-    const handleInstantRefund = async () => {
-        if (!selectedPatient || !selectedEncounterId || instantRefundBusy) return;
-        const creditAmount = -totals.balance;
-        if (creditAmount <= 0) return;
-        if (!window.confirm(`Refund ₹${creditAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} to the patient now?`)) return;
-        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Processing a refund requires an internet connection.', variant: 'destructive' }); return; }
-        setInstantRefundBusy(true);
-        try {
-            // Mirror the mode of the most recent real payment (same convention as the
-            // auto-refund-on-cancel flow), so the receipt makes sense — default to CASH.
-            const priorPayments = (eventsData?.payments ?? [])
-                .filter(p => p.paymentType !== 'REFUND')
-                .slice()
-                .sort((a, b) => new Date(b.createdDateTime).getTime() - new Date(a.createdDateTime).getTime());
-            const lastMode = (priorPayments[0]?.paymentMode as PaymentMode) || 'CASH';
-
-            const res: any = await ipdBillingService.addPayment({
-                patientId: selectedPatient.patientId,
-                encounterId: selectedEncounterId,
-                payment: { paymentType: 'REFUND', paymentMode: lastMode, amount: creditAmount },
-            });
-            if (!res?.success) throw new Error(res?.message ?? 'Could not process refund');
-            toast({ title: 'Refund processed', description: `₹${creditAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} refunded (${lastMode}).` });
-            loadEvents();
-        } catch (e: any) {
-            toast({ title: 'Could not process refund', description: e?.message ?? '', variant: 'destructive' });
-        } finally {
-            setInstantRefundBusy(false);
-        }
+    // Navigates to the refund process from the top-of-ledger credit banner — opens the same Take
+    // Payment sheet used for collecting money, pre-selected on Refund with the credit amount
+    // filled in, so the user reviews mode/amount before applying it (rather than an instant,
+    // no-review action). Uses the RAW ledger balance (totals.balance), never `due` — `due` nets
+    // out an invoice-level discount, which was never real cash collected and so can never be
+    // refunded (see the AddPaymentDialog netBalance fix above for the same distinction).
+    const openRefundProcess = () => {
+        setAddPaymentInitialType('REFUND');
+        setShowAddPayment(true);
     };
 
     // Finalize (lock) the invoice. We re-link any posted charges first so nothing is left off
@@ -585,37 +563,6 @@ export const BillingPage: React.FC = () => {
                                     <X className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
-
-                            {totals.balance < 0 ? (
-                                // Real, refundable credit (raw ledger — never the discount-adjusted
-                                // `due`, which can show a phantom credit that was never real cash
-                                // collected and so can never actually be refunded).
-                                <button
-                                    type="button"
-                                    onClick={handleInstantRefund}
-                                    disabled={instantRefundBusy}
-                                    title="Click to refund this credit instantly"
-                                    className={cn(
-                                        'flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2 transition-colors',
-                                        'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400',
-                                        'disabled:opacity-60 disabled:cursor-wait'
-                                    )}
-                                >
-                                    {instantRefundBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-[11px] font-bold tracking-wider uppercase">Credit · tap to refund</span>
-                                        <span className="text-sm font-bold tabular-nums">₹ {Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </button>
-                            ) : due > 0 ? (
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2 bg-rose-50 border-rose-300 text-rose-700">
-                                    <TrendingDown className="h-4 w-4" />
-                                    <div className="flex flex-col">
-                                        <span className="text-[11px] font-bold tracking-wider uppercase">Due</span>
-                                        <span className="text-sm font-bold tabular-nums">₹ {due.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </div>
-                            ) : null}
                         </div>
                     )}
                 </div>
@@ -629,6 +576,36 @@ export const BillingPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Credit / due banner — full-width, right at the top of the ledger (not tucked into
+                the crowded header row), so a real credit is impossible to miss. Uses the RAW
+                ledger balance (totals.balance), never the discount-adjusted `due` — a discount was
+                never real cash collected, so it can never be refunded (see openRefundProcess). */}
+            {selectedPatient && selectedEncounterId && totals.balance < 0 && (
+                <button
+                    type="button"
+                    onClick={openRefundProcess}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 text-left shadow-sm hover:from-emerald-100 hover:to-teal-100 transition-colors shrink-0"
+                >
+                    <div className="flex items-center gap-2.5">
+                        <Wallet className="h-5 w-5 text-emerald-700" />
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Patient in credit</p>
+                            <p className="text-[10px] text-emerald-600">Click to open the refund process</p>
+                        </div>
+                    </div>
+                    <span className="text-lg font-black tabular-nums text-emerald-700">₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </button>
+            )}
+            {selectedPatient && selectedEncounterId && totals.balance >= 0 && due > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <TrendingDown className="h-5 w-5 text-rose-700" />
+                        <p className="text-xs font-bold uppercase tracking-wide text-rose-700">Balance due</p>
+                    </div>
+                    <span className="text-lg font-black tabular-nums text-rose-700">₹{due.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+            )}
 
             {/* Guided 3-step rail — orients a first-time user: Patient → Add items → Pay & print.
                 Steps are derived from live state; the current step is highlighted, done steps ticked. */}
@@ -982,32 +959,6 @@ export const BillingPage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Real, refundable credit — raw ledger balance (totals.balance), never the
-                            discount-adjusted `due` above, which can sit near zero even while real
-                            cash credit remains (see handleInstantRefund). Shown prominently here
-                            (not just the small header pill) so it's impossible to miss. */}
-                        {totals.balance < 0 && (
-                            <button
-                                type="button"
-                                onClick={handleInstantRefund}
-                                disabled={instantRefundBusy}
-                                className={cn(
-                                    'w-full flex items-center justify-between gap-2 rounded-2xl border px-4 py-3 text-left transition-colors',
-                                    'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 hover:from-emerald-100 hover:to-teal-100',
-                                    'disabled:opacity-60 disabled:cursor-wait',
-                                )}
-                            >
-                                <div className="flex items-center gap-2.5">
-                                    {instantRefundBusy ? <Loader2 className="h-5 w-5 text-emerald-700 animate-spin" /> : <Wallet className="h-5 w-5 text-emerald-700" />}
-                                    <div>
-                                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Patient in credit</p>
-                                        <p className="text-[10px] text-emerald-600">Tap to refund instantly</p>
-                                    </div>
-                                </div>
-                                <span className="text-lg font-black tabular-nums text-emerald-700">₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                            </button>
-                        )}
-
                         {/* Action buttons */}
                         <div className="grid grid-cols-1 gap-2">
                             {/* Add Item supports staging several items via "+ Add another" inside the
@@ -1020,7 +971,7 @@ export const BillingPage: React.FC = () => {
                                 and, separately, a real credit (totals.balance < 0, raw ledger) must
                                 still be refundable even once due <= 0, since due <= 0 is also true
                                 for a credit balance (it was disabling refunds on finalized bills). */}
-                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || (isFinalized && due <= 0 && totals.balance >= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                            <Button onClick={() => { setAddPaymentInitialType('PAYMENT'); setShowAddPayment(true); }} disabled={!selectedEncounterId || (isFinalized && due <= 0 && totals.balance >= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Take Payment
                             </Button>
                             {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
@@ -1132,6 +1083,7 @@ export const BillingPage: React.FC = () => {
                     // as dueAmount so the "Balance Due" quick-fill keeps reflecting the discount.
                     netBalance={totals.balance}
                     dueAmount={due}
+                    initialType={addPaymentInitialType}
                     onSaved={handlePaymentSaved}
                 />
             )}

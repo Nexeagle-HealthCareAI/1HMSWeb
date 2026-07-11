@@ -26,10 +26,14 @@ export interface AddPaymentDialogProps {
     // invoice-level discount applies (this is genuinely what the patient still owes to pay).
     // Defaults to netBalance when omitted.
     dueAmount?: number;
+    // Which tab to land on when the sheet opens — 'REFUND' when navigated here from a credit
+    // banner, so the credit is pre-selected instead of requiring an extra "tap to refund" click.
+    // Defaults to 'PAYMENT'.
+    initialType?: PaymentType;
     onSaved: () => void;
 }
 
-export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, dueAmount, onSaved }) => {
+export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, dueAmount, initialType, onSaved }) => {
     const { toast } = useToast();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
@@ -44,13 +48,15 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
 
     useEffect(() => {
         if (open) {
-            setPaymentType('PAYMENT');
+            const type = initialType ?? 'PAYMENT';
+            setPaymentType(type);
             setPaymentMode('CASH');
-            setAmount(Math.max(0, effectiveDue));
+            setAmount(type === 'REFUND' ? Math.max(0, availableCredit) : Math.max(0, effectiveDue));
             setDescription('');
             setTransactionId('');
         }
-    }, [open, effectiveDue]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, effectiveDue, initialType]);
 
     const submit = async () => {
         if (submitting) return;
