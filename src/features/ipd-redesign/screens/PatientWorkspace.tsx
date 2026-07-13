@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
     ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
-    AlertTriangle, FileBadge2, ChevronsUpDown, Fingerprint, Hash, Stethoscope, Wallet, Clock3,
+    AlertTriangle, FileBadge2, ChevronsUpDown, Fingerprint, Hash, Stethoscope, Wallet, Clock3, Files,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem, type AdmissionDoctorHistoryItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -29,11 +29,12 @@ import { DischargeSummaryPanel } from '../components/DischargeSummaryPanel';
 import { BloodBankPanel } from '../components/BloodBankPanel';
 import { SurgeryCasePanel } from '../components/SurgeryCasePanel';
 import { IcuCriticalCarePanel } from '../components/IcuCriticalCarePanel';
+import { AdmissionDocumentsPanel } from '../components/AdmissionDocumentsPanel';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-export type Section = 'overview' | 'admissionDetails' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
+export type Section = 'overview' | 'admissionDetails' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'documents' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
@@ -64,6 +65,7 @@ const SECTION_LIST: { key: Section; label: string; icon: React.ElementType }[] =
     { key: 'roundNotes', label: 'Round Notes', icon: FileText },
     { key: 'sbarHandover', label: 'SBAR Handover', icon: MessageSquareText },
     { key: 'consent', label: 'Consent', icon: FileCheck2 },
+    { key: 'documents', label: 'Documents', icon: Files },
     { key: 'bloodBank', label: 'Blood Bank', icon: Droplet },
     { key: 'surgery', label: 'Surgery', icon: Scissors },
     { key: 'criticalCare', label: 'Critical Care', icon: Siren },
@@ -447,6 +449,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         <FileCheck2 className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Consent</span>
                     </button>
 
+                    <button type="button" onClick={() => setActiveSection('documents')} className={navItemClass(activeSection === 'documents')}>
+                        <Files className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Documents</span>
+                    </button>
+
                     <button type="button" onClick={() => setActiveSection('bloodBank')} className={navItemClass(activeSection === 'bloodBank')}>
                         <Droplet className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Blood Bank</span>
                     </button>
@@ -748,6 +754,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 
                     {activeSection === 'consent' && (
                         <ConsentPanel admissionId={current.admissionId} isActive={isActive} prefilterTypeCode="PROCEDURE" />
+                    )}
+
+                    {activeSection === 'documents' && (
+                        <AdmissionDocumentsPanel admissionId={current.admissionId} />
                     )}
 
                     {activeSection === 'bloodBank' && (
