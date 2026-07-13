@@ -33,7 +33,7 @@ import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-type Section = 'overview' | 'admissionDetails' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
+export type Section = 'overview' | 'admissionDetails' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 type NursingTab = 'vitals' | 'intakeOutput' | 'assessment' | 'carePlan' | 'restraint';
 
@@ -74,6 +74,10 @@ interface Props {
     admission: ActiveAdmissionItem;
     onBack: () => void;
     onChanged: () => void;
+    // Opens directly into a given section instead of Overview -- used by the OT/ICU board deep
+    // links (?tab=surgery / ?tab=criticalCare) so clicking a card lands straight on the relevant
+    // tab instead of making the user navigate there manually.
+    initialSection?: Section;
 }
 
 /**
@@ -86,10 +90,10 @@ interface Props {
  * shared ClinicalOrderPanel rather than duplicating order-list/new-order/discontinue UI per type.
  * Read-only for bed/order/nursing actions once the admission is no longer in an Active status.
  */
-export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged }) => {
+export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged, initialSection }) => {
     const { toast } = useToast();
     const [current, setCurrent] = useState<ActiveAdmissionItem>(admission);
-    const [activeSection, setActiveSection] = useState<Section>('overview');
+    const [activeSection, setActiveSection] = useState<Section>(initialSection ?? 'overview');
     const [activeCpoeTab, setActiveCpoeTab] = useState<CpoeTab>('medications');
     const [dietNursingSubTab, setDietNursingSubTab] = useState<'diet' | 'nursing'>('diet');
     const [activeNursingTab, setActiveNursingTab] = useState<NursingTab>('vitals');
@@ -540,9 +544,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                             </div>
 
                             <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center justify-between gap-2 mb-2">
                                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Doctor</h2>
-                                    <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px]" onClick={toggleDoctorHistory}>
+                                    <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] shrink-0" onClick={toggleDoctorHistory}>
                                         {doctorHistoryOpen ? 'Hide history' : 'History'}
                                     </Button>
                                 </div>
@@ -756,6 +760,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                             isActive={isActive}
                             otPlanProcedureNameSnapshot={current.otPlanProcedureNameSnapshot}
                             otPlanSuggestedIcuLevel={current.otPlanSuggestedIcuLevel}
+                            admission={current}
                         />
                     )}
 

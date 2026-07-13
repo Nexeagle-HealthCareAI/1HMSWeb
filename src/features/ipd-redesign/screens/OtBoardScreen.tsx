@@ -130,7 +130,7 @@ export const OtBoardScreen: React.FC = () => {
                                                 onClick={() => {
                                                     const targetId = c.encounterId || c.admissionId;
                                                     if (targetId) {
-                                                        navigate(`/ipd-redesign/patient/${targetId}?tab=surgery`);
+                                                        navigate(`/ipd-workspace/patient/${targetId}?tab=surgery`);
                                                     } else {
                                                         setSelectedCase(c);
                                                     }

@@ -191,6 +191,57 @@ export interface AdmissionConfirmationPrintData {
     attendantPhone?: string;
 }
 
+export interface SurgeryChecklistPhasePrintData {
+    label: string;             // "Sign-In (before anaesthesia)"
+    completedAt?: string | null;
+    completedBy?: string | null;
+    items: { label: string; checked: boolean }[];
+}
+
+export interface SurgeryCasePrintData {
+    admissionNo: string;
+    patientName: string;
+    patientId: string;
+    ageGender: string;
+    mobile?: string;
+    wardBed?: string;
+    procedureName: string;
+    surgeryType: string;
+    urgency: string;
+    statusCode: string;
+    surgeonName?: string | null;
+    anaesthetistName?: string | null;
+    cancelledReason?: string | null;
+    booking?: {
+        theatreName?: string | null;
+        scheduledStart: string;
+        scheduledEnd: string;
+        statusCode: string;
+    } | null;
+    preOp?: {
+        asaGrade?: string | null;
+        npoConfirmed: boolean;
+        allergiesReviewed: boolean;
+        investigationsReviewed: boolean;
+        consentConfirmed: boolean;
+        notes?: string | null;
+        assessedBy: string;
+        assessedAt: string;
+    } | null;
+    checklistPhases: SurgeryChecklistPhasePrintData[];
+    intraOp?: {
+        anaesthesiaType?: string | null;
+        surgeryStartAt?: string | null;
+        surgeryEndAt?: string | null;
+        estimatedBloodLossMl?: number | null;
+        findings?: string | null;
+        procedurePerformed?: string | null;
+        surgicalTeam?: string | null;
+        complicationsNotes?: string | null;
+    } | null;
+    itemsUsed: { itemName: string; category: string; qty: number; lotNumber?: string | null; serialNumber?: string | null }[];
+}
+
 export interface LedgerEntry {
     date: string;
     particulars: string;
