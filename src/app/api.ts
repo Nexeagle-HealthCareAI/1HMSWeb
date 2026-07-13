@@ -244,7 +244,7 @@ export const IPD_API_ENDPOINTS = {
   },
   ADMISSION_REFERRAL: {
     ADVISE: 'admission-referral/advise',
-    LIST: (hospitalId: string, opts?: { patientId?: string; statusCode?: string; caseType?: string; referringDoctorId?: string; fromDate?: string; toDate?: string }) => {
+    LIST: (hospitalId: string, opts?: { patientId?: string; statusCode?: string; caseType?: string; referringDoctorId?: string; fromDate?: string; toDate?: string; page?: number; pageSize?: number }) => {
       const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
       if (opts?.patientId) parts.push(`patientId=${encodeURIComponent(opts.patientId)}`);
       if (opts?.statusCode) parts.push(`statusCode=${encodeURIComponent(opts.statusCode)}`);
@@ -252,9 +252,14 @@ export const IPD_API_ENDPOINTS = {
       if (opts?.referringDoctorId) parts.push(`referringDoctorId=${encodeURIComponent(opts.referringDoctorId)}`);
       if (opts?.fromDate) parts.push(`fromDate=${encodeURIComponent(opts.fromDate)}`);
       if (opts?.toDate) parts.push(`toDate=${encodeURIComponent(opts.toDate)}`);
+      if (opts?.page) parts.push(`page=${opts.page}`);
+      if (opts?.pageSize) parts.push(`pageSize=${opts.pageSize}`);
       return `admission-referral/list?${parts.join('&')}`;
     },
     UPDATE_STATUS: 'admission-referral/status',
+    ADD_COMMENT: 'admission-referral/comment',
+    COMMENTS: (hospitalId: string, referralId: string) =>
+      `admission-referral/comments?hospitalId=${encodeURIComponent(hospitalId)}&referralId=${encodeURIComponent(referralId)}`,
   },
   PAYMENT: {
     ADD_EVENT: 'payment/add-event',
