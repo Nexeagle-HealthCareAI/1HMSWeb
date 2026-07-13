@@ -99,10 +99,10 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                 </div>
                 {isActive && item.statusCode === 'ACTIVE' && (
                     <div className="flex gap-1.5 shrink-0">
-                        <Button size="sm" variant="outline" className="h-8 text-xs text-emerald-600 hover:bg-emerald-50" onClick={() => { setResolving({ item, status: 'RESOLVED' }); setResolutionNotes(''); }}>
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs text-emerald-600 hover:bg-emerald-50" onClick={() => { setResolving({ item, status: 'RESOLVED' }); setResolutionNotes(''); }}>
                             <Check className="h-3.5 w-3.5 mr-1" /> Resolve
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400 hover:text-rose-600" onClick={() => { setResolving({ item, status: 'DISCONTINUED' }); setResolutionNotes(''); }}>
+                        <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-rose-600" onClick={() => { setResolving({ item, status: 'DISCONTINUED' }); setResolutionNotes(''); }}>
                             <X className="h-3.5 w-3.5 mr-1" /> Discontinue
                         </Button>
                     </div>
@@ -113,14 +113,14 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Nursing Care Plan</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={load} disabled={loading}>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Add diagnosis
                         </Button>
                     )}
@@ -166,9 +166,9 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                         <Label className="text-[11px] font-semibold text-slate-600">Planned interventions</Label>
                         <Textarea rows={3} value={interventions} onChange={e => setInterventions(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!diagnosis.trim() || submitting} onClick={submit} className="bg-brand-600 hover:bg-brand-700">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
+                        <Button disabled={!diagnosis.trim() || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>
@@ -187,9 +187,9 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                                 <Label className="text-xs font-semibold text-slate-700">Notes</Label>
                                 <Textarea rows={2} value={resolutionNotes} onChange={e => setResolutionNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                             </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setResolving(null)}>Cancel</Button>
-                                <Button disabled={resolveBusy} className="bg-brand-600 hover:bg-brand-700" onClick={confirmResolve}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setResolving(null)}>Cancel</Button>
+                                <Button disabled={resolveBusy} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmResolve}>
                                     {resolveBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm
                                 </Button>
                             </div>

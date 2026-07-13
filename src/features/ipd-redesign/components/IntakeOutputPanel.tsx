@@ -73,24 +73,24 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Intake / Output</h2>
-                <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                <Button variant="outline" size="sm" className="h-10 sm:h-9 self-start" onClick={load} disabled={loading}>
                     <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                 </Button>
             </div>
 
             {today && (
                 <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 sm:p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Total In ({today.dayKey})</p>
                         <p className="text-lg font-black text-emerald-800">{today.totalInMl.toLocaleString('en-IN')} mL</p>
                     </div>
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 sm:p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Total Out</p>
                         <p className="text-lg font-black text-amber-800">{today.totalOutMl.toLocaleString('en-IN')} mL</p>
                     </div>
-                    <div className={cn('rounded-xl border p-3', today.balanceMl >= 0 ? 'border-slate-200 bg-slate-50' : 'border-rose-200 bg-rose-50')}>
+                    <div className={cn('rounded-xl border p-2.5 sm:p-3', today.balanceMl >= 0 ? 'border-slate-200 bg-slate-50' : 'border-rose-200 bg-rose-50')}>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Net Balance</p>
                         <p className="text-lg font-black text-slate-800">{today.balanceMl.toLocaleString('en-IN')} mL</p>
                     </div>
@@ -100,12 +100,12 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
             {isActive && (
                 <div className="flex flex-wrap gap-2">
                     {IN_SUBTYPES.map(s => (
-                        <Button key={s} size="sm" variant="outline" className="h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => openEntry('IN', s)}>
+                        <Button key={s} size="sm" variant="outline" className="h-10 sm:h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => openEntry('IN', s)}>
                             <Plus className="h-3.5 w-3.5 mr-1" /> {s}
                         </Button>
                     ))}
                     {OUT_SUBTYPES.map(s => (
-                        <Button key={s} size="sm" variant="outline" className="h-9 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => openEntry('OUT', s)}>
+                        <Button key={s} size="sm" variant="outline" className="h-10 sm:h-9 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => openEntry('OUT', s)}>
                             <Plus className="h-3.5 w-3.5 mr-1" /> {s.replace('_', ' ')}
                         </Button>
                     ))}
@@ -151,9 +151,9 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
                         <Label className="text-[11px] font-semibold text-slate-600">Notes</Label>
                         <Input value={notes} onChange={e => setNotes(e.target.value)} className="h-9 mt-1" placeholder="Optional" />
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setEntryOpen(false)}>Cancel</Button>
-                        <Button disabled={!volumeMl || submitting} onClick={submit} className="bg-brand-600 hover:bg-brand-700">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setEntryOpen(false)}>Cancel</Button>
+                        <Button disabled={!volumeMl || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

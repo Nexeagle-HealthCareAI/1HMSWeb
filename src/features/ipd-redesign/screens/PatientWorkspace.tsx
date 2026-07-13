@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
     ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
-    AlertTriangle, FileBadge2,
+    AlertTriangle, FileBadge2, ChevronsUpDown, Fingerprint, Hash, Stethoscope, Wallet, Clock3,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -52,6 +53,23 @@ const NURSING_TABS: { key: NursingTab; label: string; icon: React.ElementType }[
     { key: 'restraint', label: 'Restraint', icon: ShieldOff },
 ];
 
+// Drives the mobile section-picker sheet (see below) — a single source of truth for every
+// top-level nav item's icon/label so the picker doesn't hand-duplicate the desktop sidebar's JSX.
+const SECTION_LIST: { key: Section; label: string; icon: React.ElementType }[] = [
+    { key: 'overview', label: 'Overview', icon: BedDouble },
+    { key: 'admissionDetails', label: 'Admission Details', icon: FileBadge2 },
+    { key: 'cpoe', label: 'CPOE', icon: ClipboardList },
+    { key: 'mar', label: 'MAR', icon: ClipboardCheck },
+    { key: 'nursing', label: 'Nursing', icon: HeartPulse },
+    { key: 'roundNotes', label: 'Round Notes', icon: FileText },
+    { key: 'sbarHandover', label: 'SBAR Handover', icon: MessageSquareText },
+    { key: 'consent', label: 'Consent', icon: FileCheck2 },
+    { key: 'bloodBank', label: 'Blood Bank', icon: Droplet },
+    { key: 'surgery', label: 'Surgery', icon: Scissors },
+    { key: 'criticalCare', label: 'Critical Care', icon: Siren },
+    { key: 'discharge', label: 'Discharge', icon: LogOut },
+];
+
 interface Props {
     admission: ActiveAdmissionItem;
     onBack: () => void;
@@ -75,7 +93,15 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     const [activeCpoeTab, setActiveCpoeTab] = useState<CpoeTab>('medications');
     const [dietNursingSubTab, setDietNursingSubTab] = useState<'diet' | 'nursing'>('diet');
     const [activeNursingTab, setActiveNursingTab] = useState<NursingTab>('vitals');
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const isActive = ACTIVE_STATUSES.includes(current.statusCode);
+
+    const currentSectionMeta = SECTION_LIST.find(s => s.key === activeSection)!;
+    const currentSubLabel = activeSection === 'cpoe'
+        ? CPOE_TABS.find(t => t.key === activeCpoeTab)?.label
+        : activeSection === 'nursing'
+            ? NURSING_TABS.find(t => t.key === activeNursingTab)?.label
+            : undefined;
 
     const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
     const [bedActionMode, setBedActionMode] = useState<'assign' | 'transfer' | null>(null);
@@ -134,88 +160,101 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
         }
     };
 
+    // Desktop-sidebar-only now — the mobile equivalent lives in the SECTION_LIST-driven sheet
+    // picker above (aside is `hidden` below lg), so these no longer need mobile-pill fallback styles.
     const navItemClass = (isCurrent: boolean, extra?: string) => cn(
-        'group w-auto lg:w-full h-10 px-4 lg:px-3 rounded-full lg:rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2.5 outline-none shrink-0 snap-center',
+        'group w-full h-10 px-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2.5 outline-none',
         isCurrent
             ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 lg:hover:translate-x-0.5',
+            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 hover:translate-x-0.5',
         extra,
     );
 
     const subNavItemClass = (isCurrent: boolean) => cn(
-        'group relative w-auto lg:w-full h-9 px-4 lg:pl-4 lg:pr-2.5 rounded-full lg:rounded-r-lg lg:rounded-l-none text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 outline-none lg:border-l-2 shrink-0 snap-center',
+        'group relative w-full h-9 pl-4 pr-2.5 rounded-r-lg text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 outline-none border-l-2',
         isCurrent
-            ? 'lg:border-brand-500 bg-brand-50 lg:bg-brand-50/50 text-brand-700'
-            : 'lg:border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/80 lg:hover:border-slate-300',
+            ? 'border-brand-500 bg-brand-50/50 text-brand-700'
+            : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/80 hover:border-slate-300',
     );
 
     return (
-        <div className="px-6 py-6 space-y-5">
+        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
             {/* Premium Header Card */}
-            <div className="relative rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-6 overflow-hidden">
+            <div className="relative rounded-2xl sm:rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-4 sm:p-6 overflow-hidden">
                 {/* Subtle top-right decorative gradient (optional touch of premium) */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-400/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative flex items-start gap-5">
+                <div className="relative flex items-start gap-3 sm:gap-5">
                     {/* Gradient Avatar */}
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-lg font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50 mt-1">
+                    <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-sm sm:text-lg font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50 sm:mt-1">
                         {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
 
                     <div className="flex-1 min-w-0">
                         {/* Name & Badges */}
-                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h1 className="text-2xl font-black text-slate-900 capitalize tracking-tight truncate max-w-md">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+                                <h1 className="text-lg sm:text-2xl font-black text-slate-900 capitalize tracking-tight truncate max-w-[60vw] sm:max-w-md">
                                     {current.patientName || current.patientId}
                                 </h1>
                                 {current.patientAge != null && (
                                     <Badge variant="outline" className="text-xs font-bold bg-white text-slate-700 shadow-sm px-2.5 py-0.5 rounded-full border-slate-200">
-                                        {current.patientAge}{current.patientSex ?? ''}
+                                        {current.patientAge}{current.patientSex ? ` ${current.patientSex}` : ''}
                                     </Badge>
                                 )}
                                 <Badge variant="outline" className={cn('text-xs font-bold px-3 py-0.5 rounded-full shadow-sm', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-500/10' : 'bg-slate-50 text-slate-600 border-slate-200')}>
                                     {current.statusCode.replace(/_/g, ' ')}
                                 </Badge>
                             </div>
-                            
-                            <Button variant="outline" size="sm" className="h-9 rounded-full bg-white/50 hover:bg-white shadow-sm border-slate-200" onClick={onBack}>
+
+                            <Button variant="outline" size="sm" className="h-10 sm:h-9 rounded-full bg-white/50 hover:bg-white shadow-sm border-slate-200 self-start shrink-0" onClick={onBack}>
                                 <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
                             </Button>
                         </div>
-                        
-                        {/* Details Row */}
-                        <div className="flex flex-wrap items-center gap-x-8 gap-y-5 mt-6 pt-5 border-t border-slate-200/60">
-                            <div className="flex flex-col gap-1">
+
+                        {/* Details — compact icon-led list on mobile (label left, value right,
+                            one line per field); spaced-out row on tablet/desktop where there's
+                            room for label-above-value blocks. */}
+                        <div className="sm:hidden mt-4 pt-1 border-t border-slate-200/60 divide-y divide-slate-100">
+                            <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong />
+                            <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong />
+                            <DetailRow icon={Stethoscope} label="Admitting Doctor" value={current.primaryDoctorName ?? '—'} />
+                            <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} />
+                            {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} />}
+                            {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} />}
+                        </div>
+
+                        <div className="hidden sm:flex sm:flex-wrap items-center gap-x-8 gap-y-5 mt-6 pt-5 border-t border-slate-200/60">
+                            <div className="flex flex-col gap-1 min-w-0">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Patient ID</p>
-                                <p className="text-sm font-bold text-slate-800">{current.patientId}</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{current.patientId}</p>
                             </div>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-1 min-w-0">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
-                                <p className="text-sm font-bold text-slate-800">{current.admissionNo}</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{current.admissionNo}</p>
                             </div>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-1 min-w-0">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitting Doctor</p>
                                 <p className="text-sm font-semibold text-slate-700 max-w-[160px] truncate" title={current.primaryDoctorName ?? ''}>
                                     {current.primaryDoctorName ?? '—'}
                                 </p>
                             </div>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-1 min-w-0">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer</p>
                                 <p className="text-sm font-semibold text-slate-700 max-w-[180px] truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
                                     <span className="font-bold text-slate-800">{current.payerType}</span> {current.payerName ? <span className="text-slate-500 text-xs">({current.payerName})</span> : ''}
                                 </p>
                             </div>
                             {current.admittedAt && (
-                                <div className="flex flex-col gap-1">
+                                <div className="flex flex-col gap-1 min-w-0">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitted</p>
-                                    <p className="text-sm font-semibold text-slate-700">{formatIstDateTime(current.admittedAt)}</p>
+                                    <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime(current.admittedAt)}</p>
                                 </div>
                             )}
                             {(current as any).dischargedAt && (
-                                <div className="flex flex-col gap-1">
+                                <div className="flex flex-col gap-1 min-w-0">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discharged</p>
-                                    <p className="text-sm font-semibold text-slate-700">{formatIstDateTime((current as any).dischargedAt)}</p>
+                                    <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime((current as any).dischargedAt)}</p>
                                 </div>
                             )}
                         </div>
@@ -224,9 +263,90 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
             </div>
 
             {/* Side nav + content */}
-            {/* Side nav + content */}
-            <div className="flex flex-col lg:flex-row items-start gap-5">
-                <aside className="w-full lg:w-60 shrink-0 lg:rounded-2xl bg-white/80 backdrop-blur-xl border-b lg:border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-2.5 flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible sticky top-6 z-10 snap-x lg:space-y-0.5 gap-2 lg:gap-0 no-scrollbar -mx-6 px-6 lg:mx-0">
+            <div className="flex flex-col lg:flex-row items-start gap-4 sm:gap-5">
+                {/* Mobile section switcher — a 12-item nav where 2 items branch into 5 sub-tabs
+                    each doesn't work as a horizontal scroll strip (sub-items used to spill into
+                    the same scroll rail as top-level items). Below lg this collapses to a sticky
+                    "current section" bar that opens a bottom-sheet picker instead. */}
+                <button
+                    type="button"
+                    onClick={() => setMobileNavOpen(true)}
+                    className="lg:hidden w-full flex items-center justify-between gap-3 h-14 px-4 rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sticky top-0 z-10"
+                >
+                    <span className="flex items-center gap-2.5 min-w-0">
+                        <currentSectionMeta.icon className="h-4 w-4 text-slate-900 shrink-0" />
+                        <span className="text-sm font-bold text-slate-900 truncate">
+                            {currentSectionMeta.label}{currentSubLabel ? ` · ${currentSubLabel}` : ''}
+                        </span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 shrink-0">
+                        Sections <ChevronsUpDown className="h-3.5 w-3.5" />
+                    </span>
+                </button>
+
+                <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                    <SheetContent side="bottom" className="lg:hidden max-h-[80vh] overflow-y-auto p-0 rounded-t-3xl">
+                        <SheetHeader className="px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
+                            <SheetTitle className="text-base font-bold">Jump to section</SheetTitle>
+                        </SheetHeader>
+                        <div className="p-3 pb-6 space-y-1">
+                            {SECTION_LIST.map(({ key, label, icon: Icon }) => (
+                                <React.Fragment key={key}>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setActiveSection(key); setMobileNavOpen(false); }}
+                                        className={cn(
+                                            'w-full h-12 px-3.5 rounded-xl text-sm font-bold flex items-center gap-3 transition-colors',
+                                            activeSection === key ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50',
+                                        )}
+                                    >
+                                        <Icon className="h-4 w-4 shrink-0" /> {label}
+                                    </button>
+                                    {key === 'cpoe' && (
+                                        <div className="pl-4 space-y-1">
+                                            {CPOE_TABS.map(({ key: tabKey, label: tabLabel, icon: TabIcon }) => (
+                                                <button
+                                                    key={tabKey}
+                                                    type="button"
+                                                    onClick={() => { setActiveSection('cpoe'); setActiveCpoeTab(tabKey); setMobileNavOpen(false); }}
+                                                    className={cn(
+                                                        'w-full h-11 pl-4 pr-3.5 rounded-lg text-[13px] font-semibold flex items-center gap-2.5 border-l-2 transition-colors',
+                                                        activeSection === 'cpoe' && activeCpoeTab === tabKey
+                                                            ? 'border-brand-500 bg-brand-50/60 text-brand-700'
+                                                            : 'border-transparent text-slate-500 hover:bg-slate-50',
+                                                    )}
+                                                >
+                                                    <TabIcon className="h-3.5 w-3.5 shrink-0" /> {tabLabel}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {key === 'nursing' && (
+                                        <div className="pl-4 space-y-1">
+                                            {NURSING_TABS.map(({ key: tabKey, label: tabLabel, icon: TabIcon }) => (
+                                                <button
+                                                    key={tabKey}
+                                                    type="button"
+                                                    onClick={() => { setActiveSection('nursing'); setActiveNursingTab(tabKey); setMobileNavOpen(false); }}
+                                                    className={cn(
+                                                        'w-full h-11 pl-4 pr-3.5 rounded-lg text-[13px] font-semibold flex items-center gap-2.5 border-l-2 transition-colors',
+                                                        activeSection === 'nursing' && activeNursingTab === tabKey
+                                                            ? 'border-brand-500 bg-brand-50/60 text-brand-700'
+                                                            : 'border-transparent text-slate-500 hover:bg-slate-50',
+                                                    )}
+                                                >
+                                                    <TabIcon className="h-3.5 w-3.5 shrink-0" /> {tabLabel}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </SheetContent>
+                </Sheet>
+
+                <aside className="hidden lg:flex lg:w-60 shrink-0 lg:rounded-2xl bg-white/80 backdrop-blur-xl lg:border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-2.5 flex-col sticky top-6 z-10 space-y-0.5">
                     <button type="button" onClick={() => setActiveSection('overview')} className={navItemClass(activeSection === 'overview')}>
                         <BedDouble className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Overview</span>
                     </button>
@@ -239,7 +359,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         <ClipboardList className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">CPOE</span>
                     </button>
                     {activeSection === 'cpoe' && (
-                        <div className="flex flex-row lg:flex-col gap-2 lg:gap-0 lg:ml-4 lg:pl-2 lg:border-l-2 lg:border-slate-100 lg:space-y-0.5 lg:my-1 lg:py-1 shrink-0 items-center">
+                        <div className="flex flex-col ml-4 pl-2 border-l-2 border-slate-100 space-y-0.5 my-1 py-1">
                             {CPOE_TABS.map(({ key, label, icon: Icon }) => (
                                 <button key={key} type="button" onClick={() => setActiveCpoeTab(key)} className={subNavItemClass(activeCpoeTab === key)}>
                                     <Icon className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">{label}</span>
@@ -256,7 +376,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         <HeartPulse className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Nursing</span>
                     </button>
                     {activeSection === 'nursing' && (
-                        <div className="flex flex-row lg:flex-col gap-2 lg:gap-0 lg:ml-4 lg:pl-2 lg:border-l-2 lg:border-slate-100 lg:space-y-0.5 lg:my-1 lg:py-1 shrink-0 items-center">
+                        <div className="flex flex-col ml-4 pl-2 border-l-2 border-slate-100 space-y-0.5 my-1 py-1">
                             {NURSING_TABS.map(({ key, label, icon: Icon }) => (
                                 <button key={key} type="button" onClick={() => setActiveNursingTab(key)} className={subNavItemClass(activeNursingTab === key)}>
                                     <Icon className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">{label}</span>
@@ -299,27 +419,27 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 <div className="flex-1 min-w-0 space-y-5">
                     {activeSection === 'overview' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            <div className="rounded-xl border border-slate-200 bg-white p-5">
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Bed</h2>
                                 {current.bedCode ? (
-                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <p className="font-semibold text-slate-900">{current.wardName ? `${current.wardName} · ` : ''}{current.bedCode}</p>
                                         {isActive && (
                                             <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="sm" className="h-9" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
+                                                <Button variant="outline" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
                                                     <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
                                                 </Button>
-                                                <Button variant="outline" size="sm" className="h-9 text-slate-500 hover:text-rose-600" onClick={releaseBed} disabled={bedBusy}>
+                                                <Button variant="outline" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none text-slate-500 hover:text-rose-600" onClick={releaseBed} disabled={bedBusy}>
                                                     <X className="h-3.5 w-3.5 mr-1.5" /> Release
                                                 </Button>
                                             </div>
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Unassigned' : 'No bed'}</p>
                                         {isActive && (
-                                            <Button variant="outline" size="sm" className="h-9" onClick={() => { setBedActionMode('assign'); setPickedBedId(''); }}>
+                                            <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => { setBedActionMode('assign'); setPickedBedId(''); }}>
                                                 <BedDouble className="h-3.5 w-3.5 mr-1.5" /> Assign a bed
                                             </Button>
                                         )}
@@ -327,26 +447,28 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
 
                                 {bedActionMode && (
-                                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-end gap-2 flex-wrap">
-                                        <div className="flex-1 min-w-[220px]">
+                                    <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-2 sm:flex-wrap">
+                                        <div className="min-w-0 sm:flex-1 sm:min-w-[220px]">
                                             <Label className="text-[11px] font-semibold text-slate-600">{bedActionMode === 'assign' ? 'Bed to assign' : 'New bed'}</Label>
-                                            <select value={pickedBedId} onChange={e => setPickedBedId(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                            <select value={pickedBedId} onChange={e => setPickedBedId(e.target.value)} className="h-11 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                                 <option value="">Select a bed…</option>
                                                 {freeBeds.map(b => (
                                                     <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
                                                 ))}
                                             </select>
                                         </div>
-                                        <Button variant="ghost" size="sm" className="h-9" onClick={() => setBedActionMode(null)}>Cancel</Button>
-                                        <Button size="sm" disabled={!pickedBedId || bedBusy} className="h-9 bg-brand-600 hover:bg-brand-700"
-                                            onClick={() => runBedAction(
-                                                () => bedActionMode === 'assign'
-                                                    ? bedBoardApi.assignBed(current.admissionId, pickedBedId)
-                                                    : bedBoardApi.transferBed(current.admissionId, pickedBedId),
-                                                bedActionMode === 'assign' ? 'Bed assigned.' : 'Bed transferred.')}>
-                                            {bedBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
-                                            {bedActionMode === 'assign' ? 'Assign' : 'Transfer'}
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none" onClick={() => setBedActionMode(null)}>Cancel</Button>
+                                            <Button size="sm" disabled={!pickedBedId || bedBusy} className="h-11 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700"
+                                                onClick={() => runBedAction(
+                                                    () => bedActionMode === 'assign'
+                                                        ? bedBoardApi.assignBed(current.admissionId, pickedBedId)
+                                                        : bedBoardApi.transferBed(current.admissionId, pickedBedId),
+                                                    bedActionMode === 'assign' ? 'Bed assigned.' : 'Bed transferred.')}>
+                                                {bedBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+                                                {bedActionMode === 'assign' ? 'Assign' : 'Transfer'}
+                                            </Button>
+                                        </div>
                                         {isAboveEntitlement(freeBeds.find(b => b.bedId === pickedBedId)?.wardType, current.entitledRoomCategory) && (
                                             <div className="w-full flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5">
                                                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
@@ -359,7 +481,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
                             </div>
 
-                            <div className="rounded-xl border border-slate-200 bg-white p-5">
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Admission details</h2>
                                 <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                                     <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Admitted</dt><dd className="text-slate-800">{formatIstDateTime(current.admittedAt)}</dd></div>
@@ -404,7 +526,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     {activeSection === 'cpoe' && activeCpoeTab === 'procedures' && (
                         <div className="space-y-3">
                             <div className="flex justify-end">
-                                <Button variant="outline" size="sm" className="h-9" onClick={() => setActiveSection('consent')}>
+                                <Button variant="outline" size="sm" className="h-10 sm:h-9" onClick={() => setActiveSection('consent')}>
                                     <FileCheck2 className="h-3.5 w-3.5 mr-1.5" /> Capture consent
                                 </Button>
                             </div>
@@ -425,11 +547,11 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         <div className="space-y-3">
                             <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 w-fit">
                                 <button type="button" onClick={() => setDietNursingSubTab('diet')}
-                                    className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'diet' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    className={cn('h-9 sm:h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'diet' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                                     <Utensils className="h-3.5 w-3.5" /> Diet
                                 </button>
                                 <button type="button" onClick={() => setDietNursingSubTab('nursing')}
-                                    className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'nursing' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                    className={cn('h-9 sm:h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'nursing' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                                     <HeartPulse className="h-3.5 w-3.5" /> Nursing
                                 </button>
                             </div>
@@ -532,3 +654,16 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
         </div>
     );
 };
+
+// Mobile-only compact metadata row (see "Details" above) — icon + label on the left, value
+// right-aligned and truncating, one line per field instead of the label-above-value blocks the
+// desktop layout uses (which take roughly 2x the vertical space per field).
+const DetailRow: React.FC<{ icon: React.ElementType; label: string; value: string; strong?: boolean }> = ({ icon: Icon, label, value, strong }) => (
+    <div className="flex items-center gap-2.5 py-2.5 text-sm">
+        <Icon className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        <span className="text-slate-500 shrink-0">{label}</span>
+        <span className={cn('flex-1 min-w-0 text-left truncate', strong ? 'font-bold text-slate-800' : 'font-semibold text-slate-700')} title={value}>
+            {value}
+        </span>
+    </div>
+);

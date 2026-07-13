@@ -128,12 +128,12 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Medication Administration</h2>
                 <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => shiftDay(-1)}><ChevronLeft className="h-4 w-4" /></Button>
-                    <span className={cn('text-xs font-bold px-2', isToday ? 'text-brand-700' : 'text-slate-600')}>{dayLabel}{isToday ? ' · Today' : ''}</span>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => shiftDay(1)}><ChevronRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="sm" className="h-10 w-10 sm:h-9 sm:w-9 p-0" onClick={() => shiftDay(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+                    <span className={cn('flex-1 sm:flex-none text-center text-xs font-bold px-2', isToday ? 'text-brand-700' : 'text-slate-600')}>{dayLabel}{isToday ? ' · Today' : ''}</span>
+                    <Button variant="outline" size="sm" className="h-10 w-10 sm:h-9 sm:w-9 p-0" onClick={() => shiftDay(1)}><ChevronRight className="h-4 w-4" /></Button>
                 </div>
             </div>
 
@@ -157,14 +157,14 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                                     {line.instructions && <p className="text-[11px] text-slate-400 italic mt-0.5">{line.instructions}</p>}
                                 </div>
                                 {isActive && line.isAdHocOnly && (
-                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => openAdminister(line, null)}>
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => openAdminister(line, null)}>
                                         <Plus className="h-3.5 w-3.5 mr-1" /> Log PRN dose
                                     </Button>
                                 )}
                             </div>
 
                             {line.slots.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-3">
+                                <div className="flex flex-wrap gap-2 sm:gap-1.5 mt-3">
                                     {line.slots.map((slot, idx) => (
                                         <button
                                             key={idx}
@@ -172,7 +172,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                                             disabled={!isActive || !isActionable(slot.status)}
                                             onClick={() => openAdminister(line, slot)}
                                             className={cn(
-                                                'h-8 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 transition-colors',
+                                                'h-10 sm:h-8 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 transition-colors',
                                                 slotStyles(slot.status),
                                                 isActive && isActionable(slot.status) ? 'cursor-pointer hover:opacity-80' : 'cursor-default',
                                             )}
@@ -215,7 +215,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                             <div className="grid grid-cols-2 gap-2">
                                 {ACTIONS.map(a => (
                                     <button key={a.key} type="button" onClick={() => setActionStatus(a.key)}
-                                        className={cn('h-9 rounded-lg border text-xs font-bold transition-colors',
+                                        className={cn('min-h-10 sm:min-h-9 px-2 py-1.5 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center text-center leading-tight',
                                             actionStatus === a.key ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
                                         {a.label}
                                     </button>
@@ -256,9 +256,9 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                                 <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-1">
-                                <Button variant="outline" onClick={() => setActing(null)}>Cancel</Button>
-                                <Button disabled={!canSubmit || submitting} onClick={submit} className="bg-brand-600 hover:bg-brand-700">
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+                                <Button variant="outline" className="h-11 sm:h-10" onClick={() => setActing(null)}>Cancel</Button>
+                                <Button disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                                     {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Record
                                 </Button>
                             </div>

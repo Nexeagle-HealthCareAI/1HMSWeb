@@ -77,27 +77,27 @@ export const AdmissionDetailsPanel: React.FC<Props> = ({ admission, isActive, on
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admission Details</h2>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
-                    <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
                     {isActive && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit</Button>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit</Button>
                     )}
                 </div>
             </div>
 
             {/* ── Identity ── */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 mb-4">
                     <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Identity</h3>
-                    {isActive && <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={profile.handleEdit}><Pencil className="h-3 w-3 mr-1" /> Edit</Button>}
+                    {isActive && <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px]" onClick={profile.handleEdit}><Pencil className="h-3 w-3 mr-1" /> Edit</Button>}
                 </div>
                 {profile.isLoading ? (
                     <p className="text-xs text-slate-400 flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</p>
                 ) : profile.patientProfile ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                         <Item label="Name" value={profile.patientProfile.fullName} />
                         <Item label="Mobile" value={profile.patientProfile.mobile} />
                         <Item label="Age / Sex" value={`${profile.patientProfile.ageYears ?? '—'}${profile.patientProfile.sex ?? ''}`} />
@@ -113,11 +113,11 @@ export const AdmissionDetailsPanel: React.FC<Props> = ({ admission, isActive, on
             </div>
 
             {/* ── Admission / clinical / referral ── */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> Clinical &amp; Referral</h3>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <Item label="Admitted" value={formatIstDateTime(admission.admittedAt)} />
                     <Item label="Type" value={admission.admissionType} />
                     <Item label="Admitting consultant" value={doctorName} />
@@ -131,11 +131,11 @@ export const AdmissionDetailsPanel: React.FC<Props> = ({ admission, isActive, on
             </div>
 
             {/* ── Payer & coverage ── */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Payer &amp; Coverage</h3>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <Item label="Payer type" value={admission.payerType} />
                     <Item label="Deposit expected" value={admission.depositExpected != null ? `₹${admission.depositExpected.toLocaleString('en-IN')}` : undefined} />
                     <Item label="Entitled room category" value={admission.entitledRoomCategory?.replace('_', ' ')} />

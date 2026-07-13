@@ -531,19 +531,19 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
     return (
         <div className="space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Discharge Summary</h2>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={() => setCustomizeOpen(true)}>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={() => setCustomizeOpen(true)}>
                         <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Customize
                     </Button>
-                    <Button variant="outline" size="sm" className="h-9" onClick={openLetterheadPreview}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={openLetterheadPreview}>
                         <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
                     </Button>
                     {isSigned && (
                         <>
-                            <Button variant="outline" size="sm" className="h-9" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
-                            <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
+                            <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                            <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
                         </>
                     )}
                 </div>
@@ -567,20 +567,20 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             />
 
             {isSigned && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center justify-between gap-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-600" />
+                        <Check className="h-4 w-4 text-emerald-600 shrink-0" />
                         <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
                     </div>
                     {isActive && (
-                        <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
+                        <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100 self-start sm:self-auto">
                             {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
                         </Button>
                     )}
                 </div>
             )}
 
-            <div className="rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-6">
+            <div className="rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {layoutFields.filter(f => f.builtIn && f.key !== 'nonPayableAnnexure' && isVisible(f.key)).map(f => (
                         <div key={f.key} style={{ order: f.order }} className={getBuiltInSpan(f.key)}>
@@ -595,7 +595,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 </div>
 
                 {!isSigned && isActive && (
-                    <div className="flex justify-end items-center gap-3 pt-2 border-t border-slate-100">
+                    <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 pt-2 border-t border-slate-100">
                         {!saving && autoSaveStatus === 'saving' && (
                             <span className="text-xs text-slate-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>
                         )}
@@ -605,18 +605,20 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         {!saving && autoSaveStatus === 'error' && (
                             <span className="text-xs text-red-500" title="Could not save. It will retry automatically on your next edit.">Save failed</span>
                         )}
-                        <Button variant="outline" disabled={saving} onClick={save}>
-                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Save draft
-                        </Button>
-                        <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => setSignOpen(true)}>
-                            <Check className="h-4 w-4 mr-2" /> Sign & finalize
-                        </Button>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2">
+                            <Button variant="outline" className="h-11 sm:h-10" disabled={saving} onClick={save}>
+                                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Save draft
+                            </Button>
+                            <Button className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700" onClick={() => setSignOpen(true)}>
+                                <Check className="h-4 w-4 mr-2" /> Sign & finalize
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>
 
             {!isCash && coverageUtilization?.isApproachingLimit && (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start justify-between gap-3">
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                         <div>
@@ -635,11 +637,11 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     </div>
                     <div className="shrink-0 flex gap-2">
                         {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt && (
-                            <Button size="sm" variant="outline" className="h-8 text-[11px] border-amber-300" onClick={() => openEnhancementDialog('approve')}>
+                            <Button size="sm" variant="outline" className="h-9 sm:h-8 text-[11px] border-amber-300" onClick={() => openEnhancementDialog('approve')}>
                                 Mark approved
                             </Button>
                         )}
-                        <Button size="sm" className="h-8 text-[11px] bg-amber-600 hover:bg-amber-700" onClick={() => openEnhancementDialog('request')}>
+                        <Button size="sm" className="h-9 sm:h-8 text-[11px] bg-amber-600 hover:bg-amber-700" onClick={() => openEnhancementDialog('request')}>
                             Request enhancement
                         </Button>
                     </div>
@@ -668,7 +670,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                                                 const stampableKey = m.key === 'CLAIM_SUBMITTED' || m.key === 'INSURER_APPROVAL' ? m.key : null;
                                                 if (stampableKey && isActive) {
                                                     return (
-                                                        <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled={stampingKey === stampableKey} onClick={() => stampMilestone(stampableKey)}>
+                                                        <Button size="sm" variant="outline" className="h-8 sm:h-7 text-[11px]" disabled={stampingKey === stampableKey} onClick={() => stampMilestone(stampableKey)}>
                                                             {stampingKey === stampableKey ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                                                             Mark {stampableKey === 'CLAIM_SUBMITTED' ? 'submitted' : 'approved'}
                                                         </Button>
@@ -708,13 +710,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             )}
 
             {isActive && !isDischarged && (
-                <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <p className="text-sm text-slate-600">Discharge is a separate action from signing the summary — sign whenever ready, discharge when the patient physically leaves.</p>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <Button variant="outline" className="text-slate-500 hover:text-rose-600" onClick={() => { setLamaReason(''); setLamaOpen(true); }}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 shrink-0">
+                        <Button variant="outline" className="h-11 sm:h-10 text-slate-500 hover:text-rose-600" onClick={() => { setLamaReason(''); setLamaOpen(true); }}>
                             Left without treatment
                         </Button>
-                        <Button className="bg-amber-600 hover:bg-amber-700 font-semibold" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
+                        <Button className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700 font-semibold" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
                             <LogOut className="h-4 w-4 mr-2" /> Discharge now
                         </Button>
                     </div>
@@ -727,9 +729,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <DialogTitle>Sign discharge summary?</DialogTitle>
                         <DialogDescription>This locks the summary from further edits. Final diagnosis and condition at discharge are required.</DialogDescription>
                     </DialogHeader>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setSignOpen(false)}>Cancel</Button>
-                        <Button disabled={signing} className="bg-amber-600 hover:bg-amber-700" onClick={confirmSign}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setSignOpen(false)}>Cancel</Button>
+                        <Button disabled={signing} className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700" onClick={confirmSign}>
                             {signing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Sign & finalize
                         </Button>
                     </div>
@@ -752,9 +754,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         </Label>
                         <Input type="number" min={0} value={enhancementAmount} onChange={e => setEnhancementAmount(e.target.value)} className="h-9 mt-1" placeholder="₹" />
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setEnhancementMode(null)}>Cancel</Button>
-                        <Button disabled={enhancementBusy} className="bg-amber-600 hover:bg-amber-700" onClick={submitEnhancement}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setEnhancementMode(null)}>Cancel</Button>
+                        <Button disabled={enhancementBusy} className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700" onClick={submitEnhancement}>
                             {enhancementBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>
@@ -771,9 +773,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Label className="text-xs font-semibold text-slate-700">Discharge notes</Label>
                         <Textarea rows={3} value={dischargeNotes} onChange={e => setDischargeNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setDischargeOpen(false)}>Cancel</Button>
-                        <Button disabled={dischargeBusy} className="bg-amber-600 hover:bg-amber-700" onClick={confirmDischarge}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setDischargeOpen(false)}>Cancel</Button>
+                        <Button disabled={dischargeBusy} className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700" onClick={confirmDischarge}>
                             {dischargeBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
                         </Button>
                     </div>
@@ -790,9 +792,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Label className="text-xs font-semibold text-slate-700">Reason</Label>
                         <Textarea rows={3} value={lamaReason} onChange={e => setLamaReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setLamaOpen(false)}>Cancel</Button>
-                        <Button disabled={lamaBusy} className="bg-rose-600 hover:bg-rose-700" onClick={confirmLama}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setLamaOpen(false)}>Cancel</Button>
+                        <Button disabled={lamaBusy} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700" onClick={confirmLama}>
                             {lamaBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm
                         </Button>
                     </div>

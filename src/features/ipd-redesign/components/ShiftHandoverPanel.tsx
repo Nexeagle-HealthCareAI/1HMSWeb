@@ -116,14 +116,14 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">SBAR Shift Handover</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={load} disabled={loading}>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New handover
                         </Button>
                     )}
@@ -147,7 +147,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                                 {n.incomingAckAt ? (
                                     <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Acknowledged by {n.incomingNurseName}</span>
                                 ) : isActive ? (
-                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => openAck(n)}>Acknowledge</Button>
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => openAck(n)}>Acknowledge</Button>
                                 ) : null}
                             </div>
                             {n.isFreeText ? (
@@ -174,11 +174,11 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
 
                     <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 w-fit">
                         <button type="button" onClick={() => setMode('structured')}
-                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', mode === 'structured' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            className={cn('h-9 sm:h-8 px-3 rounded-md text-xs font-bold transition-all', mode === 'structured' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                             Structured (SBAR)
                         </button>
                         <button type="button" onClick={() => setMode('freeText')}
-                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', mode === 'freeText' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            className={cn('h-9 sm:h-8 px-3 rounded-md text-xs font-bold transition-all', mode === 'freeText' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                             Free text
                         </button>
                     </div>
@@ -226,9 +226,9 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                         </div>
                     )}
 
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!canSubmit || submitting} onClick={submit} className="bg-brand-600 hover:bg-brand-700">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
+                        <Button disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>
@@ -245,9 +245,9 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                         <Label className="text-xs font-semibold text-slate-700">Your name *</Label>
                         <Input value={ackName} onChange={e => setAckName(e.target.value)} className="h-9 mt-1" autoFocus />
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setAckingId(null)}>Cancel</Button>
-                        <Button disabled={!ackName.trim() || ackBusy} className="bg-brand-600 hover:bg-brand-700" onClick={confirmAck}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setAckingId(null)}>Cancel</Button>
+                        <Button disabled={!ackName.trim() || ackBusy} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmAck}>
                             {ackBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Acknowledge
                         </Button>
                     </div>
