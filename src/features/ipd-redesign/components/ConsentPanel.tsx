@@ -21,11 +21,16 @@ const SignaturePad: React.FC<{ onChange: (dataUrl: string | null) => void }> = (
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const drawing = useRef(false);
 
+    // Canvas has a fixed internal drawing resolution (400x140) but renders at CSS `w-full` — on a
+    // narrow mobile dialog the rendered width is well under 400px, so raw clientX/clientY offsets
+    // would drift from the actual pen position. Scale into canvas coordinate space explicitly.
     const getPos = (e: React.MouseEvent | React.TouchEvent) => {
         const canvas = canvasRef.current!;
         const rect = canvas.getBoundingClientRect();
         const point = 'touches' in e ? e.touches[0] : e;
-        return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return { x: (point.clientX - rect.left) * scaleX, y: (point.clientY - rect.top) * scaleY };
     };
 
     const start = (e: React.MouseEvent | React.TouchEvent) => {
@@ -65,7 +70,7 @@ const SignaturePad: React.FC<{ onChange: (dataUrl: string | null) => void }> = (
                     onTouchStart={start} onTouchMove={move} onTouchEnd={end}
                 />
             </div>
-            <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-slate-400 mt-1" onClick={clear}>
+            <Button type="button" variant="ghost" size="sm" className="h-8 sm:h-7 text-xs text-slate-400 mt-1" onClick={clear}>
                 <Eraser className="h-3 w-3 mr-1" /> Clear
             </Button>
         </div>
@@ -136,14 +141,14 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Consent</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={load} disabled={loading}>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && templates.length > 0 && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openSign}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openSign}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Capture consent
                         </Button>
                     )}
@@ -211,9 +216,9 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
                         <Input value={witnessName} onChange={e => setWitnessName(e.target.value)} className="h-9 mt-1" placeholder="Optional" />
                     </div>
                     <SignaturePad onChange={setSignatureDataUrl} />
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setSignOpen(false)}>Cancel</Button>
-                        <Button disabled={!templateId || !signedByName.trim() || submitting} onClick={submit} className="bg-brand-600 hover:bg-brand-700">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setSignOpen(false)}>Cancel</Button>
+                        <Button disabled={!templateId || !signedByName.trim() || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Sign
                         </Button>
                     </div>

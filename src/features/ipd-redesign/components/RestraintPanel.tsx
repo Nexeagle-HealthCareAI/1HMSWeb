@@ -105,14 +105,14 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Restraint</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={load} disabled={loading}>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && !active && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openStart}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openStart}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Start restraint
                         </Button>
                     )}
@@ -132,7 +132,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                     <Badge variant="outline" className="text-[9px] font-bold bg-rose-100 text-rose-700 border-rose-300">ACTIVE</Badge>
                                 </div>
                                 {isActive && (
-                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { setReleasing(active); setReleaseReason(''); }}>Release</Button>
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => { setReleasing(active); setReleaseReason(''); }}>Release</Button>
                                 )}
                             </div>
                             <p className="text-[13px] text-slate-700 mt-2">{active.reason}</p>
@@ -202,9 +202,9 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                             <Input value={familyNotificationNotes} onChange={e => setFamilyNotificationNotes(e.target.value)} className="h-9 mt-1" placeholder="Optional" />
                         </div>
                     )}
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setStartOpen(false)}>Cancel</Button>
-                        <Button disabled={!restraintType.trim() || !reason.trim() || !orderedByDoctorName.trim() || submitting} onClick={submit} className="bg-rose-600 hover:bg-rose-700">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setStartOpen(false)}>Cancel</Button>
+                        <Button disabled={!restraintType.trim() || !reason.trim() || !orderedByDoctorName.trim() || submitting} onClick={submit} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Start
                         </Button>
                     </div>
@@ -223,9 +223,9 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                 <Label className="text-xs font-semibold text-slate-700">Reason</Label>
                                 <Textarea rows={2} value={releaseReason} onChange={e => setReleaseReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                             </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setReleasing(null)}>Cancel</Button>
-                                <Button disabled={releaseBusy} className="bg-brand-600 hover:bg-brand-700" onClick={confirmRelease}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setReleasing(null)}>Cancel</Button>
+                                <Button disabled={releaseBusy} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmRelease}>
                                     {releaseBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Release
                                 </Button>
                             </div>

@@ -201,11 +201,11 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
     return (
         <div className="space-y-5">
             {/* Level of Care */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><HeartPulse className="h-3.5 w-3.5" /> Level of Care</h2>
                     {isActive && (
-                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { setLocOpen(o => !o); setLocLevel(currentLevel ?? 'LEVEL_1'); }}>
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={() => { setLocOpen(o => !o); setLocLevel(currentLevel ?? 'LEVEL_1'); }}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Record level
                         </Button>
                     )}
@@ -231,9 +231,9 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                             <Label className="text-[11px] font-semibold text-slate-600">Reason</Label>
                             <Textarea value={locReason} onChange={e => setLocReason(e.target.value)} rows={2} className="mt-1" />
                         </div>
-                        <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" className="h-9" onClick={() => setLocOpen(false)}>Cancel</Button>
-                            <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={locBusy} onClick={submitLevelOfCare}>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setLocOpen(false)}>Cancel</Button>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={locBusy} onClick={submitLevelOfCare}>
                                 {locBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
                             </Button>
                         </div>
@@ -243,9 +243,9 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                 {locHistory.length > 1 && (
                     <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
                         {locHistory.slice(1).map(h => (
-                            <div key={h.icuLevelOfCareId} className="flex items-center justify-between text-xs text-slate-500">
+                            <div key={h.icuLevelOfCareId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 text-xs text-slate-500">
                                 <span>{LEVEL_LABEL[h.level]}{h.reason ? ` — ${h.reason}` : ''}</span>
-                                <span>{formatIstDateTime(h.assessedAt)}</span>
+                                <span className="shrink-0">{formatIstDateTime(h.assessedAt)}</span>
                             </div>
                         ))}
                     </div>
@@ -253,11 +253,11 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
             </div>
 
             {/* APACHE II */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">APACHE II</h2>
                     {isActive && (
-                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={openApache}>
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openApache}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New score
                         </Button>
                     )}
@@ -270,9 +270,9 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                 ) : (
                     <div className="mt-2 space-y-1.5">
                         {apacheHistory.map((s, i) => (
-                            <div key={s.apacheIIScoreId} className="flex items-center justify-between text-sm">
+                            <div key={s.apacheIIScoreId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 text-sm">
                                 <span className={cn('font-bold', i === 0 ? 'text-slate-800' : 'text-slate-500')}>Total: {s.totalScore}</span>
-                                <span className="text-[11px] text-slate-500">{s.scoredBy} · {formatIstDateTime(s.scoredAt)}</span>
+                                <span className="text-[11px] text-slate-500 shrink-0">{s.scoredBy} · {formatIstDateTime(s.scoredAt)}</span>
                             </div>
                         ))}
                     </div>
@@ -313,9 +313,9 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                                         <option value="NONOPERATIVE_OR_EMERGENCY_POSTOP">Organ insufficiency/immunocompromise — nonoperative or emergency post-op</option>
                                     </select>
                                 </div>
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="sm" className="h-9" onClick={() => setApacheOpen(false)}>Cancel</Button>
-                                    <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={apacheBusy} onClick={submitApache}>
+                                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                    <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setApacheOpen(false)}>Cancel</Button>
+                                    <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={apacheBusy} onClick={submitApache}>
                                         {apacheBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save score
                                     </Button>
                                 </div>
@@ -326,11 +326,11 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
             </div>
 
             {/* SOFA */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> SOFA</h2>
                     {isActive && (
-                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={openSofa}>
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openSofa}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New score
                         </Button>
                     )}
@@ -353,11 +353,11 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                         </ResponsiveContainer>
                         <div className="mt-2 space-y-1.5">
                             {sofaHistory.map((s, i) => (
-                                <div key={s.sofaScoreId} className="flex items-center justify-between text-sm">
+                                <div key={s.sofaScoreId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 text-sm">
                                     <span className={cn('font-bold', i === 0 ? 'text-slate-800' : 'text-slate-500')}>
                                         Total: {s.totalScore} <span className="font-normal text-slate-400">(R{s.respiratoryScore} C{s.coagulationScore} L{s.liverScore} CV{s.cardiovascularScore} CNS{s.cnsScore} Rn{s.renalScore})</span>
                                     </span>
-                                    <span className="text-[11px] text-slate-500">{s.scoredBy} · {formatIstDateTime(s.scoredAt)}</span>
+                                    <span className="text-[11px] text-slate-500 shrink-0">{s.scoredBy} · {formatIstDateTime(s.scoredAt)}</span>
                                 </div>
                             ))}
                         </div>
@@ -394,9 +394,9 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                                         <option value="DOPAMINE_HIGH_OR_EPI_HIGH_OR_NOREPI_HIGH">Dopamine &gt;15, or epinephrine/norepinephrine &gt;0.1</option>
                                     </select>
                                 </div>
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="sm" className="h-9" onClick={() => setSofaOpen(false)}>Cancel</Button>
-                                    <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={sofaBusy} onClick={submitSofa}>
+                                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                    <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setSofaOpen(false)}>Cancel</Button>
+                                    <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={sofaBusy} onClick={submitSofa}>
                                         {sofaBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save score
                                     </Button>
                                 </div>

@@ -367,12 +367,12 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
     return (
         <div className="space-y-5">
             {/* Case list + new request */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Surgery cases</h2>
                     {isActive && (
                         <Button
-                            size="sm" variant="outline" className="h-8 text-xs"
+                            size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start"
                             onClick={() => setShowNewRequest(o => {
                                 const next = !o;
                                 if (next && !procedureName.trim() && otPlanProcedureNameSnapshot) {
@@ -422,9 +422,9 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                 <Input value={anaesthetistName} onChange={e => setAnaesthetistName(e.target.value)} className="h-9 mt-1" />
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" className="h-9" onClick={() => setShowNewRequest(false)}>Cancel</Button>
-                            <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={requestBusy} onClick={submitRequest}>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setShowNewRequest(false)}>Cancel</Button>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={requestBusy} onClick={submitRequest}>
                                 {requestBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Request
                             </Button>
                         </div>
@@ -458,7 +458,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
             {detail && !detailLoading && (
                 <>
                     {/* Status bar */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-5 flex items-center justify-between flex-wrap gap-3">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <p className="font-bold text-slate-800">{detail.procedureName}</p>
                             <p className="text-xs text-slate-500">{detail.surgeonName ? `Surgeon: ${detail.surgeonName}` : ''}{detail.anaesthetistName ? ` · Anaesthetist: ${detail.anaesthetistName}` : ''}</p>
@@ -467,13 +467,13 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                             )}
                         </div>
                         {isActive && NEXT_STATUS[detail.statusCode] && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 {!showCancel && (
-                                    <Button size="sm" variant="outline" className="h-8 text-xs text-rose-600 hover:bg-rose-50" onClick={() => setShowCancel(true)}>
+                                    <Button size="sm" variant="outline" className="h-10 sm:h-8 text-xs text-rose-600 hover:bg-rose-50 flex-1 sm:flex-none" onClick={() => setShowCancel(true)}>
                                         <X className="h-3.5 w-3.5 mr-1.5" /> Cancel case
                                     </Button>
                                 )}
-                                <Button size="sm" className="h-8 text-xs bg-brand-600 hover:bg-brand-700" disabled={statusBusy} onClick={advanceStatus}>
+                                <Button size="sm" className="h-10 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700 flex-1 sm:flex-none" disabled={statusBusy} onClick={advanceStatus}>
                                     {statusBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} {NEXT_STATUS_LABEL[detail.statusCode]}
                                 </Button>
                             </div>
@@ -484,15 +484,15 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 space-y-2">
                             <Label className="text-[11px] font-semibold text-rose-700">Reason for cancellation</Label>
                             <Textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={2} />
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowCancel(false)}>Back</Button>
-                                <Button size="sm" className="h-8 bg-rose-600 hover:bg-rose-700" disabled={statusBusy} onClick={submitCancel}>Confirm cancel</Button>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                <Button variant="ghost" size="sm" className="h-10 sm:h-8" onClick={() => setShowCancel(false)}>Back</Button>
+                                <Button size="sm" className="h-10 sm:h-8 bg-rose-600 hover:bg-rose-700" disabled={statusBusy} onClick={submitCancel}>Confirm cancel</Button>
                             </div>
                         </div>
                     )}
 
                     {/* Schedule */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-5">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Schedule</h2>
                         {detail.booking && (
                             <p className="text-sm text-slate-700 mb-2">
@@ -501,23 +501,23 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                             </p>
                         )}
                         {isActive && (
-                            <div className="flex items-end gap-2 flex-wrap">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:items-end">
                                 <div>
                                     <Label className="text-[11px] font-semibold text-slate-600">Theatre</Label>
-                                    <select value={pickedTheatreId} onChange={e => setPickedTheatreId(e.target.value)} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                    <select value={pickedTheatreId} onChange={e => setPickedTheatreId(e.target.value)} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                         <option value="">Select…</option>
                                         {theatres.map(t => <option key={t.theatreId} value={t.theatreId}>{t.theatreName}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <Label className="text-[11px] font-semibold text-slate-600">Start</Label>
-                                    <Input type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} className="h-9 mt-1" />
+                                    <Input type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
                                 </div>
                                 <div>
                                     <Label className="text-[11px] font-semibold text-slate-600">End</Label>
-                                    <Input type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} className="h-9 mt-1" />
+                                    <Input type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
                                 </div>
-                                <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={bookBusy} onClick={submitBooking}>
+                                <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={bookBusy} onClick={submitBooking}>
                                     {bookBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} {detail.booking ? 'Reschedule' : 'Book'}
                                 </Button>
                             </div>
@@ -525,7 +525,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                     </div>
 
                     {/* Pre-op assessment */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-5">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><ClipboardCheck className="h-3.5 w-3.5" /> Pre-op assessment</h2>
                         {detail.latestPreOpAssessment && (
                             <p className="text-xs text-slate-500 mb-2">Last assessed by {detail.latestPreOpAssessment.assessedBy} at {formatIstDateTime(detail.latestPreOpAssessment.assessedAt)}</p>
@@ -535,7 +535,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                 <div className="flex items-end gap-3 flex-wrap">
                                     <div>
                                         <Label className="text-[11px] font-semibold text-slate-600">ASA grade</Label>
-                                        <select value={asaGrade} onChange={e => setAsaGrade(e.target.value)} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                        <select value={asaGrade} onChange={e => setAsaGrade(e.target.value)} className="h-10 sm:h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                             <option value="">—</option>
                                             {['I', 'II', 'III', 'IV', 'V', 'VI'].map(g => <option key={g} value={g}>{g}</option>)}
                                         </select>
@@ -546,14 +546,14 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                         { label: 'Investigations reviewed', val: investigationsReviewed, set: setInvestigationsReviewed },
                                         { label: 'Consent confirmed', val: consentConfirmed, set: setConsentConfirmed },
                                     ].map(({ label, val, set }) => (
-                                        <label key={label} className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 h-9">
+                                        <label key={label} className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 h-10 sm:h-9">
                                             <input type="checkbox" checked={val} onChange={e => set(e.target.checked)} className="h-4 w-4" /> {label}
                                         </label>
                                     ))}
                                 </div>
                                 <Textarea value={preOpNotes} onChange={e => setPreOpNotes(e.target.value)} placeholder="Notes" rows={2} />
                                 <div className="flex justify-end">
-                                    <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={preOpBusy} onClick={submitPreOp}>
+                                    <Button size="sm" className="h-10 sm:h-9 w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={preOpBusy} onClick={submitPreOp}>
                                         {preOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save assessment
                                     </Button>
                                 </div>
@@ -562,7 +562,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                     </div>
 
                     {/* WHO Surgical Safety Checklist */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-5">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">WHO Surgical Safety Checklist</h2>
                         {(['signIn', 'timeOut', 'signOut'] as const).map((phase, idx) => {
                             const items = phase === 'signIn' ? signInItems : phase === 'timeOut' ? timeOutItems : signOutItems;
@@ -572,10 +572,10 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                             const priorDone = idx === 0 || (phase === 'timeOut' ? detail.checklist?.signInCompletedAt : detail.checklist?.timeOutCompletedAt);
                             return (
                                 <div key={phase} className={cn('pt-3 mt-3 border-t border-slate-100 first:pt-0 first:mt-0 first:border-t-0')}>
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                         <p className="text-sm font-bold text-slate-800">{label}</p>
                                         {completedAt ? (
-                                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Completed {formatIstDateTime(completedAt)}</Badge>
+                                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">Completed {formatIstDateTime(completedAt)}</Badge>
                                         ) : !priorDone ? (
                                             <span className="text-[11px] text-slate-400">Complete the previous phase first</span>
                                         ) : null}
@@ -589,7 +589,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                                 </label>
                                             ))}
                                             <div className="flex justify-end pt-1">
-                                                <Button size="sm" className="h-8 text-xs bg-brand-600 hover:bg-brand-700" disabled={checklistBusy === phase} onClick={() => submitChecklistPhase(phase)}>
+                                                <Button size="sm" className="h-10 sm:h-8 text-xs w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={checklistBusy === phase} onClick={() => submitChecklistPhase(phase)}>
                                                     {checklistBusy === phase ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Complete {label.split(' ')[0]}
                                                 </Button>
                                             </div>
@@ -601,7 +601,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                     </div>
 
                     {/* Intra-op record */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-5">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Intra-op record</h2>
                         {isActive && (
                             <div className="space-y-3">
@@ -643,7 +643,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                     <Textarea value={complicationsNotes} onChange={e => setComplicationsNotes(e.target.value)} rows={2} className="mt-1" />
                                 </div>
                                 <div className="flex justify-end">
-                                    <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={intraOpBusy} onClick={submitIntraOp}>
+                                    <Button size="sm" className="h-10 sm:h-9 w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={intraOpBusy} onClick={submitIntraOp}>
                                         {intraOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
                                     </Button>
                                 </div>
@@ -652,7 +652,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                     </div>
 
                     {/* Items used + instrument set issue */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-5">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" /> Consumables & implants used</h2>
 
                         {detail.itemsUsed.length === 0 ? (
@@ -675,61 +675,61 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
 
                         {isActive && (
                             <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                                <div className="flex items-end gap-2 flex-wrap">
-                                    <div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 lg:items-end">
+                                    <div className="col-span-2 lg:col-span-1">
                                         <Label className="text-[11px] font-semibold text-slate-600">Inventory item</Label>
                                         <select value={pickedInventoryItemId} onChange={e => {
                                             setPickedInventoryItemId(e.target.value);
                                             const item = inventoryItems.find(i => i.inventoryItemId === e.target.value);
                                             if (item) setItemCategory(item.category === 'IMPLANT' ? 'IMPLANT' : 'CONSUMABLE');
-                                        }} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white min-w-[180px]">
+                                        }} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                             <option value="">Free text item…</option>
                                             {inventoryItems.map(i => <option key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName} (stock {i.currentStock})</option>)}
                                         </select>
                                     </div>
                                     {!pickedInventoryItemId && (
-                                        <div>
+                                        <div className="col-span-2 lg:col-span-1">
                                             <Label className="text-[11px] font-semibold text-slate-600">Item name</Label>
-                                            <Input value={freeItemName} onChange={e => setFreeItemName(e.target.value)} className="h-9 mt-1" />
+                                            <Input value={freeItemName} onChange={e => setFreeItemName(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
                                         </div>
                                     )}
                                     <div>
                                         <Label className="text-[11px] font-semibold text-slate-600">Category</Label>
-                                        <select value={itemCategory} onChange={e => setItemCategory(e.target.value as 'CONSUMABLE' | 'IMPLANT')} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                        <select value={itemCategory} onChange={e => setItemCategory(e.target.value as 'CONSUMABLE' | 'IMPLANT')} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                             <option value="CONSUMABLE">Consumable</option>
                                             <option value="IMPLANT">Implant</option>
                                         </select>
                                     </div>
                                     <div>
                                         <Label className="text-[11px] font-semibold text-slate-600">Qty</Label>
-                                        <Input type="number" min={0.001} step="0.001" value={itemQty} onChange={e => setItemQty(e.target.value)} className="h-9 mt-1 w-20" />
+                                        <Input type="number" min={0.001} step="0.001" value={itemQty} onChange={e => setItemQty(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
                                     </div>
                                     {itemCategory === 'IMPLANT' && (
                                         <>
                                             <div>
                                                 <Label className="text-[11px] font-semibold text-slate-600">Lot #</Label>
-                                                <Input value={itemLot} onChange={e => setItemLot(e.target.value)} className="h-9 mt-1 w-28" />
+                                                <Input value={itemLot} onChange={e => setItemLot(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
                                             </div>
                                             <div>
                                                 <Label className="text-[11px] font-semibold text-slate-600">Serial #</Label>
-                                                <Input value={itemSerial} onChange={e => setItemSerial(e.target.value)} className="h-9 mt-1 w-28" />
+                                                <Input value={itemSerial} onChange={e => setItemSerial(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
                                             </div>
                                         </>
                                     )}
-                                    <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={itemBusy} onClick={submitItemUsage}>
+                                    <Button size="sm" className="h-10 sm:h-9 col-span-2 lg:col-span-1 bg-brand-600 hover:bg-brand-700" disabled={itemBusy} onClick={submitItemUsage}>
                                         {itemBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1.5" />} Add
                                     </Button>
                                 </div>
 
-                                <div className="flex items-end gap-2 flex-wrap pt-2 border-t border-slate-50">
-                                    <div>
+                                <div className="flex flex-col sm:flex-row sm:items-end gap-2 pt-2 border-t border-slate-50">
+                                    <div className="flex-1 min-w-0">
                                         <Label className="text-[11px] font-semibold text-slate-600">Issue a sterile instrument set to this case</Label>
-                                        <select value={pickedSetId} onChange={e => setPickedSetId(e.target.value)} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white min-w-[200px]">
+                                        <select value={pickedSetId} onChange={e => setPickedSetId(e.target.value)} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                             <option value="">Select a sterile set…</option>
                                             {instrumentSets.map(s => <option key={s.instrumentSetId} value={s.instrumentSetId}>{s.setCode} — {s.setName}</option>)}
                                         </select>
                                     </div>
-                                    <Button size="sm" variant="outline" className="h-9 text-xs" disabled={!pickedSetId || issueBusy} onClick={issueInstrumentSet}>
+                                    <Button size="sm" variant="outline" className="h-10 sm:h-9 text-xs" disabled={!pickedSetId || issueBusy} onClick={issueInstrumentSet}>
                                         {issueBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />} Issue to OT
                                     </Button>
                                 </div>

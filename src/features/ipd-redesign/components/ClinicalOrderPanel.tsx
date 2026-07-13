@@ -127,14 +127,14 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{itemLabel} Orders</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={load} disabled={loading}>
                         <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', loading && 'animate-spin')} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New order
                         </Button>
                     )}
@@ -187,7 +187,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                             </p>
                                         </div>
                                         {l.statusCode === 'ACTIVE' && isActive && (
-                                            <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400 hover:text-rose-600 shrink-0"
+                                            <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-rose-600 shrink-0"
                                                 onClick={() => { setDiscontinuing({ orderLineId: l.orderLineId, itemName: l.itemName || 'this item' }); setDiscontinueReason(''); }}>
                                                 <X className="h-3.5 w-3.5 mr-1" /> Discontinue
                                             </Button>
@@ -310,9 +310,9 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                             <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2">
-                            <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-                            <Button disabled={!canSubmit || submitting} onClick={submit} className="bg-brand-600 hover:bg-brand-700">
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                            <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
+                            <Button disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                                 {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Place order
                             </Button>
                         </div>
@@ -333,9 +333,9 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                 <Label className="text-xs font-semibold text-slate-700">Reason</Label>
                                 <Textarea rows={2} value={discontinueReason} onChange={e => setDiscontinueReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                             </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setDiscontinuing(null)}>Cancel</Button>
-                                <Button disabled={discontinueBusy} className="bg-rose-600 hover:bg-rose-700" onClick={confirmDiscontinue}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setDiscontinuing(null)}>Cancel</Button>
+                                <Button disabled={discontinueBusy} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700" onClick={confirmDiscontinue}>
                                     {discontinueBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Discontinue
                                 </Button>
                             </div>

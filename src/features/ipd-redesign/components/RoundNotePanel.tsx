@@ -85,14 +85,14 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Round Notes</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={load} disabled={loading}>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New note
                         </Button>
                     )}
@@ -110,7 +110,7 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
                             <div className="flex items-center justify-between gap-3 flex-wrap">
                                 <span className="text-xs font-bold text-slate-700">{formatIstDateTime(n.notedAt)}{n.doctorName ? ` · ${n.doctorName}` : ''}</span>
                                 {isActive && (
-                                    <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400 hover:text-brand-600" onClick={() => openAddendum(n)}>
+                                    <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-brand-600" onClick={() => openAddendum(n)}>
                                         <MessageSquarePlus className="h-3.5 w-3.5 mr-1" /> Add addendum
                                     </Button>
                                 )}
@@ -185,9 +185,9 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
                         <Label className="text-[11px] font-semibold text-slate-600">Diagnosis</Label>
                         <Input value={form.diagnosis ?? ''} onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))} className="h-9 mt-1" placeholder="Optional" />
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-                        <Button disabled={!canSubmit || submitting} onClick={submit} className={cn('bg-brand-600 hover:bg-brand-700')}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={closeDialog}>Cancel</Button>
+                        <Button disabled={!canSubmit || submitting} onClick={submit} className={cn('h-11 sm:h-10 bg-brand-600 hover:bg-brand-700')}>
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

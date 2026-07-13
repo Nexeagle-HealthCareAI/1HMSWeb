@@ -7,12 +7,12 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  KeyRound
+  Globe
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
-import { PublicApiClientConfig } from './PublicApiClientConfig';
+import { PublicDirectoryConfig } from './PublicDirectoryConfig';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,10 +46,10 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         icon: Palette,
       },
       {
-        id: 'publicApi',
-        label: t('systemConfiguration.navigation.publicApi.label', { defaultValue: 'Public API' }),
-        description: t('systemConfiguration.navigation.publicApi.description', { defaultValue: 'External booking integrations' }),
-        icon: KeyRound,
+        id: 'publicDirectory',
+        label: t('systemConfiguration.navigation.publicDirectory.label', { defaultValue: 'Public Directory' }),
+        description: t('systemConfiguration.navigation.publicDirectory.description', { defaultValue: 'Platform-wide doctor listing' }),
+        icon: Globe,
       }
     ] as const,
     [t]
@@ -166,8 +166,8 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               />
             </TabsContent>
 
-            <TabsContent value="publicApi">
-              <PublicApiClientConfig />
+            <TabsContent value="publicDirectory">
+              <PublicDirectoryConfig />
             </TabsContent>
           </Tabs>
         </div>

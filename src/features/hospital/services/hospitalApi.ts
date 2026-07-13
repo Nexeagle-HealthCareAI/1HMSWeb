@@ -46,6 +46,9 @@ export interface HospitalUpdateRequest {
   gstin?: string;
   pan?: string;
   nabhNumber?: string;
+  // Opt-in: whether this hospital's doctors appear on the platform-wide public
+  // directory (NexEagle's "find a doctor" page). Off by default.
+  isPubliclyListed?: boolean;
 }
 
 export interface HospitalUpdateResponse {
@@ -81,6 +84,7 @@ export interface HospitalData {
   pan?: string;
   nabhNumber?: string;
   isActive: boolean;
+  isPubliclyListed: boolean;
   createdAt: string;
   lastUpdatedAt: string;
   profileStatus: HospitalProfileStatus;

@@ -140,11 +140,11 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     return (
         <div className="space-y-5">
             {/* Reserve a unit */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Reserve a unit</h2>
                     {isActive && (
-                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setPoolOpen(o => !o)}>
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={() => setPoolOpen(o => !o)}>
                             <Search className="h-3.5 w-3.5 mr-1.5" /> {poolOpen ? 'Hide pool search' : 'Search pool'}
                         </Button>
                     )}
@@ -152,22 +152,22 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
 
                 {poolOpen && isActive && (
                     <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
-                        <div className="flex items-end gap-2 flex-wrap">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:items-end">
                             <div>
                                 <Label className="text-[11px] font-semibold text-slate-600">Component</Label>
-                                <select value={poolComponent} onChange={e => setPoolComponent(e.target.value as BloodComponent | '')} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                <select value={poolComponent} onChange={e => setPoolComponent(e.target.value as BloodComponent | '')} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                     <option value="">Any</option>
                                     {COMPONENTS.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <Label className="text-[11px] font-semibold text-slate-600">Blood group</Label>
-                                <select value={poolGroup} onChange={e => setPoolGroup(e.target.value as BloodGroup | '')} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                <select value={poolGroup} onChange={e => setPoolGroup(e.target.value as BloodGroup | '')} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
                                     <option value="">Any</option>
                                     {GROUPS.map(g => <option key={g} value={g}>{groupLabel(g)}</option>)}
                                 </select>
                             </div>
-                            <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" onClick={searchPool} disabled={poolLoading}>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" onClick={searchPool} disabled={poolLoading}>
                                 {poolLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1.5" />} Search
                             </Button>
                         </div>
@@ -177,13 +177,13 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                         ) : (
                             <div className="space-y-2">
                                 {pool.map(b => (
-                                    <div key={b.bloodBagId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
+                                    <div key={b.bloodBagId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 rounded-lg border border-slate-100">
                                         <div className="text-sm">
                                             <span className="font-bold text-slate-800">{b.component} · {groupLabel(b.bloodGroup)}</span>
                                             <span className="text-slate-500"> · {b.bagNumber} · {b.volumeMl}ml · expires {formatIstDateTime(b.expiresAt)}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
-                                            <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled={reservingBagId === b.bloodBagId}
+                                            <Button size="sm" variant="outline" className="h-9 sm:h-7 text-[11px] w-full sm:w-auto" disabled={reservingBagId === b.bloodBagId}
                                                 onClick={() => reserve(b.bloodBagId, 'COMPATIBLE')}>
                                                 {reservingBagId === b.bloodBagId ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />} Reserve (compatible)
                                             </Button>
@@ -197,23 +197,23 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             </div>
 
             {/* Reserved for this admission */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Reserved for this admission</h2>
                 {reservedBags.length === 0 ? (
                     <p className="text-sm text-slate-400">No bags reserved yet.</p>
                 ) : (
                     <div className="space-y-2">
                         {reservedBags.map(b => (
-                            <div key={b.bloodBagId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
-                                <div className="text-sm flex items-center gap-2">
-                                    <Droplet className="h-4 w-4 text-rose-500" />
+                            <div key={b.bloodBagId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 rounded-lg border border-slate-100">
+                                <div className="text-sm flex items-center gap-2 flex-wrap">
+                                    <Droplet className="h-4 w-4 text-rose-500 shrink-0" />
                                     <span className="font-bold text-slate-800">{b.component} · {groupLabel(b.bloodGroup)}</span>
                                     <span className="text-slate-500">{b.bagNumber}</span>
                                     <Badge variant="outline" className={statusBadge(b.status)}>{b.status}</Badge>
                                     {b.crossmatchResult && <Badge variant="outline" className="text-[10px]">{b.crossmatchResult}</Badge>}
                                 </div>
                                 {isActive && b.status === 'RESERVED' && (
-                                    <Button size="sm" className="h-8 text-xs bg-brand-600 hover:bg-brand-700" onClick={() => openTransfuse(b.bloodBagId)}>
+                                    <Button size="sm" className="h-9 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700" onClick={() => openTransfuse(b.bloodBagId)}>
                                         Record transfusion
                                     </Button>
                                 )}
@@ -258,9 +258,9 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                 <Textarea value={reactionNotes} onChange={e => setReactionNotes(e.target.value)} className="mt-1" rows={2} />
                             </div>
                         )}
-                        <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" className="h-9" onClick={() => setTransfuseBagId(null)}>Cancel</Button>
-                            <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={transfuseBusy} onClick={submitTransfuse}>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setTransfuseBagId(null)}>Cancel</Button>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={transfuseBusy} onClick={submitTransfuse}>
                                 {transfuseBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
                             </Button>
                         </div>
@@ -269,7 +269,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             </div>
 
             {/* Transfusion history */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Transfusion history</h2>
                 {transfusions.length === 0 ? (
                     <p className="text-sm text-slate-400">No transfusions recorded yet.</p>
