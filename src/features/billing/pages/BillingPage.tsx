@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
-    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, Check,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, Check, Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,12 +28,13 @@ import { debounce } from 'lodash';
 import { patientService } from '../services/patientService';
 import {
     ipdBillingService,
-    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse,
+    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse, type PaymentMode, type PaymentType,
 } from '../services/ipdBillingService';
 import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import { offlineCachedRead, isReachable } from '@/offline';
 import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
+import { EditChargeDialog } from '../components/dialogs/EditChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
 import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 import { VISIT_TYPES, visitTypeLabel } from '../utils/constants';
@@ -109,7 +110,11 @@ export const BillingPage: React.FC = () => {
 
     // Dialogs
     const [showAddCharge, setShowAddCharge] = useState(false);
+    const [editChargeTarget, setEditChargeTarget] = useState<{ chargeEventId: string; displayName?: string; qty: number; rate: number; discountAmount: number } | null>(null);
     const [showAddPayment, setShowAddPayment] = useState(false);
+    // Which tab AddPaymentDialog opens on — 'REFUND' when navigated to from the credit banner
+    // below, so the patient's credit is front-and-center instead of an extra click away.
+    const [addPaymentInitialType, setAddPaymentInitialType] = useState<PaymentType>('PAYMENT');
     const [showNewVisit, setShowNewVisit] = useState(false);
     const [newVisitType, setNewVisitType] = useState<'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'>('OPD');
     const [creatingVisit, setCreatingVisit] = useState(false);
@@ -251,20 +256,12 @@ export const BillingPage: React.FC = () => {
 
     const handleVoid = async () => {
         if (!voidConfirm || !selectedPatient || voidBusy) return;
-        if (!voidReason.trim()) {
-            toast({ title: 'Reason required', description: 'Explain why this entry should be deleted.', variant: 'destructive' });
-            return;
-        }
         setVoidBusy(true);
         try {
             const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
-            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId, voidReason.trim());
+            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId, voidReason.trim() || undefined);
             if (res?.success === false) throw new Error(res.message ?? 'Could not delete');
-            toast(
-                res?.pendingApproval
-                    ? { title: 'Submitted for approval', description: `An Admin/AdminDoctor needs to approve this ${voidConfirm.kind} deletion.` }
-                    : { title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` }
-            );
+            toast({ title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` });
             setVoidConfirm(null);
             setVoidReason('');
             loadEvents();
@@ -273,6 +270,17 @@ export const BillingPage: React.FC = () => {
         } finally {
             setVoidBusy(false);
         }
+    };
+
+    // Navigates to the refund process from the top-of-ledger credit banner — opens the same Take
+    // Payment sheet used for collecting money, pre-selected on Refund with the credit amount
+    // filled in, so the user reviews mode/amount before applying it (rather than an instant,
+    // no-review action). Uses the RAW ledger balance (totals.balance), never `due` — `due` nets
+    // out an invoice-level discount, which was never real cash collected and so can never be
+    // refunded (see the AddPaymentDialog netBalance fix above for the same distinction).
+    const openRefundProcess = () => {
+        setAddPaymentInitialType('REFUND');
+        setShowAddPayment(true);
     };
 
     // Finalize (lock) the invoice. We re-link any posted charges first so nothing is left off
@@ -555,19 +563,6 @@ export const BillingPage: React.FC = () => {
                                     <X className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
-
-                            {due !== 0 && (
-                                <div className={cn(
-                                    'flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2',
-                                    due < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'
-                                )}>
-                                    {due < 0 ? <Wallet className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                                    <div className="flex flex-col">
-                                        <span className="text-[11px] font-bold tracking-wider uppercase">{due < 0 ? 'Credit' : 'Due'}</span>
-                                        <span className="text-sm font-bold tabular-nums">₹ {Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
@@ -581,6 +576,36 @@ export const BillingPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Credit / due banner — full-width, right at the top of the ledger (not tucked into
+                the crowded header row), so a real credit is impossible to miss. Uses the RAW
+                ledger balance (totals.balance), never the discount-adjusted `due` — a discount was
+                never real cash collected, so it can never be refunded (see openRefundProcess). */}
+            {selectedPatient && selectedEncounterId && totals.balance < 0 && (
+                <button
+                    type="button"
+                    onClick={openRefundProcess}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 text-left shadow-sm hover:from-emerald-100 hover:to-teal-100 transition-colors shrink-0"
+                >
+                    <div className="flex items-center gap-2.5">
+                        <Wallet className="h-5 w-5 text-emerald-700" />
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Patient in credit</p>
+                            <p className="text-[10px] text-emerald-600">Click to open the refund process</p>
+                        </div>
+                    </div>
+                    <span className="text-lg font-black tabular-nums text-emerald-700">₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </button>
+            )}
+            {selectedPatient && selectedEncounterId && totals.balance >= 0 && due > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <TrendingDown className="h-5 w-5 text-rose-700" />
+                        <p className="text-xs font-bold uppercase tracking-wide text-rose-700">Balance due</p>
+                    </div>
+                    <span className="text-lg font-black tabular-nums text-rose-700">₹{due.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+            )}
 
             {/* Guided 3-step rail — orients a first-time user: Patient → Add items → Pay & print.
                 Steps are derived from live state; the current step is highlighted, done steps ticked. */}
@@ -804,11 +829,16 @@ export const BillingPage: React.FC = () => {
                                                     {row.c.statusCode === 'VOID' ? <span className="text-slate-400 line-through font-medium">₹{Number(row.c.netAmount).toFixed(2)}</span> : `₹${Number(row.c.netAmount).toFixed(2)}`}
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
-                                                <td className="px-2 py-2 text-right">
+                                                <td className="px-2 py-2 text-right whitespace-nowrap">
                                                     {!isFinalized && row.c.statusCode !== 'VOID' && (
-                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
+                                                        <div className="inline-flex items-center gap-0.5">
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 })}>
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
@@ -923,19 +953,25 @@ export const BillingPage: React.FC = () => {
                             </div>
                             {isFinalized && (
                                 <div className="mt-3 flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — charges locked.{due > 0 ? ' Payments can still be collected until settled.' : ' Fully settled.'}
+                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — charges locked.
+                                    {due > 0 ? ' Payments can still be collected until settled.' : totals.balance < 0 ? ' Patient is in credit — refund available below.' : ' Fully settled.'}
                                 </div>
                             )}
                         </div>
 
                         {/* Action buttons */}
                         <div className="grid grid-cols-1 gap-2">
+                            {/* Add Item supports staging several items via "+ Add another" inside the
+                                sheet and posting them together — no separate bulk-add flow needed. */}
                             <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]">
                                 <Plus className="h-4 w-4 mr-1" /> Add Item
                             </Button>
                             {/* Payments are decoupled from finalize: a finalized invoice can still be
-                                collected against until the balance is settled (charges stay locked). */}
-                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || (isFinalized && due <= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                                collected against until the balance is settled (charges stay locked) —
+                                and, separately, a real credit (totals.balance < 0, raw ledger) must
+                                still be refundable even once due <= 0, since due <= 0 is also true
+                                for a credit balance (it was disabling refunds on finalized bills). */}
+                            <Button onClick={() => { setAddPaymentInitialType('PAYMENT'); setShowAddPayment(true); }} disabled={!selectedEncounterId || (isFinalized && due <= 0 && totals.balance >= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Take Payment
                             </Button>
                             {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
@@ -1026,13 +1062,28 @@ export const BillingPage: React.FC = () => {
                     onOptimistic={applyOptimisticCharges}
                 />
             )}
+            <EditChargeDialog
+                open={!!editChargeTarget}
+                onOpenChange={(o) => { if (!o) setEditChargeTarget(null); }}
+                charge={editChargeTarget}
+                onSaved={handleChargeSaved}
+            />
             {selectedPatient && selectedEncounterId && (
                 <AddPaymentDialog
                     open={showAddPayment}
                     onOpenChange={setShowAddPayment}
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
-                    netBalance={due}
+                    // netBalance must be the RAW ledger balance (billed vs. actually collected),
+                    // matching what the backend's REFUND validation checks — `due` additionally
+                    // nets out an invoice-level discount, which was never real cash collected and so
+                    // can never be refunded. Passing `due` as netBalance made the "Credit available"
+                    // quick-fill show a discount as refundable credit, which the backend then
+                    // correctly rejected ("Available credit: 0"). `due` is still passed separately
+                    // as dueAmount so the "Balance Due" quick-fill keeps reflecting the discount.
+                    netBalance={totals.balance}
+                    dueAmount={due}
+                    initialType={addPaymentInitialType}
                     onSaved={handlePaymentSaved}
                 />
             )}
@@ -1160,22 +1211,22 @@ export const BillingPage: React.FC = () => {
                     </div>
                     <div className="px-5 py-4 space-y-3">
                         <AlertDialogDescription className="text-sm text-slate-600">
-                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This needs Admin/AdminDoctor approval before it takes effect.
+                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This takes effect immediately.
                         </AlertDialogDescription>
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-700">Reason (required)</label>
+                            <label className="text-xs font-semibold text-slate-700">Note <span className="text-slate-400 font-normal">(optional)</span></label>
                             <Textarea
                                 value={voidReason}
                                 onChange={(e) => setVoidReason(e.target.value)}
                                 rows={2}
-                                placeholder="Why should this be deleted?"
+                                placeholder="Why is this being deleted?"
                                 className="text-sm"
                             />
                         </div>
                     </div>
                     <AlertDialogFooter className="px-5 pb-5 pt-0">
                         <AlertDialogCancel disabled={voidBusy} className="rounded-xl">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handleVoid(); }} disabled={voidBusy || !voidReason.trim()} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
+                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handleVoid(); }} disabled={voidBusy} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
                             {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Request Delete</>}
                         </AlertDialogAction>
                     </AlertDialogFooter>

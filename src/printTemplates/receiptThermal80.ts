@@ -2,6 +2,12 @@ import { ReceiptPrintData, PrintSettings } from '../types/print';
 import { format } from 'date-fns';
 
 export const buildReceiptThermal80 = (data: ReceiptPrintData, settings: PrintSettings): string => {
+    const money = (n: number) => (Number.isFinite(n) ? n : 0).toFixed(2);
+    const itemRows = (data.items ?? []).map(item => `
+        <div style="margin-bottom:4px;">
+            <div class="row"><span>${item.description}</span><span>${money(item.total)}</span></div>
+            <div style="font-size:7pt; color:#333;">${item.qty} x ${money(item.rate)}${item.discount > 0 ? ` &nbsp;(- ${money(item.discount)})` : ''}</div>
+        </div>`).join('');
     return `
     <!DOCTYPE html>
     <html>
@@ -56,6 +62,14 @@ export const buildReceiptThermal80 = (data: ReceiptPrintData, settings: PrintSet
              <div class="label">Patient:</div>
              <div class="bold">${data.patientName} (${data.patientId})</div>
         </div>
+
+        ${data.items && data.items.length > 0 ? `
+        <div class="divider"></div>
+        <div class="label bold">Services</div>
+        ${itemRows}
+        <div class="row"><span class="label">Sub Total:</span><span>${money(data.subTotal)}</span></div>
+        ${data.discountTotal > 0 ? `<div class="row"><span class="label">Discount:</span><span>- ${money(data.discountTotal)}</span></div>` : ''}
+        ` : ''}
 
         <div class="divider"></div>
 

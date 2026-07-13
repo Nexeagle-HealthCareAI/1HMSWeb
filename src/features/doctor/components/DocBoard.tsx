@@ -104,6 +104,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { AdviseAdmissionSheet } from '@/features/patient/components/AdviseAdmissionSheet';
+import { AdmissionStatusBadge } from '@/features/patient/components/AdmissionStatusBadge';
+import { admissionReferralApi, AdmissionReferralItem } from '@/features/ipd-redesign/services/admissionReferralApi';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
@@ -147,7 +149,8 @@ interface PatientAppointment {
   | 'AWAITING_RECONSULT'
   | 'COMPLETED'
   | 'SCHEDULED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'PRE_APPOINTMENT';
   appointmentType: string | null;
   phone?: string;
 }
@@ -404,6 +407,30 @@ export const ClinicalDashboard: React.FC = () => {
       phone: item.patientMobile
     })) || [];
 
+  // Latest admission-advice referral per patient, for the AdmissionStatusBadge shown alongside
+  // each appointment row. Fetched once (not per-row) to avoid an N+1 request per visible patient.
+  const [referralsByPatient, setReferralsByPatient] = useState<Record<string, AdmissionReferralItem>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!hospitalId || !doctorId) {
+      setReferralsByPatient({});
+      return;
+    }
+    admissionReferralApi.list({ hospitalId, referringDoctorId: doctorId })
+      .then(res => {
+        if (cancelled) return;
+        const map: Record<string, AdmissionReferralItem> = {};
+        // Referrals come back ordered by CreatedAt desc, so the first one seen per patient is the latest.
+        (res?.referrals ?? []).forEach(r => {
+          if (!map[r.patientId]) map[r.patientId] = r;
+        });
+        setReferralsByPatient(map);
+      })
+      .catch(() => { if (!cancelled) setReferralsByPatient({}); });
+    return () => { cancelled = true; };
+  }, [hospitalId, doctorId]);
+
   // Loading + Error state combine
   // If profile is restricted (204), we shouldn't consider appointment loading state as blocking
   const isDataLoading = doctorProfileLoading || (!doctorProfileRestricted && appointmentLoading);
@@ -483,6 +510,8 @@ export const ClinicalDashboard: React.FC = () => {
         return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.scheduled')}</Badge>;
       case 'CANCELLED':
         return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.cancelled')}</Badge>;
+      case 'PRE_APPOINTMENT':
+        return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.preAppointment')}</Badge>;
       default:
         return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.default', { status })}</Badge>;
     }
@@ -1556,6 +1585,7 @@ export const ClinicalDashboard: React.FC = () => {
                               </div>
                               <div className="flex flex-col items-end gap-1 text-right">
                                 {getStatusBadge(appointment.finalStatusCode)}
+                                <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
                                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                                   {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                                 </div>
@@ -1748,8 +1778,9 @@ export const ClinicalDashboard: React.FC = () => {
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4 align-middle">
-                                      <div className="transform transition-transform duration-200 hover:scale-105 origin-left">
+                                      <div className="transform transition-transform duration-200 hover:scale-105 origin-left flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
+                                        <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4 align-middle text-center">
@@ -2011,6 +2042,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col items-end gap-1 text-right">
                                   {getStatusBadge(appointment.finalStatusCode)}
+                                  <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
                                   <div className="font-medium text-gray-900 dark:text-white text-sm">
                                     {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
                                   </div>
@@ -2136,7 +2168,12 @@ export const ClinicalDashboard: React.FC = () => {
                                         </span>
                                       </div>
                                     </TableCell>
-                                    <TableCell className="py-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
+                                    <TableCell className="py-4">
+                                      <div className="flex flex-col gap-1 items-start">
+                                        {getStatusBadge(appointment.finalStatusCode)}
+                                        <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
+                                      </div>
+                                    </TableCell>
                                     <TableCell className="py-4">
                                       <Badge variant="outline" className="text-xs bg-brand-50 text-brand-700 border-brand-200 font-medium">
                                         {appointment.appointmentType || t('docBoard.table.newCase')}
@@ -2298,6 +2335,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col items-end gap-1 text-right">
                                   {getStatusBadge(appointment.finalStatusCode)}
+                                  <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
                                   <div className="font-medium text-gray-900 dark:text-white text-sm">
                                     {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                                   </div>
@@ -2456,7 +2494,12 @@ export const ClinicalDashboard: React.FC = () => {
                                         </span>
                                       </div>
                                     </TableCell>
-                                    <TableCell className="py-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
+                                    <TableCell className="py-4">
+                                      <div className="flex flex-col gap-1 items-start">
+                                        {getStatusBadge(appointment.finalStatusCode)}
+                                        <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
+                                      </div>
+                                    </TableCell>
                                     <TableCell className="py-4">
                                       <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
                                         {appointment.appointmentType || t('docBoard.table.newCase')}

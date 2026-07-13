@@ -47,6 +47,7 @@ export interface AdmissionReferralItem {
     followUpDate?: string;
     followUpNotes?: string;
     convertedAdmissionId?: string;
+    admittedAt?: string;
     createdAt: string;
 }
 
@@ -58,6 +59,7 @@ export interface GetAdmissionReferralsResponse {
 
 export interface ListReferralsFilters {
     hospitalId?: string;
+    patientId?: string;
     statusCode?: ReferralStatus;
     caseType?: CaseType;
     referringDoctorId?: string;

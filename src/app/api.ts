@@ -211,6 +211,7 @@ export const IPD_API_ENDPOINTS = {
     CREATE_EVENT: 'charge/create-event',
     CREATE_ENCOUNTER: 'charge/encounter',
     ADD_EVENT: 'charge/add-event',
+    UPDATE_EVENT: 'charge/update-event',
     CANCEL_EVENT: 'charge/cancel-event',
     GET_RATE_CARD: (hospitalId: string) => `charge/rate-card?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_PAYER_RATE: 'charge/rate-card/payer-rate',
@@ -243,8 +244,9 @@ export const IPD_API_ENDPOINTS = {
   },
   ADMISSION_REFERRAL: {
     ADVISE: 'admission-referral/advise',
-    LIST: (hospitalId: string, opts?: { statusCode?: string; caseType?: string; referringDoctorId?: string; fromDate?: string; toDate?: string }) => {
+    LIST: (hospitalId: string, opts?: { patientId?: string; statusCode?: string; caseType?: string; referringDoctorId?: string; fromDate?: string; toDate?: string }) => {
       const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (opts?.patientId) parts.push(`patientId=${encodeURIComponent(opts.patientId)}`);
       if (opts?.statusCode) parts.push(`statusCode=${encodeURIComponent(opts.statusCode)}`);
       if (opts?.caseType) parts.push(`caseType=${encodeURIComponent(opts.caseType)}`);
       if (opts?.referringDoctorId) parts.push(`referringDoctorId=${encodeURIComponent(opts.referringDoctorId)}`);

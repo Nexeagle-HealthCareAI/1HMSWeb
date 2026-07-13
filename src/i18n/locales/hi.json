@@ -1298,7 +1298,8 @@
       "labRequired": "लैब आवश्यक",
       "awaitingReconsult": "पुनः परामर्श प्रतीक्षित",
       "completed": "पूर्ण",
-      "cancelled": "रद्द"
+      "cancelled": "रद्द",
+      "preAppointment": "पूर्व-अपॉइंटमेंट"
     },
     "statusLabels": {
       "vitalsRequired": "वाइटल्स",
@@ -1308,7 +1309,8 @@
       "awaitingReconsult": "पुनः परामर्श",
       "completed": "पूर्ण",
       "scheduled": "शेड्यूल",
-      "cancelled": "रद्द"
+      "cancelled": "रद्द",
+      "preAppointment": "पूर्व-अपॉइंटमेंट"
     },
     "refreshNow": "अभी ताज़ा करें",
     "loadingAppointments": "अपॉइंटमेंट लोड हो रहे हैं...",
@@ -1379,7 +1381,8 @@
       "vitals": "वाइटल्स",
       "preparing": "तैयार किया जा रहा है",
       "notApplicable": "प्रासंगिक नहीं",
-      "completed": "पूर्ण"
+      "completed": "पूर्ण",
+      "confirmPreAppointment": "पुष्टि करें"
     },
     "toast": {
       "missingHospitalTitle": "हॉस्पिटल संदर्भ नहीं",
@@ -2651,6 +2654,7 @@
       "completed": "पूर्ण",
       "scheduled": "शेड्यूल किया गया",
       "cancelled": "रद्द",
+      "preAppointment": "पूर्व-अपॉइंटमेंट",
       "default": "{{status}}"
     },
     "sync": {

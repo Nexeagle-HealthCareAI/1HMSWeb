@@ -57,7 +57,9 @@ const mapStatus = (s?: string | null): 'OPEN' | 'FINAL' | 'CANCELLED' => {
     return 'OPEN';
 };
 
-export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): InvoicePrintData => {
+// Shared by the invoice and receipt templates so both show the exact same line items and the
+// exact same discount math (per-line charge.discountAmount + overall invoice-level discount).
+const computeChargeItems = (data: EventsData) => {
     const inv = data.currentInvoice;
     const charges = data.charges ?? [];
     const items: PrintItem[] = charges.map((c, i) => {
@@ -83,6 +85,12 @@ export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): In
     const overallDiscount = Math.max(0, (inv?.discountAmount ?? 0) - linkedLineDiscount);
     const discountTotal = lineDiscountTotal + overallDiscount;
     const taxTotal = inv?.taxAmount ?? charges.reduce((s, c) => s + (c.taxAmount ?? 0), 0);
+    return { items, subTotal, discountTotal, taxTotal };
+};
+
+export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): InvoicePrintData => {
+    const inv = data.currentInvoice;
+    const { items, subTotal, discountTotal, taxTotal } = computeChargeItems(data);
     return {
         invoiceNo: inv?.invoiceNo ?? '—',
         date: inv?.invoiceDate ?? new Date().toISOString(),
@@ -114,6 +122,7 @@ export const mapEventsToReceiptData = (data: EventsData, ctx: OpdDocContext): Re
     const invoiceTotal = data.totalBilledAmount ?? inv?.netAmount ?? 0;
     const balanceAfter = data.netBalance ?? 0;
     const amount = latest?.amount ?? 0;
+    const { items, subTotal, discountTotal } = computeChargeItems(data);
     return {
         receiptNo: latest?.receiptNo ?? '—',
         date: latest?.createdDateTime ?? new Date().toISOString(),
@@ -127,6 +136,9 @@ export const mapEventsToReceiptData = (data: EventsData, ctx: OpdDocContext): Re
         invoiceTotal,
         invoiceBalanceBefore: balanceAfter + amount,
         invoiceBalanceAfter: balanceAfter,
+        items,
+        subTotal,
+        discountTotal,
     };
 };
 
@@ -145,6 +157,7 @@ export const mapPaymentToReceiptData = (data: EventsData, ctx: OpdDocContext, pa
     const cumulativeUpToHere = chrono.slice(0, pos + 1).reduce((s, p) => s + signedReceived(p), 0);
     const balanceAfter = invoiceTotal - cumulativeUpToHere;
     const balanceBefore = balanceAfter + (target ? signedReceived(target) : 0);
+    const { items, subTotal, discountTotal } = computeChargeItems(data);
     return {
         receiptNo: target?.receiptNo ?? '—',
         date: target?.createdDateTime ?? new Date().toISOString(),
@@ -158,6 +171,9 @@ export const mapPaymentToReceiptData = (data: EventsData, ctx: OpdDocContext, pa
         invoiceTotal,
         invoiceBalanceBefore: balanceBefore,
         invoiceBalanceAfter: balanceAfter,
+        items,
+        subTotal,
+        discountTotal,
     };
 };
 

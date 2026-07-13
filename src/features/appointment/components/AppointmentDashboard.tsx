@@ -39,12 +39,16 @@ import {
   CheckCircle2,
   ArrowRight,
   Pencil,
+  MoreVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
@@ -61,6 +65,7 @@ import { TokenPrintModal } from './TokenPrintModal';
 import { DashboardQuickGuide } from './DashboardQuickGuide';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
+import { ConfirmPreAppointmentDialog } from './ConfirmPreAppointmentDialog';
 import { PatientForm } from './PatientForm';
 import { format as dateFnsFormat } from 'date-fns';
 
@@ -149,6 +154,8 @@ export const AppointmentDashboard = () => {
   const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
+  const [showConfirmPreAppointmentDialog, setShowConfirmPreAppointmentDialog] = useState(false);
+  const [appointmentToConfirm, setAppointmentToConfirm] = useState<AppointmentDetail | null>(null);
   const [showEditAppointment, setShowEditAppointment] = useState(false);
   const [appointmentToEdit, setAppointmentToEdit] = useState<AppointmentDetail | null>(null);
   const [showQuickGuide, setShowQuickGuide] = useState(false);
@@ -228,6 +235,16 @@ export const AppointmentDashboard = () => {
     if (refetch) refetch();
   };
 
+  const handleConfirmPreAppointmentClick = (appointment: AppointmentDetail) => {
+    setAppointmentToConfirm(appointment);
+    setShowConfirmPreAppointmentDialog(true);
+  };
+
+  const handleConfirmPreAppointmentSuccess = () => {
+    // Refresh list after successfully confirming a pre-appointment
+    if (refetch) refetch();
+  };
+
   const handleEditClick = (appointment: AppointmentDetail) => {
     setAppointmentToEdit(appointment);
     setShowEditAppointment(true);
@@ -249,9 +266,19 @@ export const AppointmentDashboard = () => {
       COMPLETED: t('appointmentDashboard.statusLabels.completed'),
       SCHEDULED: t('appointmentDashboard.statusLabels.scheduled'),
       CANCELLED: t('appointmentDashboard.statusLabels.cancelled'),
+      PRE_APPOINTMENT: t('appointmentDashboard.statusLabels.preAppointment', { defaultValue: 'Pre-Appointment' }),
     } as Record<string, string>;
 
     switch (status) {
+      case 'PRE_APPOINTMENT':
+        return (
+          <Badge
+            className="bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
+            onClick={() => appointment && handleConfirmPreAppointmentClick(appointment)}
+          >
+            {statusLabels.PRE_APPOINTMENT}
+          </Badge>
+        );
       case 'VITALS_REQUIRED':
         return (
           <Badge
@@ -965,6 +992,7 @@ export const AppointmentDashboard = () => {
       total: 0,
       vitalsRequired: 0,
       completed: 0,
+      preAppointment: 0,
       doctorStats: [] as { name: string; count: number; noShowCount: number }[]
     };
 
@@ -997,6 +1025,7 @@ export const AppointmentDashboard = () => {
       total: currentViewAppointments.length,
       vitalsRequired: currentViewAppointments.filter(apt => apt.finalStatusCode === 'VITALS_REQUIRED').length,
       completed: currentViewAppointments.filter(apt => apt.finalStatusCode === 'COMPLETED').length,
+      preAppointment: currentViewAppointments.filter(apt => apt.finalStatusCode === 'PRE_APPOINTMENT').length,
       doctorStats
     };
   }, [appointments]);
@@ -1291,6 +1320,23 @@ export const AppointmentDashboard = () => {
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
           </div>
 
+          {/* Pre-Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
+          {kpiStats.preAppointment > 0 && (
+            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                <CalendarClock className="h-20 w-20 text-amber-500 -rotate-12" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-4 mb-3 relative z-10">
+                <div className="p-2.5 bg-amber-100 dark:bg-amber-500/20 rounded-xl shadow-inner ring-1 ring-amber-500/30 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 text-amber-600 dark:text-amber-400">
+                  <CalendarClock className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' })}</span>
+              </div>
+              <div className="text-4xl font-mono font-black text-amber-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all">{kpiStats.preAppointment}</div>
+            </div>
+          )}
+
           {activeTab !== 'future' && (
             <>
               {/* Vitals Required (No Show for Past) */}
@@ -1451,7 +1497,8 @@ export const AppointmentDashboard = () => {
                     { key: 'LAB_REQUIRED', label: t('appointmentDashboard.statusFilters.labRequired'), color: 'bg-orange-100 text-orange-700 border-orange-200/50 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800/50 hover:bg-orange-200' },
                     { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200/50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 hover:bg-yellow-200' },
                     { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-200' },
-                    { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300/50 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 hover:bg-gray-200' }
+                    { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300/50 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 hover:bg-gray-200' },
+                    { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
                       const appointmentStartDate = new Date(a.startAt);
@@ -1754,57 +1801,8 @@ export const AppointmentDashboard = () => {
                             {/* Actions - Only show for current and future tabs */}
                             {activeTab !== 'past' && (
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                <div className="flex gap-1.5">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
-                                    className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
-                                      ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
-                                      : 'text-rose-600 border-rose-200 dark:border-rose-800/50 hover:bg-gradient-to-r hover:from-rose-50 hover:to-red-50 dark:hover:from-rose-900/20 dark:hover:to-red-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-rose-300 dark:hover:border-rose-700'
-                                      }`}
-                                    onClick={() => handleCancelClick(appointment)}
-                                  >
-                                    <Ban className="h-3 w-3 mr-1.5 opacity-80" />
-                                    {t('common.cancel')}
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
-                                    className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
-                                      ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
-                                      : 'text-brand-600 border-brand-200 dark:border-brand-800/50 hover:bg-gradient-to-r hover:from-brand-50 hover:to-brand-50 dark:hover:from-brand-900/20 dark:hover:to-brand-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-brand-300 dark:hover:border-brand-700'
-                                      }`}
-                                    onClick={() => handleRescheduleClick(appointment)}
-                                  >
-                                    <CalendarClock className="h-3 w-3 mr-1.5 opacity-80" />
-                                    Reschedule
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
-                                    className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
-                                      ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
-                                      : 'text-slate-600 border-slate-200 dark:border-slate-800/50 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 dark:hover:from-slate-900/20 dark:hover:to-slate-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-slate-300 dark:hover:border-slate-700'
-                                      }`}
-                                    onClick={() => handleEditClick(appointment)}
-                                  >
-                                    <Pencil className="h-3 w-3 mr-1.5 opacity-80" />
-                                    {t('common.edit', { defaultValue: 'Edit' })}
-                                  </Button>
-                                  {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleVitalsClick(appointment)}
-                                      className="h-7 px-2.5 text-xs font-bold text-fuchsia-600 border-fuchsia-200 dark:border-fuchsia-800/50 hover:bg-gradient-to-r hover:from-fuchsia-50 hover:to-purple-50 dark:hover:from-fuchsia-900/20 dark:hover:to-purple-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-fuchsia-300 dark:hover:border-fuchsia-700 transition-all duration-300"
-                                    >
-                                      <Activity className="h-3 w-3 mr-1.5 opacity-80" />
-                                      {t('appointmentDashboard.actionButtons.vitals')}
-                                    </Button>
-                                  )}
+                                <div className="flex items-center gap-1.5">
+                                  {/* Bill stays outside the dropdown — the one action front desk needs at a glance. */}
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1824,6 +1822,68 @@ export const AppointmentDashboard = () => {
                                       <><IndianRupee className="h-3 w-3 mr-1.5 opacity-80" /> {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Bill' })}</>
                                     )}
                                   </Button>
+
+                                  {/* Everything else lives in one premium dropdown. */}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 rounded-full border-slate-200 dark:border-slate-800 text-slate-500 hover:text-brand-600 hover:border-brand-300 dark:hover:border-brand-700 hover:bg-gradient-to-br hover:from-brand-50 hover:to-brand-100 dark:hover:from-brand-900/30 dark:hover:to-brand-900/20 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300"
+                                        title={t('appointmentDashboard.actionButtons.moreActions', { defaultValue: 'More actions' })}
+                                      >
+                                        <MoreVertical className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-52 rounded-xl border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-900/10 dark:shadow-black/40 p-1.5 backdrop-blur-sm"
+                                    >
+                                      {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleVitalsClick(appointment)}
+                                          className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-fuchsia-600 dark:text-fuchsia-400 focus:text-fuchsia-700 focus:bg-fuchsia-50 dark:focus:bg-fuchsia-900/20 cursor-pointer transition-colors"
+                                        >
+                                          <Activity className="h-3.5 w-3.5 opacity-80" />
+                                          {t('appointmentDashboard.actionButtons.vitals')}
+                                        </DropdownMenuItem>
+                                      )}
+                                      {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleConfirmPreAppointmentClick(appointment)}
+                                          className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-amber-600 dark:text-amber-400 focus:text-amber-700 focus:bg-amber-50 dark:focus:bg-amber-900/20 cursor-pointer transition-colors"
+                                        >
+                                          <CheckCircle2 className="h-3.5 w-3.5 opacity-80" />
+                                          {t('appointmentDashboard.actionButtons.confirmPreAppointment', { defaultValue: 'Confirm' })}
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                        onClick={() => handleRescheduleClick(appointment)}
+                                        className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-brand-600 dark:text-brand-400 focus:text-brand-700 focus:bg-brand-50 dark:focus:bg-brand-900/20 cursor-pointer transition-colors"
+                                      >
+                                        <CalendarClock className="h-3.5 w-3.5 opacity-80" />
+                                        Reschedule
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                        onClick={() => handleEditClick(appointment)}
+                                        className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 focus:text-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 cursor-pointer transition-colors"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5 opacity-80" />
+                                        {t('common.edit', { defaultValue: 'Edit' })}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator className="my-1 bg-slate-100 dark:bg-slate-800" />
+                                      <DropdownMenuItem
+                                        disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                        onClick={() => handleCancelClick(appointment)}
+                                        className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 focus:text-rose-700 focus:bg-rose-50 dark:focus:bg-rose-900/20 cursor-pointer transition-colors"
+                                      >
+                                        <Ban className="h-3.5 w-3.5 opacity-80" />
+                                        {t('common.cancel')}
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </TableCell>
                             )}
@@ -1963,6 +2023,12 @@ export const AppointmentDashboard = () => {
                           {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                             <Button variant="outline" size="sm" onClick={() => handleVitalsClick(appointment)} className="h-9 text-xs font-bold rounded-xl border-fuchsia-200 text-fuchsia-700 bg-white hover:bg-fuchsia-50 hover:border-fuchsia-300 transition-all shadow-sm">
                               <Heart className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Vitals
+                            </Button>
+                          )}
+
+                          {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
+                            <Button variant="outline" size="sm" onClick={() => handleConfirmPreAppointmentClick(appointment)} className="h-9 text-xs font-bold rounded-xl border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm">
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Confirm
                             </Button>
                           )}
 
@@ -2526,6 +2592,16 @@ export const AppointmentDashboard = () => {
             appointment={appointmentToReschedule}
             onSuccess={handleRescheduleSuccess}
             enableDoctorSelection={true}
+          />
+        )
+      }
+      {
+        appointmentToConfirm && (
+          <ConfirmPreAppointmentDialog
+            open={showConfirmPreAppointmentDialog}
+            onOpenChange={setShowConfirmPreAppointmentDialog}
+            appointment={appointmentToConfirm}
+            onSuccess={handleConfirmPreAppointmentSuccess}
           />
         )
       }
