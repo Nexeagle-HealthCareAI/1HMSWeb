@@ -10,7 +10,7 @@ import {
     ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
     AlertTriangle, FileBadge2, ChevronsUpDown, Fingerprint, Hash, Stethoscope, Wallet, Clock3,
 } from 'lucide-react';
-import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
+import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem, type AdmissionDoctorHistoryItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { isAboveEntitlement } from '../utils/roomEntitlement';
 import { AdmissionDetailsPanel } from '../components/AdmissionDetailsPanel';
@@ -108,6 +108,14 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     const [pickedBedId, setPickedBedId] = useState('');
     const [bedBusy, setBedBusy] = useState(false);
 
+    const [doctors, setDoctors] = useState<HospitalDoctorItem[]>([]);
+    const [doctorActionMode, setDoctorActionMode] = useState<'change' | null>(null);
+    const [pickedDoctorId, setPickedDoctorId] = useState('');
+    const [doctorBusy, setDoctorBusy] = useState(false);
+    const [doctorHistoryOpen, setDoctorHistoryOpen] = useState(false);
+    const [doctorHistory, setDoctorHistory] = useState<AdmissionDoctorHistoryItem[]>([]);
+    const [doctorHistoryLoading, setDoctorHistoryLoading] = useState(false);
+
     const refreshAdmission = async () => {
         try {
             const list = await admissionApi.getActiveAdmissions('ALL');
@@ -120,9 +128,22 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
         bedBoardApi.getBoard().then(beds => setFreeBeds(beds.filter(b => b.isActive && !b.admissionId))).catch(() => setFreeBeds([]));
     };
 
+    const loadDoctors = () => {
+        admissionApi.getHospitalDoctors().then(setDoctors).catch(() => setDoctors([]));
+    };
+
+    const loadDoctorHistory = () => {
+        setDoctorHistoryLoading(true);
+        admissionApi.getDoctorHistory(current.admissionId)
+            .then(setDoctorHistory)
+            .catch(() => setDoctorHistory([]))
+            .finally(() => setDoctorHistoryLoading(false));
+    };
+
     useEffect(() => {
         refreshAdmission();
         loadFreeBeds();
+        loadDoctors();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const refreshAfterAction = () => {
@@ -145,6 +166,31 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
         } finally {
             setBedBusy(false);
         }
+    };
+
+    // ── Doctor actions ───────────────────────────────────────────────────────
+    const runDoctorAction = async (fn: () => Promise<unknown>, successMessage: string) => {
+        setDoctorBusy(true);
+        try {
+            await fn();
+            toast({ title: successMessage });
+            setDoctorActionMode(null);
+            setPickedDoctorId('');
+            refreshAfterAction();
+            if (doctorHistoryOpen) loadDoctorHistory();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setDoctorBusy(false);
+        }
+    };
+
+    const toggleDoctorHistory = () => {
+        setDoctorHistoryOpen(open => {
+            const next = !open;
+            if (next) loadDoctorHistory();
+            return next;
+        });
     };
 
     const releaseBed = async () => {
@@ -490,6 +536,77 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 </dl>
                                 {(current.admissionReason || current.diagnosis) && (
                                     <p className="text-sm text-slate-700 mt-3">{current.diagnosis || current.admissionReason}</p>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Doctor</h2>
+                                    <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px]" onClick={toggleDoctorHistory}>
+                                        {doctorHistoryOpen ? 'Hide history' : 'History'}
+                                    </Button>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    {current.primaryDoctorName ? (
+                                        <p className="font-semibold text-slate-900">{current.primaryDoctorName}</p>
+                                    ) : (
+                                        <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Not assigned' : 'No doctor'}</p>
+                                    )}
+                                    {isActive && (
+                                        <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => { setDoctorActionMode('change'); setPickedDoctorId(current.primaryDoctorId ?? ''); }}>
+                                            <Stethoscope className="h-3.5 w-3.5 mr-1.5" /> Change doctor
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {doctorActionMode && (
+                                    <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-2 sm:flex-wrap">
+                                        <div className="min-w-0 sm:flex-1 sm:min-w-[220px]">
+                                            <Label className="text-[11px] font-semibold text-slate-600">Admitting doctor</Label>
+                                            <select value={pickedDoctorId} onChange={e => setPickedDoctorId(e.target.value)} className="h-11 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                <option value="">Select a doctor…</option>
+                                                {doctors.map(d => (
+                                                    <option key={d.doctorId} value={d.doctorId}>
+                                                        {d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none" onClick={() => setDoctorActionMode(null)}>Cancel</Button>
+                                            <Button size="sm" disabled={!pickedDoctorId || pickedDoctorId === current.primaryDoctorId || doctorBusy}
+                                                className="h-11 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700"
+                                                onClick={() => runDoctorAction(() => admissionApi.changeDoctor(current.admissionId, pickedDoctorId), 'Doctor changed.')}>
+                                                {doctorBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+                                                Change
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {doctorHistoryOpen && (
+                                    <div className="mt-3 pt-3 border-t border-slate-100">
+                                        {doctorHistoryLoading ? (
+                                            <p className="text-xs text-slate-400 flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</p>
+                                        ) : doctorHistory.length === 0 ? (
+                                            <p className="text-xs text-slate-400">No history yet.</p>
+                                        ) : (
+                                            <ul className="space-y-2">
+                                                {doctorHistory.map(h => (
+                                                    <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-3 text-xs">
+                                                        <span className="font-semibold text-slate-800 truncate">
+                                                            {h.doctorName ?? '—'}
+                                                            {h.statusCode === 'ACTIVE' && <span className="ml-1.5 text-[10px] font-bold uppercase text-emerald-600">Current</span>}
+                                                        </span>
+                                                        <span className="text-slate-500 shrink-0">
+                                                            {formatIstDateTime(h.assignedAt)} → {h.unassignedAt ? formatIstDateTime(h.unassignedAt) : 'Present'}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>

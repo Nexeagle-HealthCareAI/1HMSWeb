@@ -234,6 +234,31 @@ export interface ActiveAdmissionItem {
     otPlanSuggestedIcuLevel?: string | null;
 }
 
+export interface AdmissionDoctorHistoryItem {
+    assignmentId: string;
+    doctorId: string;
+    doctorName?: string | null;
+    assignedAt: string;
+    assignedBy?: string | null;
+    unassignedAt?: string | null;
+    unassignedBy?: string | null;
+    statusCode: string;   // ACTIVE | REPLACED
+}
+
+interface GetAdmissionDoctorHistoryResponse {
+    success?: boolean;
+    message?: string;
+    items?: AdmissionDoctorHistoryItem[];
+}
+
+export interface ChangeAdmittingDoctorResponse {
+    success?: boolean;
+    message?: string;
+    assignmentId?: string;
+    doctorId?: string;
+    assignedAt?: string;
+}
+
 export interface UpdateAdmissionDetailsPayload {
     admissionId: string;
     primaryDoctorId?: string;
@@ -363,4 +388,17 @@ export const admissionApi = {
             throw new Error(messageFrom(err, 'Could not update admission status.'));
         }
     },
+
+    changeDoctor: async (admissionId: string, doctorId: string, hospitalId?: string): Promise<ChangeAdmittingDoctorResponse> => {
+        try {
+            return await ipdApiClient.post('/admission/doctor', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, doctorId });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not change the admitting doctor.'));
+        }
+    },
+
+    getDoctorHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionDoctorHistoryItem[]> =>
+        ipdApiClient
+            .get<GetAdmissionDoctorHistoryResponse>('/admission/doctor/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .then(r => r.items ?? []),
 };
