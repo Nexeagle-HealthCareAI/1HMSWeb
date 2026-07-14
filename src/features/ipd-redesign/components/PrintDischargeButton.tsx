@@ -20,6 +20,8 @@ interface Props {
     admission: ActiveAdmissionItem;
 }
 
+const SEX_LABEL: Record<string, string> = { M: 'Male', F: 'Female', O: 'Other' };
+
 export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
     const { toast } = useToast();
     const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
@@ -130,7 +132,11 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                 admissionNo: printData.admissionNo,
                                 patientName: printData.patientName,
                                 patientId: printData.patientId,
-                                ageGender: printData.ageGender,
+                                patientAge: admission.patientAge,
+                                patientSex: admission.patientSex ? (SEX_LABEL[admission.patientSex] ?? admission.patientSex) : undefined,
+                                mobile: printData.mobile || undefined,
+                                patientAddress: printData.patientAddress,
+                                assignedDoctorName: admission.primaryDoctorName || undefined,
                                 admittedAt: printData.admittedAt,
                                 dischargedAt: printData.dischargedAt,
                                 referredBy: printData.referredBy,

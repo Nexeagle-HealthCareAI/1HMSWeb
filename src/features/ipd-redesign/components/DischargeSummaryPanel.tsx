@@ -40,6 +40,7 @@ interface Props {
 }
 
 const CONDITIONS: ConditionAtDischarge[] = ['STABLE', 'IMPROVED', 'RECOVERED', 'REFERRED', 'LAMA', 'EXPIRED'];
+const SEX_LABEL: Record<string, string> = { M: 'Male', F: 'Female', O: 'Other' };
 
 const EMPTY_FORM: SaveDischargeSummaryFields = {};
 
@@ -363,6 +364,24 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         };
     };
 
+    // Mints (or refreshes) the same public "view on mobile" link the Share dialog uses, and
+    // returns its URL for embedding as a QR directly on the letterhead — always re-uploads so the
+    // link reflects the current signed content, not a stale earlier snapshot. Only ever called
+    // once signed (see the qrUrl line below), so an unsigned draft never gets a shareable QR baked
+    // into it.
+    const ensureShareUrl = async (): Promise<string | undefined> => {
+        try {
+            const settings = buildPrintSettingsFromHospital(hospitalData);
+            const html = buildDischargeSummaryA4(buildPrintData(), settings);
+            const blob = await htmlToPdfBlob(html);
+            const token = await dischargeSummaryApi.uploadPdf(admission.admissionId, blob);
+            setShareToken(token);
+            return `${API_BASE_URL}/public-discharge/${token}`;
+        } catch {
+            return undefined;
+        }
+    };
+
     // If this doctor+hospital has a Discharge letterhead configured (a template PDF actually
     // uploaded, not just default settings), render through the pdf-lib template-bound renderer —
     // same personalized field layout that drives the workspace form. Without one, allowBlank=true
@@ -400,12 +419,18 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 admissionNo: data.admissionNo,
                 patientName: data.patientName,
                 patientId: data.patientId,
-                ageGender: data.ageGender,
+                patientAge: admission.patientAge,
+                patientSex: admission.patientSex ? (SEX_LABEL[admission.patientSex] ?? admission.patientSex) : undefined,
+                mobile: data.mobile || undefined,
+                patientAddress: data.patientAddress,
+                assignedDoctorName: admission.primaryDoctorName || undefined,
+                referredBy: data.referredBy,
                 admittedAt: data.admittedAt,
                 dischargedAt: data.dischargedAt,
                 conditionAtDischarge: data.conditionAtDischarge,
                 signedByDoctorName: data.signedByDoctorName,
                 signedAt: data.signedAt,
+                qrUrl: isSigned ? await ensureShareUrl() : undefined,
                 fields: {
                     admittingDiagnosis: data.admittingDiagnosis,
                     finalDiagnosis: data.finalDiagnosis,

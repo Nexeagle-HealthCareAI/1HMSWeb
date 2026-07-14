@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb, RGB, PDFPage } from 'pdf-lib';
+import QRCode from 'qrcode';
 import type { MarginConfig, TypographySettings } from '@/features/ipd-redesign/hooks/useDischargeDesigner';
 
 // Simplified sibling of prescription-preview/services/previewRenderer.ts's buildTemplateBoundPreview
@@ -58,15 +59,23 @@ export interface DischargePrintPayload {
     admissionNo: string;
     patientName: string;
     patientId: string;
-    ageGender?: string;
+    patientAge?: number | null;
+    // Already resolved to a display label ("Male"/"Female"/"Other") by the caller — the renderer
+    // draws it as-is, no code-to-label mapping in here.
+    patientSex?: string;
     mobile?: string;
     patientAddress?: string;
+    assignedDoctorName?: string;
     admittedAt: string;
     dischargedAt: string;
     referredBy?: string;
     conditionAtDischarge: string;
     signedByDoctorName?: string;
     signedAt?: string;
+    // "Scan to view the full discharge letter" link — only set once the summary is signed (see
+    // DischargeSummaryPanel.buildLetterheadPreviewOptions), so an unsigned draft never gets a
+    // shareable QR baked into it.
+    qrUrl?: string;
     fields: Record<string, string | undefined>;             // built-in values keyed by field key
     customFieldValues: Record<string, string | undefined>;  // custom (cf_*) values keyed by field key
     tpaSplit?: {
@@ -199,46 +208,78 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
 
     // --- Structural header (not a toggleable field, matches the HTML template's own header treatment) ---
     const formatDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-    
+
+    // "Scan to view full report" QR (only present once signed — see DischargeSummaryPanel) — drawn
+    // first, top-right, and its height reserved unconditionally so the rest of the header never has
+    // to know whether it's there to avoid overlapping it.
+    if (payload.qrUrl) {
+        try {
+            const qrSize = 64;
+            const qrDataUrl = await QRCode.toDataURL(payload.qrUrl, { margin: 0 });
+            const qrImageBytes = await fetch(qrDataUrl).then(r => r.arrayBuffer());
+            const qrImage = await outputDoc.embedPng(qrImageBytes);
+            page.drawImage(qrImage, { x: pageWidth - rightPad - qrSize, y: cursorY - qrSize, width: qrSize, height: qrSize });
+            const caption = 'Scan for full report';
+            const captionW = regularFont.widthOfTextAtSize(caption, sizeBase - 3);
+            page.drawText(caption, { x: pageWidth - rightPad - qrSize / 2 - captionW / 2, y: cursorY - qrSize - 10, size: sizeBase - 3, font: regularFont, color: hexToPdfRgb('#94a3b8') });
+            cursorY -= (qrSize + 20);
+        } catch {
+            // Non-fatal — the rest of the letterhead still renders without the QR.
+        }
+    }
+
     page.drawText(payload.patientName || 'Unknown Patient', { x: leftPad, y: cursorY, size: sizeBase + 2, font: boldFont, color: textColor });
-    
+
     const rightColX = pageWidth - rightPad - 190;
-    
+
     page.drawText('Admission No:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
     page.drawText(payload.admissionNo || '—', { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
-    
+
     cursorY -= lineHeight * 1.2;
-    
+
     page.drawText(`Patient ID: ${payload.patientId}`, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
-    
+
     page.drawText('Admitted:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
     page.drawText(formatDate(payload.admittedAt), { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
-    
+
     cursorY -= lineHeight * 1.2;
-    
+
     const demoParts = [];
-    if (payload.ageGender) demoParts.push(payload.ageGender);
-    if (payload.mobile) demoParts.push(`Ph: ${payload.mobile}`);
+    if (payload.patientAge != null) demoParts.push(`Age: ${payload.patientAge} years`);
+    if (payload.patientSex) demoParts.push(`Sex: ${payload.patientSex}`);
     if (demoParts.length > 0) {
-        page.drawText(demoParts.join('  ·  '), { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+        page.drawText(demoParts.join('   '), { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
     }
-    
+
+    if (payload.assignedDoctorName) {
+        page.drawText('Doctor:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
+        page.drawText(payload.assignedDoctorName, { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
+    }
+
+    if (demoParts.length > 0 || payload.assignedDoctorName) cursorY -= lineHeight * 1.2;
+
+    if (payload.mobile) {
+        page.drawText(`Ph: ${payload.mobile}`, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+    }
+
     if (payload.dischargedAt) {
         page.drawText('Discharged:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
         page.drawText(formatDate(payload.dischargedAt), { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
     }
-    
+
+    if (payload.mobile || payload.dischargedAt) cursorY -= lineHeight * 1.2;
+
     if (payload.patientAddress) {
-        cursorY -= lineHeight * 1.2;
         page.drawText(payload.patientAddress, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+        cursorY -= lineHeight * 1.2;
     }
 
     if (payload.referredBy) {
-        cursorY -= lineHeight * 1.2;
         page.drawText(`Referred by: ${payload.referredBy}`, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+        cursorY -= lineHeight * 1.2;
     }
 
-    cursorY -= lineHeight * 1.5;
+    cursorY -= lineHeight * 0.3;
     page.drawLine({ start: { x: leftPad, y: cursorY + 4 }, end: { x: pageWidth - rightPad, y: cursorY + 4 }, thickness: 1, color: hexToPdfRgb('#e2e8f0') });
     cursorY -= 8;
 
