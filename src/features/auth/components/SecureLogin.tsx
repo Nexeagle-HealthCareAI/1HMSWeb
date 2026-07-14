@@ -395,13 +395,24 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     try {
       const response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
 
-      if (response.success) {
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to send OTP');
+      }
+
+      // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
+      // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
+      // flags, not just success, or a total delivery failure looks identical to a real send.
+      if (response.isWhatsappSent || response.isEmailSent) {
         toast({
           title: "OTP Sent",
           description: "Please check your mobile for the verification code"
         });
       } else {
-        throw new Error(response.message || 'Failed to send OTP');
+        toast({
+          title: "Couldn't deliver the verification code",
+          description: response.message || "We couldn't send the OTP via WhatsApp or Email. Please try again or contact support.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       toast({
@@ -563,10 +574,21 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         console.log('Response structure:', response);
       }
 
-      toast({
-        title: "OTP Sent!",
-        description: "Please check your mobile for the verification code"
-      });
+      // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
+      // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
+      // flags, not just success, or a total delivery failure looks identical to a real send.
+      if (response.success && (response.isWhatsappSent || response.isEmailSent)) {
+        toast({
+          title: "OTP Sent!",
+          description: "Please check your mobile for the verification code"
+        });
+      } else {
+        toast({
+          title: "Couldn't deliver the verification code",
+          description: response.message || "We couldn't send the OTP via WhatsApp or Email. Please try again or contact support.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('Error sending OTP:', error);
       toast({

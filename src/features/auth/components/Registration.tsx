@@ -368,11 +368,14 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       const otpResponse = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
       console.log('✅ SendOTP API response:', otpResponse);
 
-      if (!otpResponse.success) {
+      if (!otpResponse.success || (!otpResponse.isWhatsappSent && !otpResponse.isEmailSent)) {
         // OTP delivery (WhatsApp/Email) can fail for infra reasons outside the user's control, but
         // the code is generated and stored server-side before delivery is even attempted — so
         // verification still works against that stored value. Don't block the step; just warn
         // that delivery failed and still move to the OTP-entry screen.
+        // Note: the backend always returns success=true even when both channels fail to deliver
+        // (so the stored OTP can still be retrieved for support), so isWhatsappSent/isEmailSent —
+        // not success — are the real signal that something didn't arrive.
         console.warn('⚠️ OTP delivery failed, proceeding to verification step anyway:', otpResponse.message);
         toast({
           title: "Couldn't deliver the verification code",
