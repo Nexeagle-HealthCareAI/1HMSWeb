@@ -2344,41 +2344,8 @@
     },
     "search": {
       "title": "Search Existing Patient",
-      "fieldPlaceholder": "Select search field",
-      "fields": {
-        "patientId": "Patient ID",
-        "name": "Patient Name",
-        "appointmentId": "Appointment ID",
-        "contact": "Contact",
-        "default": "Search Field"
-      },
-      "placeholder": {
-        "patientId": "Enter Patient ID (e.g., P001, PAT123)",
-        "name": "Enter Patient Name (e.g., John Doe, Sarah)",
-        "appointmentId": "Enter Appointment ID (e.g., APT001, APT123)",
-        "contact": "Enter contact number (e.g., 9876543210)",
-        "default": "Enter search term"
-      },
-      "helpTitle": "Search by {{field}}:",
-      "help": {
-        "patientId": {
-          "line1": "• Patient ID: P001, PAT123, P2024001",
-          "line2": "• Unique identifier for each patient"
-        },
-        "name": {
-          "line1": "• Full name: John Doe, Sarah Smith",
-          "line2": "• Partial name: John, Sarah"
-        },
-        "appointmentId": {
-          "line1": "• Appointment ID: APT000001, APT0000123",
-          "line2": "• PatientId: PT0000012, PT0000011"
-        },
-        "contact": {
-          "line1": "• Phone: 9876XXXXXX",
-          "line2": "• Mobile: 8074XXXXXX"
-        },
-        "default": "• Enter the search term"
-      },
+      "placeholder": "Search by name, patient ID, or mobile number",
+      "help": "Matches name, patient ID, mobile, Aadhaar, or ABHA ID — type at least 2 characters",
       "searching": "Searching...",
       "submit": "Search Patient",
       "error": "Search error: {{error}}",

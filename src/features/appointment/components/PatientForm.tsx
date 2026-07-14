@@ -186,7 +186,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [searchField, setSearchField] = useState<'name' | 'patientId' | 'contact' | 'appointmentId'>('name');
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -362,13 +361,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     return timeFormatter.format(date);
   };
 
-  // Debounced search on the dedicated search box (name / patient ID / contact / appointment ID —
-  // the backend blends all of these into one fuzzy match regardless of which field is "selected";
-  // the selector only changes the placeholder/help text so the user knows what to type).
+  // Debounced generic search — the backend already blends name/patient-ID/mobile/Aadhaar/ABHA
+  // into one fuzzy match, so there's no per-field mode to select. A query that's mostly digits
+  // is treated as a phone-number attempt and stripped to digits only (the backend mobile match
+  // is a plain substring Contains, so "987-654-3210" wouldn't otherwise match a stored "9876543210").
   useEffect(() => {
     if (formData.patientId) return; // Stop searching once a patient is selected
     const raw = searchTerm.trim();
-    const query = searchField === 'contact' ? raw.replace(/\D/g, '') : raw;
+    const digitsOnly = raw.replace(/\D/g, '');
+    const looksNumeric = digitsOnly.length > 0 && digitsOnly.length >= raw.replace(/\s/g, '').length - 2;
+    const query = looksNumeric ? digitsOnly : raw;
     if (query.length < 2) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -379,7 +381,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setIsSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const response = await searchPatients({ q: query });
+        const response = await searchPatients({ q: query, hospitalId });
         if (!active) return;
         setSearchResults(response.items);
         setSelectedIndex(0);
@@ -395,7 +397,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     }, 400);
 
     return () => { active = false; clearTimeout(timer); };
-  }, [searchTerm, searchField, formData.patientId, searchPatients]);
+  }, [searchTerm, formData.patientId, searchPatients, hospitalId]);
 
   // Handle patient selection from search results
   const handlePatientSelect = (patient: PatientSearchItem) => {
@@ -719,28 +721,109 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             </div>
           </div>
 
-          {/* Appointment Details Row in Header */}
-          <div className="mt-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar">
-            <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-white/80 dark:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-brand-200/60 dark:border-brand-700 shadow-sm whitespace-nowrap text-brand-800 dark:text-brand-200">
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <User className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
-                <span className="font-semibold">{doctor.name}</span>
+          {/* Appointment Details (left) + Patient Search (top-right on desktop, stacked on mobile) */}
+          <div className="mt-3 flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-3">
+            <div className="overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 no-scrollbar lg:flex-1 lg:min-w-0">
+              <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-white/80 dark:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-brand-200/60 dark:border-brand-700 shadow-sm whitespace-nowrap text-brand-800 dark:text-brand-200">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <User className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
+                  <span className="font-semibold">{doctor.name}</span>
+                </div>
+                <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Calendar className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
+                  <span className="font-semibold">{dateFormatter.format(new Date(selectedSlot.date))}</span>
+                </div>
+                <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Clock className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
+                  <span className="font-semibold">{formatTime(selectedSlot.time)}</span>
+                </div>
+                <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <span className="text-sm">⏱️</span>
+                  <span className="font-semibold">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
+                </div>
               </div>
-              <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <Calendar className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
-                <span className="font-semibold">{dateFormatter.format(new Date(selectedSlot.date))}</span>
-              </div>
-              <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <Clock className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
-                <span className="font-semibold">{formatTime(selectedSlot.time)}</span>
-              </div>
-              <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <span className="text-sm">⏱️</span>
-                <span className="font-semibold">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
-              </div>
+            </div>
+
+            <div className="relative lg:w-[360px] lg:shrink-0" ref={searchContainerRef}>
+              {formData.patientId ? (
+                <div className="flex items-center justify-between gap-2 h-10 px-3 rounded-xl border border-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/30 dark:border-emerald-700 shadow-sm">
+                  <div className="flex items-center gap-1.5 min-w-0 text-emerald-800 dark:text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span className="font-semibold text-sm truncate">{formData.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(createInitialFormState());
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }}
+                    className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 shrink-0 text-xs font-semibold underline underline-offset-2"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-400 pointer-events-none" />
+                    <Input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
+                      onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                      placeholder={t('patientForm.search.placeholder')}
+                      autoComplete="off"
+                      className="h-10 pl-9 pr-8 text-sm rounded-xl border-brand-200/80 dark:border-brand-700 bg-white/90 dark:bg-brand-950/40 focus-visible:ring-brand-400 shadow-sm"
+                    />
+                    {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-brand-400" />}
+                  </div>
+                  {showSearchResults && searchResults.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border bg-popover shadow-xl">
+                      <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
+                        <span>Matching patients</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowSearchResults(false);
+                          }}
+                          className="p-1 hover:bg-muted-foreground/10 rounded-full transition-colors"
+                          title="Close suggestions"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {searchResults.map((patient) => (
+                        <button
+                          key={patient.patientId}
+                          type="button"
+                          className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-b last:border-b-0 transition-colors"
+                          onClick={() => handlePatientSelect(patient)}
+                        >
+                          <div className="font-semibold text-foreground flex items-center gap-2">
+                            {patient.fullName}
+                            <Badge variant="secondary" className="text-[10px] font-mono">{patient.patientId}</Badge>
+                          </div>
+                          <div className="text-muted-foreground text-xs mt-0.5 flex gap-2">
+                            <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {patient.mobile}</span>
+                            {patient.age ? <span>· {patient.age}{patient.sex ? patient.sex[0] : ''}</span> : null}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showSearchResults && !isSearching && searchResults.length === 0 && searchTerm.trim().length >= 2 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl border bg-popover shadow-xl px-3 py-2.5 text-xs text-muted-foreground">
+                      No matching patient found — you can register them as new below.
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -793,83 +876,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
-                  {!formData.patientId && (
-                    <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 dark:bg-slate-900/30 dark:border-slate-800 p-3 md:p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Search className="h-4 w-4 text-slate-400" />
-                        <span className="text-sm font-semibold text-foreground dark:text-white">{t('patientForm.search.title')}</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-2">
-                        <select
-                          value={searchField}
-                          onChange={(e) => setSearchField(e.target.value as typeof searchField)}
-                          className="h-10 text-sm border border-input rounded-md px-2 bg-background"
-                        >
-                          {(['name', 'patientId', 'contact', 'appointmentId'] as const).map(f => (
-                            <option key={f} value={f}>{t(`patientForm.search.fields.${f}`)}</option>
-                          ))}
-                        </select>
-                        <div className="relative" ref={searchContainerRef}>
-                          <Input
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
-                            onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-                            placeholder={t(`patientForm.search.placeholder.${searchField}`)}
-                            autoComplete="off"
-                            className="h-10 text-sm md:text-base"
-                          />
-                          {showSearchResults && searchResults.length > 0 && (
-                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-lg">
-                              <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
-                                <span>Matching patients</span>
-                                <div className="flex items-center gap-2">
-                                  {isSearching && <Loader2 className="h-3 w-3 animate-spin" />}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setShowSearchResults(false);
-                                    }}
-                                    className="p-1 hover:bg-muted-foreground/10 rounded-full transition-colors"
-                                    title="Close suggestions"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                              {searchResults.map((patient) => (
-                                 <button
-                                   key={patient.patientId}
-                                   type="button"
-                                   className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-b last:border-b-0 transition-colors"
-                                   onClick={() => handlePatientSelect(patient)}
-                                 >
-                                   <div className="font-semibold text-foreground flex items-center gap-2">
-                                     {patient.fullName}
-                                     <Badge variant="secondary" className="text-[10px] font-mono">{patient.patientId}</Badge>
-                                   </div>
-                                   <div className="text-muted-foreground text-xs mt-0.5 flex gap-2">
-                                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {patient.mobile}</span>
-                                     {patient.age ? <span>· {patient.age}{patient.sex ? patient.sex[0] : ''}</span> : null}
-                                   </div>
-                                 </button>
-                              ))}
-                            </div>
-                          )}
-                          {showSearchResults && !isSearching && searchResults.length === 0 && searchTerm.trim().length >= 2 && (
-                            <div className="absolute z-50 left-0 right-0 mt-1 rounded-md border bg-popover shadow-lg px-3 py-2.5 text-xs text-muted-foreground">
-                              No matching patient found — you can register them as new below.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1.5">
-                        {t(`patientForm.search.help.${searchField}.line1`)} {t(`patientForm.search.help.${searchField}.line2`)}
-                      </p>
-                    </div>
-                  )}
                   <div className="md:col-span-2">
                     <Label htmlFor="name" className="text-sm md:text-base font-medium dark:text-gray-300">
                       {t('patientForm.personal.name')} <span className="text-red-500">*</span>

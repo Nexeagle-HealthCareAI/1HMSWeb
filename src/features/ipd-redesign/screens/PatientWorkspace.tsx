@@ -237,15 +237,22 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 {/* Subtle top-right decorative gradient (optional touch of premium) */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-400/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative flex items-start gap-3 sm:gap-5">
-                    {/* Gradient Avatar */}
-                    <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-sm sm:text-lg font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50 sm:mt-1">
-                        {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
-                    </div>
+                <div className="relative">
+                    {/* Back — top-left, above the identity block (not opposite it) */}
+                    <Button variant="outline" size="sm" className="h-9 rounded-full bg-white/50 hover:bg-white shadow-sm border-slate-200 mb-3 sm:mb-4" onClick={onBack}>
+                        <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
+                    </Button>
 
-                    <div className="flex-1 min-w-0">
-                        {/* Name & Badges */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
+                    <div className="flex items-start gap-3 sm:gap-5">
+                        {/* Gradient Avatar */}
+                        <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-sm sm:text-lg font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50 sm:mt-1">
+                            {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            {/* Name & Badges — package/referrer surfaced here too (not just the
+                                Admission Details tab) since they're what staff most often need to
+                                confirm at a glance when opening a chart. */}
                             <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
                                 <h1 className="text-lg sm:text-2xl font-black text-slate-900 capitalize tracking-tight truncate max-w-[60vw] sm:max-w-md">
                                     {current.patientName || current.patientId}
@@ -258,58 +265,64 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 <Badge variant="outline" className={cn('text-xs font-bold px-3 py-0.5 rounded-full shadow-sm', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-500/10' : 'bg-slate-50 text-slate-600 border-slate-200')}>
                                     {current.statusCode.replace(/_/g, ' ')}
                                 </Badge>
+                                {(current.otPlanProcedureNameSnapshot || current.packageCode) && (
+                                    <Badge variant="outline" className="text-xs font-bold px-3 py-0.5 rounded-full shadow-sm bg-violet-50 text-violet-700 border-violet-200">
+                                        {current.otPlanProcedureNameSnapshot || current.packageCode}
+                                    </Badge>
+                                )}
+                                {current.referralName && (
+                                    <Badge variant="outline" className="text-xs font-bold px-3 py-0.5 rounded-full shadow-sm bg-sky-50 text-sky-700 border-sky-200">
+                                        Referred by {current.referralName}
+                                    </Badge>
+                                )}
                             </div>
 
-                            <Button variant="outline" size="sm" className="h-10 sm:h-9 rounded-full bg-white/50 hover:bg-white shadow-sm border-slate-200 self-start shrink-0" onClick={onBack}>
-                                <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
-                            </Button>
-                        </div>
+                            {/* Details — compact icon-led list on mobile (label left, value right,
+                                one line per field); spaced-out row on tablet/desktop where there's
+                                room for label-above-value blocks. */}
+                            <div className="sm:hidden mt-4 pt-1 border-t border-slate-200/60 divide-y divide-slate-100">
+                                <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong />
+                                <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong />
+                                <DetailRow icon={Stethoscope} label="Admitting Doctor" value={current.primaryDoctorName ?? '—'} />
+                                <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} />
+                                {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} />}
+                                {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} />}
+                            </div>
 
-                        {/* Details — compact icon-led list on mobile (label left, value right,
-                            one line per field); spaced-out row on tablet/desktop where there's
-                            room for label-above-value blocks. */}
-                        <div className="sm:hidden mt-4 pt-1 border-t border-slate-200/60 divide-y divide-slate-100">
-                            <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong />
-                            <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong />
-                            <DetailRow icon={Stethoscope} label="Admitting Doctor" value={current.primaryDoctorName ?? '—'} />
-                            <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} />
-                            {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} />}
-                            {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} />}
-                        </div>
-
-                        <div className="hidden sm:flex sm:flex-wrap items-center gap-x-8 gap-y-5 mt-6 pt-5 border-t border-slate-200/60">
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Patient ID</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{current.patientId}</p>
-                            </div>
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{current.admissionNo}</p>
-                            </div>
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitting Doctor</p>
-                                <p className="text-sm font-semibold text-slate-700 max-w-[160px] truncate" title={current.primaryDoctorName ?? ''}>
-                                    {current.primaryDoctorName ?? '—'}
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer</p>
-                                <p className="text-sm font-semibold text-slate-700 max-w-[180px] truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
-                                    <span className="font-bold text-slate-800">{current.payerType}</span> {current.payerName ? <span className="text-slate-500 text-xs">({current.payerName})</span> : ''}
-                                </p>
-                            </div>
-                            {current.admittedAt && (
+                            <div className="hidden sm:flex sm:flex-wrap items-center gap-x-8 gap-y-5 mt-6 pt-5 border-t border-slate-200/60">
                                 <div className="flex flex-col gap-1 min-w-0">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitted</p>
-                                    <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime(current.admittedAt)}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Patient ID</p>
+                                    <p className="text-sm font-bold text-slate-800 truncate">{current.patientId}</p>
                                 </div>
-                            )}
-                            {(current as any).dischargedAt && (
                                 <div className="flex flex-col gap-1 min-w-0">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discharged</p>
-                                    <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime((current as any).dischargedAt)}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
+                                    <p className="text-sm font-bold text-slate-800 truncate">{current.admissionNo}</p>
                                 </div>
-                            )}
+                                <div className="flex flex-col gap-1 min-w-0">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitting Doctor</p>
+                                    <p className="text-sm font-semibold text-slate-700 max-w-[160px] truncate" title={current.primaryDoctorName ?? ''}>
+                                        {current.primaryDoctorName ?? '—'}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-1 min-w-0">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer</p>
+                                    <p className="text-sm font-semibold text-slate-700 max-w-[180px] truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
+                                        <span className="font-bold text-slate-800">{current.payerType}</span> {current.payerName ? <span className="text-slate-500 text-xs">({current.payerName})</span> : ''}
+                                    </p>
+                                </div>
+                                {current.admittedAt && (
+                                    <div className="flex flex-col gap-1 min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitted</p>
+                                        <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime(current.admittedAt)}</p>
+                                    </div>
+                                )}
+                                {(current as any).dischargedAt && (
+                                    <div className="flex flex-col gap-1 min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discharged</p>
+                                        <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime((current as any).dischargedAt)}</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

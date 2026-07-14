@@ -233,11 +233,13 @@ export interface RegisterAppointmentResponse {
 }
 
 export interface PatientSearchRequest {
-  // Not sent to the backend — /patient/search matches name/UHID/mobile/aadhaar/abha
-  // together regardless of "by", so this is purely a caller-side hint, optional.
-  by?: 'patientId' | 'name' | 'appointmentId' | 'contact';
   q: string;
   scope?: 'local' | 'global';
+  // Preferred hospital scope for the search. Callers that already have a resolved hospitalId
+  // (e.g. AppointmentBooking) should always pass it explicitly — falling back to the global
+  // auth store here can silently disagree with the hospital the rest of the screen is scoped
+  // to (e.g. after switching hospitals), causing the search to return zero results with no error.
+  hospitalId?: string;
 }
 
 export interface PatientSearchItem {
@@ -394,11 +396,12 @@ export const appointmentApi = {
 
   // Search patients
   searchPatients: (request: PatientSearchRequest): Promise<PatientSearchResponse> => {
-    // Get hospitalId from auth store
-    let hospitalId = '';
-    try {
-      hospitalId = useAuthStore.getState().getHospitalId();
-    } catch (e) { }
+    let hospitalId = request.hospitalId ?? '';
+    if (!hospitalId) {
+      try {
+        hospitalId = useAuthStore.getState().getHospitalId();
+      } catch (e) { }
+    }
     const url = API_ENDPOINTS.PATIENTS.SEARCH(request.q, hospitalId);
     return apiClient.get(url);
   },

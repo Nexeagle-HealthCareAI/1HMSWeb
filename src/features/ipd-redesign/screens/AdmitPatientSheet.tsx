@@ -19,6 +19,7 @@ import {
     admissionApi, type AdmissionTypeCode, type AdmitPatientPayload,
     type AdmissionPatientDetail, type AdmissionHistoryItem,
     type DuplicateMatch, type DuplicateConfidence, type HospitalDoctorItem,
+    type PatientSearchResult,
 } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { consentApi, type ConsentTemplateItem } from '../services/consentApi';
@@ -28,9 +29,9 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
 import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildAdmissionConfirmationA4 } from '@/printTemplates/admissionConfirmationA4';
-import { referrerApi, type Referrer } from '@/features/appointment/services/referrerApi';
 import { ipdBillingService, type PaymentMode } from '@/features/billing/services/ipdBillingService';
 import { otPlanApi, type OTPlanItem } from '@/features/hospital/services/otPlanApi';
+import { ReferrerPicker } from '../components/ReferrerPicker';
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
     NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
@@ -75,15 +76,6 @@ const REFERRING_FACILITY_TYPES: { value: 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | '
 
 const ROOM_CATEGORIES = ['GENERAL', 'SEMI_PRIVATE', 'PRIVATE'];
 
-// Referrer-master type styling — same colour language as OPD's appointment-booking referrer
-// picker (PatientForm.tsx): DOCTOR=blue, AGENT=purple, REFERRER="Other"=emerald.
-const REFERRER_LABEL: Record<string, string> = { DOCTOR: 'Doctor', AGENT: 'Agent', REFERRER: 'Other' };
-const REFERRER_TONE: Record<string, { bg: string; avatar: string; badge: string; border: string; text: string }> = {
-    DOCTOR: { bg: 'bg-blue-50 border-blue-200', avatar: 'bg-blue-600', badge: 'bg-blue-50 text-blue-700 border-blue-200', border: 'border-blue-200', text: 'text-blue-600' },
-    AGENT: { bg: 'bg-purple-50 border-purple-200', avatar: 'bg-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-200', border: 'border-purple-200', text: 'text-purple-600' },
-    REFERRER: { bg: 'bg-emerald-50 border-emerald-200', avatar: 'bg-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', border: 'border-emerald-200', text: 'text-emerald-600' },
-};
-
 const SEX_OPTIONS: { value: 'M' | 'F' | 'O'; label: string }[] = [
     { value: 'M', label: 'Male' },
     { value: 'F', label: 'Female' },
@@ -116,14 +108,13 @@ interface FormState {
     admissionReason: string; diagnosis: string; expectedDischargeAt: string; admissionToken: string;
     isPreRegistration: boolean;
     referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL' | 'OTHER'; referralName: string;
-    referredByReferrerId: string;
-    newReferrerName: string; newReferrerPhone: string; newReferrerAddress: string; newReferrerType: 'DOCTOR' | 'AGENT' | 'REFERRER';
+    referredByReferrerId: string; referrerType: string;
     referringFacilityName: string; referringFacilityType: '' | 'PHC' | 'NURSING_HOME' | 'HOSPITAL' | 'OTHER'; referringFacilityContact: string;
 
     payerType: PayerTypeCode; depositExpected: string; bedId: string;
     payerName: string; policyOrBeneficiaryNo: string; preAuthNo: string; packageCode: string; sanctionedAmount: string;
     entitledRoomCategory: string;
-    otPlanId: string;
+    otPlanId: string; otPlanCustomText: string;
     collectAdvanceNow: boolean; advancePaymentMode: PaymentMode; advanceTransactionId: string;
 
     consentObtained: boolean; consentSignedByName: string; consentSignerRelation: string;
@@ -140,13 +131,12 @@ const EMPTY_FORM: FormState = {
     admissionReason: '', diagnosis: '', expectedDischargeAt: '', admissionToken: '',
     isPreRegistration: false,
     referralSource: '', referralName: '',
-    referredByReferrerId: '',
-    newReferrerName: '', newReferrerPhone: '', newReferrerAddress: '', newReferrerType: 'REFERRER',
+    referredByReferrerId: '', referrerType: '',
     referringFacilityName: '', referringFacilityType: '', referringFacilityContact: '',
     payerType: 'CASH', depositExpected: '', bedId: '',
     payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
     entitledRoomCategory: '',
-    otPlanId: '',
+    otPlanId: '', otPlanCustomText: '',
     collectAdvanceNow: false, advancePaymentMode: 'CASH', advanceTransactionId: '',
     consentObtained: false, consentSignedByName: '', consentSignerRelation: 'Self',
 };
@@ -220,7 +210,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
     // Phone fields: digits only, max 10 — same convention as PatientForm's mobile input.
-    const setPhone = (k: 'mobile' | 'alternateMobile' | 'emergencyContactPhone' | 'referringFacilityContact' | 'newReferrerPhone', v: string) =>
+    const setPhone = (k: 'mobile' | 'alternateMobile' | 'emergencyContactPhone' | 'referringFacilityContact', v: string) =>
         set(k, v.replace(/\D/g, '').slice(0, 10));
 
     // Set once staff picks a live-duplicate-detection match — from then on this is a known,
@@ -229,6 +219,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [patientDetail, setPatientDetail] = useState<AdmissionPatientDetail | null>(null);
     const [history, setHistory] = useState<AdmissionHistoryItem[]>([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
+
+    // Proactive "search existing patient" box — same generic name/UHID/mobile fuzzy search used on
+    // the Appointment board, restored here (the wizard rework replaced it with the name-triggered
+    // live duplicate-detection below, which needs 3+ letters of a name and doesn't help when staff
+    // already knows the UHID or phone). Both now coexist: this is the fast known-patient path, the
+    // duplicate check below stays as the safety net for the new-patient path.
+    const [patientSearchTerm, setPatientSearchTerm] = useState('');
+    const [patientSearchResults, setPatientSearchResults] = useState<PatientSearchResult[]>([]);
+    const [patientSearching, setPatientSearching] = useState(false);
+    const [showPatientSearchResults, setShowPatientSearchResults] = useState(false);
+    const patientSearchContainerRef = useRef<HTMLDivElement>(null);
 
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string; admittedAt?: string; advanceReceiptNo?: string; advancePendingApproval?: boolean } | null>(null);
@@ -251,20 +252,71 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     // checkbox only renders when this is non-null (never blocks admission on missing config).
     const [generalConsentTemplate, setGeneralConsentTemplate] = useState<ConsentTemplateItem | null>(null);
 
-    // Referrer master search-or-create — same pattern/hospital-wide Referrer entity used by OPD
-    // appointment booking (PatientForm.tsx), reused as-is for the "person referred this patient"
-    // case (DOCTOR/OTHER). SELF needs no referrer; HOSPITAL keeps its own separate facility block.
-    const [referrers, setReferrers] = useState<Referrer[]>([]);
-    const [referrerSearch, setReferrerSearch] = useState('');
-    const [referrerFocused, setReferrerFocused] = useState(false);
-    const [creatingReferrer, setCreatingReferrer] = useState(false);
-    const referrerSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
     // submission so a retried network call can't create a duplicate admission.
     const clientRequestIdRef = useRef<string>(generateUuid());
 
     const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Local-only draft autosave — protects against an accidental close/refresh/tab-switch losing
+    // an in-progress admission. Never touches the server; nothing exists until the real submit.
+    // A restore banner (not silent auto-load) avoids ever mixing an old draft into a fresh admit
+    // for a different patient.
+    const DRAFT_KEY = `admit-draft:${hospitalId}`;
+    const [pendingDraft, setPendingDraft] = useState<{ savedAt: number } | null>(null);
+    const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const draftRestoredRef = useRef(false);
+
+    const clearDraft = () => {
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable — non-fatal */ }
+        setPendingDraft(null);
+    };
+
+    // Offer to restore a recent draft (<24h) when the sheet opens fresh — never when it was opened
+    // pre-filled from a Referred Admissions row, since that pre-fill should always win.
+    useEffect(() => {
+        if (!open || initialPatientId) return;
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const draft = JSON.parse(raw) as { form: FormState; step: WizardStep; selectedPatientId: string | null; savedAt: number };
+            if (Date.now() - draft.savedAt < 24 * 60 * 60 * 1000) {
+                setPendingDraft({ savedAt: draft.savedAt });
+            } else {
+                localStorage.removeItem(DRAFT_KEY);
+            }
+        } catch { /* corrupt/unavailable draft — ignore */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialPatientId]);
+
+    const restoreDraft = () => {
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const draft = JSON.parse(raw) as { form: FormState; step: WizardStep; selectedPatientId: string | null; savedAt: number };
+            draftRestoredRef.current = true;
+            setForm(draft.form);
+            setStep(draft.step);
+            if (draft.selectedPatientId) selectPatient(draft.selectedPatientId);
+        } catch { /* ignore */ } finally {
+            setPendingDraft(null);
+        }
+    };
+
+    // Debounced local save — skipped for one cycle right after a restore so it doesn't immediately
+    // "save" the just-restored draft back over itself with a fresh timestamp for no reason.
+    useEffect(() => {
+        if (!open || pendingDraft) return;
+        if (draftRestoredRef.current) { draftRestoredRef.current = false; return; }
+        if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+        draftSaveTimer.current = setTimeout(() => {
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, step, selectedPatientId, savedAt: Date.now() }));
+            } catch { /* storage unavailable/full — non-fatal, just no autosave this cycle */ }
+        }, 600);
+        return () => { if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, form, step, selectedPatientId, pendingDraft]);
 
     // Load the live bed picker, doctor list, OT Plans, and general-consent template whenever the sheet opens.
     useEffect(() => {
@@ -302,6 +354,39 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialOtPlanId, otPlans]);
 
+    // Debounced generic patient search — matches name/UHID/mobile/Aadhaar/ABHA the same way the
+    // Appointment board's search does. A query that's mostly digits is treated as a phone-number
+    // attempt and stripped to digits only (the backend mobile match is a plain substring Contains).
+    useEffect(() => {
+        if (selectedPatientId) return;
+        const raw = patientSearchTerm.trim();
+        const digitsOnly = raw.replace(/\D/g, '');
+        const looksNumeric = digitsOnly.length > 0 && digitsOnly.length >= raw.replace(/\s/g, '').length - 2;
+        const query = looksNumeric ? digitsOnly : raw;
+        if (query.length < 2) {
+            setPatientSearchResults([]);
+            setShowPatientSearchResults(false);
+            return;
+        }
+        let active = true;
+        setPatientSearching(true);
+        const timer = setTimeout(async () => {
+            try {
+                const items = await admissionApi.searchPatients(query, hospitalId);
+                if (!active) return;
+                setPatientSearchResults(items);
+                setShowPatientSearchResults(true);
+            } catch {
+                if (!active) return;
+                setPatientSearchResults([]);
+                setShowPatientSearchResults(false);
+            } finally {
+                if (active) setPatientSearching(false);
+            }
+        }, 400);
+        return () => { active = false; clearTimeout(timer); };
+    }, [patientSearchTerm, selectedPatientId, hospitalId]);
+
     // Debounced duplicate probe while typing name/mobile/DOB/Aadhaar — stops once an existing
     // patient has been picked below (selectedPatientId set).
     useEffect(() => {
@@ -325,24 +410,9 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
     }, [selectedPatientId, form.fullName, form.mobile, form.dateOfBirth, form.aadhaarNumber]);
 
-    // Debounced referrer-master search — only relevant when referralSource is DOCTOR/OTHER
-    // (a person referred this patient, as opposed to SELF or the separate HOSPITAL facility block).
-    useEffect(() => {
-        if (form.referralSource !== 'DOCTOR' && form.referralSource !== 'OTHER') return;
-        if (referrerSearchTimer.current) clearTimeout(referrerSearchTimer.current);
-        referrerSearchTimer.current = setTimeout(async () => {
-            try {
-                const res = await referrerApi.getReferrers(hospitalId, referrerSearch.trim() || undefined);
-                setReferrers(res.referrers ?? []);
-            } catch {
-                setReferrers([]);
-            }
-        }, 300);
-        return () => { if (referrerSearchTimer.current) clearTimeout(referrerSearchTimer.current); };
-    }, [form.referralSource, referrerSearch, hospitalId]);
-
     const selectPatient = async (patientId: string) => {
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
+        setPatientSearchTerm(''); setPatientSearchResults([]); setShowPatientSearchResults(false);
         setSelectedPatientId(patientId);
         setLoadingDetail(true);
         try {
@@ -378,21 +448,23 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         setForm(EMPTY_FORM);
     };
 
-    const selectReferrer = (r: Referrer) => {
-        setForm(f => ({ ...f, referredByReferrerId: r.referrerId, referralName: r.referrerName }));
-        setReferrerSearch(''); setCreatingReferrer(false);
+    const selectReferrer = (referrerId: string, name: string, type: string) => {
+        setForm(f => ({ ...f, referredByReferrerId: referrerId, referralName: name, referrerType: type }));
     };
     const clearReferrerSelection = () => {
-        setForm(f => ({ ...f, referredByReferrerId: '', referralName: '', newReferrerName: '', newReferrerPhone: '', newReferrerAddress: '', newReferrerType: 'REFERRER' }));
-        setReferrerSearch(''); setCreatingReferrer(false); setReferrers([]);
+        setForm(f => ({ ...f, referredByReferrerId: '', referralName: '', referrerType: '' }));
     };
 
     const reset = () => {
         setStep('admissionType'); setForm(EMPTY_FORM); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
         setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
-        setReferrers([]); setReferrerSearch(''); setReferrerFocused(false); setCreatingReferrer(false);
+        setPatientSearchTerm(''); setPatientSearchResults([]); setShowPatientSearchResults(false);
         clientRequestIdRef.current = generateUuid();
+        // Deliberately NOT clearing the draft here — reset() also runs on an accidental
+        // close-outside-click/Escape (see the Sheet's onOpenChange below), which is exactly the
+        // scenario the draft protects against. It's only cleared explicitly: after a successful
+        // submit, or via the restore banner's "Discard" button.
     };
 
     const bedsByWard = useMemo(() => {
@@ -437,27 +509,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         const t = (s: string) => { const v = s.trim(); return v.length ? v : undefined; };
         const isPreRegistration = form.admissionType === 'ELECTIVE' && form.isPreRegistration;
 
-        // A brand-new referrer is created at submit time (same pattern as OPD appointment
-        // booking) — its id then rides along as ReferredByReferrerId on the admission.
-        let referredByReferrerId = form.referredByReferrerId || undefined;
-        let referralNameForPayload = t(form.referralName);
-        if (creatingReferrer && form.newReferrerName.trim()) {
-            try {
-                const created = await referrerApi.createReferrer(hospitalId, {
-                    referrerName: form.newReferrerName.trim(),
-                    referrerType: form.newReferrerType,
-                    phone: form.newReferrerPhone.trim() || undefined,
-                    address: form.newReferrerAddress.trim() || undefined,
-                    defaultRatePercent: 0,
-                });
-                referredByReferrerId = created.referrerId;
-                referralNameForPayload = created.referrerName;
-            } catch (err) {
-                toast({ title: 'Could not save the new referrer', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
-                setSubmitting(false);
-                return;
-            }
-        }
+        // ReferrerPicker creates a brand-new referrer immediately on confirm (not deferred to
+        // here) — by submit time form.referredByReferrerId is already a real Referrer master id.
+        const referredByReferrerId = form.referredByReferrerId || undefined;
+        const referralNameForPayload = t(form.referralName);
 
         const payload: AdmitPatientPayload = {
             patientId: selectedPatientId ?? undefined,
@@ -480,6 +535,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             expectedDischargeAt: t(form.expectedDischargeAt),
             isPreRegistration,
             otPlanId: form.otPlanId || undefined,
+            customOtPlanText: !form.otPlanId ? t(form.otPlanCustomText) : undefined,
             referralId: referralId || undefined,
             referralSource: form.referralSource || undefined,
             referralName: referralNameForPayload,
@@ -507,6 +563,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             if (res.success) {
                 setSuccess({ admissionNo: res.admissionNo, patientId: res.patientId, isNewPatient: res.isNewPatient, admissionId: res.admissionId, statusCode: res.statusCode, admittedAt: res.admittedAt });
                 toast({ title: isPreRegistration ? 'Patient pre-registered' : 'Patient admitted', description: `${res.admissionNo} · Patient ID ${res.patientId}` });
+                clearDraft();
                 // Best-effort general consent capture — never blocks or undoes an admission that
                 // already succeeded. Skipped entirely for a pre-registration (patient not yet
                 // physically present); captured instead at confirm-arrival time.
@@ -649,6 +706,19 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                     </div>
                 ) : (
                     <>
+                        {/* Restore-draft banner — local-only autosave, never auto-restores silently
+                            (a stale draft could belong to a different patient than intended now). */}
+                        {pendingDraft && (
+                            <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2.5 flex items-center justify-between gap-3">
+                                <p className="text-xs text-brand-800">
+                                    <span className="font-semibold">Unsaved admission draft found</span> from {new Date(pendingDraft.savedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.
+                                </p>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={clearDraft}>Discard</Button>
+                                    <Button size="sm" className="h-7 text-[11px] bg-brand-600 hover:bg-brand-700" onClick={restoreDraft}>Restore</Button>
+                                </div>
+                            </div>
+                        )}
                         {/* Step indicator */}
                         <div className="px-5 sm:px-6 pt-4 pb-1 shrink-0">
                             <div className="flex items-center gap-2">
@@ -730,6 +800,49 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             {/* ══ Step 2: Personal Information ═══════════════════ */}
                             {step === 'personal' && (
                                 <>
+                            {/* ── Search existing patient — same generic name/UHID/mobile search as
+                                 the Appointment board, so a known patient never needs re-typing ── */}
+                            {!selectedPatientId && (
+                                <SectionCard icon={<Search className="h-4 w-4" />} title="Search existing patient" subtitle="By name, UHID, or mobile — or skip and enter new details below" tone="sky">
+                                    <div className="relative" ref={patientSearchContainerRef}>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                            <Input
+                                                value={patientSearchTerm}
+                                                onChange={e => setPatientSearchTerm(e.target.value)}
+                                                onFocus={() => { if (patientSearchResults.length > 0) setShowPatientSearchResults(true); }}
+                                                onBlur={() => setTimeout(() => setShowPatientSearchResults(false), 200)}
+                                                placeholder="Search by name, UHID, or mobile number"
+                                                autoComplete="off"
+                                                className={cn(INPUT_CLS, 'pl-9 pr-8')}
+                                            />
+                                            {patientSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-slate-400" />}
+                                        </div>
+                                        {showPatientSearchResults && patientSearchResults.length > 0 && (
+                                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border bg-white shadow-xl">
+                                                {patientSearchResults.map(p => (
+                                                    <button key={p.patientId} type="button" onClick={() => selectPatient(p.patientId)}
+                                                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 border-b last:border-b-0 transition-colors">
+                                                        <div className="font-semibold text-slate-900 flex items-center gap-2">
+                                                            {p.fullName || '—'}
+                                                            <Badge variant="outline" className="text-[10px] font-mono">{p.patientId}</Badge>
+                                                        </div>
+                                                        <div className="text-slate-500 text-xs mt-0.5 flex gap-2">
+                                                            {p.mobile && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {p.mobile}</span>}
+                                                            {p.age ? <span>· {p.age}{p.sex ?? ''}</span> : null}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {showPatientSearchResults && !patientSearching && patientSearchResults.length === 0 && patientSearchTerm.trim().length >= 2 && (
+                                            <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl border bg-white shadow-xl px-3 py-2.5 text-xs text-slate-400">
+                                                No matching patient found — enter details below to register a new one.
+                                            </div>
+                                        )}
+                                    </div>
+                                </SectionCard>
+                            )}
                             {/* ── Duplicate warning — live-detected while typing name/mobile ── */}
                             {!selectedPatientId && dupMatches.length > 0 && (!dupDismissed || hasNearCertainDup) && (
                                 <div className={cn('rounded-2xl border shadow-sm overflow-hidden',
@@ -1015,6 +1128,14 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                         </p>
                                                     ) : null;
                                                 })()}
+                                                {!form.otPlanId && (
+                                                    <Input
+                                                        value={form.otPlanCustomText}
+                                                        onChange={e => set('otPlanCustomText', e.target.value)}
+                                                        className={cn(INPUT_CLS, 'mt-2')}
+                                                        placeholder="Not listed? Type the plan/procedure name here"
+                                                    />
+                                                )}
                                             </Field>
                                             <Field label="Provisional diagnosis">
                                                 <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
@@ -1040,95 +1161,14 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
                                             {(form.referralSource === 'DOCTOR' || form.referralSource === 'OTHER') && (
                                                 <Field label="Referrer" className="sm:col-span-2">
-                                                    {form.referredByReferrerId ? (
-                                                        (() => {
-                                                            const selected = referrers.find(r => r.referrerId === form.referredByReferrerId);
-                                                            const type = selected?.referrerType ?? form.newReferrerType;
-                                                            const tone = REFERRER_TONE[type] ?? REFERRER_TONE.REFERRER;
-                                                            return (
-                                                                <div className={cn('h-10 px-3 rounded-xl border flex items-center justify-between', tone.bg)}>
-                                                                    <span className="flex items-center gap-2 min-w-0">
-                                                                        <span className={cn('h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0', tone.avatar)}>
-                                                                            {(form.referralName || '?').charAt(0).toUpperCase()}
-                                                                        </span>
-                                                                        <span className="font-semibold text-sm text-slate-800 truncate">{form.referralName}</span>
-                                                                        <Badge variant="outline" className={cn('text-[9px] font-bold shrink-0', tone.badge)}>{REFERRER_LABEL[type] ?? type}</Badge>
-                                                                    </span>
-                                                                    <button type="button" onClick={clearReferrerSelection} className="h-6 w-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-500 shrink-0">
-                                                                        <X className="h-3.5 w-3.5" />
-                                                                    </button>
-                                                                </div>
-                                                            );
-                                                        })()
-                                                    ) : creatingReferrer ? (
-                                                        <Input value={form.newReferrerName} onChange={e => set('newReferrerName', e.target.value)} placeholder="New referrer name" autoFocus className={INPUT_CLS} />
-                                                    ) : (
-                                                        <div className="relative">
-                                                            <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-                                                            <Input value={referrerSearch} onChange={e => setReferrerSearch(e.target.value)}
-                                                                onFocus={() => setReferrerFocused(true)} onBlur={() => setTimeout(() => setReferrerFocused(false), 150)}
-                                                                placeholder="Search doctor / agent referrer…" className={cn(INPUT_CLS, 'pl-9')} />
-                                                            {(referrerFocused || referrerSearch.trim()) && (
-                                                                <div className="absolute z-20 left-0 right-0 mt-1.5 max-h-52 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl divide-y divide-slate-100">
-                                                                    {referrers.length === 0 && (
-                                                                        <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
-                                                                            <Search className="h-3.5 w-3.5" /> No referrers yet — add one below.
-                                                                        </div>
-                                                                    )}
-                                                                    {referrers.map(r => {
-                                                                        const tone = REFERRER_TONE[r.referrerType] ?? REFERRER_TONE.REFERRER;
-                                                                        return (
-                                                                            <button key={r.referrerId} type="button"
-                                                                                onMouseDown={() => selectReferrer(r)}
-                                                                                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-center gap-3">
-                                                                                <span className={cn('h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0', tone.avatar)}>
-                                                                                    {r.referrerName.charAt(0).toUpperCase()}
-                                                                                </span>
-                                                                                <span className="flex-1 min-w-0">
-                                                                                    <span className="block font-medium text-sm text-slate-800 truncate">{r.referrerName}</span>
-                                                                                    {r.phone && <span className="block text-[11px] text-slate-400">{r.phone}</span>}
-                                                                                </span>
-                                                                                <Badge variant="outline" className={cn('text-[9px] font-bold shrink-0', tone.badge)}>{REFERRER_LABEL[r.referrerType] ?? r.referrerType}</Badge>
-                                                                            </button>
-                                                                        );
-                                                                    })}
-                                                                    <button type="button" onMouseDown={() => { setCreatingReferrer(true); set('newReferrerName', referrerSearch.trim()); setReferrerSearch(''); }}
-                                                                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 flex items-center gap-2">
-                                                                        <span className="h-5 w-5 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold">+</span>
-                                                                        Add new referrer{referrerSearch.trim() ? ` "${referrerSearch.trim()}"` : ''}
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {creatingReferrer && (
-                                                        <div className="mt-2 rounded-xl border border-slate-200 bg-white shadow-sm p-3 space-y-2.5">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">New referrer</span>
-                                                                <button type="button" onClick={() => { setCreatingReferrer(false); set('newReferrerName', ''); }} className="h-6 w-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-500">
-                                                                    <X className="h-3.5 w-3.5" />
-                                                                </button>
-                                                            </div>
-                                                            <div className="flex gap-2">
-                                                                {(['DOCTOR', 'AGENT', 'REFERRER'] as const).map(opt => {
-                                                                    const active = form.newReferrerType === opt;
-                                                                    const tone = REFERRER_TONE[opt];
-                                                                    return (
-                                                                        <button key={opt} type="button" onClick={() => set('newReferrerType', opt)}
-                                                                            className={cn('flex-1 h-8 rounded-lg border-2 text-xs font-semibold transition-all',
-                                                                                active ? cn(tone.avatar, 'text-white border-transparent') : cn('bg-white', tone.border, tone.text))}>
-                                                                            {REFERRER_LABEL[opt]}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                <Input value={form.newReferrerPhone} onChange={e => setPhone('newReferrerPhone', e.target.value)} inputMode="numeric" maxLength={10} placeholder="Phone (optional)" className="h-9 text-xs font-mono" />
-                                                                <Input value={form.newReferrerAddress} onChange={e => set('newReferrerAddress', e.target.value)} placeholder="Address (optional)" className="h-9 text-xs" />
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <ReferrerPicker
+                                                        hospitalId={hospitalId}
+                                                        referrerId={form.referredByReferrerId}
+                                                        referrerName={form.referralName}
+                                                        referrerType={form.referrerType}
+                                                        onSelect={selectReferrer}
+                                                        onClear={clearReferrerSelection}
+                                                    />
                                                 </Field>
                                             )}
                                         </div>

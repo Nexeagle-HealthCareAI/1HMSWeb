@@ -149,6 +149,9 @@ export interface AdmitPatientPayload {
     // Optional OT Plan picked in the wizard — pre-fills EntitledRoomCategory server-side (when not
     // explicitly supplied) and snapshots ProcedureName/SuggestedIcuLevel onto the admission.
     otPlanId?: string;
+    // Free-text plan name when the desired plan isn't in the OT Plan list — stored the same as a
+    // real plan's name would be. Ignored server-side if otPlanId is also supplied.
+    customOtPlanText?: string;
     // Set when admitting from a Referred Admissions board row — that referral is atomically marked
     // CONVERTED server-side, in the same transaction that creates this admission.
     referralId?: string;
@@ -209,6 +212,7 @@ export interface ActiveAdmissionItem {
     primaryDoctorName?: string | null;
     referralSource?: string | null;
     referralName?: string | null;
+    referredByReferrerId?: string | null;
     referringFacilityName?: string | null;
     referringFacilityType?: string | null;
     referringFacilityContact?: string | null;
@@ -269,6 +273,7 @@ export interface UpdateAdmissionDetailsPayload {
     depositExpected?: number;
     referralSource?: string;
     referralName?: string;
+    referredByReferrerId?: string;
     referringFacilityName?: string;
     referringFacilityType?: string;
     referringFacilityContact?: string;

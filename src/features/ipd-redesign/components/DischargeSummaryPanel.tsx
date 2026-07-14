@@ -16,6 +16,7 @@ import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocu
 import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
 import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
+import { LookupAutosuggestField } from './LookupAutosuggestField';
 import { DischargeMedicationsEditor } from './DischargeMedicationsEditor';
 import { DischargeFieldLayoutEditor } from './DischargeFieldLayoutEditor';
 import { ConsentPanel } from './ConsentPanel';
@@ -442,11 +443,11 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const renderBuiltinField = (key: string, label: string): React.ReactNode => {
         switch (key) {
             case 'admittingDiagnosis':
-                return <Field label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} />;
+                return <LookupAutosuggestField label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosis':
-                return <Field label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} />;
+                return <LookupAutosuggestField label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'chiefComplaint':
-                return <Field label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} />;
+                return <LookupAutosuggestField label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} lookupType="CHIEF_COMPLAINT" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'conditionAtDischarge':
                 return (
                     <div>
@@ -472,7 +473,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     </div>
                 );
             case 'proceduresPerformed':
-                return <TextField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} />;
+                return <LookupAutosuggestField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} lookupType="PROCEDURE" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline />;
             case 'dischargeMedications':
                 return (
                     <DischargeMedicationsEditor
@@ -484,7 +485,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     />
                 );
             case 'followUpInstructions':
-                return <TextField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} lookupType="FOLLOW_UP_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'followUpDate':
                 return (
                     <div>
@@ -494,9 +495,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     </div>
                 );
             case 'dietInstructions':
-                return <TextField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} lookupType="DIET_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'activityRestrictions':
-                return <TextField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} lookupType="ACTIVITY_RESTRICTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'additionalNotes':
                 return <TextField label={label} value={form.additionalNotes} readOnly={isSigned} onChange={v => setField({ additionalNotes: v })} rows={2} />;
             default:

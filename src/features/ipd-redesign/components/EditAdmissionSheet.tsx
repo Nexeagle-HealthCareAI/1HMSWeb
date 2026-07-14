@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Check, Loader2, Stethoscope, Wallet } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem } from '../services/admissionApi';
 import { useAuthStore } from '@/store/authStore';
+import { ReferrerPicker } from './ReferrerPicker';
 
 export const PAYER_TYPES = [
     { value: 'CASH', label: 'Cash' },
@@ -43,6 +44,8 @@ export interface DetailsFormState {
     depositExpected: string;
     referralSource: string;
     referralName: string;
+    referredByReferrerId: string;
+    referrerType: string;
     referringFacilityName: string;
     referringFacilityType: string;
     referringFacilityContact: string;
@@ -63,6 +66,8 @@ export const toFormState = (a: ActiveAdmissionItem): DetailsFormState => ({
     depositExpected: a.depositExpected != null ? String(a.depositExpected) : '',
     referralSource: a.referralSource ?? '',
     referralName: a.referralName ?? '',
+    referredByReferrerId: a.referredByReferrerId ?? '',
+    referrerType: '',
     referringFacilityName: a.referringFacilityName ?? '',
     referringFacilityType: a.referringFacilityType ?? '',
     referringFacilityContact: a.referringFacilityContact ?? '',
@@ -84,6 +89,7 @@ interface Props {
 export const EditAdmissionSheet: React.FC<Props> = ({ open, onOpenChange, admission, onUpdated }) => {
     const { toast } = useToast();
     const { getHospitalId } = useAuthStore();
+    const hospitalId = getHospitalId?.() ?? '';
     const [form, setForm] = useState<DetailsFormState | null>(null);
     const set = <K extends keyof DetailsFormState>(k: K, v: DetailsFormState[K]) => setForm(f => f ? ({ ...f, [k]: v }) : null);
     const [saving, setSaving] = useState(false);
@@ -123,6 +129,7 @@ export const EditAdmissionSheet: React.FC<Props> = ({ open, onOpenChange, admiss
                     depositExpected: form.depositExpected ? parseFloat(form.depositExpected) : undefined,
                     referralSource: t(form.referralSource),
                     referralName: t(form.referralName),
+                    referredByReferrerId: form.referredByReferrerId || undefined,
                     referringFacilityName: t(form.referringFacilityName),
                     referringFacilityType: t(form.referringFacilityType),
                     referringFacilityContact: t(form.referringFacilityContact),
@@ -184,9 +191,16 @@ export const EditAdmissionSheet: React.FC<Props> = ({ open, onOpenChange, admiss
                                     <option value="OTHER">Other</option>
                                 </select>
                             </Field>
-                            {(form.referralSource === 'DOCTOR' || form.referralSource === 'HOSPITAL' || form.referralSource === 'OTHER') && (
-                                <Field label="Referrer name">
-                                    <Input value={form.referralName} onChange={e => set('referralName', e.target.value)} className={INPUT_CLS} />
+                            {(form.referralSource === 'DOCTOR' || form.referralSource === 'OTHER') && (
+                                <Field label="Referrer" className="sm:col-span-2">
+                                    <ReferrerPicker
+                                        hospitalId={hospitalId}
+                                        referrerId={form.referredByReferrerId}
+                                        referrerName={form.referralName}
+                                        referrerType={form.referrerType}
+                                        onSelect={(referrerId, name, type) => setForm(f => f ? ({ ...f, referredByReferrerId: referrerId, referralName: name, referrerType: type }) : null)}
+                                        onClear={() => setForm(f => f ? ({ ...f, referredByReferrerId: '', referralName: '', referrerType: '' }) : null)}
+                                    />
                                 </Field>
                             )}
                             {form.referralSource === 'HOSPITAL' && (
