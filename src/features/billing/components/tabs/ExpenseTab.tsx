@@ -225,21 +225,21 @@ export const ExpenseTab: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-4 h-full print:bg-white print:p-0">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print:hidden">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 print:hidden">
                 <KpiStat label="Total Expenses" amount={summary.total} format={inr} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                 <KpiStat label="Pending Payment" amount={summary.pending} format={inr} icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" />
                 <KpiStat label="Categories" value={String(summary.categories)} icon={<Building2 className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-violet-100/50 text-brand-900" />
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-rose-500/5 print:shadow-none print:ring-0">
-                <div className="p-3 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 bg-slate-50/60 print:hidden">
+                <div className="p-3 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-2.5 bg-slate-50/60 print:hidden">
                     <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-                        <div className="relative w-full sm:w-48 flex-shrink-0">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input placeholder="Search category, vendor…" className="pl-9 bg-white text-sm rounded-xl h-9" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }} />
+                        <div className="relative w-full flex-shrink-0">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input placeholder="Search category, vendor…" className="pl-9 bg-white text-sm rounded-xl h-10 sm:h-9" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }} />
                         </div>
                         <Select value={dateFilter} onValueChange={(v: any) => setDateFilter(v)}>
-                            <SelectTrigger className="w-full sm:w-[130px] h-9 bg-white rounded-xl text-sm">
+                            <SelectTrigger className="w-[calc(50%-4px)] sm:w-[130px] h-10 sm:h-9 bg-white rounded-xl text-sm">
                                 <SelectValue placeholder="Date" />
                             </SelectTrigger>
                             <SelectContent>
@@ -249,15 +249,8 @@ export const ExpenseTab: React.FC = () => {
                                 <SelectItem value="CUSTOM">Custom Range</SelectItem>
                             </SelectContent>
                         </Select>
-                        {dateFilter === 'CUSTOM' && (
-                            <div className="flex items-center gap-1 w-full sm:w-auto">
-                                <Input type="date" className="h-9 w-full sm:w-[130px] bg-white rounded-xl text-sm" value={customFromDate} onChange={e => setCustomFromDate(e.target.value)} />
-                                <span className="text-slate-400">-</span>
-                                <Input type="date" className="h-9 w-full sm:w-[130px] bg-white rounded-xl text-sm" value={customToDate} onChange={e => setCustomToDate(e.target.value)} />
-                            </div>
-                        )}
                         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                            <SelectTrigger className="w-full sm:w-[160px] h-9 bg-white rounded-xl text-sm">
+                            <SelectTrigger className="w-[calc(50%-4px)] sm:w-[160px] h-10 sm:h-9 bg-white rounded-xl text-sm">
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -265,12 +258,19 @@ export const ExpenseTab: React.FC = () => {
                                 {CATEGORIES.map(c => <SelectItem key={c} value={c}>{CAT_LABEL(c)}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                        {dateFilter === 'CUSTOM' && (
+                            <div className="flex items-center gap-1 w-full">
+                                <Input type="date" className="h-10 sm:h-9 flex-1 min-w-0 bg-white rounded-xl text-sm" value={customFromDate} onChange={e => setCustomFromDate(e.target.value)} />
+                                <span className="text-slate-400 shrink-0">-</span>
+                                <Input type="date" className="h-10 sm:h-9 flex-1 min-w-0 bg-white rounded-xl text-sm" value={customToDate} onChange={e => setCustomToDate(e.target.value)} />
+                            </div>
+                        )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
+                    <div className="flex items-center gap-2 w-full xl:w-auto justify-end">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl">
-                                    <Download className="h-3.5 w-3.5" /> Export
+                                <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0">
+                                    <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Export</span>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -278,10 +278,10 @@ export const ExpenseTab: React.FC = () => {
                                 <DropdownMenuItem onClick={printTable}><Printer className="h-4 w-4 mr-2" /> Print PDF</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl" onClick={() => load(true)} disabled={refreshing || loading}>
-                            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> Refresh
+                        <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0" onClick={() => load(true)} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
                         </Button>
-                        <Button size="sm" className="h-9 gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-xs shadow-md shadow-rose-500/20" onClick={openAdd}>
+                        <Button size="sm" className="h-10 sm:h-9 gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-xs shadow-md shadow-rose-500/20 flex-1 xl:flex-none" onClick={openAdd}>
                             <Plus className="h-3.5 w-3.5" /> Add Expense
                         </Button>
                     </div>
@@ -295,7 +295,36 @@ export const ExpenseTab: React.FC = () => {
                     ) : items.length === 0 ? (
                         <EmptyState icon={<TrendingDown className="h-6 w-6" />} title="No expenses recorded yet" hint="Click “Add Expense” to record your first one." />
                     ) : (
-                        <Table>
+                        <>
+                        {/* Mobile card list — edit/delete are always visible here (unlike the desktop
+                            table's hover-reveal), since touch devices have no hover state. */}
+                        <div className="md:hidden divide-y divide-slate-100">
+                            {items.map(e => (
+                                <div key={e.expenseId} className="p-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', CATEGORY_TONE[e.categoryCode] ?? 'bg-slate-50 text-slate-600 border-slate-200')}>{CAT_LABEL(e.categoryCode)}</Badge>
+                                        <span className="font-mono font-bold text-slate-800 tabular-nums shrink-0">{inr(e.amount)}</span>
+                                    </div>
+                                    <div className="mt-1.5">
+                                        <p className="font-semibold text-slate-800 text-sm">{e.vendor || '—'}</p>
+                                        {e.description && <p className="text-[11px] text-slate-500">{e.description}</p>}
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2 mt-2">
+                                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                            <span className="whitespace-nowrap">{format(new Date(e.expenseDate), 'dd MMM yy, hh:mm a')}</span>
+                                            <span className="font-mono uppercase">{e.paymentMode || '—'}</span>
+                                            <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', e.statusCode === 'PAID' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200')}>{e.statusCode}</Badge>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => setDeleteId(e.expenseId)}><Trash2 className="h-4 w-4" /></Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <Table className="hidden md:table">
                             <TableHeader className="bg-slate-50/80 backdrop-blur border-b border-slate-200 sticky top-0 z-10">
                                 <TableRow className="border-none hover:bg-transparent">
                                     <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Date</TableHead>
@@ -341,6 +370,7 @@ export const ExpenseTab: React.FC = () => {
                                 </TableRow>
                             </TableFooter>
                         </Table>
+                        </>
                     )}
                 </div>
             </Card>
@@ -354,57 +384,57 @@ export const ExpenseTab: React.FC = () => {
                         </SheetTitle>
                         <p className="text-rose-50/90 text-xs mt-0.5">Food &amp; refreshments, equipment, medicine and other bills</p>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-6">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <Label className="text-xs font-semibold">Date</Label>
-                            <Input type="datetime-local" value={form.expenseDate} onChange={(e) => setForm(f => ({ ...f, expenseDate: e.target.value }))} className="h-9 mt-1" />
+                            <Input type="datetime-local" value={form.expenseDate} onChange={(e) => setForm(f => ({ ...f, expenseDate: e.target.value }))} className="h-11 sm:h-9 mt-1" />
                         </div>
                         <div>
                             <Label className="text-xs font-semibold">Category</Label>
                             <Select value={form.categoryCode} onValueChange={(v) => setForm(f => ({ ...f, categoryCode: v }))}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="h-11 sm:h-9 mt-1"><SelectValue /></SelectTrigger>
                                 <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{CAT_LABEL(c)}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div>
                             <Label className="text-xs font-semibold">Amount (₹)</Label>
-                            <Input type="number" min={0} step="0.01" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} className="h-9 mt-1 font-mono" />
+                            <Input type="number" min={0} step="0.01" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} className="h-11 sm:h-9 mt-1 font-mono" />
                         </div>
                         <div>
                             <Label className="text-xs font-semibold">Vendor</Label>
-                            <Input value={form.vendor} onChange={(e) => setForm(f => ({ ...f, vendor: e.target.value }))} className="h-9 mt-1" placeholder="Payee / supplier" />
+                            <Input value={form.vendor} onChange={(e) => setForm(f => ({ ...f, vendor: e.target.value }))} className="h-11 sm:h-9 mt-1" placeholder="Payee / supplier" />
                         </div>
                         <div>
                             <Label className="text-xs font-semibold">Payment Mode</Label>
                             <Select value={form.paymentMode} onValueChange={(v) => setForm(f => ({ ...f, paymentMode: v }))}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="h-11 sm:h-9 mt-1"><SelectValue /></SelectTrigger>
                                 <SelectContent>{MODES.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div>
                             <Label className="text-xs font-semibold">Status</Label>
                             <Select value={form.statusCode} onValueChange={(v) => setForm(f => ({ ...f, statusCode: v }))}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="h-11 sm:h-9 mt-1"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="PAID">Paid</SelectItem>
                                     <SelectItem value="PENDING">Pending</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="col-span-2">
+                        <div className="sm:col-span-2">
                             <Label className="text-xs font-semibold">Reference #</Label>
-                            <Input value={form.referenceNo} onChange={(e) => setForm(f => ({ ...f, referenceNo: e.target.value }))} className="h-9 mt-1 font-mono" placeholder="Bill / txn ref (optional)" />
+                            <Input value={form.referenceNo} onChange={(e) => setForm(f => ({ ...f, referenceNo: e.target.value }))} className="h-11 sm:h-9 mt-1 font-mono" placeholder="Bill / txn ref (optional)" />
                         </div>
-                        <div className="col-span-2">
+                        <div className="sm:col-span-2">
                             <Label className="text-xs font-semibold">Description</Label>
                             <Textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-sm mt-1" placeholder="Optional notes" />
                         </div>
                     </div>
                     </div>
                     <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
-                        <Button onClick={save} disabled={saving} className="bg-rose-600 hover:bg-rose-700">
+                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
+                        <Button onClick={save} disabled={saving} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700">
                             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : (form.expenseId ? 'Update' : 'Add')}
                         </Button>
                     </div>

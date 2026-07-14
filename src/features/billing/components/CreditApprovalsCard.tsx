@@ -147,8 +147,8 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                             </Badge>
                         )}
                     </CardTitle>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => load(true)} disabled={refreshing}>
-                        <RefreshCw className={cn('h-3 w-3 mr-1', refreshing && 'animate-spin')} /> Refresh
+                    <Button variant="outline" size="sm" className="h-9 sm:h-7 text-xs shrink-0" onClick={() => load(true)} disabled={refreshing}>
+                        <RefreshCw className={cn('h-3 w-3 sm:mr-1', refreshing && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
                     </Button>
                 </div>
             </CardHeader>
@@ -171,7 +171,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                         <div
                             key={it.creditApprovalId}
                             className={cn(
-                                'rounded-lg border p-2.5 flex items-start gap-3',
+                                'rounded-lg border p-2.5 flex flex-col sm:flex-row sm:items-start gap-2.5 sm:gap-3',
                                 isPending ? 'border-amber-200 bg-white' : 'border-slate-200 bg-slate-50/50'
                             )}
                         >
@@ -202,14 +202,14 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        className="h-7 text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
+                                        className="h-9 sm:h-7 flex-1 sm:flex-none text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
                                         onClick={() => { setDecideCtx({ item: it, decision: 'REJECTED' }); setDecideNote(''); }}
                                     >
                                         <X className="h-3 w-3 mr-1" /> Reject
                                     </Button>
                                     <Button
                                         size="sm"
-                                        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
+                                        className="h-9 sm:h-7 flex-1 sm:flex-none text-xs bg-emerald-600 hover:bg-emerald-700"
                                         onClick={() => { setDecideCtx({ item: it, decision: 'APPROVED' }); setDecideNote(''); }}
                                     >
                                         <CheckCircle2 className="h-3 w-3 mr-1" /> Approve

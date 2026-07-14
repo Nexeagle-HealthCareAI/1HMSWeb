@@ -61,6 +61,8 @@ const ChainManagement = lazy(() => import('@/features/hospital/components/ChainM
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
+// DEV-ONLY: unauthenticated mobile-UI preview harness for the Billing dashboard (see route below).
+const BillingDashboardPreview = lazy(() => import('@/features/billing/pages/BillingDashboardPreview').then(module => ({ default: module.default })));
 const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPreviewPage').then(module => ({ default: module.PrintPreviewPage })));
 const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
 
@@ -170,6 +172,18 @@ export const AppRoutes: React.FC = () => {
             element={
               <MainLayout>
                 <ReferredAdmissionsPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Billing dashboard preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/billing-preview"
+            element={
+              <MainLayout>
+                <BillingDashboardPreview />
               </MainLayout>
             }
           />

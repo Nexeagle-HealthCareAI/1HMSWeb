@@ -57,18 +57,18 @@ export const KpiStat: React.FC<KpiStatProps> = ({ label, icon, tone, value, amou
             transition={{ duration: 0.35, ease: 'easeOut' }}
         >
             <Card className={cn(
-                'relative overflow-hidden border-0 ring-1 ring-black/5 p-4 flex items-center gap-3.5 rounded-2xl bg-gradient-to-br shadow-lg shadow-brand-500/5',
+                'relative overflow-hidden border-0 ring-1 ring-black/5 p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-br shadow-lg shadow-brand-500/5',
                 tone,
                 className,
             )}>
                 <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/30 blur-2xl pointer-events-none" />
-                <div className="relative h-11 w-11 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center shrink-0 shadow-sm">
+                <div className="relative h-8 w-8 sm:h-11 sm:w-11 rounded-lg sm:rounded-xl bg-white/70 backdrop-blur flex items-center justify-center shrink-0 shadow-sm [&_svg]:h-4 [&_svg]:w-4 sm:[&_svg]:h-5 sm:[&_svg]:w-5">
                     {icon}
                 </div>
                 <div className="relative min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</p>
-                    <p className="text-xl font-black tabular-nums truncate">{display}</p>
-                    {hint && <p className="text-[10px] font-medium opacity-60 truncate">{hint}</p>}
+                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest opacity-70 truncate">{label}</p>
+                    <p className="text-base sm:text-xl font-black tabular-nums truncate">{display}</p>
+                    {hint && <p className="text-[9px] sm:text-[10px] font-medium opacity-60 truncate">{hint}</p>}
                 </div>
             </Card>
         </motion.div>
