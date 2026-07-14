@@ -108,6 +108,11 @@ export interface IcuBoardCase {
     sofaScore?: number | null;
     onVentilator: boolean;
     primaryDiagnosis?: string | null;
+    ewsScore?: number | null;
+    ewsRiskBand?: 'LOW' | 'LOW_MEDIUM' | 'MEDIUM' | 'HIGH' | null;
+    hasOpenRapidResponse: boolean;
+    activeDeviceCount: number;
+    hasOverdueBundleCheck: boolean;
 }
 
 export const icuApi = {

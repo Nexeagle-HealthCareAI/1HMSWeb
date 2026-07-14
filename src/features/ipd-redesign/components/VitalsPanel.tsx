@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, Table2, LineChart as LineChartIcon } from 'lucide-react';
 import { vitalsApi, type VitalReadingItem, type RecordVitalReadingFields } from '../services/vitalsApi';
 import { VitalsTrendChart } from './VitalsTrendChart';
+import { EarlyWarningScorePanel } from './EarlyWarningScorePanel';
 import { formatIstDateTime } from '../utils/istDate';
 
 interface Props {
@@ -61,6 +62,8 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
 
     return (
         <div className="space-y-3">
+            <EarlyWarningScorePanel admissionId={admissionId} isActive={isActive} />
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Vitals</h2>
                 <div className="flex items-center gap-2 flex-wrap">

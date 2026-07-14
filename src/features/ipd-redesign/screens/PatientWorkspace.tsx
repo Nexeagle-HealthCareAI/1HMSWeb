@@ -30,6 +30,7 @@ import { BloodBankPanel } from '../components/BloodBankPanel';
 import { SurgeryCasePanel } from '../components/SurgeryCasePanel';
 import { IcuCriticalCarePanel } from '../components/IcuCriticalCarePanel';
 import { AdmissionDocumentsPanel } from '../components/AdmissionDocumentsPanel';
+import { DeteriorationAlertBanner } from '../components/DeteriorationAlertBanner';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
@@ -475,6 +476,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 <div className="flex-1 min-w-0 space-y-5">
                     {activeSection === 'overview' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="lg:col-span-2">
+                                <DeteriorationAlertBanner admissionId={current.admissionId} />
+                            </div>
                             <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Bed</h2>
                                 {current.bedCode ? (

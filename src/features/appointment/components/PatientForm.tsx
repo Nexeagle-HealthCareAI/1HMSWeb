@@ -186,9 +186,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  // searchField state removed
+  const [searchField, setSearchField] = useState<'name' | 'patientId' | 'contact' | 'appointmentId'>('name');
+  const [searchTerm, setSearchTerm] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -362,11 +362,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     return timeFormatter.format(date);
   };
 
-  // Debounced search on name typing
+  // Debounced search on the dedicated search box (name / patient ID / contact / appointment ID —
+  // the backend blends all of these into one fuzzy match regardless of which field is "selected";
+  // the selector only changes the placeholder/help text so the user knows what to type).
   useEffect(() => {
-    if (formData.patientId) return; // Stop searching if already selected
-    if (suppressSuggestions) return; // Stop searching if user discarded suggestions
-    const query = formData.name.trim();
+    if (formData.patientId) return; // Stop searching once a patient is selected
+    const raw = searchTerm.trim();
+    const query = searchField === 'contact' ? raw.replace(/\D/g, '') : raw;
     if (query.length < 2) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -393,7 +395,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     }, 400);
 
     return () => { active = false; clearTimeout(timer); };
-  }, [formData.name, formData.patientId, searchPatients]);
+  }, [searchTerm, searchField, formData.patientId, searchPatients]);
 
   // Handle patient selection from search results
   const handlePatientSelect = (patient: PatientSearchItem) => {
@@ -428,6 +430,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setSelectedReferrer(null);
     setShowSearchResults(false);
     setSearchQuery('');
+    setSearchTerm('');
     setSelectedIndex(0);
   };
 
@@ -790,11 +793,88 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
+                  {!formData.patientId && (
+                    <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 dark:bg-slate-900/30 dark:border-slate-800 p-3 md:p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Search className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm font-semibold text-foreground dark:text-white">{t('patientForm.search.title')}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-2">
+                        <select
+                          value={searchField}
+                          onChange={(e) => setSearchField(e.target.value as typeof searchField)}
+                          className="h-10 text-sm border border-input rounded-md px-2 bg-background"
+                        >
+                          {(['name', 'patientId', 'contact', 'appointmentId'] as const).map(f => (
+                            <option key={f} value={f}>{t(`patientForm.search.fields.${f}`)}</option>
+                          ))}
+                        </select>
+                        <div className="relative" ref={searchContainerRef}>
+                          <Input
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
+                            onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                            placeholder={t(`patientForm.search.placeholder.${searchField}`)}
+                            autoComplete="off"
+                            className="h-10 text-sm md:text-base"
+                          />
+                          {showSearchResults && searchResults.length > 0 && (
+                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-lg">
+                              <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
+                                <span>Matching patients</span>
+                                <div className="flex items-center gap-2">
+                                  {isSearching && <Loader2 className="h-3 w-3 animate-spin" />}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setShowSearchResults(false);
+                                    }}
+                                    className="p-1 hover:bg-muted-foreground/10 rounded-full transition-colors"
+                                    title="Close suggestions"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                              {searchResults.map((patient) => (
+                                 <button
+                                   key={patient.patientId}
+                                   type="button"
+                                   className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-b last:border-b-0 transition-colors"
+                                   onClick={() => handlePatientSelect(patient)}
+                                 >
+                                   <div className="font-semibold text-foreground flex items-center gap-2">
+                                     {patient.fullName}
+                                     <Badge variant="secondary" className="text-[10px] font-mono">{patient.patientId}</Badge>
+                                   </div>
+                                   <div className="text-muted-foreground text-xs mt-0.5 flex gap-2">
+                                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {patient.mobile}</span>
+                                     {patient.age ? <span>· {patient.age}{patient.sex ? patient.sex[0] : ''}</span> : null}
+                                   </div>
+                                 </button>
+                              ))}
+                            </div>
+                          )}
+                          {showSearchResults && !isSearching && searchResults.length === 0 && searchTerm.trim().length >= 2 && (
+                            <div className="absolute z-50 left-0 right-0 mt-1 rounded-md border bg-popover shadow-lg px-3 py-2.5 text-xs text-muted-foreground">
+                              No matching patient found — you can register them as new below.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1.5">
+                        {t(`patientForm.search.help.${searchField}.line1`)} {t(`patientForm.search.help.${searchField}.line2`)}
+                      </p>
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <Label htmlFor="name" className="text-sm md:text-base font-medium dark:text-gray-300">
                       {t('patientForm.personal.name')} <span className="text-red-500">*</span>
                     </Label>
-                    <div className="relative" ref={searchContainerRef}>
+                    <div className="relative">
                       <div className="relative flex items-center">
                         <Input
                           id="name"
@@ -802,10 +882,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           onChange={(e) => {
                             const val = e.target.value;
                             setFormData(prev => ({ ...prev, name: val, patientId: '' }));
-                            if (val.trim() === '') setSuppressSuggestions(false);
                           }}
-                          onFocus={() => { if (!suppressSuggestions && searchResults.length > 0 && !formData.patientId) setShowSearchResults(true); }}
-                          onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                           placeholder={t('patientForm.personal.namePlaceholder')}
                           autoComplete="off"
                           className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)} ${formData.patientId ? 'pr-10' : ''}`}
@@ -825,52 +902,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           </button>
                         )}
                       </div>
-                      {showSearchResults && searchResults.length > 0 && !formData.patientId && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-lg">
-                          <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
-                            <span>Suggested patients</span>
-                            <div className="flex items-center gap-2">
-                              {isSearching && <Loader2 className="h-3 w-3 animate-spin" />}
-                              <button 
-                                type="button" 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSuppressSuggestions(true);
-                                  setShowSearchResults(false);
-                                  setSearchResults([]);
-                                }}
-                                className="p-1 hover:bg-muted-foreground/10 rounded-full transition-colors"
-                                title="Close suggestions"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                          {searchResults.map((patient, index) => (
-                             <button 
-                               key={patient.patientId} 
-                               type="button"
-                               className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-b last:border-b-0 transition-colors"
-                               onClick={() => handlePatientSelect(patient)}
-                             >
-                               <div className="font-semibold text-foreground flex items-center gap-2">
-                                 {patient.fullName} 
-                                 <Badge variant="secondary" className="text-[10px] font-mono">{patient.patientId}</Badge>
-                               </div>
-                               <div className="text-muted-foreground text-xs mt-0.5 flex gap-2">
-                                 <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {patient.mobile}</span>
-                                 {patient.age ? <span>· {patient.age}{patient.sex ? patient.sex[0] : ''}</span> : null}
-                               </div>
-                             </button>
-                          ))}
-                        </div>
-                      )}
-                      {showSearchResults && !isSearching && searchResults.length === 0 && !formData.patientId && formData.name.trim().length >= 2 && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 rounded-md border bg-popover shadow-lg px-3 py-2.5 text-xs text-muted-foreground">
-                          No matching patient found — you'll be adding <span className="font-semibold text-foreground">"{formData.name.trim()}"</span> as a new patient.
-                        </div>
-                      )}
                     </div>
                     {errors.name && (
                       <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.name)}</p>
