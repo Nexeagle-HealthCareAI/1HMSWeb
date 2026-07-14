@@ -247,7 +247,7 @@ export interface PatientSearchItem {
   fullName: string;
   mobile: string;
   sex: string;
-  age: number;
+  age: number | null;
   ageUnit?: string;
   dateOfBirth: string;
   address: string;

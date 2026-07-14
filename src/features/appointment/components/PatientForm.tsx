@@ -406,7 +406,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       name: patient.fullName,
       referrerId: '',
       phone: formatPhoneNumber(patient.mobile || ''),
-      age: patient.age.toString(),
+      // patient.age is nullable server-side (many older/incomplete records have no recorded age) —
+      // an unguarded .toString() threw here and silently killed the whole selection for any such
+      // patient, since the error surfaced only in the console with nothing visible in the UI.
+      age: patient.age != null ? patient.age.toString() : '',
       ageUnit: (patient as any).ageUnit || 'Y',
       gender: patient.sex,
       address: patient.address || '',
