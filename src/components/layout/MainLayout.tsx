@@ -229,7 +229,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       path: '/appointment-dashboard',
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-redesign' },
+    { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },

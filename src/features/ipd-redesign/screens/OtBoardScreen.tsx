@@ -1,13 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DndContext, DragOverlay, PointerSensor, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { useNavigate } from 'react-router-dom';
 import {
-    Loader2, RefreshCw, AlertCircle, Scissors, Clock, CheckCircle2, Circle, LayoutGrid
+    Loader2, RefreshCw, AlertCircle, Scissors, Clock, CheckCircle2, Circle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { otBookingApi, type OtBoardCase } from '@/features/ipd-redesign/services/otBookingApi';
+import { surgeryCaseApi, type SurgeryStatus } from '@/features/ipd-redesign/services/surgeryCaseApi';
+import { SurgeryTransitionDialog } from '../components/SurgeryTransitionDialog';
 
 const BOARD_POLL_MS = 15000;
 
@@ -24,7 +29,20 @@ const BOARD_COLUMNS: { key: OtBoardCase['statusCode']; label: string }[] = [
     { key: 'IN_THEATRE', label: 'In Theatre' },
     { key: 'POST_OP', label: 'Post-Op' },
     { key: 'COMPLETED', label: 'Completed' },
+    { key: 'CANCELLED', label: 'Cancelled' },
 ];
+
+const TERMINAL_COLUMNS: OtBoardCase['statusCode'][] = ['COMPLETED', 'CANCELLED'];
+
+// Mirrors the backend's fixed forward sequence (SurgeryCaseCommandHandlers.cs) plus "cancel from
+// any non-terminal status" -- drives which columns a card can validly be dropped on.
+const ALLOWED_NEXT: Partial<Record<OtBoardCase['statusCode'], SurgeryStatus[]>> = {
+    REQUESTED: ['SCHEDULED', 'CANCELLED'],
+    SCHEDULED: ['PRE_OP', 'CANCELLED'],
+    PRE_OP: ['IN_THEATRE', 'CANCELLED'],
+    IN_THEATRE: ['POST_OP', 'CANCELLED'],
+    POST_OP: ['COMPLETED', 'CANCELLED'],
+};
 
 const formatTime = (iso?: string | null) => {
     if (!iso) return null;
@@ -33,12 +51,125 @@ const formatTime = (iso?: string | null) => {
     } catch { return null; }
 };
 
+const renderProgressDots = (c: OtBoardCase) => {
+    const steps: { done: boolean; label: string }[] = [
+        { done: c.preOpAssessmentComplete, label: 'Pre-Op' },
+        { done: c.signInComplete, label: 'Sign-In' },
+        { done: c.timeOutComplete, label: 'Time-Out' },
+        { done: c.signOutComplete, label: 'Sign-Out' },
+    ];
+    return (
+        <div className="flex items-center gap-1 mt-2">
+            {steps.map(s => (
+                <span key={s.label} title={s.label} className={s.done ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-700'}>
+                    {s.done ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+                </span>
+            ))}
+        </div>
+    );
+};
+
+const CardContent: React.FC<{ c: OtBoardCase }> = ({ c }) => (
+    <>
+        <div className="flex items-start justify-between gap-1">
+            <p className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{c.patientName || 'Unnamed patient'}</p>
+            <Badge variant="outline" className={`shrink-0 text-[9px] font-bold uppercase ${URGENCY_COLORS[c.urgency] ?? URGENCY_COLORS.ROUTINE}`}>{c.urgency}</Badge>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{c.procedureName}</p>
+        {c.surgeonName && <p className="text-[11px] text-gray-400 truncate mt-1">Dr. {c.surgeonName}</p>}
+        {c.theatreName && (
+            <p className="text-[11px] text-brand-600 dark:text-brand-400 flex items-center gap-1 mt-1">
+                <Scissors className="h-3 w-3" /> {c.theatreName}
+            </p>
+        )}
+        {c.scheduledStart && (
+            <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
+                <Clock className="h-3 w-3" /> {formatTime(c.scheduledStart)}
+            </p>
+        )}
+        {renderProgressDots(c)}
+    </>
+);
+
+const OtBoardCardItem: React.FC<{ c: OtBoardCase; draggable: boolean; onOpen: () => void }> = ({ c, draggable, onOpen }) => {
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+        id: c.surgeryCaseId,
+        data: { fromStatus: c.statusCode },
+        disabled: !draggable,
+    });
+
+    return (
+        <motion.button
+            ref={setNodeRef}
+            {...attributes} {...listeners}
+            layout initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: isDragging ? 0.35 : 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            onClick={onOpen}
+            className={cn(
+                'w-full text-left bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group touch-none',
+                draggable && 'cursor-grab active:cursor-grabbing',
+            )}
+        >
+            <CardContent c={c} />
+        </motion.button>
+    );
+};
+
+const OtBoardColumn: React.FC<{
+    col: { key: OtBoardCase['statusCode']; label: string; cases: OtBoardCase[] };
+    activeFromStatus: OtBoardCase['statusCode'] | null;
+    onOpenCard: (c: OtBoardCase) => void;
+}> = ({ col, activeFromStatus, onOpenCard }) => {
+    const { setNodeRef, isOver } = useDroppable({ id: col.key });
+    const dragging = activeFromStatus != null;
+    const isValidTarget = dragging ? (ALLOWED_NEXT[activeFromStatus!]?.includes(col.key as SurgeryStatus) ?? false) : null;
+    const isCancelled = col.key === 'CANCELLED';
+
+    return (
+        <motion.div
+            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}
+            className="w-72 shrink-0 flex flex-col"
+        >
+            <div className="flex items-center justify-between px-1 mb-2">
+                <h3 className={cn('text-xs font-bold uppercase tracking-wider', isCancelled ? 'text-rose-500 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400')}>{col.label}</h3>
+                <Badge variant="outline" className="text-[10px] font-bold bg-white dark:bg-slate-900">{col.cases.length}</Badge>
+            </div>
+            <div
+                ref={setNodeRef}
+                className={cn(
+                    'flex-1 space-y-2 overflow-y-auto rounded-xl p-2 min-h-[120px] transition-colors duration-150 border-2 border-transparent',
+                    isCancelled ? 'bg-rose-50/40 dark:bg-rose-950/10' : 'bg-gray-50 dark:bg-slate-900/40',
+                    dragging && isValidTarget && 'border-emerald-300 bg-emerald-50/60',
+                    dragging && isValidTarget === false && 'opacity-40',
+                    isOver && isValidTarget && 'border-emerald-500 bg-emerald-100/60',
+                )}
+            >
+                <AnimatePresence initial={false}>
+                    {col.cases.map(c => (
+                        <OtBoardCardItem key={c.surgeryCaseId} c={c} draggable={!TERMINAL_COLUMNS.includes(col.key)} onOpen={() => onOpenCard(c)} />
+                    ))}
+                </AnimatePresence>
+                {col.cases.length === 0 && (
+                    <p className="text-[11px] text-gray-400 text-center py-6">No cases</p>
+                )}
+            </div>
+        </motion.div>
+    );
+};
+
 export const OtBoardScreen: React.FC = () => {
     const navigate = useNavigate();
+    const { toast } = useToast();
     const [board, setBoard] = useState<OtBoardCase[]>([]);
     const [boardLoading, setBoardLoading] = useState(true);
     const [boardError, setBoardError] = useState<string | null>(null);
     const [selectedCase, setSelectedCase] = useState<OtBoardCase | null>(null);
+
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
+    const [transitionCase, setTransitionCase] = useState<OtBoardCase | null>(null);
+    const [transitionToStatus, setTransitionToStatus] = useState<SurgeryStatus | null>(null);
+    const [transitionOpen, setTransitionOpen] = useState(false);
+
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
     const loadBoard = useCallback(async (silent = false) => {
         if (!silent) setBoardLoading(true);
@@ -63,22 +194,69 @@ export const OtBoardScreen: React.FC = () => {
         return BOARD_COLUMNS.map(col => ({ ...col, cases: board.filter(c => c.statusCode === col.key) }));
     }, [board]);
 
-    const renderProgressDots = (c: OtBoardCase) => {
-        const steps: { done: boolean; label: string }[] = [
-            { done: c.preOpAssessmentComplete, label: 'Pre-Op' },
-            { done: c.signInComplete, label: 'Sign-In' },
-            { done: c.timeOutComplete, label: 'Time-Out' },
-            { done: c.signOutComplete, label: 'Sign-Out' },
-        ];
-        return (
-            <div className="flex items-center gap-1 mt-2">
-                {steps.map(s => (
-                    <span key={s.label} title={s.label} className={s.done ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-700'}>
-                        {s.done ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
-                    </span>
-                ))}
-            </div>
-        );
+    const activeFromStatus = activeDragId ? board.find(c => c.surgeryCaseId === activeDragId)?.statusCode ?? null : null;
+    const activeCase = activeDragId ? board.find(c => c.surgeryCaseId === activeDragId) ?? null : null;
+
+    const openCard = (c: OtBoardCase) => {
+        const targetId = c.encounterId || c.admissionId;
+        if (targetId) {
+            navigate(`/ipd-workspace/patient/${targetId}?tab=surgery`);
+        } else {
+            setSelectedCase(c);
+        }
+    };
+
+    const patchStatus = (surgeryCaseId: string, toStatus: SurgeryStatus) => {
+        setBoard(prev => prev.map(c => (c.surgeryCaseId === surgeryCaseId ? { ...c, statusCode: toStatus } : c)));
+    };
+
+    const applyInstantTransition = async (surgeryCaseId: string, toStatus: SurgeryStatus) => {
+        patchStatus(surgeryCaseId, toStatus);
+        try {
+            await surgeryCaseApi.updateStatus(surgeryCaseId, toStatus);
+            toast({ title: `Moved to ${toStatus.replace('_', ' ')}.` });
+        } catch (err) {
+            toast({ title: 'Could not update status', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            loadBoard(true);
+        }
+    };
+
+    const handleDragStart = (event: DragStartEvent) => setActiveDragId(String(event.active.id));
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        setActiveDragId(null);
+        const { active, over } = event;
+        if (!over) return;
+
+        const fromStatus = (active.data.current?.fromStatus as OtBoardCase['statusCode']) ?? null;
+        const toStatus = over.id as SurgeryStatus;
+        if (!fromStatus || fromStatus === toStatus) return;
+
+        const allowed = ALLOWED_NEXT[fromStatus];
+        if (!allowed || !allowed.includes(toStatus)) return; // invalid hop -- card snaps back, no local state was touched
+
+        const found = board.find(c => c.surgeryCaseId === active.id);
+        if (!found) return;
+
+        const needsModal =
+            toStatus === 'SCHEDULED' || toStatus === 'CANCELLED' || toStatus === 'COMPLETED' ||
+            (toStatus === 'IN_THEATRE' && !(found.preOpAssessmentComplete && found.signInComplete)) ||
+            (toStatus === 'POST_OP' && !(found.timeOutComplete && found.signOutComplete));
+
+        if (needsModal) {
+            setTransitionCase(found);
+            setTransitionToStatus(toStatus);
+            setTransitionOpen(true);
+            return;
+        }
+
+        applyInstantTransition(found.surgeryCaseId, toStatus);
+    };
+
+    const handleTransitionSuccess = (surgeryCaseId: string, toStatus: SurgeryStatus) => {
+        patchStatus(surgeryCaseId, toStatus);
+        loadBoard(true);
     };
 
     return (
@@ -99,73 +277,35 @@ export const OtBoardScreen: React.FC = () => {
                     </div>
                 )}
                 {!boardLoading && !boardError && (
-                    <motion.div 
-                        initial="hidden" 
-                        animate="visible" 
-                        variants={{
-                            hidden: {},
-                            visible: { transition: { staggerChildren: 0.1 } }
-                        }}
-                        className="flex gap-4 h-full min-w-max"
-                    >
-                        {columnsWithCases.map(col => (
-                            <motion.div 
-                                key={col.key} 
-                                variants={{
-                                    hidden: { opacity: 0, y: 20 },
-                                    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
-                                }}
-                                className="w-72 shrink-0 flex flex-col"
-                            >
-                                <div className="flex items-center justify-between px-1 mb-2">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{col.label}</h3>
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-white dark:bg-slate-900">{col.cases.length}</Badge>
+                    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                        <motion.div
+                            initial="hidden"
+                            animate="visible"
+                            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1 } } }}
+                            className="flex gap-4 h-full min-w-max"
+                        >
+                            {columnsWithCases.map(col => (
+                                <OtBoardColumn key={col.key} col={col} activeFromStatus={activeFromStatus} onOpenCard={openCard} />
+                            ))}
+                        </motion.div>
+                        <DragOverlay>
+                            {activeCase ? (
+                                <div className="w-72 bg-white dark:bg-slate-900 rounded-lg border-2 border-brand-400 shadow-2xl p-3 rotate-2 scale-105 cursor-grabbing">
+                                    <CardContent c={activeCase} />
                                 </div>
-                                <div className="flex-1 space-y-2 overflow-y-auto rounded-xl bg-gray-50 dark:bg-slate-900/40 p-2 min-h-[120px]">
-                                    <AnimatePresence initial={false}>
-                                        {col.cases.map(c => (
-                                            <motion.button
-                                                key={c.surgeryCaseId}
-                                                layout initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                                                onClick={() => {
-                                                    const targetId = c.encounterId || c.admissionId;
-                                                    if (targetId) {
-                                                        navigate(`/ipd-redesign/patient/${targetId}?tab=surgery`);
-                                                    } else {
-                                                        setSelectedCase(c);
-                                                    }
-                                                }}
-                                                className="w-full text-left bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group"
-                                            >
-                                                <div className="flex items-start justify-between gap-1">
-                                                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{c.patientName || 'Unnamed patient'}</p>
-                                                    <Badge variant="outline" className={`shrink-0 text-[9px] font-bold uppercase ${URGENCY_COLORS[c.urgency] ?? URGENCY_COLORS.ROUTINE}`}>{c.urgency}</Badge>
-                                                </div>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{c.procedureName}</p>
-                                                {c.surgeonName && <p className="text-[11px] text-gray-400 truncate mt-1">Dr. {c.surgeonName}</p>}
-                                                {c.theatreName && (
-                                                    <p className="text-[11px] text-brand-600 dark:text-brand-400 flex items-center gap-1 mt-1">
-                                                        <Scissors className="h-3 w-3" /> {c.theatreName}
-                                                    </p>
-                                                )}
-                                                {c.scheduledStart && (
-                                                    <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
-                                                        <Clock className="h-3 w-3" /> {formatTime(c.scheduledStart)}
-                                                    </p>
-                                                )}
-                                                {renderProgressDots(c)}
-                                            </motion.button>
-                                        ))}
-                                    </AnimatePresence>
-                                    {col.cases.length === 0 && (
-                                        <p className="text-[11px] text-gray-400 text-center py-6">No cases</p>
-                                    )}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </motion.div>
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
                 )}
             </div>
+
+            <SurgeryTransitionDialog
+                open={transitionOpen}
+                onOpenChange={setTransitionOpen}
+                surgeryCase={transitionCase}
+                toStatus={transitionToStatus}
+                onSuccess={handleTransitionSuccess}
+            />
 
             <Dialog open={!!selectedCase} onOpenChange={(o) => { if (!o) setSelectedCase(null); }}>
                 <DialogContent className="max-w-md">
@@ -188,7 +328,7 @@ export const OtBoardScreen: React.FC = () => {
                                 </div>
                             </div>
                             <p className="text-[11px] text-muted-foreground pt-2 border-t border-gray-100 dark:border-gray-800">
-                                This board is read-only. Record assessments, checklist steps, and status changes from the patient's IPD workspace.
+                                Drag a card to another column to change its status — the board will ask for anything that transition needs.
                             </p>
                         </>
                     )}
@@ -197,5 +337,3 @@ export const OtBoardScreen: React.FC = () => {
         </div>
     );
 };
- 
-

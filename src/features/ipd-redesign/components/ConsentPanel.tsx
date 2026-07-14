@@ -1,81 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, RefreshCw, Eraser } from 'lucide-react';
+import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import { consentApi, type ConsentTemplateItem, type ConsentRecordItem } from '../services/consentApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { SignaturePad } from './SignaturePad';
 
 interface Props {
     admissionId: string;
     isActive: boolean;
     prefilterTypeCode?: string;
 }
-
-// Minimal canvas-based signature capture — no reusable signature-pad component exists yet
-// anywhere in this codebase, so this is intentionally self-contained rather than a new shared
-// component (the only consumer is this panel).
-const SignaturePad: React.FC<{ onChange: (dataUrl: string | null) => void }> = ({ onChange }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const drawing = useRef(false);
-
-    // Canvas has a fixed internal drawing resolution (400x140) but renders at CSS `w-full` — on a
-    // narrow mobile dialog the rendered width is well under 400px, so raw clientX/clientY offsets
-    // would drift from the actual pen position. Scale into canvas coordinate space explicitly.
-    const getPos = (e: React.MouseEvent | React.TouchEvent) => {
-        const canvas = canvasRef.current!;
-        const rect = canvas.getBoundingClientRect();
-        const point = 'touches' in e ? e.touches[0] : e;
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        return { x: (point.clientX - rect.left) * scaleX, y: (point.clientY - rect.top) * scaleY };
-    };
-
-    const start = (e: React.MouseEvent | React.TouchEvent) => {
-        drawing.current = true;
-        const ctx = canvasRef.current!.getContext('2d')!;
-        const { x, y } = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-    };
-    const move = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!drawing.current) return;
-        const ctx = canvasRef.current!.getContext('2d')!;
-        const { x, y } = getPos(e);
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-    };
-    const end = () => {
-        if (!drawing.current) return;
-        drawing.current = false;
-        onChange(canvasRef.current!.toDataURL('image/png'));
-    };
-    const clear = () => {
-        const canvas = canvasRef.current!;
-        canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height);
-        onChange(null);
-    };
-
-    return (
-        <div>
-            <Label className="text-[11px] font-semibold text-slate-600">Signature</Label>
-            <div className="mt-1 border border-slate-200 rounded-lg overflow-hidden bg-white">
-                <canvas
-                    ref={canvasRef} width={400} height={140} className="w-full touch-none cursor-crosshair"
-                    onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
-                    onTouchStart={start} onTouchMove={move} onTouchEnd={end}
-                />
-            </div>
-            <Button type="button" variant="ghost" size="sm" className="h-8 sm:h-7 text-xs text-slate-400 mt-1" onClick={clear}>
-                <Eraser className="h-3 w-3 mr-1" /> Clear
-            </Button>
-        </div>
-    );
-};
 
 export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilterTypeCode }) => {
     const { toast } = useToast();
@@ -94,7 +32,7 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
 
     const load = () => {
         setLoading(true);
-        Promise.all([consentApi.getTemplates(), consentApi.getRecords(admissionId)])
+        Promise.all([consentApi.getTemplates(prefilterTypeCode), consentApi.getRecords(admissionId)])
             .then(([t, r]) => { setTemplates(t); setRecords(r); })
             .catch(() => toast({ title: 'Could not load consent data', variant: 'destructive' }))
             .finally(() => setLoading(false));

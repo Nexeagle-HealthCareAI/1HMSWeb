@@ -91,7 +91,7 @@ export const IcuBoardScreen: React.FC = () => {
                                                 layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                                                 onClick={() => {
                                                     const targetId = c.encounterId || c.admissionId;
-                                                    if (targetId) navigate(`/ipd-redesign/patient/${targetId}?tab=criticalCare`);
+                                                    if (targetId) navigate(`/ipd-workspace/patient/${targetId}?tab=criticalCare`);
                                                 }}
                                                 className="w-full text-left bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
                                             >

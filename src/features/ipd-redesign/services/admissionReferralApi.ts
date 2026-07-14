@@ -49,12 +49,22 @@ export interface AdmissionReferralItem {
     convertedAdmissionId?: string;
     admittedAt?: string;
     createdAt: string;
+    commentCount?: number;
+}
+
+export interface ReferralStatusCount {
+    statusCode: ReferralStatus;
+    count: number;
 }
 
 export interface GetAdmissionReferralsResponse {
     success: boolean;
     message?: string;
     referrals: AdmissionReferralItem[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    statusCounts: ReferralStatusCount[];
 }
 
 export interface ListReferralsFilters {
@@ -65,6 +75,34 @@ export interface ListReferralsFilters {
     referringDoctorId?: string;
     fromDate?: string;
     toDate?: string;
+    page?: number;
+    pageSize?: number;
+}
+
+export interface AdmissionReferralCommentItem {
+    commentId: string;
+    commentText: string;
+    createdAt: string;
+    createdBy?: string;
+}
+
+export interface GetAdmissionReferralCommentsResponse {
+    success: boolean;
+    message?: string;
+    comments: AdmissionReferralCommentItem[];
+}
+
+export interface AddAdmissionReferralCommentRequest {
+    hospitalId?: string;
+    referralId: string;
+    commentText: string;
+}
+
+export interface AddAdmissionReferralCommentResponse {
+    success: boolean;
+    message?: string;
+    commentId?: string;
+    createdAt?: string;
 }
 
 export interface UpdateReferralStatusRequest {
@@ -98,4 +136,13 @@ export const admissionReferralApi = {
 
     updateStatus: (req: UpdateReferralStatusRequest): Promise<UpdateReferralStatusResponse> =>
         ipdApiClient.put(IPD_API_ENDPOINTS.ADMISSION_REFERRAL.UPDATE_STATUS, req),
+
+    getComments: (referralId: string, hospitalId?: string): Promise<GetAdmissionReferralCommentsResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.ADMISSION_REFERRAL.COMMENTS(hospitalIdOrThrow(hospitalId), referralId)),
+
+    addComment: (req: AddAdmissionReferralCommentRequest): Promise<AddAdmissionReferralCommentResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.ADMISSION_REFERRAL.ADD_COMMENT, {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
 };

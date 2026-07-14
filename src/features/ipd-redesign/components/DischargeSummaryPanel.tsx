@@ -18,6 +18,9 @@ import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
 import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
 import { DischargeMedicationsEditor } from './DischargeMedicationsEditor';
 import { DischargeFieldLayoutEditor } from './DischargeFieldLayoutEditor';
+import { ConsentPanel } from './ConsentPanel';
+import { SignaturePad } from './SignaturePad';
+import { consentApi } from '../services/consentApi';
 import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import type { DischargeFieldConfigItem } from '../services/dischargeFieldLayoutApi';
 import { dischargeSettingsApi } from '../services/dischargeSettingsApi';
@@ -71,6 +74,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [lamaOpen, setLamaOpen] = useState(false);
     const [lamaReason, setLamaReason] = useState('');
     const [lamaBusy, setLamaBusy] = useState(false);
+    const [lamaTemplateId, setLamaTemplateId] = useState('');
+    const [lamaSignedByName, setLamaSignedByName] = useState('');
+    const [lamaSignerRelation, setLamaSignerRelation] = useState('Self');
+    const [lamaSignatureDataUrl, setLamaSignatureDataUrl] = useState<string | null>(null);
 
     const [customizeOpen, setCustomizeOpen] = useState(false);
     const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout();
@@ -275,6 +282,20 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const confirmLama = async () => {
         setLamaBusy(true);
         try {
+            // Signature capture is best-effort: a missing LAMA consent template (not every
+            // hospital has run the seed script yet) or a signing failure never blocks the actual
+            // LAMA status transition -- it just falls back to today's reason-only record.
+            if (lamaTemplateId && lamaSignedByName.trim()) {
+                try {
+                    await consentApi.sign(admission.admissionId, lamaTemplateId, {
+                        signedByName: lamaSignedByName.trim(),
+                        signerRelation: lamaSignerRelation,
+                        signatureImageBase64: lamaSignatureDataUrl ?? undefined,
+                    });
+                } catch {
+                    toast({ title: 'Could not record the LAMA consent signature — continuing with the status change.', variant: 'destructive' });
+                }
+            }
             await bedBoardApi.updateAdmissionStatus(admission.admissionId, 'LAMA', lamaReason || undefined);
             toast({ title: 'Recorded — patient left without treatment.' });
             setLamaOpen(false);
@@ -284,6 +305,17 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         } finally {
             setLamaBusy(false);
         }
+    };
+
+    // The medication editor writes to `form.medications` (structured rows), not the legacy
+    // `form.dischargeMedications` string -- format the rows into print-ready lines here so what the
+    // doctor actually entered is what appears on the printed/letterhead summary.
+    const formatMedicationsForPrint = (meds?: SaveDischargeSummaryFields['medications']): string | undefined => {
+        if (!meds || meds.length === 0) return undefined;
+        const lines = meds
+            .filter(m => m.medicineName?.trim())
+            .map(m => [m.medicineName, m.dosage, m.route, m.frequency, m.durations, m.instructions].filter(Boolean).join(' — '));
+        return lines.length > 0 ? lines.join('\n') : undefined;
     };
 
     const buildPrintData = () => {
@@ -304,7 +336,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             courseInHospital: form.courseInHospital,
             proceduresPerformed: form.proceduresPerformed,
             conditionAtDischarge: form.conditionAtDischarge || 'STABLE',
-            dischargeMedications: form.dischargeMedications,
+            dischargeMedications: formatMedicationsForPrint(form.medications),
             followUpInstructions: form.followUpInstructions,
             followUpDate: form.followUpDate,
             dietInstructions: form.dietInstructions,
@@ -420,10 +452,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     <div>
                         <Label className="text-[11px] font-semibold text-slate-600">{label} *</Label>
                         {isSigned ? (
-                            <p className="text-sm mt-1 text-slate-800">{form.conditionAtDischarge ?? '—'}</p>
+                            <p className="text-base mt-1.5 text-slate-800">{form.conditionAtDischarge ?? '—'}</p>
                         ) : (
                             <select value={form.conditionAtDischarge ?? ''} onChange={e => setField({ conditionAtDischarge: e.target.value as ConditionAtDischarge })}
-                                className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                className="h-12 mt-1.5 w-full text-base border border-slate-200 rounded-xl px-3 bg-slate-50 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow">
                                 <option value="">— Select —</option>
                                 {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
@@ -458,7 +490,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     <div>
                         <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
                         <Input type="date" value={form.followUpDate ? form.followUpDate.substring(0, 10) : ''} onChange={e => setField({ followUpDate: e.target.value || undefined })}
-                            className="h-9 mt-1" disabled={isSigned} />
+                            className="h-12 mt-1.5 text-base bg-slate-50" disabled={isSigned} />
                     </div>
                 );
             case 'dietInstructions':
@@ -479,7 +511,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             return (
                 <div>
                     <Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label>
-                    <p className={cn('text-sm mt-1 text-slate-800 whitespace-pre-wrap', !value && 'text-slate-400')}>{value || '—'}</p>
+                    <p className={cn('text-base mt-1.5 text-slate-800 whitespace-pre-wrap', !value && 'text-slate-400')}>{value || '—'}</p>
                 </div>
             );
         }
@@ -487,14 +519,14 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             case 'paragraph':
                 return <TextField label={f.label} value={value} readOnly={false} onChange={setValue} rows={3} />;
             case 'number':
-                return <div><Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label><Input type="number" value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1" /></div>;
+                return <div><Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label><Input type="number" value={value} onChange={e => setValue(e.target.value)} className="h-12 mt-1.5 text-base bg-slate-50" /></div>;
             case 'date':
-                return <div><Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label><Input type="date" value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1" /></div>;
+                return <div><Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label><Input type="date" value={value} onChange={e => setValue(e.target.value)} className="h-12 mt-1.5 text-base bg-slate-50" /></div>;
             case 'boolean':
                 return (
                     <div>
                         <Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label>
-                        <select value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                        <select value={value} onChange={e => setValue(e.target.value)} className="h-12 mt-1.5 w-full text-base border border-slate-200 rounded-xl px-3 bg-slate-50 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow">
                             <option value="">— Select —</option>
                             <option value="Yes">Yes</option>
                             <option value="No">No</option>
@@ -505,7 +537,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 return (
                     <div>
                         <Label className="text-[11px] font-semibold text-slate-600">{f.label}</Label>
-                        <select value={value} onChange={e => setValue(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                        <select value={value} onChange={e => setValue(e.target.value)} className="h-12 mt-1.5 w-full text-base border border-slate-200 rounded-xl px-3 bg-slate-50 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow">
                             <option value="">— Select —</option>
                             {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -517,12 +549,16 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     };
 
     const getBuiltInSpan = (key: string) => {
-        const fullWidth = ['courseInHospital', 'historyOfPresentIllness', 'dischargeMedications', 'proceduresPerformed', 'followUpInstructions', 'dietInstructions', 'activityRestrictions', 'additionalNotes'];
-        return fullWidth.includes(key) ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1';
+        // Fields that need real room to read/type stay full-width; short, naturally-compact
+        // controls (selects, date pickers) pair up two-per-row (grid-flow-row-dense on the
+        // container pulls a later compact field up to fill the gap even when it isn't adjacent in
+        // the doctor's saved field order) so the form isn't one long column of tiny fields.
+        const fullWidth = ['admittingDiagnosis', 'finalDiagnosis', 'chiefComplaint', 'courseInHospital', 'historyOfPresentIllness', 'dischargeMedications', 'proceduresPerformed', 'followUpInstructions', 'dietInstructions', 'activityRestrictions', 'additionalNotes'];
+        return fullWidth.includes(key) ? 'col-span-1 md:col-span-2' : 'col-span-1';
     };
 
     const getCustomSpan = (f: DischargeFieldConfigItem) => {
-        return f.type === 'paragraph' ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1';
+        return f.type === 'paragraph' ? 'col-span-1 md:col-span-2' : 'col-span-1';
     };
 
     if (loading) {
@@ -581,7 +617,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             )}
 
             <div className="rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:grid-flow-row-dense">
                     {layoutFields.filter(f => f.builtIn && f.key !== 'nonPayableAnnexure' && isVisible(f.key)).map(f => (
                         <div key={f.key} style={{ order: f.order }} className={getBuiltInSpan(f.key)}>
                             {renderBuiltinField(f.key, f.label)}
@@ -709,11 +745,19 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 </div>
             )}
 
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <ConsentPanel admissionId={admission.admissionId} isActive={isActive} prefilterTypeCode="DISCHARGE" />
+            </div>
+
             {isActive && !isDischarged && (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <p className="text-sm text-slate-600">Discharge is a separate action from signing the summary — sign whenever ready, discharge when the patient physically leaves.</p>
                     <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 shrink-0">
-                        <Button variant="outline" className="h-11 sm:h-10 text-slate-500 hover:text-rose-600" onClick={() => { setLamaReason(''); setLamaOpen(true); }}>
+                        <Button variant="outline" className="h-11 sm:h-10 text-slate-500 hover:text-rose-600" onClick={() => {
+                            setLamaReason(''); setLamaTemplateId(''); setLamaSignedByName(''); setLamaSignerRelation('Self'); setLamaSignatureDataUrl(null);
+                            setLamaOpen(true);
+                            consentApi.getTemplates('LAMA').then(t => setLamaTemplateId(t[0]?.consentTemplateId ?? '')).catch(() => setLamaTemplateId(''));
+                        }}>
                             Left without treatment
                         </Button>
                         <Button className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700 font-semibold" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
@@ -783,7 +827,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             </Dialog>
 
             <Dialog open={lamaOpen} onOpenChange={setLamaOpen}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{admission.patientName || 'Patient'} left without treatment?</DialogTitle>
                         <DialogDescription>Records the admission as LAMA (left against medical advice), closes it, and releases the bed. This cannot be undone.</DialogDescription>
@@ -792,6 +836,26 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Label className="text-xs font-semibold text-slate-700">Reason</Label>
                         <Textarea rows={3} value={lamaReason} onChange={e => setLamaReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
                     </div>
+                    {lamaTemplateId ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <Label className="text-[11px] font-semibold text-slate-600">Signed by</Label>
+                                    <Input value={lamaSignedByName} onChange={e => setLamaSignedByName(e.target.value)} className="h-9 mt-1" />
+                                </div>
+                                <div>
+                                    <Label className="text-[11px] font-semibold text-slate-600">Relation</Label>
+                                    <select value={lamaSignerRelation} onChange={e => setLamaSignerRelation(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                        {['Self', 'Father', 'Mother', 'Spouse', 'Guardian', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <SignaturePad onChange={setLamaSignatureDataUrl} />
+                            <p className="text-[11px] text-slate-400">Signature is optional but recommended — it's attached as a LAMA consent record documenting that the risks of leaving early were explained.</p>
+                        </>
+                    ) : (
+                        <p className="text-[11px] text-amber-600">No LAMA consent template is configured for this hospital yet — this will only record the reason above.</p>
+                    )}
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setLamaOpen(false)}>Cancel</Button>
                         <Button disabled={lamaBusy} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700" onClick={confirmLama}>
@@ -806,16 +870,16 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
 const Field: React.FC<{ label: string; value?: string; readOnly: boolean; onChange: (v: string) => void }> = ({ label, value, readOnly, onChange }) => (
     <div className="flex flex-col h-full">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</Label>
         {readOnly ? (
-            <div className="flex-1 bg-slate-50/50 border border-slate-100 rounded-xl p-3 shadow-sm">
-                <p className="text-sm text-slate-800 font-medium">{value || '—'}</p>
+            <div className="flex-1 bg-slate-50/50 border border-slate-100 rounded-xl p-3.5 shadow-sm">
+                <p className="text-base text-slate-800 font-medium">{value || '—'}</p>
             </div>
         ) : (
-            <Input 
-                value={value ?? ''} 
-                onChange={e => onChange(e.target.value)} 
-                className="h-10 bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl" 
+            <Input
+                value={value ?? ''}
+                onChange={e => onChange(e.target.value)}
+                className="h-12 text-base bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl"
             />
         )}
     </div>
@@ -823,17 +887,17 @@ const Field: React.FC<{ label: string; value?: string; readOnly: boolean; onChan
 
 const TextField: React.FC<{ label: string; value?: string; readOnly: boolean; onChange: (v: string) => void; rows?: number }> = ({ label, value, readOnly, onChange, rows = 3 }) => (
     <div className="flex flex-col h-full">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</Label>
+        <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</Label>
         {readOnly ? (
             <div className="flex-1 bg-slate-50/50 border border-slate-100 rounded-xl p-4 shadow-sm">
-                <p className={cn('text-sm text-slate-800 whitespace-pre-wrap font-medium', !value && 'text-slate-400 italic')}>{value || '—'}</p>
+                <p className={cn('text-base text-slate-800 whitespace-pre-wrap font-medium', !value && 'text-slate-400 italic')}>{value || '—'}</p>
             </div>
         ) : (
-            <Textarea 
-                rows={rows} 
-                value={value ?? ''} 
-                onChange={e => onChange(e.target.value)} 
-                className="text-sm bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl" 
+            <Textarea
+                rows={rows}
+                value={value ?? ''}
+                onChange={e => onChange(e.target.value)}
+                className="text-base leading-relaxed bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl"
             />
         )}
     </div>

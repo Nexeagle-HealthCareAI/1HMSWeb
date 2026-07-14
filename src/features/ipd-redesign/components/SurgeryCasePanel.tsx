@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,7 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Check, X, Scissors, Calendar, ClipboardCheck, Activity, Package, AlertTriangle } from 'lucide-react';
+import {
+    Loader2, Plus, Check, X, Scissors, Calendar, ClipboardCheck, Activity, Package, AlertTriangle,
+    LogIn, Clock3, LogOut, ChevronRight, ChevronLeft, type LucideIcon,
+} from 'lucide-react';
 import {
     surgeryCaseApi, type SurgeryCaseSummary, type SurgeryCaseDetail, type SurgeryStatus,
 } from '../services/surgeryCaseApi';
@@ -14,6 +18,9 @@ import { otBookingApi, type OperationTheatre } from '../services/otBookingApi';
 import { inventoryApi, type InventoryItem } from '../services/inventoryApi';
 import { cssdApi, type InstrumentSet } from '../services/cssdApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { WHO_CHECKLIST_PHASES, type ChecklistPhaseKey } from './surgeryChecklistItems';
+import { PrintSurgeryCaseButton } from './PrintSurgeryCaseButton';
+import type { ActiveAdmissionItem } from '../services/admissionApi';
 
 interface Props {
     admissionId: string;
@@ -22,35 +29,22 @@ interface Props {
     // request's procedure name and surfaces an ICU hint. Not a live join (see Admission entity).
     otPlanProcedureNameSnapshot?: string | null;
     otPlanSuggestedIcuLevel?: string | null;
+    // Full admission record, used only to build the printable OT record header (patient/admission
+    // details). Optional so this panel can still render without it; the Print button just won't show.
+    admission?: ActiveAdmissionItem;
 }
 
-const WHO_ITEMS: Record<'signIn' | 'timeOut' | 'signOut', { key: string; label: string }[]> = {
-    signIn: [
-        { key: 'identity_site_procedure_consent', label: 'Patient has confirmed identity, site, procedure, and consent' },
-        { key: 'site_marked', label: 'Site marked / not applicable' },
-        { key: 'anaesthesia_safety_check', label: 'Anaesthesia safety check completed' },
-        { key: 'pulse_oximeter', label: 'Pulse oximeter on patient and functioning' },
-        { key: 'known_allergy', label: 'Known allergy?' },
-        { key: 'difficult_airway_risk', label: 'Difficult airway/aspiration risk? If yes, equipment/assistance available' },
-        { key: 'blood_loss_risk', label: 'Risk of >500ml blood loss (7ml/kg in children)? If yes, adequate IV access/fluids planned' },
-    ],
-    timeOut: [
-        { key: 'team_introduced', label: 'All team members introduced by name and role' },
-        { key: 'verbal_confirmation', label: 'Surgeon/anaesthetist/nurse verbally confirm patient, site, procedure' },
-        { key: 'critical_events_surgeon', label: 'Anticipated critical events reviewed — surgeon' },
-        { key: 'critical_events_anaesthetist', label: 'Anticipated critical events reviewed — anaesthetist' },
-        { key: 'critical_events_nursing', label: 'Anticipated critical events reviewed — nursing team' },
-        { key: 'antibiotic_prophylaxis', label: 'Antibiotic prophylaxis given within last 60 minutes? / not applicable' },
-        { key: 'imaging_displayed', label: 'Essential imaging displayed? / not applicable' },
-    ],
-    signOut: [
-        { key: 'procedure_name_recorded', label: 'Nurse verbally confirms: name of procedure recorded' },
-        { key: 'counts_correct', label: 'Instrument, sponge, and needle counts correct / not applicable' },
-        { key: 'specimen_labeled', label: 'Specimen labeled correctly, including patient name' },
-        { key: 'equipment_problems', label: 'Equipment problems to be addressed identified' },
-        { key: 'recovery_concerns_reviewed', label: 'Surgeon/anaesthetist/nurse review key concerns for recovery and management' },
-    ],
-};
+type StepKey = 'schedule' | 'preop' | ChecklistPhaseKey | 'intraop' | 'items';
+
+const STEP_META: { key: StepKey; label: string; icon: LucideIcon; tone: string }[] = [
+    { key: 'schedule', label: 'Schedule', icon: Calendar, tone: 'bg-blue-50 text-blue-600' },
+    { key: 'preop', label: 'Pre-Op', icon: ClipboardCheck, tone: 'bg-amber-50 text-amber-600' },
+    { key: 'signIn', label: 'Sign-In', icon: LogIn, tone: 'bg-violet-50 text-violet-600' },
+    { key: 'timeOut', label: 'Time-Out', icon: Clock3, tone: 'bg-violet-50 text-violet-600' },
+    { key: 'signOut', label: 'Sign-Out', icon: LogOut, tone: 'bg-violet-50 text-violet-600' },
+    { key: 'intraop', label: 'Intra-Op', icon: Activity, tone: 'bg-cyan-50 text-cyan-600' },
+    { key: 'items', label: 'Items', icon: Package, tone: 'bg-slate-100 text-slate-600' },
+];
 
 const statusBadgeClass = (status: string) => cn(
     'text-[10px] font-bold',
@@ -76,13 +70,24 @@ const NEXT_STATUS_LABEL: Partial<Record<SurgeryStatus, string>> = {
     POST_OP: 'Complete case',
 };
 
-export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPlanProcedureNameSnapshot, otPlanSuggestedIcuLevel }) => {
+const StepHeader: React.FC<{ icon: LucideIcon; tone: string; title: string; subtitle?: string }> = ({ icon: Icon, tone, title, subtitle }) => (
+    <div className="flex items-center gap-2.5 mb-4">
+        <span className={cn('flex h-10 w-10 items-center justify-center rounded-xl shrink-0', tone)}><Icon className="h-5 w-5" /></span>
+        <div>
+            <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+            {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
+        </div>
+    </div>
+);
+
+export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPlanProcedureNameSnapshot, otPlanSuggestedIcuLevel, admission }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [cases, setCases] = useState<SurgeryCaseSummary[]>([]);
     const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
     const [detail, setDetail] = useState<SurgeryCaseDetail | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [activeStep, setActiveStep] = useState<StepKey>('schedule');
 
     const [showNewRequest, setShowNewRequest] = useState(false);
     const [requestBusy, setRequestBusy] = useState(false);
@@ -109,7 +114,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
     const [signInItems, setSignInItems] = useState<Record<string, boolean>>({});
     const [timeOutItems, setTimeOutItems] = useState<Record<string, boolean>>({});
     const [signOutItems, setSignOutItems] = useState<Record<string, boolean>>({});
-    const [checklistBusy, setChecklistBusy] = useState<'signIn' | 'timeOut' | 'signOut' | null>(null);
+    const [checklistBusy, setChecklistBusy] = useState<ChecklistPhaseKey | null>(null);
 
     const [anaesthesiaType, setAnaesthesiaType] = useState('');
     const [surgeryStartAt, setSurgeryStartAt] = useState('');
@@ -174,6 +179,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
     };
 
     useEffect(() => { loadDetail(); }, [selectedCaseId]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { setActiveStep('schedule'); }, [selectedCaseId]);
 
     useEffect(() => {
         otBookingApi.getTheatres().then(setTheatres).catch(() => setTheatres([]));
@@ -245,7 +251,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
         }
     };
 
-    const submitChecklistPhase = async (phase: 'signIn' | 'timeOut' | 'signOut') => {
+    const submitChecklistPhase = async (phase: ChecklistPhaseKey) => {
         if (!detail) return;
         setChecklistBusy(phase);
         try {
@@ -360,14 +366,75 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
         }
     };
 
+    const isStepComplete = (key: StepKey, d: SurgeryCaseDetail): boolean => {
+        switch (key) {
+            case 'schedule': return !!d.booking;
+            case 'preop': return !!d.latestPreOpAssessment;
+            case 'signIn': return !!d.checklist?.signInCompletedAt;
+            case 'timeOut': return !!d.checklist?.timeOutCompletedAt;
+            case 'signOut': return !!d.checklist?.signOutCompletedAt;
+            case 'intraop': return !!d.intraOpRecord;
+            case 'items': return d.itemsUsed.length > 0;
+        }
+    };
+
+    const renderChecklistPhase = (phase: ChecklistPhaseKey, d: SurgeryCaseDetail) => {
+        const meta = WHO_CHECKLIST_PHASES.find(p => p.key === phase)!;
+        const items = phase === 'signIn' ? signInItems : phase === 'timeOut' ? timeOutItems : signOutItems;
+        const setItems = phase === 'signIn' ? setSignInItems : phase === 'timeOut' ? setTimeOutItems : setSignOutItems;
+        const completedAt = phase === 'signIn' ? d.checklist?.signInCompletedAt : phase === 'timeOut' ? d.checklist?.timeOutCompletedAt : d.checklist?.signOutCompletedAt;
+        const stepTone = STEP_META.find(s => s.key === phase)!.tone;
+        const Icon = STEP_META.find(s => s.key === phase)!.icon;
+        return (
+            <div>
+                <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+                    <StepHeader icon={Icon} tone={stepTone} title={`WHO Checklist — ${meta.label}`} subtitle={completedAt ? undefined : 'Optional — complete whenever ready'} />
+                    {completedAt && (
+                        <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">
+                            Completed {formatIstDateTime(completedAt)}
+                        </Badge>
+                    )}
+                </div>
+                {completedAt ? (
+                    <div className="space-y-1.5">
+                        {meta.items.map(item => (
+                            <div key={item.key} className="flex items-start gap-2 text-xs text-slate-600">
+                                {items[item.key] ? <Check className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" /> : <X className="h-3.5 w-3.5 text-slate-300 mt-0.5 shrink-0" />}
+                                {item.label}
+                            </div>
+                        ))}
+                    </div>
+                ) : isActive ? (
+                    <div className="space-y-2">
+                        {meta.items.map(item => (
+                            <label key={item.key} className="flex items-start gap-2 text-xs text-slate-700">
+                                <input type="checkbox" checked={!!items[item.key]} onChange={e => setItems({ ...items, [item.key]: e.target.checked })} className="h-4 w-4 mt-0.5" />
+                                {item.label}
+                            </label>
+                        ))}
+                        <div className="flex justify-end pt-1">
+                            <Button size="sm" className="h-10 sm:h-9 text-xs w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={checklistBusy === phase} onClick={() => submitChecklistPhase(phase)}>
+                                {checklistBusy === phase ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Complete {meta.label.split(' ')[0]}
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-slate-400">Not recorded.</p>
+                )}
+            </div>
+        );
+    };
+
     if (loading) {
         return <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>;
     }
 
+    const stepIdx = STEP_META.findIndex(s => s.key === activeStep);
+
     return (
         <div className="space-y-5">
             {/* Case list + new request */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Surgery cases</h2>
                     {isActive && (
@@ -458,7 +525,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
             {detail && !detailLoading && (
                 <>
                     {/* Status bar */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <p className="font-bold text-slate-800">{detail.procedureName}</p>
                             <p className="text-xs text-slate-500">{detail.surgeonName ? `Surgeon: ${detail.surgeonName}` : ''}{detail.anaesthetistName ? ` · Anaesthetist: ${detail.anaesthetistName}` : ''}</p>
@@ -466,18 +533,21 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                 <p className="text-xs text-rose-600 mt-1">Cancelled: {detail.cancelledReason}</p>
                             )}
                         </div>
-                        {isActive && NEXT_STATUS[detail.statusCode] && (
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                                {!showCancel && (
-                                    <Button size="sm" variant="outline" className="h-10 sm:h-8 text-xs text-rose-600 hover:bg-rose-50 flex-1 sm:flex-none" onClick={() => setShowCancel(true)}>
-                                        <X className="h-3.5 w-3.5 mr-1.5" /> Cancel case
+                        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                            {admission && <PrintSurgeryCaseButton admission={admission} detail={detail} />}
+                            {isActive && NEXT_STATUS[detail.statusCode] && (
+                                <>
+                                    {!showCancel && (
+                                        <Button size="sm" variant="outline" className="h-10 sm:h-8 text-xs text-rose-600 hover:bg-rose-50 flex-1 sm:flex-none" onClick={() => setShowCancel(true)}>
+                                            <X className="h-3.5 w-3.5 mr-1.5" /> Cancel case
+                                        </Button>
+                                    )}
+                                    <Button size="sm" className="h-10 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700 flex-1 sm:flex-none" disabled={statusBusy} onClick={advanceStatus}>
+                                        {statusBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} {NEXT_STATUS_LABEL[detail.statusCode]}
                                     </Button>
-                                )}
-                                <Button size="sm" className="h-10 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700 flex-1 sm:flex-none" disabled={statusBusy} onClick={advanceStatus}>
-                                    {statusBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} {NEXT_STATUS_LABEL[detail.statusCode]}
-                                </Button>
-                            </div>
-                        )}
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {showCancel && (
@@ -491,250 +561,286 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                         </div>
                     )}
 
-                    {/* Schedule */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Schedule</h2>
-                        {detail.booking && (
-                            <p className="text-sm text-slate-700 mb-2">
-                                <span className="font-semibold">{detail.booking.theatreName}</span> · {formatIstDateTime(detail.booking.scheduledStart)} – {formatIstDateTime(detail.booking.scheduledEnd)}
-                                <Badge variant="outline" className="ml-2 text-[10px]">{detail.booking.statusCode}</Badge>
-                            </p>
-                        )}
-                        {isActive && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:items-end">
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Theatre</Label>
-                                    <select value={pickedTheatreId} onChange={e => setPickedTheatreId(e.target.value)} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                        <option value="">Select…</option>
-                                        {theatres.map(t => <option key={t.theatreId} value={t.theatreId}>{t.theatreName}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Start</Label>
-                                    <Input type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
-                                </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">End</Label>
-                                    <Input type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
-                                </div>
-                                <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={bookBusy} onClick={submitBooking}>
-                                    {bookBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} {detail.booking ? 'Reschedule' : 'Book'}
-                                </Button>
-                            </div>
-                        )}
+                    {/* Step-by-step wizard */}
+                    <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-b from-white to-slate-50/60 shadow-sm p-3 sm:p-4">
+                        <div className="flex items-center gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+                            {STEP_META.map((step, idx) => {
+                                const complete = isStepComplete(step.key, detail);
+                                const active = activeStep === step.key;
+                                const Icon = step.icon;
+                                return (
+                                    <React.Fragment key={step.key}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveStep(step.key)}
+                                            className={cn('relative flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl shrink-0 transition-colors', !active && 'hover:bg-slate-100')}
+                                        >
+                                            {active && (
+                                                <motion.div
+                                                    layoutId="surgeryStepActivePill"
+                                                    className="absolute inset-0 rounded-xl bg-brand-600 shadow-md shadow-brand-600/20"
+                                                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                                />
+                                            )}
+                                            <span className={cn(
+                                                'relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors',
+                                                active ? 'border-white/40 bg-white/15 text-white' : complete ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-slate-200 bg-white text-slate-400',
+                                            )}>
+                                                {complete && !active ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                                            </span>
+                                            <span className={cn('relative z-10 text-[10px] font-bold whitespace-nowrap', active ? 'text-white' : complete ? 'text-emerald-700' : 'text-slate-500')}>
+                                                {step.label}
+                                            </span>
+                                        </button>
+                                        {idx < STEP_META.length - 1 && <div className={cn('h-px w-3 sm:w-5 shrink-0', complete ? 'bg-emerald-200' : 'bg-slate-200')} />}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    {/* Pre-op assessment */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><ClipboardCheck className="h-3.5 w-3.5" /> Pre-op assessment</h2>
-                        {detail.latestPreOpAssessment && (
-                            <p className="text-xs text-slate-500 mb-2">Last assessed by {detail.latestPreOpAssessment.assessedBy} at {formatIstDateTime(detail.latestPreOpAssessment.assessedAt)}</p>
-                        )}
-                        {isActive && (
-                            <div className="space-y-3">
-                                <div className="flex items-end gap-3 flex-wrap">
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeStep}
+                                initial={{ opacity: 0, x: 16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -16 }}
+                                transition={{ duration: 0.22, ease: 'easeOut' }}
+                                className="p-4 sm:p-6"
+                            >
+                                {activeStep === 'schedule' && (
                                     <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">ASA grade</Label>
-                                        <select value={asaGrade} onChange={e => setAsaGrade(e.target.value)} className="h-10 sm:h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="">—</option>
-                                            {['I', 'II', 'III', 'IV', 'V', 'VI'].map(g => <option key={g} value={g}>{g}</option>)}
-                                        </select>
-                                    </div>
-                                    {[
-                                        { label: 'NPO confirmed', val: npoConfirmed, set: setNpoConfirmed },
-                                        { label: 'Allergies reviewed', val: allergiesReviewed, set: setAllergiesReviewed },
-                                        { label: 'Investigations reviewed', val: investigationsReviewed, set: setInvestigationsReviewed },
-                                        { label: 'Consent confirmed', val: consentConfirmed, set: setConsentConfirmed },
-                                    ].map(({ label, val, set }) => (
-                                        <label key={label} className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 h-10 sm:h-9">
-                                            <input type="checkbox" checked={val} onChange={e => set(e.target.checked)} className="h-4 w-4" /> {label}
-                                        </label>
-                                    ))}
-                                </div>
-                                <Textarea value={preOpNotes} onChange={e => setPreOpNotes(e.target.value)} placeholder="Notes" rows={2} />
-                                <div className="flex justify-end">
-                                    <Button size="sm" className="h-10 sm:h-9 w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={preOpBusy} onClick={submitPreOp}>
-                                        {preOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save assessment
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* WHO Surgical Safety Checklist */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">WHO Surgical Safety Checklist</h2>
-                        {(['signIn', 'timeOut', 'signOut'] as const).map((phase, idx) => {
-                            const items = phase === 'signIn' ? signInItems : phase === 'timeOut' ? timeOutItems : signOutItems;
-                            const setItems = phase === 'signIn' ? setSignInItems : phase === 'timeOut' ? setTimeOutItems : setSignOutItems;
-                            const completedAt = phase === 'signIn' ? detail.checklist?.signInCompletedAt : phase === 'timeOut' ? detail.checklist?.timeOutCompletedAt : detail.checklist?.signOutCompletedAt;
-                            const label = phase === 'signIn' ? 'Sign-In (before anaesthesia)' : phase === 'timeOut' ? 'Time-Out (before incision)' : 'Sign-Out (before leaving theatre)';
-                            const priorDone = idx === 0 || (phase === 'timeOut' ? detail.checklist?.signInCompletedAt : detail.checklist?.timeOutCompletedAt);
-                            return (
-                                <div key={phase} className={cn('pt-3 mt-3 border-t border-slate-100 first:pt-0 first:mt-0 first:border-t-0')}>
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                                        <p className="text-sm font-bold text-slate-800">{label}</p>
-                                        {completedAt ? (
-                                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">Completed {formatIstDateTime(completedAt)}</Badge>
-                                        ) : !priorDone ? (
-                                            <span className="text-[11px] text-slate-400">Complete the previous phase first</span>
-                                        ) : null}
-                                    </div>
-                                    {isActive && !completedAt && priorDone && (
-                                        <div className="mt-2 space-y-1.5">
-                                            {WHO_ITEMS[phase].map(item => (
-                                                <label key={item.key} className="flex items-start gap-2 text-xs text-slate-700">
-                                                    <input type="checkbox" checked={!!items[item.key]} onChange={e => setItems({ ...items, [item.key]: e.target.checked })} className="h-4 w-4 mt-0.5" />
-                                                    {item.label}
-                                                </label>
-                                            ))}
-                                            <div className="flex justify-end pt-1">
-                                                <Button size="sm" className="h-10 sm:h-8 text-xs w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={checklistBusy === phase} onClick={() => submitChecklistPhase(phase)}>
-                                                    {checklistBusy === phase ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Complete {label.split(' ')[0]}
+                                        <StepHeader icon={Calendar} tone="bg-blue-50 text-blue-600" title="Schedule" subtitle="Book the theatre and time slot" />
+                                        {detail.booking && (
+                                            <p className="text-sm text-slate-700 mb-3">
+                                                <span className="font-semibold">{detail.booking.theatreName}</span> · {formatIstDateTime(detail.booking.scheduledStart)} – {formatIstDateTime(detail.booking.scheduledEnd)}
+                                                <Badge variant="outline" className="ml-2 text-[10px]">{detail.booking.statusCode}</Badge>
+                                            </p>
+                                        )}
+                                        {isActive && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:items-end">
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">Theatre</Label>
+                                                    <select value={pickedTheatreId} onChange={e => setPickedTheatreId(e.target.value)} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                        <option value="">Select…</option>
+                                                        {theatres.map(t => <option key={t.theatreId} value={t.theatreId}>{t.theatreName}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">Start</Label>
+                                                    <Input type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">End</Label>
+                                                    <Input type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                                </div>
+                                                <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={bookBusy} onClick={submitBooking}>
+                                                    {bookBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} {detail.booking ? 'Reschedule' : 'Book'}
                                                 </Button>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                                        )}
+                                    </div>
+                                )}
 
-                    {/* Intra-op record */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Intra-op record</h2>
-                        {isActive && (
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {activeStep === 'preop' && (
                                     <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Anaesthesia type</Label>
-                                        <select value={anaesthesiaType} onChange={e => setAnaesthesiaType(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="">—</option>
-                                            {['GA', 'SPINAL', 'EPIDURAL', 'LOCAL', 'SEDATION', 'REGIONAL'].map(t => <option key={t} value={t}>{t}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Estimated blood loss (ml)</Label>
-                                        <Input type="number" min={0} value={estimatedBloodLossMl} onChange={e => setEstimatedBloodLossMl(e.target.value)} className="h-9 mt-1" />
-                                    </div>
-                                    <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Surgery start (incision)</Label>
-                                        <Input type="datetime-local" value={surgeryStartAt} onChange={e => setSurgeryStartAt(e.target.value)} className="h-9 mt-1" />
-                                    </div>
-                                    <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Surgery end (closure)</Label>
-                                        <Input type="datetime-local" value={surgeryEndAt} onChange={e => setSurgeryEndAt(e.target.value)} className="h-9 mt-1" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Procedure performed (actual)</Label>
-                                    <Input value={procedurePerformed} onChange={e => setProcedurePerformed(e.target.value)} className="h-9 mt-1" />
-                                </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Surgical team</Label>
-                                    <Input value={surgicalTeam} onChange={e => setSurgicalTeam(e.target.value)} placeholder="Surgeon, assistant, anaesthetist, scrub nurse, circulating nurse" className="h-9 mt-1" />
-                                </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Findings</Label>
-                                    <Textarea value={findings} onChange={e => setFindings(e.target.value)} rows={2} className="mt-1" />
-                                </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Complications</Label>
-                                    <Textarea value={complicationsNotes} onChange={e => setComplicationsNotes(e.target.value)} rows={2} className="mt-1" />
-                                </div>
-                                <div className="flex justify-end">
-                                    <Button size="sm" className="h-10 sm:h-9 w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={intraOpBusy} onClick={submitIntraOp}>
-                                        {intraOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Items used + instrument set issue */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" /> Consumables & implants used</h2>
-
-                        {detail.itemsUsed.length === 0 ? (
-                            <p className="text-sm text-slate-400">No items recorded yet.</p>
-                        ) : (
-                            <div className="space-y-1.5">
-                                {detail.itemsUsed.map(u => (
-                                    <div key={u.intraOpItemUsageId} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-slate-100 text-sm flex-wrap">
-                                        <span className="font-semibold text-slate-800">{u.itemName} <span className="text-slate-400 font-normal">× {u.qty}</span></span>
-                                        <div className="flex items-center gap-1.5">
-                                            <Badge variant="outline" className="text-[10px]">{u.category}</Badge>
-                                            {u.lotNumber && <Badge variant="outline" className="text-[10px]">Lot {u.lotNumber}</Badge>}
-                                            {u.isStockDeducted && <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Deducted</Badge>}
-                                            {u.isBilled && <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">Billed</Badge>}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {isActive && (
-                            <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 lg:items-end">
-                                    <div className="col-span-2 lg:col-span-1">
-                                        <Label className="text-[11px] font-semibold text-slate-600">Inventory item</Label>
-                                        <select value={pickedInventoryItemId} onChange={e => {
-                                            setPickedInventoryItemId(e.target.value);
-                                            const item = inventoryItems.find(i => i.inventoryItemId === e.target.value);
-                                            if (item) setItemCategory(item.category === 'IMPLANT' ? 'IMPLANT' : 'CONSUMABLE');
-                                        }} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="">Free text item…</option>
-                                            {inventoryItems.map(i => <option key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName} (stock {i.currentStock})</option>)}
-                                        </select>
-                                    </div>
-                                    {!pickedInventoryItemId && (
-                                        <div className="col-span-2 lg:col-span-1">
-                                            <Label className="text-[11px] font-semibold text-slate-600">Item name</Label>
-                                            <Input value={freeItemName} onChange={e => setFreeItemName(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
-                                        </div>
-                                    )}
-                                    <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Category</Label>
-                                        <select value={itemCategory} onChange={e => setItemCategory(e.target.value as 'CONSUMABLE' | 'IMPLANT')} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="CONSUMABLE">Consumable</option>
-                                            <option value="IMPLANT">Implant</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Qty</Label>
-                                        <Input type="number" min={0.001} step="0.001" value={itemQty} onChange={e => setItemQty(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
-                                    </div>
-                                    {itemCategory === 'IMPLANT' && (
-                                        <>
-                                            <div>
-                                                <Label className="text-[11px] font-semibold text-slate-600">Lot #</Label>
-                                                <Input value={itemLot} onChange={e => setItemLot(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                        <StepHeader icon={ClipboardCheck} tone="bg-amber-50 text-amber-600" title="Pre-Op Assessment" subtitle="ASA grading & safety review before anaesthesia" />
+                                        {detail.latestPreOpAssessment && (
+                                            <p className="text-xs text-slate-500 mb-2">Last assessed by {detail.latestPreOpAssessment.assessedBy} at {formatIstDateTime(detail.latestPreOpAssessment.assessedAt)}</p>
+                                        )}
+                                        {isActive && (
+                                            <div className="space-y-3">
+                                                <div className="flex items-end gap-3 flex-wrap">
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">ASA grade</Label>
+                                                        <select value={asaGrade} onChange={e => setAsaGrade(e.target.value)} className="h-10 sm:h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                            <option value="">—</option>
+                                                            {['I', 'II', 'III', 'IV', 'V', 'VI'].map(g => <option key={g} value={g}>{g}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    {[
+                                                        { label: 'NPO confirmed', val: npoConfirmed, set: setNpoConfirmed },
+                                                        { label: 'Allergies reviewed', val: allergiesReviewed, set: setAllergiesReviewed },
+                                                        { label: 'Investigations reviewed', val: investigationsReviewed, set: setInvestigationsReviewed },
+                                                        { label: 'Consent confirmed', val: consentConfirmed, set: setConsentConfirmed },
+                                                    ].map(({ label, val, set }) => (
+                                                        <label key={label} className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 h-10 sm:h-9">
+                                                            <input type="checkbox" checked={val} onChange={e => set(e.target.checked)} className="h-4 w-4" /> {label}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                <Textarea value={preOpNotes} onChange={e => setPreOpNotes(e.target.value)} placeholder="Notes" rows={2} />
+                                                <div className="flex justify-end">
+                                                    <Button size="sm" className="h-10 sm:h-9 w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={preOpBusy} onClick={submitPreOp}>
+                                                        {preOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save assessment
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <Label className="text-[11px] font-semibold text-slate-600">Serial #</Label>
-                                                <Input value={itemSerial} onChange={e => setItemSerial(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
-                                            </div>
-                                        </>
-                                    )}
-                                    <Button size="sm" className="h-10 sm:h-9 col-span-2 lg:col-span-1 bg-brand-600 hover:bg-brand-700" disabled={itemBusy} onClick={submitItemUsage}>
-                                        {itemBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1.5" />} Add
-                                    </Button>
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row sm:items-end gap-2 pt-2 border-t border-slate-50">
-                                    <div className="flex-1 min-w-0">
-                                        <Label className="text-[11px] font-semibold text-slate-600">Issue a sterile instrument set to this case</Label>
-                                        <select value={pickedSetId} onChange={e => setPickedSetId(e.target.value)} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="">Select a sterile set…</option>
-                                            {instrumentSets.map(s => <option key={s.instrumentSetId} value={s.instrumentSetId}>{s.setCode} — {s.setName}</option>)}
-                                        </select>
+                                        )}
                                     </div>
-                                    <Button size="sm" variant="outline" className="h-10 sm:h-9 text-xs" disabled={!pickedSetId || issueBusy} onClick={issueInstrumentSet}>
-                                        {issueBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />} Issue to OT
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
+                                )}
+
+                                {(activeStep === 'signIn' || activeStep === 'timeOut' || activeStep === 'signOut') && renderChecklistPhase(activeStep, detail)}
+
+                                {activeStep === 'intraop' && (
+                                    <div>
+                                        <StepHeader icon={Activity} tone="bg-cyan-50 text-cyan-600" title="Intra-Op Record" subtitle="Anaesthesia, findings & the operative course" />
+                                        {isActive && (
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Anaesthesia type</Label>
+                                                        <select value={anaesthesiaType} onChange={e => setAnaesthesiaType(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                            <option value="">—</option>
+                                                            {['GA', 'SPINAL', 'EPIDURAL', 'LOCAL', 'SEDATION', 'REGIONAL'].map(t => <option key={t} value={t}>{t}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Estimated blood loss (ml)</Label>
+                                                        <Input type="number" min={0} value={estimatedBloodLossMl} onChange={e => setEstimatedBloodLossMl(e.target.value)} className="h-9 mt-1" />
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Surgery start (incision)</Label>
+                                                        <Input type="datetime-local" value={surgeryStartAt} onChange={e => setSurgeryStartAt(e.target.value)} className="h-9 mt-1" />
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Surgery end (closure)</Label>
+                                                        <Input type="datetime-local" value={surgeryEndAt} onChange={e => setSurgeryEndAt(e.target.value)} className="h-9 mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">Procedure performed (actual)</Label>
+                                                    <Input value={procedurePerformed} onChange={e => setProcedurePerformed(e.target.value)} className="h-9 mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">Surgical team</Label>
+                                                    <Input value={surgicalTeam} onChange={e => setSurgicalTeam(e.target.value)} placeholder="Surgeon, assistant, anaesthetist, scrub nurse, circulating nurse" className="h-9 mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">Findings</Label>
+                                                    <Textarea value={findings} onChange={e => setFindings(e.target.value)} rows={2} className="mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-600">Complications</Label>
+                                                    <Textarea value={complicationsNotes} onChange={e => setComplicationsNotes(e.target.value)} rows={2} className="mt-1" />
+                                                </div>
+                                                <div className="flex justify-end">
+                                                    <Button size="sm" className="h-10 sm:h-9 w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={intraOpBusy} onClick={submitIntraOp}>
+                                                        {intraOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeStep === 'items' && (
+                                    <div>
+                                        <StepHeader icon={Package} tone="bg-slate-100 text-slate-600" title="Consumables & Implants" subtitle="Items and sterile sets used in this case" />
+
+                                        {detail.itemsUsed.length === 0 ? (
+                                            <p className="text-sm text-slate-400">No items recorded yet.</p>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                {detail.itemsUsed.map(u => (
+                                                    <div key={u.intraOpItemUsageId} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-slate-100 text-sm flex-wrap">
+                                                        <span className="font-semibold text-slate-800">{u.itemName} <span className="text-slate-400 font-normal">× {u.qty}</span></span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Badge variant="outline" className="text-[10px]">{u.category}</Badge>
+                                                            {u.lotNumber && <Badge variant="outline" className="text-[10px]">Lot {u.lotNumber}</Badge>}
+                                                            {u.isStockDeducted && <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Deducted</Badge>}
+                                                            {u.isBilled && <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">Billed</Badge>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {isActive && (
+                                            <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 lg:items-end">
+                                                    <div className="col-span-2 lg:col-span-1">
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Inventory item</Label>
+                                                        <select value={pickedInventoryItemId} onChange={e => {
+                                                            setPickedInventoryItemId(e.target.value);
+                                                            const item = inventoryItems.find(i => i.inventoryItemId === e.target.value);
+                                                            if (item) setItemCategory(item.category === 'IMPLANT' ? 'IMPLANT' : 'CONSUMABLE');
+                                                        }} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                            <option value="">Free text item…</option>
+                                                            {inventoryItems.map(i => <option key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName} (stock {i.currentStock})</option>)}
+                                                        </select>
+                                                    </div>
+                                                    {!pickedInventoryItemId && (
+                                                        <div className="col-span-2 lg:col-span-1">
+                                                            <Label className="text-[11px] font-semibold text-slate-600">Item name</Label>
+                                                            <Input value={freeItemName} onChange={e => setFreeItemName(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Category</Label>
+                                                        <select value={itemCategory} onChange={e => setItemCategory(e.target.value as 'CONSUMABLE' | 'IMPLANT')} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                            <option value="CONSUMABLE">Consumable</option>
+                                                            <option value="IMPLANT">Implant</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Qty</Label>
+                                                        <Input type="number" min={0.001} step="0.001" value={itemQty} onChange={e => setItemQty(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                                    </div>
+                                                    {itemCategory === 'IMPLANT' && (
+                                                        <>
+                                                            <div>
+                                                                <Label className="text-[11px] font-semibold text-slate-600">Lot #</Label>
+                                                                <Input value={itemLot} onChange={e => setItemLot(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-[11px] font-semibold text-slate-600">Serial #</Label>
+                                                                <Input value={itemSerial} onChange={e => setItemSerial(e.target.value)} className="h-10 sm:h-9 mt-1 w-full" />
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                    <Button size="sm" className="h-10 sm:h-9 col-span-2 lg:col-span-1 bg-brand-600 hover:bg-brand-700" disabled={itemBusy} onClick={submitItemUsage}>
+                                                        {itemBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1.5" />} Add
+                                                    </Button>
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row sm:items-end gap-2 pt-2 border-t border-slate-50">
+                                                    <div className="flex-1 min-w-0">
+                                                        <Label className="text-[11px] font-semibold text-slate-600">Issue a sterile instrument set to this case</Label>
+                                                        <select value={pickedSetId} onChange={e => setPickedSetId(e.target.value)} className="h-10 sm:h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                                            <option value="">Select a sterile set…</option>
+                                                            {instrumentSets.map(s => <option key={s.instrumentSetId} value={s.instrumentSetId}>{s.setCode} — {s.setName}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <Button size="sm" variant="outline" className="h-10 sm:h-9 text-xs" disabled={!pickedSetId || issueBusy} onClick={issueInstrumentSet}>
+                                                        {issueBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />} Issue to OT
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
+
+                        <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 border-t border-slate-100 bg-slate-50/60">
+                            <Button
+                                variant="ghost" size="sm" className="h-9 text-xs"
+                                disabled={stepIdx === 0}
+                                onClick={() => setActiveStep(STEP_META[stepIdx - 1].key)}
+                            >
+                                <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Back
+                            </Button>
+                            <span className="text-[11px] text-slate-400 font-semibold hidden sm:inline">Step {stepIdx + 1} of {STEP_META.length} · all steps optional</span>
+                            <Button
+                                variant="ghost" size="sm" className="h-9 text-xs"
+                                disabled={stepIdx === STEP_META.length - 1}
+                                onClick={() => setActiveStep(STEP_META[stepIdx + 1].key)}
+                            >
+                                Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                            </Button>
+                        </div>
                     </div>
                 </>
             )}
