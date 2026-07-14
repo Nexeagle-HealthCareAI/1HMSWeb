@@ -74,8 +74,11 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 patientAddress: admission.patientAddress || undefined,
                 admittedAt: admission.admittedAt,
                 dischargedAt: physicalDischargeAt || draft.signedAt || new Date().toISOString(),
+                referredBy: admission.referralName || undefined,
                 admittingDiagnosis: draft.admittingDiagnosis || undefined,
                 finalDiagnosis: draft.finalDiagnosis || undefined,
+                finalDiagnosisIcd10Code: draft.finalDiagnosisIcd10Code || undefined,
+                finalDiagnosisIcd10Name: draft.finalDiagnosisIcd10Name || undefined,
                 chiefComplaint: draft.chiefComplaint || undefined,
                 historyOfPresentIllness: draft.historyOfPresentIllness || undefined,
                 courseInHospital: draft.courseInHospital || undefined,
@@ -128,12 +131,15 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                 ageGender: printData.ageGender,
                                 admittedAt: printData.admittedAt,
                                 dischargedAt: printData.dischargedAt,
+                                referredBy: printData.referredBy,
                                 conditionAtDischarge: printData.conditionAtDischarge,
                                 signedByDoctorName: printData.signedByDoctorName,
                                 signedAt: printData.signedAt,
                                 fields: {
                                     admittingDiagnosis: printData.admittingDiagnosis,
-                                    finalDiagnosis: printData.finalDiagnosis,
+                                    finalDiagnosis: printData.finalDiagnosisIcd10Code
+                                        ? `${printData.finalDiagnosis ?? ''} (ICD-10: ${printData.finalDiagnosisIcd10Code} — ${printData.finalDiagnosisIcd10Name ?? ''})`
+                                        : printData.finalDiagnosis,
                                     chiefComplaint: printData.chiefComplaint,
                                     historyOfPresentIllness: printData.historyOfPresentIllness,
                                     courseInHospital: printData.courseInHospital,

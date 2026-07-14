@@ -63,6 +63,7 @@ export interface DischargePrintPayload {
     patientAddress?: string;
     admittedAt: string;
     dischargedAt: string;
+    referredBy?: string;
     conditionAtDischarge: string;
     signedByDoctorName?: string;
     signedAt?: string;
@@ -219,7 +220,12 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         cursorY -= lineHeight * 1.2;
         page.drawText(payload.patientAddress, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
     }
-    
+
+    if (payload.referredBy) {
+        cursorY -= lineHeight * 1.2;
+        page.drawText(`Referred by: ${payload.referredBy}`, { x: leftPad, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+    }
+
     cursorY -= lineHeight * 1.5;
     page.drawLine({ start: { x: leftPad, y: cursorY + 4 }, end: { x: pageWidth - rightPad, y: cursorY + 4 }, thickness: 1, color: hexToPdfRgb('#e2e8f0') });
     cursorY -= 8;

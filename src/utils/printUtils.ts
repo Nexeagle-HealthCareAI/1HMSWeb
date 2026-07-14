@@ -50,6 +50,19 @@ export const openPreviewHtml = (htmlContent: string) => {
 // Renders a full HTML document (e.g. an A4 print template) into an off-screen iframe,
 // rasterizes it with html2canvas, and saves it as a paginated A4 PDF via jsPDF.
 export const downloadHtmlAsPdf = async (htmlContent: string, filename: string): Promise<void> => {
+  const pdf = await buildPdfFromHtml(htmlContent);
+  pdf.save(filename);
+};
+
+// Same rasterize-and-paginate pipeline as downloadHtmlAsPdf, but returns the PDF as a Blob
+// instead of triggering a browser download -- for uploading it to the server (e.g. the discharge
+// summary's shareable QR/WhatsApp link) rather than saving it locally.
+export const htmlToPdfBlob = async (htmlContent: string): Promise<Blob> => {
+  const pdf = await buildPdfFromHtml(htmlContent);
+  return pdf.output('blob');
+};
+
+const buildPdfFromHtml = async (htmlContent: string) => {
   const { default: jsPDF } = await import('jspdf');
   const { default: html2canvas } = await import('html2canvas');
 
@@ -98,7 +111,7 @@ export const downloadHtmlAsPdf = async (htmlContent: string, filename: string): 
       heightLeft -= pageH;
     }
 
-    pdf.save(filename);
+    return pdf;
   } finally {
     document.body.removeChild(iframe);
   }
