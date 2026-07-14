@@ -11,14 +11,14 @@ import { generateUuid } from '@/utils/uuid';
 import {
     UserPlus, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
-    User, CalendarCheck, Sun, LogOut, AlertTriangle, Users, Wallet, BedDouble,
+    User, CalendarCheck, Sun, LogOut, AlertTriangle, Wallet, BedDouble,
     Printer, Download, Search,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
     admissionApi, type AdmissionTypeCode, type AdmitPatientPayload,
     type AdmissionPatientDetail, type AdmissionHistoryItem,
-    type DuplicateMatch, type DuplicateConfidence, type HospitalDoctorItem,
+    type HospitalDoctorItem,
     type PatientSearchResult,
 } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -31,13 +31,8 @@ import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
 import { buildAdmissionConfirmationA4 } from '@/printTemplates/admissionConfirmationA4';
 import { ipdBillingService, type PaymentMode } from '@/features/billing/services/ipdBillingService';
 import { otPlanApi, type OTPlanItem } from '@/features/hospital/services/otPlanApi';
+import { PackageTypePicker } from '@/features/hospital/components/masters/PackageTypePicker';
 import { ReferrerPicker } from '../components/ReferrerPicker';
-
-const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
-    NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
-    PROBABLE: { chip: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Probable' },
-    POSSIBLE: { chip: 'bg-sky-100 text-sky-700 border-sky-200', label: 'Possible' },
-};
 
 type WizardStep = 'admissionType' | 'personal' | 'clinical' | 'advanceBed';
 const WIZARD_STEPS: { key: WizardStep; label: string; required: boolean }[] = [
@@ -105,7 +100,7 @@ interface FormState {
     flatHouse: string; street: string; city: string; district: string; state: string; pincode: string;
     aadhaarNumber: string; panNumber: string; abhaId: string;
     admissionType: AdmissionTypeCode; primaryDoctorId: string;
-    admissionReason: string; diagnosis: string; expectedDischargeAt: string; admissionToken: string;
+    admissionReason: string; diagnosis: string; expectedDischargeAt: string;
     isPreRegistration: boolean;
     referralSource: '' | 'SELF' | 'DOCTOR' | 'HOSPITAL' | 'OTHER'; referralName: string;
     referredByReferrerId: string; referrerType: string;
@@ -115,6 +110,7 @@ interface FormState {
     payerName: string; policyOrBeneficiaryNo: string; preAuthNo: string; packageCode: string; sanctionedAmount: string;
     entitledRoomCategory: string;
     otPlanId: string; otPlanCustomText: string;
+    packageTypeId: string | null;
     collectAdvanceNow: boolean; advancePaymentMode: PaymentMode; advanceTransactionId: string;
 
     consentObtained: boolean; consentSignedByName: string; consentSignerRelation: string;
@@ -128,7 +124,7 @@ const EMPTY_FORM: FormState = {
     flatHouse: '', street: '', city: '', district: '', state: '', pincode: '',
     aadhaarNumber: '', panNumber: '', abhaId: '',
     admissionType: 'ELECTIVE', primaryDoctorId: '',
-    admissionReason: '', diagnosis: '', expectedDischargeAt: '', admissionToken: '',
+    admissionReason: '', diagnosis: '', expectedDischargeAt: '',
     isPreRegistration: false,
     referralSource: '', referralName: '',
     referredByReferrerId: '', referrerType: '',
@@ -137,6 +133,7 @@ const EMPTY_FORM: FormState = {
     payerName: '', policyOrBeneficiaryNo: '', preAuthNo: '', packageCode: '', sanctionedAmount: '',
     entitledRoomCategory: '',
     otPlanId: '', otPlanCustomText: '',
+    packageTypeId: null,
     collectAdvanceNow: false, advancePaymentMode: 'CASH', advanceTransactionId: '',
     consentObtained: false, consentSignedByName: '', consentSignerRelation: 'Self',
 };
@@ -167,8 +164,12 @@ const CHIP_TONES: Record<string, string> = {
 const SectionCard: React.FC<{
     icon: React.ReactNode; title: string; subtitle?: string; tone?: keyof typeof CHIP_TONES;
     right?: React.ReactNode; children: React.ReactNode;
-}> = ({ icon, title, subtitle, tone = 'indigo', right, children }) => (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    // Cards whose content renders an absolutely-positioned overlay (e.g. a search
+    // results dropdown) need this — the default overflow-hidden (for rounded corners)
+    // would otherwise clip the overlay wherever it extends past the card's own bounds.
+    allowOverflow?: boolean;
+}> = ({ icon, title, subtitle, tone = 'indigo', right, children, allowOverflow }) => (
+    <section className={cn('rounded-2xl border border-slate-200 bg-white shadow-sm', !allowOverflow && 'overflow-hidden')}>
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
             <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', CHIP_TONES[tone])}>{icon}</div>
             <div className="min-w-0 flex-1">
@@ -234,14 +235,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string; admittedAt?: string; advanceReceiptNo?: string; advancePendingApproval?: boolean } | null>(null);
 
-    // Live duplicate detection — replaces the old separate "Returning: search" step. Runs
-    // continuously as name/mobile/DOB/Aadhaar are typed, unless an existing patient is already
-    // selected below.
-    const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
-    const [dupChecking, setDupChecking] = useState(false);
-    const [dupDismissed, setDupDismissed] = useState(false);
-    const [confirmNotDup, setConfirmNotDup] = useState(false);
-
     // Available beds for the optional bed picker.
     const [availableBeds, setAvailableBeds] = useState<BedBoardItem[]>([]);
     // Admitting-consultant picker.
@@ -255,8 +248,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
     // submission so a retried network call can't create a duplicate admission.
     const clientRequestIdRef = useRef<string>(generateUuid());
-
-    const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Local-only draft autosave — protects against an accidental close/refresh/tab-switch losing
     // an in-progress admission. Never touches the server; nothing exists until the real submit.
@@ -387,31 +378,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         return () => { active = false; clearTimeout(timer); };
     }, [patientSearchTerm, selectedPatientId, hospitalId]);
 
-    // Debounced duplicate probe while typing name/mobile/DOB/Aadhaar — stops once an existing
-    // patient has been picked below (selectedPatientId set).
-    useEffect(() => {
-        if (selectedPatientId) { setDupMatches([]); setDupChecking(false); return; }
-        if (dupTimer.current) clearTimeout(dupTimer.current);
-        const name = form.fullName.trim();
-        if (name.length < 3) { setDupMatches([]); setDupChecking(false); return; }
-        setDupChecking(true);
-        dupTimer.current = setTimeout(async () => {
-            const matches = await admissionApi.checkDuplicates({
-                fullName: name,
-                mobile: form.mobile.trim() || undefined,
-                dateOfBirth: form.dateOfBirth || undefined,
-                aadhaarNumber: form.aadhaarNumber.trim() || undefined,
-            });
-            setDupMatches(matches);
-            setConfirmNotDup(false);
-            setDupDismissed(false);
-            setDupChecking(false);
-        }, 450);
-        return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
-    }, [selectedPatientId, form.fullName, form.mobile, form.dateOfBirth, form.aadhaarNumber]);
-
     const selectPatient = async (patientId: string) => {
-        setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
         setPatientSearchTerm(''); setPatientSearchResults([]); setShowPatientSearchResults(false);
         setSelectedPatientId(patientId);
         setLoadingDetail(true);
@@ -458,7 +425,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const reset = () => {
         setStep('admissionType'); setForm(EMPTY_FORM); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
-        setDupMatches([]); setDupDismissed(false); setConfirmNotDup(false);
         setPatientSearchTerm(''); setPatientSearchResults([]); setShowPatientSearchResults(false);
         clientRequestIdRef.current = generateUuid();
         // Deliberately NOT clearing the draft here — reset() also runs on an accidental
@@ -476,7 +442,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         return groups;
     }, [availableBeds]);
 
-    const hasNearCertainDup = !selectedPatientId && dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
     // Emergency/casualty: an unidentified patient must never be blocked at the door — Sex +
     // approximate age are the only two things required; name/mobile are backfilled later.
     // Doesn't apply once an existing patient has been picked — their identity is already known.
@@ -494,10 +459,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         } else if (!form.fullName.trim() || !form.mobile.trim()) {
             return false;
         }
-        // A near-certain duplicate must be explicitly acknowledged before a second UHID is created.
-        if (hasNearCertainDup && !confirmNotDup) return false;
         return true;
-    }, [selectedPatientId, isEmergencyQuickAdmit, form.fullName, form.mobile, form.sex, form.ageYears, form.dateOfBirth, hasNearCertainDup, confirmNotDup]);
+    }, [selectedPatientId, isEmergencyQuickAdmit, form.fullName, form.mobile, form.sex, form.ageYears, form.dateOfBirth]);
 
     const submit = async () => {
         if (!canSubmit || submitting) {
@@ -531,11 +494,12 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             panNumber: t(form.panNumber), abhaId: t(form.abhaId),
             admissionType: form.admissionType,
             primaryDoctorId: form.primaryDoctorId || undefined,
-            admissionReason: t(form.admissionReason), diagnosis: t(form.diagnosis), admissionToken: t(form.admissionToken),
+            admissionReason: t(form.admissionReason), diagnosis: t(form.diagnosis),
             expectedDischargeAt: t(form.expectedDischargeAt),
             isPreRegistration,
             otPlanId: form.otPlanId || undefined,
             customOtPlanText: !form.otPlanId ? t(form.otPlanCustomText) : undefined,
+            packageTypeId: form.packageTypeId || undefined,
             referralId: referralId || undefined,
             referralSource: form.referralSource || undefined,
             referralName: referralNameForPayload,
@@ -769,17 +733,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         })}
                                     </div>
 
-                                    <div className="mt-4">
-                                        <Field label="Admission Token" className="max-w-xs">
-                                            <Input
-                                                placeholder="e.g. Q-105 or physical token number"
-                                                value={form.admissionToken}
-                                                onChange={e => set('admissionToken', e.target.value)}
-                                                className={INPUT_CLS}
-                                            />
-                                        </Field>
-                                    </div>
-
                                     <AnimatePresence mode="wait">
                                         <motion.p key={form.admissionType}
                                             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.15 }}
@@ -803,7 +756,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             {/* ── Search existing patient — same generic name/UHID/mobile search as
                                  the Appointment board, so a known patient never needs re-typing ── */}
                             {!selectedPatientId && (
-                                <SectionCard icon={<Search className="h-4 w-4" />} title="Search existing patient" subtitle="By name, UHID, or mobile — or skip and enter new details below" tone="sky">
+                                <SectionCard icon={<Search className="h-4 w-4" />} title="Search existing patient" subtitle="By name, UHID, or mobile — or skip and enter new details below" tone="sky" allowOverflow>
                                     <div className="relative" ref={patientSearchContainerRef}>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -842,53 +795,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         )}
                                     </div>
                                 </SectionCard>
-                            )}
-                            {/* ── Duplicate warning — live-detected while typing name/mobile ── */}
-                            {!selectedPatientId && dupMatches.length > 0 && (!dupDismissed || hasNearCertainDup) && (
-                                <div className={cn('rounded-2xl border shadow-sm overflow-hidden',
-                                    hasNearCertainDup ? 'border-rose-300 bg-rose-50/60' : 'border-amber-300 bg-amber-50/50')}>
-                                    <div className="flex items-center gap-2.5 px-4 py-3 border-b border-black/5">
-                                        <AlertTriangle className={cn('h-5 w-5 shrink-0', hasNearCertainDup ? 'text-rose-600' : 'text-amber-600')} />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-bold text-slate-900">
-                                                {hasNearCertainDup ? 'This looks like an existing patient' : 'Possible existing patient'}
-                                            </p>
-                                            <p className="text-[11px] text-slate-500">{dupMatches.length} match{dupMatches.length > 1 ? 'es' : ''} found — reuse to avoid creating a duplicate record.</p>
-                                        </div>
-                                    </div>
-                                    <div className="p-3 space-y-2">
-                                        {dupMatches.map(m => (
-                                            <div key={m.patientId} className="rounded-xl border border-slate-200 bg-white p-2.5 flex items-center gap-3">
-                                                <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold shrink-0">{initials(m.fullName)}</div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-semibold text-slate-900 truncate">{m.fullName || '—'}</p>
-                                                        <Badge variant="outline" className={cn('text-[11px] font-bold border', DUP_TONE[m.confidence].chip)}>{DUP_TONE[m.confidence].label}</Badge>
-                                                    </div>
-                                                    <p className="text-[11px] text-slate-500 font-mono truncate">
-                                                        {m.patientId}{m.ageYears != null ? ` · ${m.ageYears}${m.sex ?? ''}` : m.sex ? ` · ${m.sex}` : ''}{m.mobile ? ` · ${m.mobile}` : ''} · {Math.round(m.similarity * 100)}% name
-                                                    </p>
-                                                </div>
-                                                <Button size="sm" onClick={() => selectPatient(m.patientId)} className="h-8 text-xs bg-brand-600 hover:bg-brand-700 shrink-0">
-                                                    <Users className="h-3.5 w-3.5 mr-1" /> Use this
-                                                </Button>
-                                            </div>
-                                        ))}
-                                        {hasNearCertainDup ? (
-                                            <label className="flex items-start gap-2 text-[11px] text-slate-600 px-1 pt-1 cursor-pointer">
-                                                <input type="checkbox" checked={confirmNotDup} onChange={e => setConfirmNotDup(e.target.checked)} className="mt-0.5" />
-                                                <span>I confirm this is a <span className="font-semibold">different person</span> — create a new patient record anyway.</span>
-                                            </label>
-                                        ) : (
-                                            <div className="flex justify-end pt-0.5">
-                                                <Button size="sm" variant="ghost" onClick={() => setDupDismissed(true)} className="h-7 text-[11px] text-slate-500">Not this patient</Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            {!selectedPatientId && dupChecking && dupMatches.length === 0 && form.fullName.trim().length >= 3 && (
-                                <p className="text-[11px] text-slate-400 flex items-center gap-1.5 px-1"><Loader2 className="h-3 w-3 animate-spin" /> Checking for existing patients…</p>
                             )}
 
                             {/* ── Selected existing patient: identity card ──────── */}
@@ -1093,7 +999,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             {/* ══ Step 3: Clinical & Referral ═════════════════════ */}
                             {step === 'clinical' && (
                                 <>
-                                    <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber">
+                                    <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber" allowOverflow>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Field label="Admitting consultant">
                                                 <select value={form.primaryDoctorId} onChange={e => set('primaryDoctorId', e.target.value)} className={SELECT_CLS}>
@@ -1137,6 +1043,14 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                     />
                                                 )}
                                             </Field>
+                                            <Field label="Package Type" className="sm:col-span-2">
+                                                <PackageTypePicker
+                                                    hospitalId={hospitalId}
+                                                    value={form.packageTypeId}
+                                                    onChange={v => set('packageTypeId', v)}
+                                                    label={null}
+                                                />
+                                            </Field>
                                             <Field label="Provisional diagnosis">
                                                 <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
                                             </Field>
@@ -1166,6 +1080,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                         referrerId={form.referredByReferrerId}
                                                         referrerName={form.referralName}
                                                         referrerType={form.referrerType}
+                                                        lockedType={form.referralSource === 'DOCTOR' ? 'DOCTOR' : 'REFERRER'}
                                                         onSelect={selectReferrer}
                                                         onClear={clearReferrerSelection}
                                                     />

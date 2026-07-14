@@ -130,6 +130,7 @@ export const EditAdmissionSheet: React.FC<Props> = ({ open, onOpenChange, admiss
                     referralSource: t(form.referralSource),
                     referralName: t(form.referralName),
                     referredByReferrerId: form.referredByReferrerId || undefined,
+                    referrerType: form.referrerType || undefined,
                     referringFacilityName: t(form.referringFacilityName),
                     referringFacilityType: t(form.referringFacilityType),
                     referringFacilityContact: t(form.referringFacilityContact),
@@ -198,6 +199,7 @@ export const EditAdmissionSheet: React.FC<Props> = ({ open, onOpenChange, admiss
                                         referrerId={form.referredByReferrerId}
                                         referrerName={form.referralName}
                                         referrerType={form.referrerType}
+                                        lockedType={form.referralSource === 'DOCTOR' ? 'DOCTOR' : 'REFERRER'}
                                         onSelect={(referrerId, name, type) => setForm(f => f ? ({ ...f, referredByReferrerId: referrerId, referralName: name, referrerType: type }) : null)}
                                         onClear={() => setForm(f => f ? ({ ...f, referredByReferrerId: '', referralName: '', referrerType: '' }) : null)}
                                     />

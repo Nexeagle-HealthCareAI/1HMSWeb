@@ -21,6 +21,11 @@ interface Props {
     referrerId: string;
     referrerName: string;
     referrerType?: string;
+    // When the caller already knows the referrer type from an earlier step (e.g. a "Referred by:
+    // Doctor" dropdown), pass it here so "Add new referrer" doesn't ask the same question again.
+    // Doctor is unambiguous, so the type toggle is hidden entirely; Other stays visible (defaulted
+    // to it) since it still covers two real sub-types — Agent and plain Other.
+    lockedType?: 'DOCTOR' | 'AGENT' | 'REFERRER';
     onSelect: (referrerId: string, referrerName: string, referrerType: string) => void;
     onClear: () => void;
 }
@@ -31,15 +36,17 @@ interface Props {
 // (not hidden behind focusing the search box), and a new referrer is created immediately on
 // confirm rather than deferred to the parent form's own submit — referrers are small, reusable,
 // hospital-wide master data, so an extra one from an abandoned edit is harmless.
-export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referrerName, referrerType, onSelect, onClear }) => {
+export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referrerName, referrerType, lockedType, onSelect, onClear }) => {
     const [search, setSearch] = useState('');
-    const [focused, setFocused] = useState(false);
+    // Drives dropdown visibility on its own — deliberately not derived from search.trim(), else
+    // clicking away while text is still typed in the box would leave the dropdown stuck open.
+    const [open, setOpen] = useState(false);
     const [results, setResults] = useState<Referrer[]>([]);
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [creating, setCreating] = useState(false);
     const [newName, setNewName] = useState('');
-    const [newType, setNewType] = useState<'DOCTOR' | 'AGENT' | 'REFERRER'>('REFERRER');
+    const [newType, setNewType] = useState<'DOCTOR' | 'AGENT' | 'REFERRER'>(lockedType ?? 'REFERRER');
     const [newPhone, setNewPhone] = useState('');
     const [newAddress, setNewAddress] = useState('');
     const [saving, setSaving] = useState(false);
@@ -62,12 +69,12 @@ export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referr
     const startCreate = (prefillName: string) => {
         setCreating(true);
         setNewName(prefillName);
-        setNewType('REFERRER');
+        setNewType(lockedType ?? 'REFERRER');
         setNewPhone('');
         setNewAddress('');
         setSaveError(null);
         setSearch('');
-        setFocused(false);
+        setOpen(false);
     };
 
     const confirmCreate = async () => {
@@ -82,7 +89,7 @@ export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referr
                 address: newAddress.trim() || undefined,
                 defaultRatePercent: 0,
             });
-            onSelect(created.referrerId, created.referrerName, newType);
+            onSelect(created.referrerId, created.referrerName || newName.trim(), newType);
             setCreating(false);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'Could not save the new referrer.');
@@ -119,19 +126,27 @@ export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referr
                     </button>
                 </div>
                 <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Referrer name" autoFocus className={INPUT_CLS} />
-                <div className="flex gap-2">
-                    {(['DOCTOR', 'AGENT', 'REFERRER'] as const).map(opt => {
-                        const active = newType === opt;
-                        const tone = REFERRER_TONE[opt];
-                        return (
-                            <button key={opt} type="button" onClick={() => setNewType(opt)}
-                                className={cn('flex-1 h-8 rounded-lg border-2 text-xs font-semibold transition-all',
-                                    active ? cn(tone.avatar, 'text-white border-transparent') : cn('bg-white', tone.border, tone.text))}>
-                                {REFERRER_LABEL[opt]}
-                            </button>
-                        );
-                    })}
-                </div>
+                {lockedType ? (
+                    // Type is already implied by the "Referred by" choice one step up — no need to
+                    // ask again, just show what it'll be saved as.
+                    <Badge variant="outline" className={cn('text-[10px] font-bold w-fit', REFERRER_TONE[lockedType].badge)}>
+                        {REFERRER_LABEL[lockedType]}
+                    </Badge>
+                ) : (
+                    <div className="flex gap-2">
+                        {(['DOCTOR', 'AGENT', 'REFERRER'] as const).map(opt => {
+                            const active = newType === opt;
+                            const tone = REFERRER_TONE[opt];
+                            return (
+                                <button key={opt} type="button" onClick={() => setNewType(opt)}
+                                    className={cn('flex-1 h-8 rounded-lg border-2 text-xs font-semibold transition-all',
+                                        active ? cn(tone.avatar, 'text-white border-transparent') : cn('bg-white', tone.border, tone.text))}>
+                                    {REFERRER_LABEL[opt]}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                     <Input value={newPhone} onChange={e => setNewPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="Phone (optional)" className="h-9 text-xs font-mono" />
                     <Input value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder="Address (optional)" className="h-9 text-xs" />
@@ -152,15 +167,15 @@ export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referr
         <div className="relative">
             <div className="relative">
                 <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-                <Input value={search} onChange={e => setSearch(e.target.value)}
-                    onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)}
+                <Input value={search} onChange={e => { setSearch(e.target.value); setOpen(true); }}
+                    onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
                     placeholder="Search doctor / agent referrer…" className={cn(INPUT_CLS, 'pl-9')} />
             </div>
             <button type="button" onMouseDown={() => startCreate(search.trim())}
                 className="mt-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1">
                 <Plus className="h-3 w-3" /> Add new referrer
             </button>
-            {(focused || search.trim()) && (
+            {open && (
                 <div className="absolute z-20 left-0 right-0 mt-1.5 max-h-52 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl divide-y divide-slate-100">
                     {results.length === 0 && (
                         <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
@@ -171,7 +186,7 @@ export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referr
                         const tone = REFERRER_TONE[r.referrerType] ?? REFERRER_TONE.REFERRER;
                         return (
                             <button key={r.referrerId} type="button"
-                                onMouseDown={() => onSelect(r.referrerId, r.referrerName, r.referrerType)}
+                                onMouseDown={() => { setOpen(false); onSelect(r.referrerId, r.referrerName, r.referrerType); }}
                                 className="w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-center gap-3">
                                 <span className={cn('h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0', tone.avatar)}>
                                     {r.referrerName.charAt(0).toUpperCase()}
