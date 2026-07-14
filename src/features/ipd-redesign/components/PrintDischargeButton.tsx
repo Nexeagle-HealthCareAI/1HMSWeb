@@ -28,7 +28,9 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
 
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewOptions, setPreviewOptions] = useState<DischargeTemplateBoundOptions | null>(null);
-    const { fields: layoutFields, doctorId: layoutDoctorId } = useDischargeFieldLayout();
+    // Scoped to the admission's assigned doctor, not whoever is currently logged in — any staff
+    // member printing from the dashboard must see the same letterhead the assigned doctor would.
+    const { fields: layoutFields, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
 
     const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
     useEffect(() => {
@@ -137,9 +139,10 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                 signedAt: printData.signedAt,
                                 fields: {
                                     admittingDiagnosis: printData.admittingDiagnosis,
-                                    finalDiagnosis: printData.finalDiagnosisIcd10Code
-                                        ? `${printData.finalDiagnosis ?? ''} (ICD-10: ${printData.finalDiagnosisIcd10Code} — ${printData.finalDiagnosisIcd10Name ?? ''})`
-                                        : printData.finalDiagnosis,
+                                    finalDiagnosis: printData.finalDiagnosis,
+                                    finalDiagnosisIcd10: printData.finalDiagnosisIcd10Code
+                                        ? `${printData.finalDiagnosisIcd10Code} — ${printData.finalDiagnosisIcd10Name ?? ''}`
+                                        : undefined,
                                     chiefComplaint: printData.chiefComplaint,
                                     historyOfPresentIllness: printData.historyOfPresentIllness,
                                     courseInHospital: printData.courseInHospital,

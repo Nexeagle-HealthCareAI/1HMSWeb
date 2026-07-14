@@ -29,7 +29,7 @@ import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import type { DischargeFieldConfigItem } from '../services/dischargeFieldLayoutApi';
 import { dischargeSettingsApi } from '../services/dischargeSettingsApi';
 import { DischargePreviewModal } from '@/components/shared/discharge-preview/components/DischargePreviewModal';
-import type { DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
+import { buildBlankA4TemplateFile, type DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
 import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 
@@ -84,7 +84,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [lamaSignatureDataUrl, setLamaSignatureDataUrl] = useState<string | null>(null);
 
     const [customizeOpen, setCustomizeOpen] = useState(false);
-    const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout();
+    // Scoped to the admission's assigned doctor, not whoever is currently logged in viewing/
+    // editing this discharge summary — a nurse, front-desk user, or a different doctor must see
+    // the same field layout and letterhead as the assigned doctor would, not their own (or none).
+    const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
     const layoutByKey = useMemo(() => new Map(layoutFields.map(f => [f.key, f])), [layoutFields]);
     const isVisible = (key: string) => (hasSavedLayout ? layoutByKey.get(key)?.showInPad ?? true : true);
 
@@ -361,15 +364,19 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     };
 
     // If this doctor+hospital has a Discharge letterhead configured (a template PDF actually
-    // uploaded, not just default settings), render through the new pdf-lib template-bound renderer
-    // — same personalized field layout that drives the workspace form. Otherwise return null so the
-    // caller falls back to today's generic HTML print, unchanged (no letterhead = no regression).
-    const buildLetterheadPreviewOptions = async (): Promise<DischargeTemplateBoundOptions | null> => {
-        if (!layoutDoctorId || !hospitalId) return null;
-        const settings = await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId);
-        if (!settings?.uri) return null;
-        const templateFile = await dischargeSettingsApi.fetchTemplateFile(settings.uri);
-        if (!templateFile) return null;
+    // uploaded, not just default settings), render through the pdf-lib template-bound renderer —
+    // same personalized field layout that drives the workspace form. Without one, allowBlank=true
+    // callers (the in-app Preview) still get a real preview drawn on a blank A4 canvas rather than
+    // a dead end; allowBlank=false callers (Download/Print) return null so they keep falling back
+    // to today's generic hospital-branded HTML print, unchanged.
+    const buildLetterheadPreviewOptions = async ({ allowBlank }: { allowBlank: boolean }): Promise<DischargeTemplateBoundOptions | null> => {
+        if (!hospitalId) return null;
+        const settings = layoutDoctorId ? await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId) : null;
+        let templateFile = settings?.uri ? await dischargeSettingsApi.fetchTemplateFile(settings.uri) : null;
+        if (!templateFile) {
+            if (!allowBlank) return null;
+            templateFile = await buildBlankA4TemplateFile();
+        }
 
         const data = buildPrintData();
         const formatDateOnly = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined);
@@ -377,17 +384,17 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         return {
             templateFile,
             margins: {
-                top: settings.headerHeight ?? 20,
-                bottom: settings.footerHeight ?? 20,
-                left: settings.contentLeftMargin ?? 20,
-                right: settings.contentRightMargin ?? 20,
+                top: settings?.headerHeight ?? 20,
+                bottom: settings?.footerHeight ?? 20,
+                left: settings?.contentLeftMargin ?? 20,
+                right: settings?.contentRightMargin ?? 20,
             },
-            overflowStrategy: settings.overFlowPage === false ? 'blank' : 'reuse-template',
+            overflowStrategy: settings?.overFlowPage === false ? 'blank' : 'reuse-template',
             typography: {
-                family: (settings.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
-                size: settings.fontSize ?? 11,
-                weight: (settings.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
-                color: settings.textColour ?? '#111827',
+                family: (settings?.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
+                size: settings?.fontSize ?? 11,
+                weight: (settings?.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
+                color: settings?.textColour ?? '#111827',
             },
             payload: {
                 admissionNo: data.admissionNo,
@@ -402,6 +409,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 fields: {
                     admittingDiagnosis: data.admittingDiagnosis,
                     finalDiagnosis: data.finalDiagnosis,
+                    finalDiagnosisIcd10: data.finalDiagnosisIcd10Code
+                        ? `${data.finalDiagnosisIcd10Code} — ${data.finalDiagnosisIcd10Name ?? ''}`
+                        : undefined,
                     chiefComplaint: data.chiefComplaint,
                     historyOfPresentIllness: data.historyOfPresentIllness,
                     courseInHospital: data.courseInHospital,
@@ -420,10 +430,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         };
     };
 
+    // In-app Preview always shows something — a real letterhead if one's configured, otherwise the
+    // same content laid out on a blank A4 canvas (with the configured/default margins applied)
+    // rather than a toast-and-nothing dead end.
     const openLetterheadPreview = async () => {
-        const options = await buildLetterheadPreviewOptions();
+        const options = await buildLetterheadPreviewOptions({ allowBlank: true });
         if (!options) {
-            toast({ title: 'No letterhead template configured. Please customize your discharge letterhead first.' });
+            toast({ title: 'Could not load the discharge preview.', variant: 'destructive' });
             return false;
         }
         setPreviewOptions(options);
@@ -431,14 +444,25 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         return true;
     };
 
+    // Download/Print only route through the letterhead-bound preview when a real letterhead is
+    // configured; without one they keep using today's generic hospital-branded HTML print (nicer
+    // for actual output than a blank canvas), unchanged.
+    const openLetterheadPreviewIfConfigured = async () => {
+        const options = await buildLetterheadPreviewOptions({ allowBlank: false });
+        if (!options) return false;
+        setPreviewOptions(options);
+        setPreviewOpen(true);
+        return true;
+    };
+
     const download = async () => {
-        if (await openLetterheadPreview()) return;
+        if (await openLetterheadPreviewIfConfigured()) return;
         const settings = buildPrintSettingsFromHospital(hospitalData);
         const html = buildDischargeSummaryA4(buildPrintData(), settings);
         await downloadHtmlAsPdf(html, `discharge-summary-${admission.admissionNo}.pdf`);
     };
     const print = async () => {
-        if (await openLetterheadPreview()) return;
+        if (await openLetterheadPreviewIfConfigured()) return;
         const settings = buildPrintSettingsFromHospital(hospitalData);
         openPrintHtml(buildDischargeSummaryA4(buildPrintData(), settings));
     };
@@ -500,20 +524,19 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             case 'admittingDiagnosis':
                 return <LookupAutosuggestField label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosis':
+                return <LookupAutosuggestField label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
+            case 'finalDiagnosisIcd10':
                 return (
-                    <div className="space-y-3">
-                        <LookupAutosuggestField label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />
-                        <Icd10CodePicker
-                            label="ICD-10 Code"
-                            code={form.finalDiagnosisIcd10Code}
-                            name={form.finalDiagnosisIcd10Name}
-                            readOnly={isSigned}
-                            onSelect={(code, name) => setField({ finalDiagnosisIcd10Code: code, finalDiagnosisIcd10Name: name })}
-                            onClear={() => setField({ finalDiagnosisIcd10Code: undefined, finalDiagnosisIcd10Name: undefined })}
-                            hospitalId={hospitalId}
-                            doctorId={medicationSearchDoctorId}
-                        />
-                    </div>
+                    <Icd10CodePicker
+                        label={label}
+                        code={form.finalDiagnosisIcd10Code}
+                        name={form.finalDiagnosisIcd10Name}
+                        readOnly={isSigned}
+                        onSelect={(code, name) => setField({ finalDiagnosisIcd10Code: code, finalDiagnosisIcd10Name: name })}
+                        onClear={() => setField({ finalDiagnosisIcd10Code: undefined, finalDiagnosisIcd10Name: undefined })}
+                        hospitalId={hospitalId}
+                        doctorId={medicationSearchDoctorId}
+                    />
                 );
             case 'chiefComplaint':
                 return <LookupAutosuggestField label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} lookupType="CHIEF_COMPLAINT" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;

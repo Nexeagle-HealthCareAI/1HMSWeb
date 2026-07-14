@@ -88,6 +88,18 @@ export interface DischargeTemplateBoundOptions {
 
 const inr = (n: number) => `Rs. ${(Number.isFinite(n) ? n : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// A4 in PDF points (210mm x 297mm at 72pt/inch) — same constant prescription-preview's
+// buildPreviewBlob() fallback uses. Lets the preview show correctly-margined content even when a
+// doctor hasn't uploaded a letterhead yet, instead of the "no template configured" dead end.
+const A4_POINTS: [number, number] = [595.28, 841.89];
+
+export const buildBlankA4TemplateFile = async (): Promise<File> => {
+    const doc = await PDFDocument.create();
+    doc.addPage(A4_POINTS);
+    const pdfBytes = await doc.save();
+    return new File([pdfBytes as BlobPart], 'blank-a4.pdf', { type: 'application/pdf' });
+};
+
 export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins, overflowStrategy, typography, payload, printFields }: DischargeTemplateBoundOptions): Promise<Uint8Array> => {
     const templateBytes = await templateFile.arrayBuffer();
     const templateDoc = await PDFDocument.load(templateBytes);
