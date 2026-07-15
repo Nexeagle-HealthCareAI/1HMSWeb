@@ -158,7 +158,7 @@ jobs:
           context: .
           push: true
           build-args: |
-            VITE_API_BASE_URL=${{ vars.PROD_API_BASE_URL || 'http://151.185.45.67:5001' }}
+            VITE_API_BASE_URL=${{ vars.PROD_API_BASE_URL || 'https://1hms-api.nexeagle.com' }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
             ${{ steps.vars.outputs.image }}:latest
