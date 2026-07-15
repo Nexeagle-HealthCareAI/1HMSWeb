@@ -30,6 +30,14 @@ const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(modu
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const AdminConfigModule = lazy(() => import('@/features/dashboard/components/AdminConfigModule').then(module => ({ default: module.AdminConfigModule })));
 const IpdWorkflowApp = lazy(() => import('@/features/ipd-redesign/IpdWorkflowApp').then(module => ({ default: module.default })));
+// DEV-ONLY: unauthenticated mobile-UI preview harnesses for IPD screens (see routes below).
+const IpdDashboardPreview = lazy(() => import('@/features/ipd-redesign/pages/IpdDashboardPreview').then(module => ({ default: module.default })));
+const BedBoardPreview = lazy(() => import('@/features/ipd-redesign/pages/BedBoardPreview').then(module => ({ default: module.default })));
+const KpiDashboardPreview = lazy(() => import('@/features/ipd-redesign/pages/KpiDashboardPreview').then(module => ({ default: module.default })));
+const AdmitPatientPreview = lazy(() => import('@/features/ipd-redesign/pages/AdmitPatientPreview').then(module => ({ default: module.default })));
+const IpdMobileReview = lazy(() => import('@/features/ipd-redesign/pages/IpdMobileReview').then(module => ({ default: module.default })));
+const ConsultantLedgerPreview = lazy(() => import('@/features/ipd-redesign/pages/ConsultantLedgerPreview').then(module => ({ default: module.default })));
+const ReferredAdmissionsPreview = lazy(() => import('@/features/ipd-redesign/pages/ReferredAdmissionsPreview').then(module => ({ default: module.default })));
 const IpdPatientWorkspacePage = lazy(() => import('@/features/ipd-redesign/pages/IpdPatientWorkspacePage').then(module => ({ default: module.default })));
 const InventoryManagementPage = lazy(() => import('@/features/ipd-redesign/pages/InventoryManagementPage').then(module => ({ default: module.default })));
 const OtBoardPage = lazy(() => import('@/features/ipd-redesign/pages/OtBoardPage').then(module => ({ default: module.default })));
@@ -53,6 +61,8 @@ const ChainManagement = lazy(() => import('@/features/hospital/components/ChainM
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
+// DEV-ONLY: unauthenticated mobile-UI preview harness for the Billing dashboard (see route below).
+const BillingDashboardPreview = lazy(() => import('@/features/billing/pages/BillingDashboardPreview').then(module => ({ default: module.default })));
 const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPreviewPage').then(module => ({ default: module.PrintPreviewPage })));
 const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
 
@@ -103,6 +113,86 @@ export const AppRoutes: React.FC = () => {
           path="/token-view"
           element={<TokenDetailsPage />}
         />
+
+        {/* DEV-ONLY: unauthenticated IPD dashboard preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/ipd-preview"
+            element={
+              <MainLayout>
+                <IpdDashboardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Bed Board preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/bedboard-preview"
+            element={
+              <MainLayout>
+                <BedBoardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated KPI Dashboard preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/kpi-preview"
+            element={
+              <MainLayout>
+                <KpiDashboardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Admit Patient sheet preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route path="/admit-preview" element={<AdmitPatientPreview />} />
+        )}
+
+        {/* DEV-ONLY: Consultant Ledger + Referred Admissions previews for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/ledger-preview"
+            element={
+              <MainLayout>
+                <ConsultantLedgerPreview />
+              </MainLayout>
+            }
+          />
+        )}
+        {import.meta.env.DEV && (
+          <Route
+            path="/referrals-preview"
+            element={
+              <MainLayout>
+                <ReferredAdmissionsPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Billing dashboard preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/billing-preview"
+            element={
+              <MainLayout>
+                <BillingDashboardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: one-page mobile review gallery embedding every IPD preview in a phone frame. */}
+        {import.meta.env.DEV && (
+          <Route path="/ipd-mobile-review" element={<IpdMobileReview />} />
+        )}
 
         <Route
           path="/login"

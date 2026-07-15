@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Gift, Users, Wallet, Phone, Percent } from 'lucide-react';
+import { ArrowLeft, Gift, Users, Wallet, Phone, Percent } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -27,15 +27,17 @@ export const IncentiveTab: React.FC = () => {
                 Incentive accrual & payout engine is not yet available. The referrer master below is live; per-visit accruals and payouts will appear here once the backend is built. (Internal ledger only — never shown on patient/GST invoices; TDS u/s 194H applies at payout.)
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <KpiStat label="Payable (Accrued)" value="—" icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" hint="Accrual engine pending" />
                 <KpiStat label="Paid to Date" value="—" icon={<Gift className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" hint="Payout engine pending" />
                 <KpiStat label="Referrers" value={isLoading ? '…' : String(referrers.length)} icon={<Users className="h-5 w-5 text-fuchsia-600" />} tone="from-fuchsia-50 to-purple-100/50 text-fuchsia-900" />
             </div>
 
             <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
-                {/* Referrer master (real data) */}
-                <Card className="col-span-12 md:col-span-4 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-fuchsia-500/5 bg-white overflow-hidden flex flex-col">
+                {/* Referrer master (real data) — on mobile this is the "master" list; it hides once a
+                    referrer is picked (drill-in), and the detail panel takes over with a back button.
+                    Both show side-by-side from md up. */}
+                <Card className={cn('col-span-12 md:col-span-4 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-fuchsia-500/5 bg-white overflow-hidden flex flex-col', selectedId && 'hidden md:flex')}>
                     <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Referrers</span>
                     </div>
@@ -54,7 +56,7 @@ export const IncentiveTab: React.FC = () => {
                                         <button
                                             key={r.referrerId}
                                             onClick={() => setSelectedId(r.referrerId)}
-                                            className={cn('w-full text-left px-3 py-2.5 transition-colors hover:bg-fuchsia-50/40', active && 'bg-fuchsia-50 border-l-2 border-l-fuchsia-500')}
+                                            className={cn('w-full text-left px-3 py-3 sm:py-2.5 transition-colors hover:bg-fuchsia-50/40 active:bg-fuchsia-50', active && 'bg-fuchsia-50 border-l-2 border-l-fuchsia-500')}
                                         >
                                             <p className="font-semibold text-slate-900 text-sm truncate">{r.referrerName}</p>
                                             <div className="flex items-center justify-between mt-0.5">
@@ -70,10 +72,14 @@ export const IncentiveTab: React.FC = () => {
                 </Card>
 
                 {/* Selected referrer + accrual ledger (empty until backend exists) */}
-                <Card className="col-span-12 md:col-span-8 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-fuchsia-500/5 bg-white overflow-hidden flex flex-col">
+                <Card className={cn('col-span-12 md:col-span-8 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-fuchsia-500/5 bg-white overflow-hidden flex flex-col', !selectedId && 'hidden md:flex')}>
                     {selected ? (
                         <>
                             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                                <button type="button" onClick={() => setSelectedId(null)}
+                                    className="md:hidden flex items-center gap-1.5 text-xs font-bold text-fuchsia-700 mb-2">
+                                    <ArrowLeft className="h-4 w-4" /> All referrers
+                                </button>
                                 <p className="font-bold text-slate-900">{selected.referrerName}</p>
                                 <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-500">
                                     <Badge variant="outline" className="text-[10px] font-bold rounded-full bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">{selected.referrerType}</Badge>

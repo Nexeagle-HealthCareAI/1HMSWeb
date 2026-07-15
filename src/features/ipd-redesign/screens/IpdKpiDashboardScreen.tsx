@@ -23,12 +23,12 @@ const todayKey = () => toDateKey(new Date());
 const daysAgoKey = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return toDateKey(d); };
 
 const StatTile: React.FC<{ icon: React.ElementType; label: string; value: string; sub?: string }> = ({ icon: Icon, label, value, sub }) => (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            <Icon className="h-3.5 w-3.5" /> {label}
+    <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-slate-500">
+            <Icon className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{label}</span>
         </div>
-        <p className="text-2xl font-black text-slate-900 mt-1">{value}</p>
-        {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+        <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{value}</p>
+        {sub && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{sub}</p>}
     </div>
 );
 
@@ -67,30 +67,34 @@ export const IpdKpiDashboardScreen: React.FC<Props> = ({ onBack }) => {
     const alosChartData = (data?.alosTrend ?? []).map(p => ({ week: p.weekStart.slice(5, 10), days: p.avgDays }));
 
     return (
-        <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
-                    <div className="h-11 w-11 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow">
-                        <Gauge className="h-5 w-5" />
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-10">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 sm:px-3 shrink-0" onClick={onBack}>
+                        <ArrowLeft className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Dashboard</span>
+                    </Button>
+                    <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow shrink-0">
+                        <Gauge className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div>
-                        <h1 className="text-lg font-black text-slate-900">IPD KPI Dashboard</h1>
-                        <p className="text-xs text-slate-500">Occupancy, length of stay, bed turnaround, discharge TAT, readmissions.</p>
+                    <div className="min-w-0">
+                        <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">IPD KPI Dashboard</h1>
+                        <p className="text-xs text-slate-500 hidden sm:block">Occupancy, length of stay, bed turnaround, discharge TAT, readmissions.</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 w-full sm:w-auto">
                         {(['7', '30', '90'] as const).map(p => (
                             <button key={p} type="button" onClick={() => applyPreset(p)}
-                                className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', preset === p ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                                className={cn('h-9 sm:h-8 flex-1 sm:flex-none px-3 rounded-lg text-xs font-bold transition-all', preset === p ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                                 {p}d
                             </button>
                         ))}
                     </div>
-                    <Input type="date" value={fromDate} onChange={e => { setPreset('custom'); setFromDate(e.target.value); }} className="h-9 w-auto" />
-                    <span className="text-slate-400 text-sm">to</span>
-                    <Input type="date" value={toDate} onChange={e => { setPreset('custom'); setToDate(e.target.value); }} className="h-9 w-auto" />
+                    <div className="flex items-center gap-2">
+                        <Input type="date" value={fromDate} onChange={e => { setPreset('custom'); setFromDate(e.target.value); }} className="h-10 sm:h-9 flex-1 min-w-0 sm:w-36 sm:flex-none rounded-xl" />
+                        <span className="text-slate-400 text-sm shrink-0">to</span>
+                        <Input type="date" value={toDate} onChange={e => { setPreset('custom'); setToDate(e.target.value); }} className="h-10 sm:h-9 flex-1 min-w-0 sm:w-36 sm:flex-none rounded-xl" />
+                    </div>
                 </div>
             </div>
 
@@ -98,7 +102,7 @@ export const IpdKpiDashboardScreen: React.FC<Props> = ({ onBack }) => {
                 <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
             ) : data && (
                 <>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
                         <StatTile icon={BedDouble} label="Current BOR" value={`${data.currentBorPercent}%`} />
                         <StatTile icon={Clock} label="ALOS" value={`${data.alosDays}d`} />
                         <StatTile icon={ArrowLeftRight} label="Bed Turnaround" value={`${data.avgBedTurnaroundHours}h`} />
@@ -106,8 +110,8 @@ export const IpdKpiDashboardScreen: React.FC<Props> = ({ onBack }) => {
                         <StatTile icon={Repeat} label="Readmission Rate" value={`${data.readmissionRatePercent}%`} sub={`${data.readmittedCount}/${data.totalIndexDischarges}`} />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
                             <p className="text-[11px] font-bold text-slate-600 mb-2">Bed Occupancy Rate — daily</p>
                             <ResponsiveContainer width="100%" height={220}>
                                 <LineChart data={borChartData} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
@@ -120,7 +124,7 @@ export const IpdKpiDashboardScreen: React.FC<Props> = ({ onBack }) => {
                             </ResponsiveContainer>
                         </div>
 
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
                             <p className="text-[11px] font-bold text-slate-600 mb-2">Average Length of Stay — weekly</p>
                             {alosChartData.length === 0 ? (
                                 <div className="h-[220px] flex items-center justify-center text-sm text-slate-400">Not enough discharges in this range yet.</div>

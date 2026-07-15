@@ -20,7 +20,7 @@ export const ApprovalsTab: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-3 h-full overflow-y-auto pb-4">
-            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 p-1 w-fit shadow-inner">
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 p-1 w-full sm:w-fit overflow-x-auto shadow-inner [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {FILTERS.map(f => (
                     <Button
                         key={f.value}
@@ -28,7 +28,7 @@ export const ApprovalsTab: React.FC = () => {
                         variant="ghost"
                         onClick={() => setFilter(f.value)}
                         className={cn(
-                            'h-7 text-xs rounded-lg px-3',
+                            'h-9 sm:h-7 text-xs rounded-lg px-3 shrink-0',
                             filter === f.value ? 'bg-brand-600 text-white hover:bg-brand-700 hover:text-white' : 'text-slate-600'
                         )}
                     >
