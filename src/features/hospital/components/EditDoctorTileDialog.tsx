@@ -12,8 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useDepartmentApi } from '@/hooks/useApi';
 import { ProfilePictureUploader } from '@/components/shared/ProfilePictureUploader';
@@ -21,8 +19,7 @@ import { QualificationSelector } from '@/features/doctor/components/Qualificatio
 import { SpecializationSelector } from '@/features/doctor/components/SpecializationSelector';
 import { LanguagesSelector } from './LanguagesSelector';
 import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '../services/publicDirectoryDoctorsApi';
-import { doctorReviewsApi, type AdminReviewItem } from '../services/doctorReviewsApi';
-import { Loader2, MessageSquare, Save, Star } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 
 interface EditDoctorTileDialogProps {
   open: boolean;
@@ -61,10 +58,6 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
   const [publicContactPhone, setPublicContactPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [reviews, setReviews] = useState<(AdminReviewItem & { moderating?: boolean })[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewStats, setReviewStats] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
-
   useEffect(() => {
     if (doctor && open) {
       setPhotoUrl(doctor.photoUrl || '');
@@ -79,47 +72,6 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
       setPublicContactPhone(doctor.publicContactPhone || '');
     }
   }, [doctor, open]);
-
-  // Reviews are fetched lazily, only while the dialog is open for a given doctor — kept out
-  // of the tile-grid's list call so the grid's initial load stays light.
-  useEffect(() => {
-    if (!doctor || !open || !hospitalId) {
-      setReviews([]);
-      return;
-    }
-    let active = true;
-    setReviewsLoading(true);
-    doctorReviewsApi.list(hospitalId, doctor.doctorId)
-      .then((res) => {
-        if (!active) return;
-        setReviews((res?.reviews ?? []).map((r) => ({ ...r })));
-        setReviewStats({ averageRating: res?.averageRating ?? 0, reviewCount: res?.reviewCount ?? 0 });
-      })
-      .catch(() => {
-        if (active) setReviews([]);
-      })
-      .finally(() => {
-        if (active) setReviewsLoading(false);
-      });
-    return () => { active = false; };
-  }, [doctor, open, hospitalId]);
-
-  const handleModerate = async (reviewId: string, nextHidden: boolean) => {
-    if (!doctor) return;
-    setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? { ...r, moderating: true } : r)));
-    try {
-      const response = await doctorReviewsApi.moderate(hospitalId, doctor.doctorId, reviewId, nextHidden);
-      if (response.success) {
-        setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? { ...r, isHidden: nextHidden } : r)));
-      } else {
-        toast({ variant: 'destructive', title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }), description: response.message ?? '' });
-      }
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }), description: e?.message ?? '' });
-    } finally {
-      setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? { ...r, moderating: false } : r)));
-    }
-  };
 
   const departmentOptions = useMemo(() => {
     if (!departmentsResponse?.departments) return [];
@@ -299,64 +251,6 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
                 placeholder={t('publicDirectory.editDialog.publicPhonePlaceholder', { defaultValue: 'Optional — shown to patients' })}
               />
             </div>
-          </div>
-
-          <div className="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-800">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <MessageSquare className="h-4 w-4" />
-                {t('publicDirectory.editDialog.reviews', { defaultValue: 'Reviews' })}
-              </Label>
-              {reviewStats.reviewCount > 0 && (
-                <span className="flex items-center gap-1 text-sm font-medium">
-                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  {reviewStats.averageRating.toFixed(1)}
-                  <span className="text-muted-foreground font-normal">({reviewStats.reviewCount})</span>
-                </span>
-              )}
-            </div>
-
-            {reviewsLoading ? (
-              <div className="flex justify-center py-4 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            ) : reviews.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">
-                {t('publicDirectory.editDialog.noReviews', { defaultValue: 'No reviews yet.' })}
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {reviews.map((r) => (
-                  <div key={r.reviewId} className={`rounded-lg border p-3 text-sm ${r.isHidden ? 'opacity-50 border-gray-200 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800'}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="flex items-center gap-0.5 shrink-0">
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                          {r.rating}
-                        </span>
-                        <span className="font-medium truncate">{r.authorName || t('publicDirectory.editDialog.anonymous', { defaultValue: 'Anonymous' })}</span>
-                        {r.isHidden && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-                            {t('publicDirectory.editDialog.hidden', { defaultValue: 'Hidden' })}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-muted-foreground">
-                          {t('publicDirectory.editDialog.hide', { defaultValue: 'Hide' })}
-                        </span>
-                        <Switch
-                          checked={r.isHidden}
-                          disabled={r.moderating}
-                          onCheckedChange={(checked) => handleModerate(r.reviewId, checked)}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mt-1">{r.comment}</p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 

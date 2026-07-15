@@ -4,12 +4,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Award,
+  BadgeCheck,
   Globe,
   GraduationCap,
-  IdCard,
   Languages as LanguagesIcon,
   Loader2,
   Mail,
+  MessageSquare,
   Pencil,
   Phone,
   Search,
@@ -41,6 +42,7 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '@/features/hospital/services/publicDirectoryDoctorsApi';
 import { EditDoctorTileDialog } from './EditDoctorTileDialog';
+import { DoctorReviewsDialog } from './DoctorReviewsDialog';
 import { cn } from '@/lib/utils';
 
 const initialsFor = (name?: string | null) => {
@@ -143,6 +145,7 @@ export const PublicDirectoryConfig: React.FC = () => {
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editingDoctor, setEditingDoctor] = useState<PublicDirectoryDoctorTile | null>(null);
+  const [reviewsDoctor, setReviewsDoctor] = useState<PublicDirectoryDoctorTile | null>(null);
 
   const loadDoctors = useCallback(async () => {
     if (!hospitalId) return;
@@ -306,7 +309,7 @@ export const PublicDirectoryConfig: React.FC = () => {
                     >
                       <Card
                         className={cn(
-                          'relative h-full overflow-hidden border shadow-sm transition-colors duration-300 hover:shadow-md',
+                          'relative h-full overflow-hidden rounded-2xl border shadow-sm transition-all duration-300 hover:shadow-lg',
                           d.isPubliclyListed
                             ? 'border-emerald-200 dark:border-emerald-900'
                             : 'border-gray-200 dark:border-gray-800'
@@ -314,11 +317,13 @@ export const PublicDirectoryConfig: React.FC = () => {
                       >
                         <div
                           className={cn(
-                            'absolute inset-x-0 top-0 h-1 transition-colors duration-300',
-                            d.isPubliclyListed ? 'bg-emerald-400 dark:bg-emerald-500' : 'bg-gray-200 dark:bg-gray-800'
+                            'absolute inset-x-0 top-0 h-1.5 transition-colors duration-300',
+                            d.isPubliclyListed
+                              ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400'
+                              : 'bg-gray-200 dark:bg-gray-800'
                           )}
                         />
-                        <CardContent className="p-4 pt-5 space-y-3.5">
+                        <CardContent className="p-4 pt-5 space-y-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-3 min-w-0">
                               <Avatar
@@ -336,29 +341,50 @@ export const PublicDirectoryConfig: React.FC = () => {
                                 <p className="font-semibold leading-tight truncate">
                                   {d.fullName || translate('publicDirectory.unnamedDoctor', 'Unnamed doctor')}
                                 </p>
-                                {d.reviewCount > 0 && (
-                                  <span className="flex items-center gap-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">
-                                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                                    {d.rating?.toFixed(1)}
-                                    <span className="text-muted-foreground font-normal">({d.reviewCount})</span>
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                  {d.departmentName || translate('publicDirectory.tile.speciality', 'Speciality')}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setReviewsDoctor(d)}
+                                  className="flex items-center gap-1 text-xs font-medium mt-1.5 -ml-1 rounded-full px-1.5 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                                >
+                                  <Star
+                                    className={cn(
+                                      'h-3 w-3',
+                                      d.reviewCount > 0 ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'
+                                    )}
+                                  />
+                                  <span className={d.reviewCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}>
+                                    {(d.rating ?? 0).toFixed(1)}
                                   </span>
-                                )}
+                                  <span className="flex items-center gap-0.5 text-muted-foreground font-normal underline decoration-dotted underline-offset-2">
+                                    <MessageSquare className="h-3 w-3" />
+                                    {translate('publicDirectory.tile.reviewsCount', '{{count}} reviews').replace('{{count}}', String(d.reviewCount))}
+                                  </span>
+                                </button>
                               </div>
                             </div>
                             <Badge
                               variant={d.isPubliclyListed ? 'default' : 'outline'}
                               className={cn(
-                                'shrink-0 text-[10px] px-2 py-0.5',
+                                'shrink-0 gap-1 text-[10px] px-2 py-0.5',
                                 d.isPubliclyListed && 'bg-emerald-500 hover:bg-emerald-500 text-white border-transparent'
                               )}
                             >
+                              <span
+                                className={cn(
+                                  'inline-block h-1.5 w-1.5 rounded-full',
+                                  d.isPubliclyListed ? 'bg-white animate-pulse' : 'bg-muted-foreground/50'
+                                )}
+                              />
                               {d.isPubliclyListed
                                 ? translate('publicDirectory.tile.live', 'Live')
                                 : translate('publicDirectory.tile.hidden', 'Hidden')}
                             </Badge>
                           </div>
 
-                          <div className="space-y-1.5 border-y border-dashed border-gray-200 dark:border-gray-800 py-2.5">
+                          <div className="space-y-1.5 rounded-xl bg-gray-50/70 dark:bg-gray-900/40 p-3">
                             <FieldRow
                               icon={Stethoscope}
                               label={translate('publicDirectory.tile.speciality', 'Speciality')}
@@ -380,7 +406,7 @@ export const PublicDirectoryConfig: React.FC = () => {
                             )}
                             {d.licenseNumber && (
                               <FieldRow
-                                icon={IdCard}
+                                icon={BadgeCheck}
                                 label={translate('publicDirectory.tile.licenseNo', 'License No')}
                                 value={d.licenseNumber}
                               />
@@ -416,8 +442,8 @@ export const PublicDirectoryConfig: React.FC = () => {
                           </div>
 
                           {d.bio && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              <span className="font-semibold text-foreground">{translate('publicDirectory.tile.about', 'About')}:</span> {d.bio}
+                            <p className="text-xs text-muted-foreground line-clamp-2 italic border-l-2 border-brand-200 dark:border-brand-800 pl-2.5">
+                              {d.bio}
                             </p>
                           )}
 
@@ -431,7 +457,7 @@ export const PublicDirectoryConfig: React.FC = () => {
                               <Pencil className="h-3.5 w-3.5" />
                               {translate('publicDirectory.tile.edit', 'Edit profile')}
                             </Button>
-                            <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-800 px-2.5 py-1.5">
+                            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-800 px-3 py-1.5">
                               <span className="text-[11px] font-medium text-muted-foreground">
                                 {translate('publicDirectory.tile.public', 'Public')}
                               </span>
@@ -466,6 +492,14 @@ export const PublicDirectoryConfig: React.FC = () => {
         doctor={editingDoctor}
         hospitalId={hospitalId || ''}
         onSaved={loadDoctors}
+      />
+
+      <DoctorReviewsDialog
+        open={reviewsDoctor !== null}
+        onOpenChange={(open) => !open && setReviewsDoctor(null)}
+        doctor={reviewsDoctor}
+        hospitalId={hospitalId || ''}
+        onReviewsChanged={loadDoctors}
       />
 
       <AlertDialog open={pendingToggle !== null} onOpenChange={(open) => !open && !confirming && setPendingToggle(null)}>

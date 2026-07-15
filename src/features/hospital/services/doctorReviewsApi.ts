@@ -7,6 +7,7 @@ export interface AdminReviewItem {
     comment: string;
     helpfulCount: number;
     isHidden: boolean;
+    isHospitalResponse: boolean;
     submittedIp?: string | null;
     createdAt: string;
 }
@@ -24,9 +25,15 @@ export interface ModerateDoctorReviewResponse {
     message?: string | null;
 }
 
-// Admin moderation surface for the Public Directory tile editor's "Reviews" panel — mirrors
-// the public NexEagleWebsite review UI, but includes hidden reviews and lets an admin
-// hide/unhide one after the fact.
+export interface SubmitHospitalResponseResponse {
+    success: boolean;
+    message?: string | null;
+    reviewId: string;
+}
+
+// Admin moderation surface for the Public Directory doctor reviews dialog — mirrors the
+// public NexEagleWebsite review UI, but includes hidden reviews, lets an admin hide/unhide
+// one after the fact, and lets the hospital post its own official "Hospital Response".
 export const doctorReviewsApi = {
     list: (hospitalId: string, doctorId: string): Promise<GetHospitalDoctorReviewsResponse> =>
         apiClient.get(`/doctors/${encodeURIComponent(doctorId)}/reviews?hospitalId=${encodeURIComponent(hospitalId)}`),
@@ -35,5 +42,11 @@ export const doctorReviewsApi = {
         apiClient.patch(
             `/doctors/${encodeURIComponent(doctorId)}/reviews/${encodeURIComponent(reviewId)}/moderate?hospitalId=${encodeURIComponent(hospitalId)}`,
             { isHidden }
+        ),
+
+    submitHospitalResponse: (hospitalId: string, doctorId: string, comment: string): Promise<SubmitHospitalResponseResponse> =>
+        apiClient.post(
+            `/doctors/${encodeURIComponent(doctorId)}/reviews?hospitalId=${encodeURIComponent(hospitalId)}`,
+            { comment }
         ),
 };
