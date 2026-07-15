@@ -49,6 +49,10 @@ export interface HospitalUpdateRequest {
   // Opt-in: whether this hospital's doctors appear on the platform-wide public
   // directory (NexEagle's "find a doctor" page). Off by default.
   isPubliclyListed?: boolean;
+  // GPS pin for the public directory's "get directions" link — shared by every doctor
+  // publicly listed at this hospital.
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface HospitalUpdateResponse {
@@ -85,6 +89,8 @@ export interface HospitalData {
   nabhNumber?: string;
   isActive: boolean;
   isPubliclyListed: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
   createdAt: string;
   lastUpdatedAt: string;
   profileStatus: HospitalProfileStatus;

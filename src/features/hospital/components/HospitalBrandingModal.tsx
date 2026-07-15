@@ -61,7 +61,11 @@ const defaultBranding: HospitalBranding = {
   nabhNumber: ''
 };
 
-const requiredFields: ReadonlyArray<keyof HospitalBranding> = [
+// Every field-label/validation/update helper below operates on string values only —
+// HospitalBranding's latitude/longitude are numeric and not part of this onboarding form.
+type StringFieldKey = Exclude<keyof HospitalBranding, 'latitude' | 'longitude'>;
+
+const requiredFields: ReadonlyArray<StringFieldKey> = [
   'name',
   'type',
   'email',
@@ -97,7 +101,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
   const { data: onboardingPlans = [] } = getPlans();
   const visibleOnboardingPlans = onboardingPlans.filter(p => p.billingCycle === planCycle);
 
-  const fieldLabels: Record<keyof HospitalBranding, string> = useMemo(
+  const fieldLabels: Record<StringFieldKey, string> = useMemo(
     () => ({
       name: t('hospitalBranding.labels.name'),
       type: t('hospitalBranding.labels.type'),
@@ -148,7 +152,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
   const registerHospitalMutation = useHospitalApi.registerHospital();
 
   // Validation functions
-  const isRequiredField = (field: keyof HospitalBranding) => requiredFields.includes(field);
+  const isRequiredField = (field: StringFieldKey) => requiredFields.includes(field);
 
   const validateEmail = (email: string): string | undefined => {
     const trimmed = email.trim();
@@ -186,7 +190,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
     return undefined;
   };
 
-  const getFieldError = (field: keyof HospitalBranding, rawValue: string): string | undefined => {
+  const getFieldError = (field: StringFieldKey, rawValue: string): string | undefined => {
     const value = rawValue ?? '';
     const trimmedValue = value.trim();
 
@@ -220,7 +224,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
     }
   };
 
-  const updateBranding = (field: keyof HospitalBranding, value: string) => {
+  const updateBranding = (field: StringFieldKey, value: string) => {
     setBranding(prev => ({
       ...prev,
       [field]: value
@@ -239,8 +243,8 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
     });
   };
 
-  const validateFields = (fields: ReadonlyArray<keyof HospitalBranding>) => {
-    const fieldErrors: Partial<Record<keyof HospitalBranding, string>> = {};
+  const validateFields = (fields: ReadonlyArray<StringFieldKey>) => {
+    const fieldErrors: Partial<Record<StringFieldKey, string>> = {};
 
     fields.forEach(field => {
       const value = branding[field] ?? '';
@@ -268,7 +272,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
     };
   };
 
-  const stepFieldMap: Record<number, ReadonlyArray<keyof HospitalBranding>> = {
+  const stepFieldMap: Record<number, ReadonlyArray<StringFieldKey>> = {
     1: ['name', 'type', 'email', 'contact', 'alternateContact', 'website'],
     2: ['location', 'city', 'state', 'country', 'pincode'],
     3: ['registrationNumber', 'gstin', 'pan', 'nabhNumber', 'timeZone'],

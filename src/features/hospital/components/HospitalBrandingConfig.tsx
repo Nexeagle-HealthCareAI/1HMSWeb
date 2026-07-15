@@ -11,6 +11,7 @@ import {
   FileText,
   Globe,
   Hash,
+  LocateFixed,
   Mail,
   MapPin,
   Phone,
@@ -45,6 +46,9 @@ export interface HospitalBranding {
   gstin?: string;
   pan?: string;
   nabhNumber?: string;
+  // GPS pin for the public directory's "get directions" link.
+  latitude?: number;
+  longitude?: number;
 }
 
 interface HospitalBrandingConfigProps {
@@ -52,7 +56,11 @@ interface HospitalBrandingConfigProps {
   onBrandingChange: (branding: HospitalBranding) => void;
 }
 
-const requiredFields: ReadonlyArray<keyof HospitalBranding> = [
+// Every field-label/validation/update helper below operates on string values only —
+// latitude/longitude are numeric and handled separately via updateGeoField.
+type StringFieldKey = Exclude<keyof HospitalBranding, 'latitude' | 'longitude'>;
+
+const requiredFields: ReadonlyArray<StringFieldKey> = [
   'name',
   'type',
   'email',
@@ -89,7 +97,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [previousBranding, setPreviousBranding] = useState<HospitalBranding | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  const fieldLabels: Record<keyof HospitalBranding, string> = useMemo(
+  const fieldLabels: Record<StringFieldKey, string> = useMemo(
     () => ({
       name: translate('hospitalBranding.labels.name', 'Hospital Name'),
       type: translate('hospitalBranding.labels.type', 'Hospital Type'),
@@ -212,7 +220,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     return panRegex.test(pan) ? null : translate('hospitalBranding.validation.panInvalid', 'Invalid PAN format');
   };
 
-  const validateField = (field: keyof HospitalBranding, value: string): string | null => {
+  const validateField = (field: StringFieldKey, value: string): string | null => {
     const trimmedValue = value?.trim() ?? '';
 
     if (requiredFields.includes(field) && !trimmedValue) {
@@ -249,7 +257,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       }
     });
 
-    const optionalChecks: Array<keyof HospitalBranding> = ['alternateContact', 'website', 'timeZone', 'gstin', 'pan', 'nabhNumber'];
+    const optionalChecks: Array<StringFieldKey> = ['alternateContact', 'website', 'timeZone', 'gstin', 'pan', 'nabhNumber'];
     optionalChecks.forEach((field) => {
       const error = validateField(field, data[field] || '');
       if (error) {
@@ -297,7 +305,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         registrationNumber: hospitalData.registrationNumber || '',
         gstin: hospitalData.gstin || '',
         pan: hospitalData.pan || '',
-        nabhNumber: hospitalData.nabhNumber || ''
+        nabhNumber: hospitalData.nabhNumber || '',
+        latitude: hospitalData.latitude ?? undefined,
+        longitude: hospitalData.longitude ?? undefined
       };
 
       const hasChanges = Object.keys(updatedBranding).some(
@@ -384,7 +394,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           timeZone: branding.timeZone || '',
           gstin: branding.gstin,
           pan: branding.pan,
-          nabhNumber: branding.nabhNumber
+          nabhNumber: branding.nabhNumber,
+          latitude: branding.latitude,
+          longitude: branding.longitude
         });
 
         if (response.success) {
@@ -407,7 +419,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     }
   };
 
-  const updateBranding = (field: keyof HospitalBranding, value: string) => {
+  const updateBranding = (field: StringFieldKey, value: string) => {
     onBrandingChange({
       ...branding,
       [field]: value
@@ -423,6 +435,48 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       }
       return next;
     });
+  };
+
+  // Latitude/longitude are optional numeric fields, kept separate from updateBranding above
+  // since that helper assumes string values and runs string-field validation.
+  const updateGeoField = (field: 'latitude' | 'longitude', value: string) => {
+    const parsed = value.trim() === '' ? undefined : Number(value);
+    onBrandingChange({
+      ...branding,
+      [field]: Number.isFinite(parsed) ? parsed : undefined
+    });
+  };
+
+  const [isLocatingGps, setIsLocatingGps] = useState(false);
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.geolocation.unsupported', 'Your browser does not support geolocation.'),
+        variant: 'destructive'
+      });
+      return;
+    }
+    setIsLocatingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        onBrandingChange({
+          ...branding,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+        setIsLocatingGps(false);
+      },
+      () => {
+        toast({
+          title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+          description: translate('hospitalBranding.geolocation.failed', 'Could not detect your current location.'),
+          variant: 'destructive'
+        });
+        setIsLocatingGps(false);
+      }
+    );
   };
 
   const hasMissingRequiredFields = requiredFields.some((field) => !(branding[field]?.trim()));
@@ -841,6 +895,53 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       {validationErrors.pincode}
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    {translate('hospitalBranding.labels.geolocation', 'GPS Location')}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUseMyLocation}
+                    disabled={(isExistingHospital && !isEditMode) || isLocatingGps}
+                    className="gap-2"
+                  >
+                    <LocateFixed className="h-3.5 w-3.5" />
+                    {isLocatingGps
+                      ? translate('hospitalBranding.geolocation.detecting', 'Detecting…')
+                      : translate('hospitalBranding.geolocation.useMyLocation', 'Use my current location')}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {translate(
+                    'hospitalBranding.geolocation.description',
+                    "Powers the \"get directions\" link on your doctors' public listings."
+                  )}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={branding.latitude ?? ''}
+                    onChange={(e) => updateGeoField('latitude', e.target.value)}
+                    placeholder={translate('hospitalBranding.placeholders.latitude', 'Latitude')}
+                    disabled={isExistingHospital && !isEditMode}
+                  />
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={branding.longitude ?? ''}
+                    onChange={(e) => updateGeoField('longitude', e.target.value)}
+                    placeholder={translate('hospitalBranding.placeholders.longitude', 'Longitude')}
+                    disabled={isExistingHospital && !isEditMode}
+                  />
                 </div>
               </div>
             </CardContent>
