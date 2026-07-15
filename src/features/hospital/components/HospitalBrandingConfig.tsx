@@ -458,6 +458,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       });
       return;
     }
+    // Browsers disable navigator.geolocation entirely on insecure (non-HTTPS) origins, except
+    // localhost — getCurrentPosition would just fail immediately with an unhelpful generic
+    // error, so catch this case up front and say what's actually wrong.
+    if (!window.isSecureContext) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate(
+          'hospitalBranding.geolocation.insecureContext',
+          'GPS location requires a secure (HTTPS) connection — this site is currently served over plain HTTP. Enter the latitude/longitude manually for now.'
+        ),
+        variant: 'destructive'
+      });
+      return;
+    }
     setIsLocatingGps(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -468,14 +482,31 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         });
         setIsLocatingGps(false);
       },
-      () => {
+      (error) => {
+        // Surface the browser's actual reason instead of one generic message — permission
+        // denial, no location provider available, and a timeout all need different next steps.
+        const description =
+          error.code === error.PERMISSION_DENIED
+            ? translate(
+                'hospitalBranding.geolocation.permissionDenied',
+                'Location access was denied. Allow location for this site in your browser settings and try again.'
+              )
+            : error.code === error.POSITION_UNAVAILABLE
+              ? translate(
+                  'hospitalBranding.geolocation.positionUnavailable',
+                  'Your device could not determine its location. Check that location services are turned on, or enter coordinates manually.'
+                )
+              : error.code === error.TIMEOUT
+                ? translate('hospitalBranding.geolocation.timeout', 'Detecting your location took too long. Please try again.')
+                : translate('hospitalBranding.geolocation.failed', 'Could not detect your current location.');
         toast({
           title: translate('hospitalBranding.toast.errorTitle', 'Error'),
-          description: translate('hospitalBranding.geolocation.failed', 'Could not detect your current location.'),
+          description,
           variant: 'destructive'
         });
         setIsLocatingGps(false);
-      }
+      },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
     );
   };
 
