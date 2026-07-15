@@ -187,18 +187,20 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" className="h-10 sm:h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
-                    <div className="h-10 w-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm shrink-0">
-                        <UserPlus className="h-5 w-5 text-white" />
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 sm:px-3 shrink-0" onClick={onBack}>
+                        <ArrowLeft className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Dashboard</span>
+                    </Button>
+                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm shrink-0">
+                        <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
                     <div className="min-w-0">
-                        <h1 className="text-lg sm:text-xl font-black text-slate-900 truncate">Referred Admissions</h1>
-                        <p className="text-xs text-slate-500">Patients doctors have advised for admission, from prescription board.</p>
+                        <h1 className="text-base sm:text-xl font-black text-slate-900 leading-tight">Referred Admissions</h1>
+                        <p className="text-xs text-slate-500 hidden sm:block">Patients doctors have advised for admission, from prescription board.</p>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" className="h-10 sm:h-9 self-start sm:self-auto" onClick={() => load(true)} disabled={refreshing || loading}>
-                    <RefreshCw className={cn('h-4 w-4 mr-1.5', refreshing && 'animate-spin')} /> Refresh
+                <Button variant="outline" size="sm" className="h-9 px-3 shrink-0 self-start sm:self-auto" onClick={() => load(true)} disabled={refreshing || loading}>
+                    <RefreshCw className={cn('h-4 w-4 sm:mr-1.5', refreshing && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
                 </Button>
             </div>
 

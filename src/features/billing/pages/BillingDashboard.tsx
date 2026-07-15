@@ -18,8 +18,8 @@ const TABS = [
 ] as const;
 
 const TAB_TRIGGER = cn(
-    'group flex-1 min-w-[110px] sm:min-w-[150px] h-auto flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 whitespace-normal',
-    'rounded-xl px-2.5 py-1.5 border border-transparent transition-all duration-300',
+    'group w-full xl:flex-1 xl:min-w-[150px] h-auto flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 whitespace-normal',
+    'rounded-xl px-2.5 py-2 sm:py-1.5 border border-transparent transition-all duration-300',
     'text-gray-600 hover:bg-white hover:text-gray-900 hover:-translate-y-0.5',
     'data-[state=active]:bg-gradient-to-br data-[state=active]:from-brand-600 data-[state=active]:to-brand-600',
     'data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-xl data-[state=active]:shadow-brand-500/30',
@@ -34,8 +34,11 @@ const fadeIn = {
 export const BillingDashboard: React.FC = () => {
     const [tab, setTab] = useState('revenue');
 
+    // Below lg: natural page scroll (the fixed-viewport/internal-scroll shell below starves the
+    // list of vertical space once the KPI grid + filter bar eat the phone/tablet screen). At lg+
+    // this reverts to the locked-viewport, internal-scroll desktop layout.
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-4 sm:px-6 pt-2 pb-4 gap-4 overflow-hidden">
+        <div className="flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-3 sm:px-6 pt-2 pb-4 gap-4 overflow-visible lg:overflow-hidden">
             <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0">
                 {/* Header + tab navigation in one row (matches the Admin / Appointment board) */}
                 <div className="flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-brand-500/5 ring-1 ring-black/5">
@@ -49,7 +52,9 @@ export const BillingDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <TabsList className="h-auto w-full xl:w-auto xl:flex-1 xl:max-w-2xl flex flex-nowrap overflow-x-auto justify-start xl:justify-end gap-2 rounded-2xl border border-slate-200 bg-white/70 p-1 shadow-inner ring-1 ring-black/5">
+                    {/* 2×2 card grid on phones — every tab visible at once, no horizontal swipe —
+                        a single row from sm up, reverting to the original inline flex row at xl. */}
+                    <TabsList className="h-auto w-full xl:w-auto xl:flex-1 xl:max-w-2xl grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-nowrap gap-2 rounded-2xl border border-slate-200 bg-white/70 p-1.5 sm:p-1 shadow-inner ring-1 ring-black/5">
                         {TABS.map((t) => (
                             <TabsTrigger key={t.id} value={t.id} className={TAB_TRIGGER} title={t.description}>
                                 <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">

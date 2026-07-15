@@ -121,6 +121,13 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
         [items, selected],
     );
 
+    // Census over the currently-visible beds (respects the ward filter) — the mobile at-a-glance count.
+    const census = useMemo(() => {
+        const visible = Object.values(grouped).flat();
+        const occupied = visible.filter(b => !!b.admissionId).length;
+        return { total: visible.length, occupied, available: visible.length - occupied };
+    }, [grouped]);
+
     const openBed = (b: BedBoardItem) => {
         if (!b.admissionId) return; // free beds are informational only — assign from the admissions list
         setSelected(b);
@@ -146,27 +153,52 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
-                    <div className="h-10 w-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm">
-                        <BedDouble className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-xl font-black text-slate-900">Bed Board</h1>
-                            <span className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-600 uppercase tracking-wider">
-                                <LiveDot /> Live
-                            </span>
-                        </div>
-                        <p className="text-xs text-slate-500">Every bed, live · transfer, release & discharge.</p>
-                    </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-10">
+            <div className="flex items-center gap-2 sm:gap-3">
+                <Button variant="outline" size="sm" className="h-9 px-2.5 sm:px-3 shrink-0" onClick={onBack}>
+                    <ArrowLeft className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Dashboard</span>
+                </Button>
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm shrink-0">
+                    <BedDouble className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
-                <select value={wardFilter} onChange={e => setWardFilter(e.target.value)} className="h-9 text-xs border border-slate-200 rounded-md px-2 bg-white">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-lg sm:text-xl font-black text-slate-900">Bed Board</h1>
+                        <span className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-600 uppercase tracking-wider shrink-0">
+                            <LiveDot /> Live
+                        </span>
+                    </div>
+                    <p className="text-xs text-slate-500 hidden sm:block">Every bed, live · transfer, release &amp; discharge.</p>
+                </div>
+            </div>
+
+            {/* Census summary + ward filter */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="grid grid-cols-3 gap-2 flex-1">
+                    <CensusTile label="Occupied" value={census.occupied} tone="rose" />
+                    <CensusTile label="Available" value={census.available} tone="emerald" />
+                    <CensusTile label="Total beds" value={census.total} tone="slate" />
+                </div>
+                <select value={wardFilter} onChange={e => setWardFilter(e.target.value)}
+                    className="h-11 sm:h-10 text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl px-3 bg-white shadow-sm w-full sm:w-auto shrink-0">
                     <option value="ALL">All wards</option>
                     {wards.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                {([
+                    { label: 'Occupied', cls: 'bg-rose-400' },
+                    { label: 'Available', cls: 'bg-emerald-400' },
+                    { label: 'Cleaning', cls: 'bg-amber-400' },
+                    { label: 'Reserved', cls: 'bg-sky-400' },
+                    { label: 'Blocked', cls: 'bg-slate-400' },
+                ] as const).map(({ label, cls }) => (
+                    <span key={label} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                        <span className={cn('h-2.5 w-2.5 rounded-full', cls)} /> {label}
+                    </span>
+                ))}
             </div>
 
             {loading && items.length === 0 ? (
@@ -178,12 +210,12 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                     {Object.entries(grouped).map(([ward, beds]) => {
                         const occ = beds.filter(b => !!b.admissionId).length;
                         return (
-                            <motion.div key={ward} layout className="rounded-xl border border-slate-200 bg-white p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="font-bold text-slate-900">{ward}</p>
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50">{occ}/{beds.length} occupied</Badge>
+                            <motion.div key={ward} layout className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                    <p className="font-bold text-slate-900 text-sm sm:text-base truncate">{ward}</p>
+                                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 shrink-0">{occ}/{beds.length} occupied</Badge>
                                 </div>
-                                <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="flex flex-wrap gap-2">
+                                <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                                     <AnimatePresence initial={false}>
                                         {beds.map(b => {
                                             const occupied = !!b.admissionId;
@@ -203,21 +235,21 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                                                     whileTap={occupied ? { scale: 0.96 } : undefined}
                                                     onClick={() => openBed(b)}
                                                     disabled={!occupied}
-                                                    className={cn('w-36 rounded-lg border-2 p-2 text-left', tone,
-                                                        occupied ? 'hover:shadow-md cursor-pointer' : 'cursor-default opacity-90',
+                                                    className={cn('w-full min-h-[78px] rounded-xl border-2 p-2.5 text-left flex flex-col min-w-0', tone,
+                                                        occupied ? 'hover:shadow-md cursor-pointer active:scale-[0.97]' : 'cursor-default opacity-90',
                                                         flashing && (occupied ? 'ring-4 ring-rose-300' : 'ring-4 ring-emerald-300'))}>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-mono text-[10px] font-bold">{b.bedCode}</span>
-                                                        <span className="text-[10px] font-bold uppercase tracking-wider">{occupied ? 'OCCUPIED' : (b.statusCode ?? 'AVAILABLE')}</span>
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className="font-mono text-[11px] font-bold truncate">{b.bedCode}</span>
+                                                        <span className="text-[8.5px] font-bold uppercase tracking-wider shrink-0">{occupied ? 'OCCUPIED' : (b.statusCode ?? 'AVAILABLE')}</span>
                                                     </div>
                                                       {occupied ? (
-                                                          <div className="mt-1">
-                                                              <p className="text-xs font-bold truncate">{b.patientName || '?'}</p>
-                                                              <p className="text-[10px] opacity-80 truncate">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
+                                                          <div className="mt-1.5 min-w-0">
+                                                              <p className="text-[13px] font-bold truncate leading-tight">{b.patientName || '?'}</p>
+                                                              <p className="text-[10px] opacity-80 truncate mt-0.5">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
                                                               {b.admissionToken && <p className="text-[10px] font-bold text-rose-800 mt-0.5 truncate">Token: {b.admissionToken}</p>}
                                                           </div>
                                                       ) : (
-                                                        <p className="text-[10px] mt-1 opacity-70">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
+                                                        <p className="text-[11px] mt-auto pt-1.5 opacity-70">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
                                                     )}
                                                 </motion.button>
                                             );
@@ -300,6 +332,20 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                     )}
                 </DialogContent>
             </Dialog>
+        </div>
+    );
+};
+
+const CensusTile: React.FC<{ label: string; value: number; tone: 'rose' | 'emerald' | 'slate' }> = ({ label, value, tone }) => {
+    const tones: Record<string, string> = {
+        rose: 'border-rose-100 bg-rose-50 text-rose-700',
+        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+        slate: 'border-slate-200 bg-slate-50 text-slate-700',
+    };
+    return (
+        <div className={cn('rounded-xl border px-3 py-2 shadow-sm', tones[tone])}>
+            <p className="text-[10px] font-bold uppercase tracking-wider truncate opacity-80">{label}</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">{value}</p>
         </div>
     );
 };
