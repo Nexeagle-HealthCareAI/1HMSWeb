@@ -6,6 +6,7 @@ import {
   Award,
   Globe,
   GraduationCap,
+  IdCard,
   Languages as LanguagesIcon,
   Loader2,
   Mail,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   Star,
   Stethoscope,
+  Tags,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -51,6 +53,21 @@ const initialsFor = (name?: string | null) => {
 type PendingToggle =
   | { kind: 'hospital'; next: boolean }
   | { kind: 'doctor'; doctorId: string; doctorName: string; next: boolean };
+
+// Every field on a doctor tile renders through this — a fixed icon + bold label + value —
+// so every piece of data is unambiguous at a glance ("Languages Spoken: English, Hindi").
+const FieldRow: React.FC<{ icon: React.ElementType; label: string; value: React.ReactNode }> = ({
+  icon: Icon,
+  label,
+  value,
+}) => (
+  <div className="flex items-start gap-1.5 text-xs leading-relaxed">
+    <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+    <p className="text-muted-foreground">
+      <span className="font-semibold text-foreground">{label}:</span> {value}
+    </p>
+  </div>
+);
 
 // Admin screen: opt this hospital's doctors into the platform-wide public directory
 // (NexEagle's "find a doctor" page, spanning every opted-in hospital). Off by default —
@@ -277,10 +294,6 @@ export const PublicDirectoryConfig: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               <AnimatePresence initial={false}>
                 {filteredDoctors.map((d, index) => {
-                  const hasContact = Boolean(d.publicContactEmail || d.publicContactPhone);
-                  const hasStats = Boolean(d.licenseNumber || d.qualification || d.experienceYears != null);
-                  const hasTags = d.specializations.length > 0 || d.languages.length > 0;
-
                   return (
                     <motion.div
                       key={d.doctorId}
@@ -323,7 +336,6 @@ export const PublicDirectoryConfig: React.FC = () => {
                                 <p className="font-semibold leading-tight truncate">
                                   {d.fullName || translate('publicDirectory.unnamedDoctor', 'Unnamed doctor')}
                                 </p>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">{d.departmentName || '—'}</p>
                                 {d.reviewCount > 0 && (
                                   <span className="flex items-center gap-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">
                                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
@@ -346,60 +358,67 @@ export const PublicDirectoryConfig: React.FC = () => {
                             </Badge>
                           </div>
 
-                          {hasStats && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground border-y border-dashed border-gray-200 dark:border-gray-800 py-2">
-                              {d.qualification && (
-                                <span className="flex items-center gap-1">
-                                  <GraduationCap className="h-3 w-3" />
-                                  {d.qualification}
-                                </span>
-                              )}
-                              {d.experienceYears != null && (
-                                <span className="flex items-center gap-1">
-                                  <Award className="h-3 w-3" />
-                                  {translate('publicDirectory.tile.experienceYears', '{{count}} yrs experience').replace('{{count}}', String(d.experienceYears))}
-                                </span>
-                              )}
-                              {d.licenseNumber && (
-                                <span>{translate('publicDirectory.tile.license', 'Lic. {{number}}').replace('{{number}}', d.licenseNumber)}</span>
-                              )}
-                            </div>
-                          )}
+                          <div className="space-y-1.5 border-y border-dashed border-gray-200 dark:border-gray-800 py-2.5">
+                            <FieldRow
+                              icon={Stethoscope}
+                              label={translate('publicDirectory.tile.speciality', 'Speciality')}
+                              value={d.departmentName || '—'}
+                            />
+                            {d.qualification && (
+                              <FieldRow
+                                icon={GraduationCap}
+                                label={translate('publicDirectory.tile.qualification', 'Qualification')}
+                                value={d.qualification}
+                              />
+                            )}
+                            {d.experienceYears != null && (
+                              <FieldRow
+                                icon={Award}
+                                label={translate('publicDirectory.tile.experience', 'Experience')}
+                                value={translate('publicDirectory.tile.experienceYears', '{{count}} years').replace('{{count}}', String(d.experienceYears))}
+                              />
+                            )}
+                            {d.licenseNumber && (
+                              <FieldRow
+                                icon={IdCard}
+                                label={translate('publicDirectory.tile.licenseNo', 'License No')}
+                                value={d.licenseNumber}
+                              />
+                            )}
+                            {d.specializations.length > 0 && (
+                              <FieldRow
+                                icon={Tags}
+                                label={translate('publicDirectory.tile.focusAreas', 'Focus Areas')}
+                                value={d.specializations.join(', ')}
+                              />
+                            )}
+                            {d.languages.length > 0 && (
+                              <FieldRow
+                                icon={LanguagesIcon}
+                                label={translate('publicDirectory.tile.languagesSpoken', 'Languages Spoken')}
+                                value={d.languages.join(', ')}
+                              />
+                            )}
+                            {d.publicContactEmail && (
+                              <FieldRow
+                                icon={Mail}
+                                label={translate('publicDirectory.tile.email', 'Email')}
+                                value={<span className="break-all">{d.publicContactEmail}</span>}
+                              />
+                            )}
+                            {d.publicContactPhone && (
+                              <FieldRow
+                                icon={Phone}
+                                label={translate('publicDirectory.tile.phone', 'Phone')}
+                                value={d.publicContactPhone}
+                              />
+                            )}
+                          </div>
 
-                          {d.bio && <p className="text-xs text-muted-foreground line-clamp-2">{d.bio}</p>}
-
-                          {hasTags && (
-                            <div className="flex flex-wrap gap-1">
-                              {d.specializations.slice(0, 3).map((s) => (
-                                <Badge key={s} variant="secondary" className="text-[10px] px-2 py-0.5">{s}</Badge>
-                              ))}
-                              {d.specializations.length > 3 && (
-                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5">+{d.specializations.length - 3}</Badge>
-                              )}
-                              {d.languages.slice(0, 3).map((l) => (
-                                <Badge key={l} variant="outline" className="text-[10px] px-2 py-0.5 gap-1">
-                                  <LanguagesIcon className="h-2.5 w-2.5" />
-                                  {l}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-
-                          {hasContact && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              {d.publicContactEmail && (
-                                <span className="flex items-center gap-1 truncate">
-                                  <Mail className="h-3 w-3 shrink-0" />
-                                  {d.publicContactEmail}
-                                </span>
-                              )}
-                              {d.publicContactPhone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3 shrink-0" />
-                                  {d.publicContactPhone}
-                                </span>
-                              )}
-                            </div>
+                          {d.bio && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              <span className="font-semibold text-foreground">{translate('publicDirectory.tile.about', 'About')}:</span> {d.bio}
+                            </p>
                           )}
 
                           <div className="flex items-center gap-2 pt-1">
