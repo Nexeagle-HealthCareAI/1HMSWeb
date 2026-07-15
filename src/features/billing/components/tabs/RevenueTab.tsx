@@ -268,7 +268,7 @@ export const RevenueTab: React.FC = () => {
                         <Calendar className="h-3 w-3" /> {scopeLabel}
                     </span>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                     <KpiStat label="Billed" amount={kpis.billed} format={inr} hint={`${kpis.bills} ${kpis.bills === 1 ? 'bill' : 'bills'}`} icon={<IndianRupee className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-brand-100/50 text-brand-900" />
                     <KpiStat label="Collected" amount={kpis.collected} format={inr} hint={`${kpis.rate}% collected`} icon={<Wallet className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" />
                     <KpiStat label="Outstanding" amount={kpis.due} format={inr} hint={`${kpis.unpaid} unpaid ${kpis.unpaid === 1 ? 'bill' : 'bills'}`} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
@@ -278,62 +278,67 @@ export const RevenueTab: React.FC = () => {
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-brand-500/5 print:shadow-none print:ring-0">
-                <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/60 print:hidden">
-                    <div className="flex items-center p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
-                        {FILTERS.map(({ key, label, active }) => (
-                            <button
-                                key={key}
-                                onClick={() => { setStatusFilter(key); setCurrentPage(1); }}
-                                className={cn(
-                                    'px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all',
-                                    statusFilter === key ? active : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100',
-                                )}
-                            >
-                                {label}
-                            </button>
-                        ))}
+                <div className="p-3 border-b border-slate-100 flex flex-col gap-2.5 bg-slate-50/60 print:hidden">
+                    {/* Search — always full width, own row */}
+                    <div className="relative w-full">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input placeholder="Search by PTID or Name..." className="pl-9 bg-white text-sm rounded-xl h-10 sm:h-9" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
                     </div>
 
-                    {/* Visit type */}
-                    <Select value={visitFilter} onValueChange={(v) => { setVisitFilter(v); setCurrentPage(1); }}>
-                        <SelectTrigger className="h-9 w-[130px] rounded-xl bg-white text-xs"><SelectValue placeholder="Visit type" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="ALL">All visits</SelectItem>
-                            {visitTypes.map(v => <SelectItem key={v} value={v}>{visitTypeLabel(v)}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-
-                    {/* Date filter: All / Single day / Range */}
-                    <Select value={dateMode} onValueChange={(v) => { setDateMode(v as any); setCurrentPage(1); }}>
-                        <SelectTrigger className="h-9 w-[120px] rounded-xl bg-white text-xs">
-                            <div className="flex items-center gap-1.5 min-w-0"><Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" /><SelectValue /></div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All dates</SelectItem>
-                            <SelectItem value="day">Single day</SelectItem>
-                            <SelectItem value="range">Date range</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {dateMode === 'day' && (
-                        <Input type="date" value={dayDate} onChange={(e) => { setDayDate(e.target.value); setCurrentPage(1); }} className="h-9 w-[150px] rounded-xl bg-white text-xs" />
-                    )}
-                    {dateMode === 'range' && (
-                        <div className="flex items-center gap-1.5">
-                            <Input type="date" value={rangeStart} onChange={(e) => { setRangeStart(e.target.value); setCurrentPage(1); }} className="h-9 w-[140px] rounded-xl bg-white text-xs" />
-                            <span className="text-xs text-slate-400">to</span>
-                            <Input type="date" value={rangeEnd} onChange={(e) => { setRangeEnd(e.target.value); setCurrentPage(1); }} className="h-9 w-[140px] rounded-xl bg-white text-xs" />
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        {/* Status pills — horizontally scrollable so they never overflow the card on narrow screens */}
+                        <div className="flex items-center p-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            {FILTERS.map(({ key, label, active }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => { setStatusFilter(key); setCurrentPage(1); }}
+                                    className={cn(
+                                        'px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0',
+                                        statusFilter === key ? active : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100',
+                                    )}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
-                    )}
 
-                    <div className="flex items-center gap-2 ml-auto">
-                        <div className="relative w-full sm:w-52">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input placeholder="Search by PTID or Name..." className="pl-9 bg-white text-sm rounded-xl" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
-                        </div>
+                        {/* Visit type */}
+                        <Select value={visitFilter} onValueChange={(v) => { setVisitFilter(v); setCurrentPage(1); }}>
+                            <SelectTrigger className="h-10 sm:h-9 w-[calc(50%-4px)] sm:w-[130px] rounded-xl bg-white text-xs"><SelectValue placeholder="Visit type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ALL">All visits</SelectItem>
+                                {visitTypes.map(v => <SelectItem key={v} value={v}>{visitTypeLabel(v)}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+
+                        {/* Date filter: All / Single day / Range */}
+                        <Select value={dateMode} onValueChange={(v) => { setDateMode(v as any); setCurrentPage(1); }}>
+                            <SelectTrigger className="h-10 sm:h-9 w-[calc(50%-4px)] sm:w-[120px] rounded-xl bg-white text-xs">
+                                <div className="flex items-center gap-1.5 min-w-0"><Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" /><SelectValue /></div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All dates</SelectItem>
+                                <SelectItem value="day">Single day</SelectItem>
+                                <SelectItem value="range">Date range</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {dateMode === 'day' && (
+                            <Input type="date" value={dayDate} onChange={(e) => { setDayDate(e.target.value); setCurrentPage(1); }} className="h-10 sm:h-9 flex-1 min-w-[140px] sm:flex-none sm:w-[150px] rounded-xl bg-white text-xs" />
+                        )}
+                        {dateMode === 'range' && (
+                            <div className="flex items-center gap-1.5 flex-1 sm:flex-none">
+                                <Input type="date" value={rangeStart} onChange={(e) => { setRangeStart(e.target.value); setCurrentPage(1); }} className="h-10 sm:h-9 flex-1 min-w-0 sm:flex-none sm:w-[140px] rounded-xl bg-white text-xs" />
+                                <span className="text-xs text-slate-400 shrink-0">to</span>
+                                <Input type="date" value={rangeEnd} onChange={(e) => { setRangeEnd(e.target.value); setCurrentPage(1); }} className="h-10 sm:h-9 flex-1 min-w-0 sm:flex-none sm:w-[140px] rounded-xl bg-white text-xs" />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:ml-auto sm:w-auto w-full">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl">
-                                    <Download className="h-3.5 w-3.5" /> Export
+                                <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0">
+                                    <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Export</span>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -341,10 +346,10 @@ export const RevenueTab: React.FC = () => {
                                 <DropdownMenuItem onClick={printTable}><Printer className="h-4 w-4 mr-2" /> Print PDF</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl" onClick={() => loadDashboard(true)} disabled={refreshing || loading}>
-                            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> Refresh
+                        <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0" onClick={() => loadDashboard(true)} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
                         </Button>
-                        <Button size="sm" className="h-9 gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-500 hover:to-brand-500 text-white text-xs shadow-md shadow-brand-500/20" onClick={() => navigate('/billing/ledger')}>
+                        <Button size="sm" className="h-10 sm:h-9 gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-500 hover:to-brand-500 text-white text-xs shadow-md shadow-brand-500/20 flex-1 sm:flex-none" onClick={() => navigate('/billing/ledger')}>
                             <Plus className="h-3.5 w-3.5" /> New Bill
                         </Button>
                     </div>
@@ -362,7 +367,65 @@ export const RevenueTab: React.FC = () => {
                             hint={billingData.length === 0 ? 'Bills will appear here once visits are charged.' : 'Try a different status or search term.'}
                         />
                     ) : (
-                        <Table>
+                        <>
+                        {/* Mobile card list — the 8-column table is unreadable below md, so patients
+                            render as tappable cards instead; same data, same tap-to-open-ledger action. */}
+                        <div className="md:hidden divide-y divide-slate-100">
+                            {paginatedPatients.map((g) => {
+                                const bal = g.current?.balance ?? 0;
+                                return (
+                                    <div key={groupKey(g)} className="p-3 active:bg-slate-50 transition-colors" onClick={() => openPatientLedger(g)}>
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-brand-100 to-violet-100 border border-brand-200 flex items-center justify-center text-xs font-bold text-brand-700 shrink-0">{g.patientName.charAt(0)}</div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-slate-900 truncate">{g.patientName}</p>
+                                                    <p className="text-[10px] tracking-widest text-slate-500 font-mono">{g.patientIdDisplay}</p>
+                                                </div>
+                                            </div>
+                                            <Badge variant="secondary" className={cn('text-[10px] px-2 py-0.5 border font-bold uppercase rounded-full shrink-0',
+                                                g.current?.status === 'OPEN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                g.current?.status === 'CANCELLED' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                                'bg-slate-100 text-slate-600 border-slate-300')}>{g.current?.status ?? '—'}</Badge>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 mt-2 text-[11px]">
+                                            {g.current && <span className="font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-100">{visitTypeLabel(g.current.type)}</span>}
+                                            <span className="text-slate-500">{g.current ? format(new Date(g.current.date), 'dd MMM') : '—'}</span>
+                                            {g.visits.length > 1 && <span className="text-slate-400">· {g.visits.length} visits</span>}
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 mt-2.5 text-xs bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                                            <div>
+                                                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Billed</p>
+                                                <p className="text-slate-800 font-semibold tabular-nums">{inr(g.current?.totalDebit ?? 0)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Paid</p>
+                                                <p className="text-emerald-600 font-bold tabular-nums">{inr(g.current?.totalCredit ?? 0)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">{bal < 0 ? 'Credit' : 'Due'}</p>
+                                                <p className={cn('font-bold tabular-nums', bal > 0 ? 'text-rose-600' : bal < 0 ? 'text-blue-700' : 'text-emerald-600')}>
+                                                    {bal === 0 ? 'Paid' : inr(Math.abs(bal))}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {g.pastDue > 0 && (
+                                            <p className="mt-2 text-[11px] font-bold text-amber-600">Past due: {inr(g.pastDue)}</p>
+                                        )}
+
+                                        <Button variant="outline" size="sm" className="w-full mt-2.5 h-9 text-xs font-semibold rounded-lg border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100/60" onClick={(e) => { e.stopPropagation(); openPatientLedger(g); }}>
+                                            Open Ledger <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                                        </Button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Desktop table */}
+                        <Table className="hidden md:table">
                             <TableHeader className="bg-slate-50/80 backdrop-blur border-b border-slate-200 sticky top-0 z-10">
                                 <TableRow className="border-none hover:bg-transparent">
                                     <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Patient</TableHead>
@@ -447,15 +510,16 @@ export const RevenueTab: React.FC = () => {
                                 </TableRow>
                             </TableFooter>
                         </Table>
+                        </>
                     )}
                 </div>
 
-                <div className="p-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
-                    <div>Showing {groupedPatients.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}–{Math.min(currentPage * itemsPerPage, groupedPatients.length)} of {groupedPatients.length} patients</div>
-                    <div className="flex gap-2 items-center">
-                        <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}><ChevronLeft className="h-4 w-4" /></Button>
-                        <div className="px-3 font-bold bg-white border border-slate-200 rounded-lg tabular-nums">Page {currentPage} / {Math.max(1, totalPages)}</div>
-                        <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}><ChevronRight className="h-4 w-4" /></Button>
+                <div className="p-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-2 text-xs font-semibold text-slate-500 uppercase">
+                    <div className="truncate">Showing {groupedPatients.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}–{Math.min(currentPage * itemsPerPage, groupedPatients.length)} of {groupedPatients.length}<span className="hidden sm:inline"> patients</span></div>
+                    <div className="flex gap-1.5 sm:gap-2 items-center shrink-0">
+                        <Button variant="outline" size="sm" className="h-9 w-9 sm:h-7 sm:w-7 p-0 rounded-lg" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                        <div className="px-2 sm:px-3 font-bold bg-white border border-slate-200 rounded-lg tabular-nums whitespace-nowrap">{currentPage} / {Math.max(1, totalPages)}</div>
+                        <Button variant="outline" size="sm" className="h-9 w-9 sm:h-7 sm:w-7 p-0 rounded-lg" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}><ChevronRight className="h-4 w-4" /></Button>
                     </div>
                 </div>
             </Card>

@@ -58,8 +58,14 @@ ipdAxios.interceptors.response.use(
         if (error.response) {
             const { status, data } = error.response;
             if (status === 401) {
-                useAuthStore.getState().logout();
-                window.location.href = '/login';
+                // DEV-only IPD preview routes render the app shell without a real login, so the shell's
+                // background calls (alerts, etc.) return 401 — don't hijack the preview by logging out
+                // and redirecting to /login. Real routes still redirect as normal.
+                const isDevPreview = import.meta.env.DEV && /(-preview|mobile-review)/.test(window.location.pathname);
+                if (!isDevPreview) {
+                    useAuthStore.getState().logout();
+                    window.location.href = '/login';
+                }
             } else {
                 console.error(`IPD API HTTP ${status}:`, data);
             }

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ArrowLeft, Stethoscope, Loader2, Check } from 'lucide-react';
 import {
     consultantIncentiveApi, type ConsultantIncentiveDoctorSummary, type ConsultantIncentiveLine, type IncentiveLedgerStatus,
@@ -28,6 +29,7 @@ const STATUS_TONE: Record<string, string> = {
  */
 export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack }) => {
     const { toast } = useToast();
+    const isMobile = useIsMobile();
     const [doctors, setDoctors] = useState<ConsultantIncentiveDoctorSummary[]>([]);
     const [loadingSummary, setLoadingSummary] = useState(true);
     const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
@@ -92,20 +94,24 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack }) => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-            <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
-                <div className="h-11 w-11 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow">
-                    <Stethoscope className="h-5 w-5" />
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-10">
+            <div className="flex items-center gap-2 sm:gap-3">
+                <Button variant="outline" size="sm" className="h-9 px-2.5 sm:px-3 shrink-0" onClick={onBack}>
+                    <ArrowLeft className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Dashboard</span>
+                </Button>
+                <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow shrink-0">
+                    <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                <div>
-                    <h1 className="text-lg font-black text-slate-900">Consultant Incentive Ledger</h1>
-                    <p className="text-xs text-slate-500">Per-doctor treating-fee incentive accrual &amp; payout.</p>
+                <div className="min-w-0">
+                    <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">Consultant Incentive Ledger</h1>
+                    <p className="text-xs text-slate-500 hidden sm:block">Per-doctor treating-fee incentive accrual &amp; payout.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-1">
+                {/* Doctor list — on mobile this is the "master" list; it hides once a doctor is
+                    picked (drill-in), and the ledger detail takes over. Both show side-by-side on lg. */}
+                <div className={cn('rounded-xl border border-slate-200 bg-white p-4 lg:col-span-1', selectedDoctorId && 'hidden lg:block')}>
                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">Doctors</h2>
                     {loadingSummary ? (
                         <div className="flex items-center justify-center py-10 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
@@ -129,13 +135,18 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack }) => {
                     )}
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-2">
+                <div className={cn('rounded-xl border border-slate-200 bg-white p-4 lg:col-span-2', !selectedDoctorId && 'hidden lg:block')}>
                     {!selectedDoctorId ? (
                         <div className="flex items-center justify-center py-16 text-sm text-slate-400">Select a doctor to view their ledger.</div>
                     ) : (
                         <>
-                            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                                <div>
+                            {/* Mobile drill-in: back to the doctor list */}
+                            <button type="button" onClick={() => setSelectedDoctorId(null)}
+                                className="lg:hidden flex items-center gap-1.5 text-xs font-bold text-brand-700 mb-3 -mt-1">
+                                <ArrowLeft className="h-4 w-4" /> All doctors
+                            </button>
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                                <div className="min-w-0">
                                     <h2 className="text-sm font-black text-slate-900">{selectedDoctor?.doctorName || 'Unknown doctor'}</h2>
                                     <div className="grid grid-cols-3 gap-2 mt-2 max-w-md">
                                         <div className="rounded-lg bg-amber-50 border border-amber-200 p-2 text-center">
@@ -152,16 +163,16 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack }) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as IncentiveLedgerStatus | 'ALL')}
-                                        className="h-9 text-xs border border-slate-200 rounded-lg px-2 bg-white">
+                                        className="h-10 sm:h-9 text-xs border border-slate-200 rounded-lg px-2 bg-white flex-1 sm:flex-none min-w-0">
                                         <option value="ALL">All statuses</option>
                                         <option value="ACCRUED">Accrued</option>
                                         <option value="PAID">Paid</option>
                                         <option value="CANCELLED">Cancelled</option>
                                     </select>
-                                    <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700" disabled={accruedCount === 0} onClick={() => setShowSettle(o => !o)}>
-                                        Settle accrued ({accruedCount})
+                                    <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700 shrink-0" disabled={accruedCount === 0} onClick={() => setShowSettle(o => !o)}>
+                                        Settle ({accruedCount})
                                     </Button>
                                 </div>
                             </div>
@@ -169,9 +180,9 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack }) => {
                             {showSettle && (
                                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-3 space-y-2">
                                     <p className="text-xs text-slate-600">Marks every currently-accrued line for this doctor as PAID.</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div><Label className="text-[11px] font-semibold text-slate-600">Payout reference</Label><Input value={payoutRef} onChange={e => setPayoutRef(e.target.value)} className="h-9 mt-1" placeholder="Voucher / bank ref" /></div>
-                                        <div><Label className="text-[11px] font-semibold text-slate-600">TDS amount (194J, total)</Label><Input type="number" min={0} value={tdsAmount} onChange={e => setTdsAmount(e.target.value)} className="h-9 mt-1" placeholder="₹" /></div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div><Label className="text-[11px] font-semibold text-slate-600">Payout reference</Label><Input value={payoutRef} onChange={e => setPayoutRef(e.target.value)} className="h-10 sm:h-9 mt-1" placeholder="Voucher / bank ref" /></div>
+                                        <div><Label className="text-[11px] font-semibold text-slate-600">TDS amount (194J, total)</Label><Input type="number" min={0} value={tdsAmount} onChange={e => setTdsAmount(e.target.value)} className="h-10 sm:h-9 mt-1" placeholder="₹" /></div>
                                     </div>
                                     <div className="flex justify-end gap-2">
                                         <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowSettle(false)}>Cancel</Button>
@@ -189,12 +200,12 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack }) => {
                             ) : (
                                 <div className="space-y-1.5">
                                     {lines.map(l => (
-                                        <div key={l.consultantIncentiveLedgerId} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-slate-100 flex-wrap">
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-800">{l.chargeDisplayName || '—'}</p>
-                                                <p className="text-[11px] text-slate-500">Patient {l.patientId} · Accrued {formatIstDateTime(l.accruedAt)}{l.paidAt ? ` · Paid ${formatIstDateTime(l.paidAt)}` : ''}{l.payoutRef ? ` · Ref ${l.payoutRef}` : ''}</p>
+                                        <div key={l.consultantIncentiveLedgerId} className="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-lg border border-slate-100">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-semibold text-slate-800 truncate">{l.chargeDisplayName || '—'}</p>
+                                                <p className="text-[11px] text-slate-500 break-words">Patient {l.patientId} · Accrued {formatIstDateTime(l.accruedAt)}{l.paidAt ? ` · Paid ${formatIstDateTime(l.paidAt)}` : ''}{l.payoutRef ? ` · Ref ${l.payoutRef}` : ''}</p>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col items-end gap-1 shrink-0">
                                                 <span className="text-sm font-black text-slate-800">₹{l.incentiveAmount.toLocaleString('en-IN')}</span>
                                                 <Badge variant="outline" className={cn('text-[10px] font-bold', STATUS_TONE[l.statusCode ?? ''])}>{l.statusCode}</Badge>
                                             </div>

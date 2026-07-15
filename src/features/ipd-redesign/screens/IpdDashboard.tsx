@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/store/authStore';
 import { PrintDischargeButton } from '../components/PrintDischargeButton';
 import { PrintAdmissionButton } from '../components/PrintAdmissionButton';
@@ -76,6 +77,7 @@ interface Props {
  */
 export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenReferredAdmissions, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
+    const isMobile = useIsMobile();
     // Reactive (not a one-off getHospitalId() grab) so that if this screen mounts before the
     // persisted auth store finishes hydrating hospitalId, load() below re-runs automatically the
     // moment it becomes available instead of throwing synchronously and crashing the dashboard.
@@ -205,84 +207,98 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const paginatedAdmissions = filteredAdmissions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
-        <div className="w-full max-w-full pb-6 space-y-6 bg-slate-50/50 min-h-screen">
+        <div className="w-full max-w-full pb-28 sm:pb-6 space-y-5 sm:space-y-6 bg-slate-50/50 min-h-screen">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 px-4 sm:px-8 xl:px-12 py-6 sm:py-8 flex flex-col xl:flex-row xl:items-center justify-between gap-6 shadow-lg shadow-brand-900/5 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 px-4 sm:px-8 xl:px-12 py-5 sm:py-8 shadow-lg shadow-brand-900/5 relative overflow-hidden">
                 {/* Decorative background flare */}
                 <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-                
-                <div className="relative z-10">
-                    <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-sm">Inpatient Department</h1>
-                    <p className="text-brand-100 text-sm font-medium mt-1 drop-shadow-sm">Click a patient to manage their bed, medications, and discharge.</p>
-                </div>
-                
-                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
-                    <div className="flex items-center flex-wrap gap-1.5 p-1.5 bg-black/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-inner w-full sm:w-auto">
-                        <button onClick={onOpenBedBoard} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
-                            <LayoutGrid className="h-4 w-4 mr-2 text-brand-200" /> Live Bed Board
-                        </button>
-                        <button onClick={onOpenKpiDashboard} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
-                            <Gauge className="h-4 w-4 mr-2 text-brand-200" /> KPI Dashboard
-                        </button>
-                        <button onClick={onOpenConsultantLedger} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
-                            <Stethoscope className="h-4 w-4 mr-2 text-brand-200" /> Consultant Ledger
-                        </button>
-                        <button onClick={onOpenReferredAdmissions} className="flex items-center h-10 px-4 rounded-xl shrink-0 text-sm font-bold text-white hover:bg-white/20 transition-all">
-                            <UserPlus className="h-4 w-4 mr-2 text-brand-200" /> Referred Admissions
+
+                <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-5">
+                    <div>
+                        <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight drop-shadow-sm">Inpatient Department</h1>
+                        <p className="text-brand-100 text-xs sm:text-sm font-medium mt-1 drop-shadow-sm">Tap a patient to manage their bed, medications, and discharge.</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
+                        {/* Quick nav — 2-col tap grid on mobile, frosted inline pill on desktop */}
+                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-2 sm:gap-1.5 sm:p-1.5 sm:bg-black/10 sm:backdrop-blur-xl sm:border sm:border-white/10 sm:rounded-2xl sm:shadow-inner w-full sm:w-auto">
+                            {([
+                                { short: 'Bed Board', full: 'Live Bed Board', icon: LayoutGrid, onClick: onOpenBedBoard },
+                                { short: 'KPI', full: 'KPI Dashboard', icon: Gauge, onClick: onOpenKpiDashboard },
+                                { short: 'Ledger', full: 'Consultant Ledger', icon: Stethoscope, onClick: onOpenConsultantLedger },
+                                { short: 'Referrals', full: 'Referred Admissions', icon: UserPlus, onClick: onOpenReferredAdmissions },
+                            ] as const).map(({ short, full, icon: Icon, onClick }) => (
+                                <button key={short} onClick={onClick}
+                                    className="flex items-center justify-center sm:justify-start h-11 sm:h-10 px-3 sm:px-4 rounded-xl shrink-0 text-[13px] sm:text-sm font-bold text-white bg-white/10 sm:bg-transparent border border-white/15 sm:border-0 hover:bg-white/20 active:scale-[0.97] transition-all">
+                                    <Icon className="h-4 w-4 mr-2 text-brand-100 sm:text-brand-200 shrink-0" />
+                                    <span className="sm:hidden truncate">{short}</span>
+                                    <span className="hidden sm:inline">{full}</span>
+                                </button>
+                            ))}
+                        </div>
+                        {/* Admit — desktop header button; on mobile the sticky bottom bar handles this. */}
+                        <button onClick={onAdmit} className="hidden sm:flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10">
+                            <Plus className="h-4 w-4 mr-2" /> Admit Patient
                         </button>
                     </div>
-                    <button onClick={onAdmit} className="flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10 w-full sm:w-auto">
-                        <Plus className="h-4 w-4 mr-2" /> Admit Patient
-                    </button>
                 </div>
             </div>
 
             <div className="px-4 sm:px-8 xl:px-12 space-y-6">
 
             {/* KPI tiles — always the active census, regardless of the list's status filter below */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <KpiTile label="Admitted" value={kpis.admittedCount} icon={<Hotel className="h-4 w-4" />} tone="sky" />
                 <KpiTile label="Unassigned" value={kpis.unassigned} icon={<ClipboardList className="h-4 w-4" />} tone="amber" />
-                <KpiTile label="Non-cash payer" value={kpis.nonCash} icon={<Wallet className="h-4 w-4" />} tone="rose" />
+                <KpiTile label="Non-cash" value={kpis.nonCash} icon={<Wallet className="h-4 w-4" />} tone="rose" />
             </div>
 
             {/* Admissions list */}
             <section className="space-y-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admissions</h2>
-                    <div className="flex items-center gap-2 flex-wrap w-full">
-                        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
-                            {(['ACTIVE', 'DISCHARGED', 'ALL'] as AdmissionStatusFilter[]).map(s => (
-                                <button key={s} type="button" onClick={() => setStatusFilter(s)}
-                                    className={cn('h-8 px-4 rounded-lg text-xs font-bold transition-all duration-200',
-                                        statusFilter === s ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
-                                    {s === 'ACTIVE' ? 'Active' : s === 'DISCHARGED' ? 'Discharged' : 'All'}
-                                </button>
-                            ))}
+                <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admissions</h2>
+                        <Button variant="outline" onClick={load} disabled={loading} className="h-9 rounded-xl px-3 shadow-sm shrink-0 border-slate-200/60 hover:bg-slate-50 transition-all text-slate-600 font-semibold">
+                            <RefreshCw className={cn('h-4 w-4 sm:mr-2', loading && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
+                        </Button>
+                    </div>
+
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 lg:gap-2 lg:flex-wrap">
+                        {/* Search — full width on mobile, flexes on desktop */}
+                        <div className="relative w-full lg:flex-1 lg:min-w-[220px]">
+                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={isMobile ? 'Search name, UHID, bed…' : 'Search name, UHID, admission #, bed…'} className="h-11 sm:h-10 rounded-xl text-sm pl-9 w-full bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20 transition-all hover:border-slate-300" />
                         </div>
-                        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
-                            {(['TODAY', 'ALL', 'RANGE'] as DateFilterMode[]).map(m => (
-                                <button key={m} type="button" onClick={() => setDateFilter(m)}
-                                    className={cn('h-8 px-4 rounded-lg text-xs font-bold transition-all duration-200',
-                                        dateFilter === m ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
-                                    {m === 'TODAY' ? 'Today' : m === 'ALL' ? 'All' : 'Range'}
-                                </button>
-                            ))}
+
+                        {/* Segmented filters — wrap onto their own rows on small screens */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
+                                {(['ACTIVE', 'DISCHARGED', 'ALL'] as AdmissionStatusFilter[]).map(s => (
+                                    <button key={s} type="button" onClick={() => setStatusFilter(s)}
+                                        className={cn('h-9 px-4 rounded-lg text-xs font-bold transition-all duration-200 shrink-0',
+                                            statusFilter === s ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
+                                        {s === 'ACTIVE' ? 'Active' : s === 'DISCHARGED' ? 'Discharged' : 'All'}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
+                                {(['TODAY', 'ALL', 'RANGE'] as DateFilterMode[]).map(m => (
+                                    <button key={m} type="button" onClick={() => setDateFilter(m)}
+                                        className={cn('h-9 px-4 rounded-lg text-xs font-bold transition-all duration-200 shrink-0',
+                                            dateFilter === m ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
+                                        {m === 'TODAY' ? 'Today' : m === 'ALL' ? 'All' : 'Range'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
                         {dateFilter === 'RANGE' && (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <Input type="date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-10 rounded-xl text-xs w-32 sm:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
-                                <span className="text-slate-400 text-xs font-semibold">to</span>
-                                <Input type="date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-10 rounded-xl text-xs w-32 sm:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
+                            <div className="flex items-center gap-1.5 lg:shrink-0">
+                                <Input type="date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-11 sm:h-10 rounded-xl text-xs flex-1 lg:flex-none lg:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
+                                <span className="text-slate-400 text-xs font-semibold shrink-0">to</span>
+                                <Input type="date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-11 sm:h-10 rounded-xl text-xs flex-1 lg:flex-none lg:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
                             </div>
                         )}
-                        <div className="relative w-full sm:w-auto flex-1 min-w-[200px]">
-                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, UHID, admission #, bed…" className="h-10 rounded-xl text-sm pl-9 w-full bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20 transition-all hover:border-slate-300" />
-                        </div>
-                        <Button variant="outline" onClick={load} disabled={loading} className="h-10 rounded-xl px-4 shadow-sm shrink-0 border-slate-200/60 hover:bg-slate-50 transition-all text-slate-600 font-semibold">
-                            <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} /> Refresh
-                        </Button>
                     </div>
                 </div>
 
@@ -305,28 +321,31 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                     </Badge>
                                 </div>
                                 {a.statusCode === 'ADMITTED' && (
-                                    <div className="flex justify-end gap-1.5 mt-1">
-                                        <PrintTokenButton admission={a} className="h-7 text-[10px]" />
-                                        <PrintAdmissionButton admission={a} className="h-7 text-[10px]" />
-                                        <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
-                                            <Pencil className="h-3 w-3 mr-1" /> Edit details
+                                    <div className="flex flex-wrap justify-end gap-2 mt-1">
+                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3" /></span>
+                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3" /></span>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
+                                            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                                         </Button>
-                                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
-                                            <X className="h-3 w-3 mr-1" /> Cancel
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                            <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
                                         </Button>
                                     </div>
                                 )}
                                 {a.statusCode === 'PRE_ADMIT' && (
-                                    <div className="flex justify-end gap-1.5 mt-1">
-                                        <PrintTokenButton admission={a} className="h-7 text-[10px]" />
-                                        <PrintAdmissionButton admission={a} className="h-7 text-[10px]" />
-                                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
-                                            <X className="h-3 w-3 mr-1" /> Cancel
+                                    <div className="flex flex-wrap justify-end gap-2 mt-1">
+                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3" /></span>
+                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3" /></span>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3" onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
+                                            <CalendarCheck className="h-3.5 w-3.5 mr-1.5" /> Confirm arrival
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                            <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
                                         </Button>
                                     </div>
                                 )}
                                 {a.statusCode === 'DISCHARGED' && (
-                                    <div className="flex justify-end mt-1">
+                                    <div className="flex justify-end mt-1" onClick={e => e.stopPropagation()}>
                                         <PrintDischargeButton admission={a} />
                                     </div>
                                 )}
@@ -337,7 +356,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                     </div>
                                     <div className="flex flex-col gap-0.5">
                                         <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Bed</span>
-                                        <span className="text-slate-800 font-semibold truncate">{a.wardName ? `${a.wardName} - ${a.bedName}` : 'Unassigned'}</span>
+                                        <span className={cn('font-semibold truncate', a.bedCode ? 'text-slate-800' : 'text-amber-600')}>{a.bedCode ? `${a.wardName ? a.wardName + ' · ' : ''}${a.bedCode}` : 'Unassigned'}</span>
                                     </div>
                                     <div className="flex flex-col gap-0.5">
                                         <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Payer</span>
@@ -521,6 +540,13 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                 onUpdated={() => { setEditingAdmissionTarget(null); load(); }}
             />
             </div>
+
+            {/* Mobile-only sticky primary action — thumb-reachable Admit button */}
+            <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 px-4 pb-4 pt-8 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none">
+                <button onClick={onAdmit} className="pointer-events-auto w-full h-14 flex items-center justify-center rounded-2xl text-base font-bold bg-brand-600 text-white shadow-xl shadow-brand-600/30 active:scale-[0.98] transition-all">
+                    <Plus className="h-5 w-5 mr-2" /> Admit Patient
+                </button>
+            </div>
         </div>
     );
 };
@@ -534,9 +560,12 @@ const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.Rea
         amber: 'bg-amber-50 border-amber-100 text-amber-700',
     };
     return (
-        <div className={cn('rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md', tones[tone])}>
-            <div className="flex items-center gap-2 opacity-80 mb-2">{icon}<p className="text-[11px] font-bold uppercase tracking-widest">{label}</p></div>
-            <p className="text-3xl font-black text-slate-900">{value}</p>
+        <div className={cn('rounded-2xl border p-3 sm:p-5 shadow-sm transition-all hover:shadow-md', tones[tone])}>
+            <div className="flex items-center gap-1.5 opacity-80 mb-1 sm:mb-2">
+                <span className="hidden sm:inline shrink-0">{icon}</span>
+                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider sm:tracking-widest truncate">{label}</p>
+            </div>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900">{value}</p>
             {sub && <p className="text-xs font-semibold mt-1 opacity-75">{sub}</p>}
         </div>
     );

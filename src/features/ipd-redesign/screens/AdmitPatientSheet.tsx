@@ -90,7 +90,8 @@ const synthesizeUnknownName = (sex: string, ageYears: string, ageUnit: 'Y' | 'M'
 };
 
 const SELECT_CLS = 'h-10 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white outline-none transition focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400';
-const INPUT_CLS = 'h-10 rounded-lg';
+// h-11 (44px) on mobile for comfortable touch targets, h-10 on sm+ to keep the desktop density.
+const INPUT_CLS = 'h-11 sm:h-10 rounded-lg';
 
 interface FormState {
     fullName: string; sex: string; ageYears: string; ageUnit: 'Y' | 'M' | 'D'; dateOfBirth: string;
@@ -1263,49 +1264,56 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         </div>
 
                         {/* Footer */}
-                        <div className="shrink-0 px-5 sm:px-6 pt-3 pb-4 bg-white border-t border-slate-200 flex items-center gap-3">
-                            <Button variant="outline" className="h-10 px-4" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
-                                {step === 'admissionType' ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
-                            </Button>
-                            <div className="flex-1 min-w-0">
-                                {step === 'personal' && !canSubmit && (
-                                    <p className="text-[11px] text-slate-400 truncate">
-                                        {isEmergencyQuickAdmit ? 'Sex and approximate age are required to continue.' : 'Name and mobile are required to continue.'}
-                                    </p>
+                        <div className="shrink-0 px-4 sm:px-6 pt-3 pb-4 bg-white border-t border-slate-200">
+                            {/* Helper hint — its own row so it never fights the action buttons for width */}
+                            {((step === 'personal' && !canSubmit) || (!!selectedPatientId && step !== 'admissionType')) && (
+                                <div className="mb-2">
+                                    {step === 'personal' && !canSubmit && (
+                                        <p className="text-[11px] text-slate-400 truncate">
+                                            {isEmergencyQuickAdmit ? 'Sex and approximate age are required to continue.' : 'Name and mobile are required to continue.'}
+                                        </p>
+                                    )}
+                                    {!!selectedPatientId && <p className="text-[11px] text-slate-400 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <Button variant="outline" className="h-11 sm:h-10 px-3 sm:px-4 shrink-0" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
+                                    {step === 'admissionType' ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
+                                </Button>
+                                {/* Desktop: push actions to the right; mobile: buttons flex-fill instead. */}
+                                <div className="hidden sm:block sm:flex-1" />
+                                {step === 'admissionType' && (
+                                    <Button onClick={() => setStep('personal')} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                        Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                                    </Button>
                                 )}
-                                {!!selectedPatientId && step !== 'admissionType' && <p className="text-[11px] text-slate-400 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
+                                {step === 'personal' && (
+                                    <>
+                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-3 sm:px-4 min-w-0">
+                                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
+                                        </Button>
+                                        <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 sm:px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                            Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                                        </Button>
+                                    </>
+                                )}
+                                {step === 'clinical' && (
+                                    <>
+                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-3 sm:px-4 min-w-0">
+                                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
+                                        </Button>
+                                        <Button onClick={() => setStep('advanceBed')} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 sm:px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                            Next <ArrowRight className="h-4 w-4 ml-1.5" />
+                                        </Button>
+                                    </>
+                                )}
+                                {step === 'advanceBed' && (
+                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 sm:px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                                        {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
+                                    </Button>
+                                )}
                             </div>
-                            {step === 'admissionType' && (
-                                <Button onClick={() => setStep('personal')} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
-                                    Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                                </Button>
-                            )}
-                            {step === 'personal' && (
-                                <>
-                                    <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-10 px-4">
-                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Skip &amp; admit
-                                    </Button>
-                                    <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
-                                        Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                                    </Button>
-                                </>
-                            )}
-                            {step === 'clinical' && (
-                                <>
-                                    <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-10 px-4">
-                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Skip &amp; admit
-                                    </Button>
-                                    <Button onClick={() => setStep('advanceBed')} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
-                                        Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                                    </Button>
-                                </>
-                            )}
-                            {step === 'advanceBed' && (
-                                <Button onClick={submit} disabled={!canSubmit || submitting} className="h-10 px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
-                                    {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
-                                    {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
-                                </Button>
-                            )}
                         </div>
                     </>
                 )}

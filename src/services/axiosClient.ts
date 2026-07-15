@@ -90,9 +90,14 @@ axiosInstance.interceptors.response.use(
       switch (status) {
         case 401:
           if (!isAuthExempt) {
-            // Unauthorized - clear auth and redirect to login for protected endpoints
-            useAuthStore.getState().logout();
-            window.location.href = '/login';
+            // DEV-only IPD preview routes render the app shell without a real login, so shell
+            // background calls return 401 — don't hijack the preview by redirecting to /login.
+            const isDevPreview = import.meta.env.DEV && /(-preview|mobile-review)/.test(window.location.pathname);
+            if (!isDevPreview) {
+              // Unauthorized - clear auth and redirect to login for protected endpoints
+              useAuthStore.getState().logout();
+              window.location.href = '/login';
+            }
           }
           break;
           
