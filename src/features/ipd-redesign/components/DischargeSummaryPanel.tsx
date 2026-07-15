@@ -6,16 +6,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Check, Download, Printer, LogOut, Clock3, AlertTriangle, Settings2, Eye, RefreshCcw } from 'lucide-react';
+import { Loader2, Check, Download, Printer, LogOut, Clock3, AlertTriangle, Settings2, Eye, RefreshCcw, Share2, MessageCircle, Copy } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
 import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
 import { bedBoardApi } from '../services/bedBoardApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
-import { downloadHtmlAsPdf, openPrintHtml } from '@/utils/printUtils';
+import { downloadHtmlAsPdf, openPrintHtml, htmlToPdfBlob } from '@/utils/printUtils';
 import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
+import { API_BASE_URL } from '@/app/api';
 import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
+import { LookupAutosuggestField } from './LookupAutosuggestField';
+import { Icd10CodePicker } from './Icd10CodePicker';
 import { DischargeMedicationsEditor } from './DischargeMedicationsEditor';
 import { DischargeFieldLayoutEditor } from './DischargeFieldLayoutEditor';
 import { ConsentPanel } from './ConsentPanel';
@@ -25,7 +29,7 @@ import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import type { DischargeFieldConfigItem } from '../services/dischargeFieldLayoutApi';
 import { dischargeSettingsApi } from '../services/dischargeSettingsApi';
 import { DischargePreviewModal } from '@/components/shared/discharge-preview/components/DischargePreviewModal';
-import type { DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
+import { buildBlankA4TemplateFile, type DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
 import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 
@@ -36,6 +40,7 @@ interface Props {
 }
 
 const CONDITIONS: ConditionAtDischarge[] = ['STABLE', 'IMPROVED', 'RECOVERED', 'REFERRED', 'LAMA', 'EXPIRED'];
+const SEX_LABEL: Record<string, string> = { M: 'Male', F: 'Female', O: 'Other' };
 
 const EMPTY_FORM: SaveDischargeSummaryFields = {};
 
@@ -80,7 +85,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const [lamaSignatureDataUrl, setLamaSignatureDataUrl] = useState<string | null>(null);
 
     const [customizeOpen, setCustomizeOpen] = useState(false);
-    const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout();
+    // Scoped to the admission's assigned doctor, not whoever is currently logged in viewing/
+    // editing this discharge summary — a nurse, front-desk user, or a different doctor must see
+    // the same field layout and letterhead as the assigned doctor would, not their own (or none).
+    const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
     const layoutByKey = useMemo(() => new Map(layoutFields.map(f => [f.key, f])), [layoutFields]);
     const isVisible = (key: string) => (hasSavedLayout ? layoutByKey.get(key)?.showInPad ?? true : true);
 
@@ -329,8 +337,11 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             patientAddress: admission.patientAddress || undefined,
             admittedAt: admission.admittedAt,
             dischargedAt: physicalDischargeAt || new Date().toISOString(),
+            referredBy: admission.referralName || undefined,
             admittingDiagnosis: form.admittingDiagnosis,
             finalDiagnosis: form.finalDiagnosis,
+            finalDiagnosisIcd10Code: form.finalDiagnosisIcd10Code,
+            finalDiagnosisIcd10Name: form.finalDiagnosisIcd10Name,
             chiefComplaint: form.chiefComplaint,
             historyOfPresentIllness: form.historyOfPresentIllness,
             courseInHospital: form.courseInHospital,
@@ -353,16 +364,38 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         };
     };
 
+    // Mints (or refreshes) the same public "view on mobile" link the Share dialog uses, and
+    // returns its URL for embedding as a QR directly on the letterhead — always re-uploads so the
+    // link reflects the current signed content, not a stale earlier snapshot. Only ever called
+    // once signed (see the qrUrl line below), so an unsigned draft never gets a shareable QR baked
+    // into it.
+    const ensureShareUrl = async (): Promise<string | undefined> => {
+        try {
+            const settings = buildPrintSettingsFromHospital(hospitalData);
+            const html = buildDischargeSummaryA4(buildPrintData(), settings);
+            const blob = await htmlToPdfBlob(html);
+            const token = await dischargeSummaryApi.uploadPdf(admission.admissionId, blob);
+            setShareToken(token);
+            return `${API_BASE_URL}/public-discharge/${token}`;
+        } catch {
+            return undefined;
+        }
+    };
+
     // If this doctor+hospital has a Discharge letterhead configured (a template PDF actually
-    // uploaded, not just default settings), render through the new pdf-lib template-bound renderer
-    // — same personalized field layout that drives the workspace form. Otherwise return null so the
-    // caller falls back to today's generic HTML print, unchanged (no letterhead = no regression).
-    const buildLetterheadPreviewOptions = async (): Promise<DischargeTemplateBoundOptions | null> => {
-        if (!layoutDoctorId || !hospitalId) return null;
-        const settings = await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId);
-        if (!settings?.uri) return null;
-        const templateFile = await dischargeSettingsApi.fetchTemplateFile(settings.uri);
-        if (!templateFile) return null;
+    // uploaded, not just default settings), render through the pdf-lib template-bound renderer —
+    // same personalized field layout that drives the workspace form. Without one, allowBlank=true
+    // callers (the in-app Preview) still get a real preview drawn on a blank A4 canvas rather than
+    // a dead end; allowBlank=false callers (Download/Print) return null so they keep falling back
+    // to today's generic hospital-branded HTML print, unchanged.
+    const buildLetterheadPreviewOptions = async ({ allowBlank }: { allowBlank: boolean }): Promise<DischargeTemplateBoundOptions | null> => {
+        if (!hospitalId) return null;
+        const settings = layoutDoctorId ? await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId) : null;
+        let templateFile = settings?.uri ? await dischargeSettingsApi.fetchTemplateFile(settings.uri) : null;
+        if (!templateFile) {
+            if (!allowBlank) return null;
+            templateFile = await buildBlankA4TemplateFile();
+        }
 
         const data = buildPrintData();
         const formatDateOnly = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined);
@@ -370,31 +403,40 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         return {
             templateFile,
             margins: {
-                top: settings.headerHeight ?? 20,
-                bottom: settings.footerHeight ?? 20,
-                left: settings.contentLeftMargin ?? 20,
-                right: settings.contentRightMargin ?? 20,
+                top: settings?.headerHeight ?? 20,
+                bottom: settings?.footerHeight ?? 20,
+                left: settings?.contentLeftMargin ?? 20,
+                right: settings?.contentRightMargin ?? 20,
             },
-            overflowStrategy: settings.overFlowPage === false ? 'blank' : 'reuse-template',
+            overflowStrategy: settings?.overFlowPage === false ? 'blank' : 'reuse-template',
             typography: {
-                family: (settings.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
-                size: settings.fontSize ?? 11,
-                weight: (settings.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
-                color: settings.textColour ?? '#111827',
+                family: (settings?.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
+                size: settings?.fontSize ?? 11,
+                weight: (settings?.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
+                color: settings?.textColour ?? '#111827',
             },
             payload: {
                 admissionNo: data.admissionNo,
                 patientName: data.patientName,
                 patientId: data.patientId,
-                ageGender: data.ageGender,
+                patientAge: admission.patientAge,
+                patientSex: admission.patientSex ? (SEX_LABEL[admission.patientSex] ?? admission.patientSex) : undefined,
+                mobile: data.mobile || undefined,
+                patientAddress: data.patientAddress,
+                assignedDoctorName: admission.primaryDoctorName || undefined,
+                referredBy: data.referredBy,
                 admittedAt: data.admittedAt,
                 dischargedAt: data.dischargedAt,
                 conditionAtDischarge: data.conditionAtDischarge,
                 signedByDoctorName: data.signedByDoctorName,
                 signedAt: data.signedAt,
+                qrUrl: isSigned ? await ensureShareUrl() : undefined,
                 fields: {
                     admittingDiagnosis: data.admittingDiagnosis,
                     finalDiagnosis: data.finalDiagnosis,
+                    finalDiagnosisIcd10: data.finalDiagnosisIcd10Code
+                        ? `${data.finalDiagnosisIcd10Code} — ${data.finalDiagnosisIcd10Name ?? ''}`
+                        : undefined,
                     chiefComplaint: data.chiefComplaint,
                     historyOfPresentIllness: data.historyOfPresentIllness,
                     courseInHospital: data.courseInHospital,
@@ -413,10 +455,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         };
     };
 
+    // In-app Preview always shows something — a real letterhead if one's configured, otherwise the
+    // same content laid out on a blank A4 canvas (with the configured/default margins applied)
+    // rather than a toast-and-nothing dead end.
     const openLetterheadPreview = async () => {
-        const options = await buildLetterheadPreviewOptions();
+        const options = await buildLetterheadPreviewOptions({ allowBlank: true });
         if (!options) {
-            toast({ title: 'No letterhead template configured. Please customize your discharge letterhead first.' });
+            toast({ title: 'Could not load the discharge preview.', variant: 'destructive' });
             return false;
         }
         setPreviewOptions(options);
@@ -424,16 +469,76 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         return true;
     };
 
+    // Download/Print only route through the letterhead-bound preview when a real letterhead is
+    // configured; without one they keep using today's generic hospital-branded HTML print (nicer
+    // for actual output than a blank canvas), unchanged.
+    const openLetterheadPreviewIfConfigured = async () => {
+        const options = await buildLetterheadPreviewOptions({ allowBlank: false });
+        if (!options) return false;
+        setPreviewOptions(options);
+        setPreviewOpen(true);
+        return true;
+    };
+
     const download = async () => {
-        if (await openLetterheadPreview()) return;
+        if (await openLetterheadPreviewIfConfigured()) return;
         const settings = buildPrintSettingsFromHospital(hospitalData);
         const html = buildDischargeSummaryA4(buildPrintData(), settings);
         await downloadHtmlAsPdf(html, `discharge-summary-${admission.admissionNo}.pdf`);
     };
     const print = async () => {
-        if (await openLetterheadPreview()) return;
+        if (await openLetterheadPreviewIfConfigured()) return;
         const settings = buildPrintSettingsFromHospital(hospitalData);
         openPrintHtml(buildDischargeSummaryA4(buildPrintData(), settings));
+    };
+
+    // "View on mobile" QR + WhatsApp send — uses the standard hospital template (not a doctor's
+    // custom letterhead upload, which is an interactive pdf-lib preview flow rather than a byte
+    // source this can pull from directly).
+    const [shareOpen, setShareOpen] = useState(false);
+    const [shareBusy, setShareBusy] = useState(false);
+    const [shareToken, setShareToken] = useState<string | null>(null);
+    const [whatsAppBusy, setWhatsAppBusy] = useState(false);
+    const shareUrl = shareToken ? `${API_BASE_URL}/public-discharge/${shareToken}` : null;
+
+    const openShare = async () => {
+        setShareOpen(true);
+        if (shareToken) return;
+        setShareBusy(true);
+        try {
+            const settings = buildPrintSettingsFromHospital(hospitalData);
+            const html = buildDischargeSummaryA4(buildPrintData(), settings);
+            const blob = await htmlToPdfBlob(html);
+            const token = await dischargeSummaryApi.uploadPdf(admission.admissionId, blob);
+            setShareToken(token);
+        } catch (err) {
+            toast({ title: 'Could not generate the shareable link', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+            setShareOpen(false);
+        } finally {
+            setShareBusy(false);
+        }
+    };
+
+    const sendViaWhatsApp = async () => {
+        setWhatsAppBusy(true);
+        try {
+            await dischargeSummaryApi.sendWhatsApp(admission.admissionId);
+            toast({ title: 'Discharge summary sent via WhatsApp.' });
+        } catch (err) {
+            toast({ title: 'Could not send via WhatsApp', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setWhatsAppBusy(false);
+        }
+    };
+
+    const copyShareLink = async () => {
+        if (!shareUrl) return;
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast({ title: 'Link copied.' });
+        } catch {
+            toast({ title: 'Could not copy the link', variant: 'destructive' });
+        }
     };
 
     // One case per DEFAULT_DISCHARGE_FIELDS built-in key — visibility/label/order come from the
@@ -442,11 +547,24 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const renderBuiltinField = (key: string, label: string): React.ReactNode => {
         switch (key) {
             case 'admittingDiagnosis':
-                return <Field label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} />;
+                return <LookupAutosuggestField label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosis':
-                return <Field label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} />;
+                return <LookupAutosuggestField label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
+            case 'finalDiagnosisIcd10':
+                return (
+                    <Icd10CodePicker
+                        label={label}
+                        code={form.finalDiagnosisIcd10Code}
+                        name={form.finalDiagnosisIcd10Name}
+                        readOnly={isSigned}
+                        onSelect={(code, name) => setField({ finalDiagnosisIcd10Code: code, finalDiagnosisIcd10Name: name })}
+                        onClear={() => setField({ finalDiagnosisIcd10Code: undefined, finalDiagnosisIcd10Name: undefined })}
+                        hospitalId={hospitalId}
+                        doctorId={medicationSearchDoctorId}
+                    />
+                );
             case 'chiefComplaint':
-                return <Field label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} />;
+                return <LookupAutosuggestField label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} lookupType="CHIEF_COMPLAINT" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'conditionAtDischarge':
                 return (
                     <div>
@@ -472,7 +590,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     </div>
                 );
             case 'proceduresPerformed':
-                return <TextField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} />;
+                return <LookupAutosuggestField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} lookupType="PROCEDURE" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline />;
             case 'dischargeMedications':
                 return (
                     <DischargeMedicationsEditor
@@ -484,7 +602,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     />
                 );
             case 'followUpInstructions':
-                return <TextField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} lookupType="FOLLOW_UP_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'followUpDate':
                 return (
                     <div>
@@ -494,9 +612,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     </div>
                 );
             case 'dietInstructions':
-                return <TextField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} lookupType="DIET_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'activityRestrictions':
-                return <TextField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} lookupType="ACTIVITY_RESTRICTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'additionalNotes':
                 return <TextField label={label} value={form.additionalNotes} readOnly={isSigned} onChange={v => setField({ additionalNotes: v })} rows={2} />;
             default:
@@ -579,11 +697,39 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     {isSigned && (
                         <>
                             <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                            <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={openShare}><Share2 className="h-3.5 w-3.5 mr-1.5" /> Share</Button>
                             <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
                         </>
                     )}
                 </div>
             </div>
+
+            <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Share discharge summary</DialogTitle>
+                        <DialogDescription>Scan to view as a PDF on any phone, anytime — or send it straight to WhatsApp.</DialogDescription>
+                    </DialogHeader>
+                    {shareBusy ? (
+                        <div className="py-10 flex flex-col items-center justify-center gap-2 text-sm text-slate-400">
+                            <Loader2 className="h-5 w-5 animate-spin" /> Preparing the shareable link…
+                        </div>
+                    ) : shareUrl ? (
+                        <div className="flex flex-col items-center gap-4 py-2">
+                            <div className="p-3 rounded-xl border border-slate-200 bg-white">
+                                <QRCodeSVG value={shareUrl} size={168} level="H" />
+                            </div>
+                            <div className="flex items-center gap-2 w-full">
+                                <Input value={shareUrl} readOnly className="h-10 text-xs font-mono" />
+                                <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={copyShareLink}><Copy className="h-3.5 w-3.5" /></Button>
+                            </div>
+                            <Button className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 font-semibold" disabled={whatsAppBusy} onClick={sendViaWhatsApp}>
+                                {whatsAppBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-2" />} Send via WhatsApp
+                            </Button>
+                        </div>
+                    ) : null}
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={customizeOpen} onOpenChange={setCustomizeOpen}>
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">

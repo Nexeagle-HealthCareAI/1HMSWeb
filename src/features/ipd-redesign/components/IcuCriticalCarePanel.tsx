@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Check, Plus, HeartPulse, Activity } from 'lucide-react';
+import { Loader2, Check, Plus, HeartPulse, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import {
     icuApi, type IcuLevel, type IcuLevelOfCareEntry, type ApacheIIScoreEntry, type SofaScoreEntry,
     type ChronicHealthCategory, type VasopressorTier,
 } from '../services/icuApi';
 import { formatIstDateTime, formatIstTime } from '../utils/istDate';
+import { DevicesPanel } from './DevicesPanel';
+import { InfectionEventsPanel } from './InfectionEventsPanel';
 
 interface Props {
     admissionId: string;
@@ -197,6 +199,11 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
     };
 
     const sofaTrendData = [...sofaHistory].reverse().map(s => ({ time: formatIstTime(s.scoredAt), total: s.totalScore }));
+    // The trend matters more than any single value — flag it as a rising/falling signal right next
+    // to the chart rather than making someone eyeball the line. sofaHistory is newest-first.
+    const sofaTrend = sofaHistory.length >= 2
+        ? sofaHistory[0].totalScore === sofaHistory[1].totalScore ? 'flat' : sofaHistory[0].totalScore > sofaHistory[1].totalScore ? 'rising' : 'falling'
+        : null;
 
     return (
         <div className="space-y-5">
@@ -328,7 +335,19 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
             {/* SOFA */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> SOFA</h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> SOFA</h2>
+                        {sofaTrend === 'rising' && (
+                            <Badge variant="outline" className="text-[10px] font-bold bg-rose-50 text-rose-700 border-rose-200 flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" /> Rising — deteriorating
+                            </Badge>
+                        )}
+                        {sofaTrend === 'falling' && (
+                            <Badge variant="outline" className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1">
+                                <TrendingDown className="h-3 w-3" /> Improving
+                            </Badge>
+                        )}
+                    </div>
                     {isActive && (
                         <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openSofa}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New score
@@ -404,6 +423,14 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                         )}
                     </div>
                 )}
+            </div>
+
+            {/* Devices & Infection Prevention */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <DevicesPanel admissionId={admissionId} isActive={isActive} />
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <InfectionEventsPanel admissionId={admissionId} isActive={isActive} />
             </div>
         </div>
     );

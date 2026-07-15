@@ -10,7 +10,9 @@ import {
     ClipboardList, ClipboardCheck, Activity, Droplets, Droplet, ShieldAlert, ListChecks, ShieldOff, FileText, MessageSquareText, FileCheck2, Siren,
     AlertTriangle, FileBadge2, ChevronsUpDown, Fingerprint, Hash, Stethoscope, Wallet, Clock3, Files,
 } from 'lucide-react';
-import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem, type AdmissionDoctorHistoryItem } from '../services/admissionApi';
+import { useAuthStore } from '@/store/authStore';
+import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem, type AdmissionDoctorHistoryItem, type AdmissionReferrerHistoryItem } from '../services/admissionApi';
+import { ReferrerPicker, REFERRER_LABEL } from '../components/ReferrerPicker';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { isAboveEntitlement } from '../utils/roomEntitlement';
 import { AdmissionDetailsPanel } from '../components/AdmissionDetailsPanel';
@@ -30,9 +32,11 @@ import { BloodBankPanel } from '../components/BloodBankPanel';
 import { SurgeryCasePanel } from '../components/SurgeryCasePanel';
 import { IcuCriticalCarePanel } from '../components/IcuCriticalCarePanel';
 import { AdmissionDocumentsPanel } from '../components/AdmissionDocumentsPanel';
+import { DeteriorationAlertBanner } from '../components/DeteriorationAlertBanner';
 import { formatIstDateTime } from '../utils/istDate';
 
 const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
+const SEX_LABEL: Record<string, string> = { M: 'Male', F: 'Female', O: 'Other' };
 
 export type Section = 'overview' | 'admissionDetails' | 'cpoe' | 'mar' | 'nursing' | 'roundNotes' | 'sbarHandover' | 'consent' | 'documents' | 'bloodBank' | 'surgery' | 'criticalCare' | 'discharge';
 type CpoeTab = 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
@@ -94,6 +98,7 @@ interface Props {
  */
 export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged, initialSection }) => {
     const { toast } = useToast();
+    const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
     const [current, setCurrent] = useState<ActiveAdmissionItem>(admission);
     const [activeSection, setActiveSection] = useState<Section>(initialSection ?? 'overview');
     const [activeCpoeTab, setActiveCpoeTab] = useState<CpoeTab>('medications');
@@ -122,6 +127,16 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     const [doctorHistory, setDoctorHistory] = useState<AdmissionDoctorHistoryItem[]>([]);
     const [doctorHistoryLoading, setDoctorHistoryLoading] = useState(false);
 
+    const [referrerActionMode, setReferrerActionMode] = useState<'change' | null>(null);
+    const [pickedReferralSource, setPickedReferralSource] = useState<'SELF' | 'DOCTOR' | 'OTHER'>('SELF');
+    const [pickedReferrerId, setPickedReferrerId] = useState('');
+    const [pickedReferrerName, setPickedReferrerName] = useState('');
+    const [pickedReferrerType, setPickedReferrerType] = useState('');
+    const [referrerBusy, setReferrerBusy] = useState(false);
+    const [referrerHistoryOpen, setReferrerHistoryOpen] = useState(false);
+    const [referrerHistory, setReferrerHistory] = useState<AdmissionReferrerHistoryItem[]>([]);
+    const [referrerHistoryLoading, setReferrerHistoryLoading] = useState(false);
+
     const refreshAdmission = async () => {
         try {
             const list = await admissionApi.getActiveAdmissions('ALL');
@@ -144,6 +159,14 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
             .then(setDoctorHistory)
             .catch(() => setDoctorHistory([]))
             .finally(() => setDoctorHistoryLoading(false));
+    };
+
+    const loadReferrerHistory = () => {
+        setReferrerHistoryLoading(true);
+        admissionApi.getReferrerHistory(current.admissionId)
+            .then(setReferrerHistory)
+            .catch(() => setReferrerHistory([]))
+            .finally(() => setReferrerHistoryLoading(false));
     };
 
     useEffect(() => {
@@ -199,6 +222,39 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
         });
     };
 
+    // ── Referrer actions ─────────────────────────────────────────────────────
+    const runReferrerAction = async (fn: () => Promise<unknown>, successMessage: string) => {
+        setReferrerBusy(true);
+        try {
+            await fn();
+            toast({ title: successMessage });
+            setReferrerActionMode(null);
+            refreshAfterAction();
+            if (referrerHistoryOpen) loadReferrerHistory();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setReferrerBusy(false);
+        }
+    };
+
+    const toggleReferrerHistory = () => {
+        setReferrerHistoryOpen(open => {
+            const next = !open;
+            if (next) loadReferrerHistory();
+            return next;
+        });
+    };
+
+    const startChangeReferrer = () => {
+        setReferrerActionMode('change');
+        const source = current.referralSource === 'DOCTOR' || current.referralSource === 'OTHER' ? current.referralSource : 'SELF';
+        setPickedReferralSource(source);
+        setPickedReferrerId(source === 'SELF' ? '' : current.referredByReferrerId ?? '');
+        setPickedReferrerName(source === 'SELF' ? '' : current.referralName ?? '');
+        setPickedReferrerType('');
+    };
+
     const releaseBed = async () => {
         setBedBusy(true);
         try {
@@ -232,83 +288,75 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     return (
         <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
             {/* Premium Header Card */}
-            <div className="relative rounded-2xl sm:rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-4 sm:p-6 overflow-hidden">
+            <div className="relative rounded-2xl sm:rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-3.5 sm:p-4 overflow-hidden">
                 {/* Subtle top-right decorative gradient (optional touch of premium) */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-400/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative flex items-start gap-3 sm:gap-5">
-                    {/* Gradient Avatar */}
-                    <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-sm sm:text-lg font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50 sm:mt-1">
-                        {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
-                    </div>
+                <div className="relative">
+                    {/* Back — top-left, above the identity block (not opposite it). Explicit
+                        text/hover-text colors: the outline Button variant's own hover state
+                        (hover:text-accent-foreground) resolves to white, which combined with a
+                        white hover background made the label invisible on hover. */}
+                    <Button variant="outline" size="sm" className="h-8 rounded-full bg-white/50 hover:bg-white text-slate-700 hover:text-slate-900 shadow-sm border-slate-200 mb-2.5" onClick={onBack}>
+                        <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
+                    </Button>
 
-                    <div className="flex-1 min-w-0">
-                        {/* Name & Badges */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
-                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
-                                <h1 className="text-lg sm:text-2xl font-black text-slate-900 capitalize tracking-tight truncate max-w-[60vw] sm:max-w-md">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                        {/* Gradient Avatar */}
+                        <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-sm font-black shrink-0 shadow-lg shadow-brand-500/30 border border-brand-400/50">
+                            {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            {/* Name & Badges — package/referrer surfaced here too (not just the
+                                Admission Details tab) since they're what staff most often need to
+                                confirm at a glance when opening a chart. */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+                                <h1 className="text-base sm:text-xl font-black text-slate-900 capitalize tracking-tight truncate max-w-[60vw] sm:max-w-md mr-1">
                                     {current.patientName || current.patientId}
                                 </h1>
                                 {current.patientAge != null && (
-                                    <Badge variant="outline" className="text-xs font-bold bg-white text-slate-700 shadow-sm px-2.5 py-0.5 rounded-full border-slate-200">
-                                        {current.patientAge}{current.patientSex ? ` ${current.patientSex}` : ''}
+                                    <Badge variant="outline" className="text-[11px] font-bold bg-white text-slate-700 shadow-sm px-2 py-0 rounded-full border-slate-200">
+                                        Age: {current.patientAge} {current.patientAge === 1 ? 'year' : 'years'}
                                     </Badge>
                                 )}
-                                <Badge variant="outline" className={cn('text-xs font-bold px-3 py-0.5 rounded-full shadow-sm', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-500/10' : 'bg-slate-50 text-slate-600 border-slate-200')}>
-                                    {current.statusCode.replace(/_/g, ' ')}
+                                {current.patientSex && (
+                                    <Badge variant="outline" className="text-[11px] font-bold bg-white text-slate-700 shadow-sm px-2 py-0 rounded-full border-slate-200">
+                                        Sex: {SEX_LABEL[current.patientSex] ?? current.patientSex}
+                                    </Badge>
+                                )}
+                                <Badge variant="outline" className={cn('text-[11px] font-bold px-2.5 py-0 rounded-full shadow-sm', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-500/10' : 'bg-slate-50 text-slate-600 border-slate-200')}>
+                                    Status: {current.statusCode.replace(/_/g, ' ')}
                                 </Badge>
+                                {(current.otPlanProcedureNameSnapshot || current.packageCode) && (
+                                    <Badge variant="outline" className="text-[11px] font-bold px-2.5 py-0 rounded-full shadow-sm bg-violet-50 text-violet-700 border-violet-200">
+                                        Plan: {current.otPlanProcedureNameSnapshot || current.packageCode}
+                                    </Badge>
+                                )}
+                                {current.packageTypeNameSnapshot && (
+                                    <Badge variant="outline" className="text-[11px] font-bold px-2.5 py-0 rounded-full shadow-sm bg-amber-50 text-amber-700 border-amber-200">
+                                        Package Type: {current.packageTypeNameSnapshot}
+                                    </Badge>
+                                )}
+                                {current.referralName && (
+                                    <Badge variant="outline" className="text-[11px] font-bold px-2.5 py-0 rounded-full shadow-sm bg-sky-50 text-sky-700 border-sky-200">
+                                        Referred by: {current.referralName}
+                                    </Badge>
+                                )}
                             </div>
 
-                            <Button variant="outline" size="sm" className="h-10 sm:h-9 rounded-full bg-white/50 hover:bg-white shadow-sm border-slate-200 self-start shrink-0" onClick={onBack}>
-                                <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
-                            </Button>
-                        </div>
-
-                        {/* Details — compact icon-led list on mobile (label left, value right,
-                            one line per field); spaced-out row on tablet/desktop where there's
-                            room for label-above-value blocks. */}
-                        <div className="sm:hidden mt-4 pt-1 border-t border-slate-200/60 divide-y divide-slate-100">
-                            <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong />
-                            <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong />
-                            <DetailRow icon={Stethoscope} label="Admitting Doctor" value={current.primaryDoctorName ?? '—'} />
-                            <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} />
-                            {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} />}
-                            {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} />}
-                        </div>
-
-                        <div className="hidden sm:flex sm:flex-wrap items-center gap-x-8 gap-y-5 mt-6 pt-5 border-t border-slate-200/60">
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Patient ID</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{current.patientId}</p>
+                            {/* Details — one compact single-line icon+label+value row per field
+                                (DetailRow), wrapped in a responsive grid so it never needs a
+                                separate mobile/desktop layout. Far shorter than the old stacked
+                                label-above-value blocks this replaced. */}
+                            <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-5">
+                                <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong />
+                                <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong />
+                                <DetailRow icon={Stethoscope} label="Doctor" value={current.primaryDoctorName ?? '—'} />
+                                <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} />
+                                {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} />}
+                                {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} />}
                             </div>
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{current.admissionNo}</p>
-                            </div>
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitting Doctor</p>
-                                <p className="text-sm font-semibold text-slate-700 max-w-[160px] truncate" title={current.primaryDoctorName ?? ''}>
-                                    {current.primaryDoctorName ?? '—'}
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-1 min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer</p>
-                                <p className="text-sm font-semibold text-slate-700 max-w-[180px] truncate" title={`${current.payerType} ${current.payerName ? `(${current.payerName})` : ''}`}>
-                                    <span className="font-bold text-slate-800">{current.payerType}</span> {current.payerName ? <span className="text-slate-500 text-xs">({current.payerName})</span> : ''}
-                                </p>
-                            </div>
-                            {current.admittedAt && (
-                                <div className="flex flex-col gap-1 min-w-0">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admitted</p>
-                                    <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime(current.admittedAt)}</p>
-                                </div>
-                            )}
-                            {(current as any).dischargedAt && (
-                                <div className="flex flex-col gap-1 min-w-0">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discharged</p>
-                                    <p className="text-sm font-semibold text-slate-700 truncate">{formatIstDateTime((current as any).dischargedAt)}</p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -475,6 +523,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 <div className="flex-1 min-w-0 space-y-5">
                     {activeSection === 'overview' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="lg:col-span-2">
+                                <DeteriorationAlertBanner admissionId={current.admissionId} />
+                            </div>
                             <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Bed</h2>
                                 {current.bedCode ? (
@@ -607,6 +658,104 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                                     <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-3 text-xs">
                                                         <span className="font-semibold text-slate-800 truncate">
                                                             {h.doctorName ?? '—'}
+                                                            {h.statusCode === 'ACTIVE' && <span className="ml-1.5 text-[10px] font-bold uppercase text-emerald-600">Current</span>}
+                                                        </span>
+                                                        <span className="text-slate-500 shrink-0">
+                                                            {formatIstDateTime(h.assignedAt)} → {h.unassignedAt ? formatIstDateTime(h.unassignedAt) : 'Present'}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Referrer</h2>
+                                    <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] shrink-0" onClick={toggleReferrerHistory}>
+                                        {referrerHistoryOpen ? 'Hide history' : 'History'}
+                                    </Button>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    {current.referralSource === 'SELF' ? (
+                                        <p className="font-semibold text-slate-900">Self</p>
+                                    ) : current.referralName ? (
+                                        <p className="font-semibold text-slate-900">
+                                            {current.referralName}
+                                            {current.referralSource && <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400">{current.referralSource}</span>}
+                                        </p>
+                                    ) : (
+                                        <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Not specified' : 'None'}</p>
+                                    )}
+                                    {isActive && (
+                                        <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={startChangeReferrer}>
+                                            <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Change referrer
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {referrerActionMode && (
+                                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                                        <div className="flex gap-2">
+                                            {(['SELF', 'DOCTOR', 'OTHER'] as const).map(opt => {
+                                                const active = pickedReferralSource === opt;
+                                                return (
+                                                    <button key={opt} type="button"
+                                                        onClick={() => { setPickedReferralSource(opt); setPickedReferrerId(''); setPickedReferrerName(''); setPickedReferrerType(''); }}
+                                                        className={cn('flex-1 h-9 rounded-lg border-2 text-xs font-semibold transition-all',
+                                                            active ? 'bg-brand-600 text-white border-transparent' : 'bg-white border-slate-200 text-slate-600')}>
+                                                        {opt === 'SELF' ? 'Self' : opt === 'DOCTOR' ? 'Doctor' : 'Other'}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {(pickedReferralSource === 'DOCTOR' || pickedReferralSource === 'OTHER') && (
+                                            <ReferrerPicker
+                                                hospitalId={hospitalId}
+                                                referrerId={pickedReferrerId}
+                                                referrerName={pickedReferrerName}
+                                                referrerType={pickedReferrerType}
+                                                lockedType={pickedReferralSource === 'DOCTOR' ? 'DOCTOR' : 'REFERRER'}
+                                                onSelect={(id, name, type) => { setPickedReferrerId(id); setPickedReferrerName(name); setPickedReferrerType(type); }}
+                                                onClear={() => { setPickedReferrerId(''); setPickedReferrerName(''); setPickedReferrerType(''); }}
+                                            />
+                                        )}
+
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Button variant="ghost" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none" onClick={() => setReferrerActionMode(null)}>Cancel</Button>
+                                            <Button size="sm"
+                                                disabled={(pickedReferralSource !== 'SELF' && !pickedReferrerId) || referrerBusy}
+                                                className="h-11 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700"
+                                                onClick={() => runReferrerAction(() => admissionApi.changeReferrer(current.admissionId, {
+                                                    referralSource: pickedReferralSource,
+                                                    referrerId: pickedReferralSource === 'SELF' ? null : pickedReferrerId,
+                                                    referrerName: pickedReferralSource === 'SELF' ? null : pickedReferrerName,
+                                                    referrerType: pickedReferralSource === 'SELF' ? null : pickedReferrerType,
+                                                }), 'Referrer changed.')}>
+                                                {referrerBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+                                                Change
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {referrerHistoryOpen && (
+                                    <div className="mt-3 pt-3 border-t border-slate-100">
+                                        {referrerHistoryLoading ? (
+                                            <p className="text-xs text-slate-400 flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</p>
+                                        ) : referrerHistory.length === 0 ? (
+                                            <p className="text-xs text-slate-400">No history yet.</p>
+                                        ) : (
+                                            <ul className="space-y-2">
+                                                {referrerHistory.map(h => (
+                                                    <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-3 text-xs">
+                                                        <span className="font-semibold text-slate-800 truncate">
+                                                            {h.referralSource === 'SELF' ? 'Self' : h.referrerName ?? '—'}
+                                                            {h.referrerType && <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400">{REFERRER_LABEL[h.referrerType] ?? h.referrerType}</span>}
                                                             {h.statusCode === 'ACTIVE' && <span className="ml-1.5 text-[10px] font-bold uppercase text-emerald-600">Current</span>}
                                                         </span>
                                                         <span className="text-slate-500 shrink-0">
@@ -791,9 +940,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 // right-aligned and truncating, one line per field instead of the label-above-value blocks the
 // desktop layout uses (which take roughly 2x the vertical space per field).
 const DetailRow: React.FC<{ icon: React.ElementType; label: string; value: string; strong?: boolean }> = ({ icon: Icon, label, value, strong }) => (
-    <div className="flex items-center gap-2.5 py-2.5 text-sm">
+    <div className="flex items-center gap-2 py-1.5 text-xs sm:text-sm min-w-0">
         <Icon className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-        <span className="text-slate-500 shrink-0">{label}</span>
+        <span className="text-slate-400 shrink-0">{label}</span>
         <span className={cn('flex-1 min-w-0 text-left truncate', strong ? 'font-bold text-slate-800' : 'font-semibold text-slate-700')} title={value}>
             {value}
         </span>

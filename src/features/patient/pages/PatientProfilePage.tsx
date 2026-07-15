@@ -163,7 +163,6 @@ export const PatientProfilePage: React.FC = () => {
       try {
         // Use searchPatients to find the patient's record which includes appointmentId
         const response = await appointmentApi.searchPatients({
-          by: 'patientId',
           q: patientId,
           scope: 'local'
         });

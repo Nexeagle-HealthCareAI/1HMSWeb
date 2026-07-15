@@ -20,6 +20,8 @@ interface Props {
     admission: ActiveAdmissionItem;
 }
 
+const SEX_LABEL: Record<string, string> = { M: 'Male', F: 'Female', O: 'Other' };
+
 export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
     const { toast } = useToast();
     const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
@@ -28,7 +30,9 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
 
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewOptions, setPreviewOptions] = useState<DischargeTemplateBoundOptions | null>(null);
-    const { fields: layoutFields, doctorId: layoutDoctorId } = useDischargeFieldLayout();
+    // Scoped to the admission's assigned doctor, not whoever is currently logged in — any staff
+    // member printing from the dashboard must see the same letterhead the assigned doctor would.
+    const { fields: layoutFields, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
 
     const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
     useEffect(() => {
@@ -74,8 +78,11 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 patientAddress: admission.patientAddress || undefined,
                 admittedAt: admission.admittedAt,
                 dischargedAt: physicalDischargeAt || draft.signedAt || new Date().toISOString(),
+                referredBy: admission.referralName || undefined,
                 admittingDiagnosis: draft.admittingDiagnosis || undefined,
                 finalDiagnosis: draft.finalDiagnosis || undefined,
+                finalDiagnosisIcd10Code: draft.finalDiagnosisIcd10Code || undefined,
+                finalDiagnosisIcd10Name: draft.finalDiagnosisIcd10Name || undefined,
                 chiefComplaint: draft.chiefComplaint || undefined,
                 historyOfPresentIllness: draft.historyOfPresentIllness || undefined,
                 courseInHospital: draft.courseInHospital || undefined,
@@ -125,15 +132,23 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                 admissionNo: printData.admissionNo,
                                 patientName: printData.patientName,
                                 patientId: printData.patientId,
-                                ageGender: printData.ageGender,
+                                patientAge: admission.patientAge,
+                                patientSex: admission.patientSex ? (SEX_LABEL[admission.patientSex] ?? admission.patientSex) : undefined,
+                                mobile: printData.mobile || undefined,
+                                patientAddress: printData.patientAddress,
+                                assignedDoctorName: admission.primaryDoctorName || undefined,
                                 admittedAt: printData.admittedAt,
                                 dischargedAt: printData.dischargedAt,
+                                referredBy: printData.referredBy,
                                 conditionAtDischarge: printData.conditionAtDischarge,
                                 signedByDoctorName: printData.signedByDoctorName,
                                 signedAt: printData.signedAt,
                                 fields: {
                                     admittingDiagnosis: printData.admittingDiagnosis,
                                     finalDiagnosis: printData.finalDiagnosis,
+                                    finalDiagnosisIcd10: printData.finalDiagnosisIcd10Code
+                                        ? `${printData.finalDiagnosisIcd10Code} — ${printData.finalDiagnosisIcd10Name ?? ''}`
+                                        : undefined,
                                     chiefComplaint: printData.chiefComplaint,
                                     historyOfPresentIllness: printData.historyOfPresentIllness,
                                     courseInHospital: printData.courseInHospital,

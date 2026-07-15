@@ -149,6 +149,12 @@ export interface AdmitPatientPayload {
     // Optional OT Plan picked in the wizard — pre-fills EntitledRoomCategory server-side (when not
     // explicitly supplied) and snapshots ProcedureName/SuggestedIcuLevel onto the admission.
     otPlanId?: string;
+    // Free-text plan name when the desired plan isn't in the OT Plan list — stored the same as a
+    // real plan's name would be. Ignored server-side if otPlanId is also supplied.
+    customOtPlanText?: string;
+    // Optional Package Type picked in the wizard, from the hospital's Package Type master (same
+    // master used by Advise Admission / OT Plan editor) — snapshotted (name) onto the admission.
+    packageTypeId?: string | null;
     // Set when admitting from a Referred Admissions board row — that referral is atomically marked
     // CONVERTED server-side, in the same transaction that creates this admission.
     referralId?: string;
@@ -209,6 +215,7 @@ export interface ActiveAdmissionItem {
     primaryDoctorName?: string | null;
     referralSource?: string | null;
     referralName?: string | null;
+    referredByReferrerId?: string | null;
     referringFacilityName?: string | null;
     referringFacilityType?: string | null;
     referringFacilityContact?: string | null;
@@ -232,6 +239,9 @@ export interface ActiveAdmissionItem {
     // procedure-name pre-fill and ICU hint.
     otPlanProcedureNameSnapshot?: string | null;
     otPlanSuggestedIcuLevel?: string | null;
+
+    // Package Type picked at admit time, if any — frozen snapshot, not live.
+    packageTypeNameSnapshot?: string | null;
 }
 
 export interface AdmissionDoctorHistoryItem {
@@ -259,6 +269,32 @@ export interface ChangeAdmittingDoctorResponse {
     assignedAt?: string;
 }
 
+export interface AdmissionReferrerHistoryItem {
+    assignmentId: string;
+    referralSource: string;   // SELF | DOCTOR | OTHER
+    referrerId?: string | null;
+    referrerName?: string | null;
+    referrerType?: string | null;
+    assignedAt: string;
+    assignedBy?: string | null;
+    unassignedAt?: string | null;
+    unassignedBy?: string | null;
+    statusCode: string;   // ACTIVE | REPLACED
+}
+
+interface GetAdmissionReferrerHistoryResponse {
+    success?: boolean;
+    message?: string;
+    items?: AdmissionReferrerHistoryItem[];
+}
+
+export interface ChangeAdmissionReferrerResponse {
+    success?: boolean;
+    message?: string;
+    assignmentId?: string;
+    assignedAt?: string;
+}
+
 export interface UpdateAdmissionDetailsPayload {
     admissionId: string;
     primaryDoctorId?: string;
@@ -269,6 +305,9 @@ export interface UpdateAdmissionDetailsPayload {
     depositExpected?: number;
     referralSource?: string;
     referralName?: string;
+    referredByReferrerId?: string;
+    // Snapshotted onto the AdmissionReferrerAssignment history row alongside referralName.
+    referrerType?: string;
     referringFacilityName?: string;
     referringFacilityType?: string;
     referringFacilityContact?: string;
@@ -400,5 +439,22 @@ export const admissionApi = {
     getDoctorHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionDoctorHistoryItem[]> =>
         ipdApiClient
             .get<GetAdmissionDoctorHistoryResponse>('/admission/doctor/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .then(r => r.items ?? []),
+
+    changeReferrer: async (
+        admissionId: string,
+        referral: { referralSource: 'SELF' | 'DOCTOR' | 'OTHER'; referrerId?: string | null; referrerName?: string | null; referrerType?: string | null },
+        hospitalId?: string,
+    ): Promise<ChangeAdmissionReferrerResponse> => {
+        try {
+            return await ipdApiClient.post('/admission/referrer', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, ...referral });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not change the referrer.'));
+        }
+    },
+
+    getReferrerHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionReferrerHistoryItem[]> =>
+        ipdApiClient
+            .get<GetAdmissionReferrerHistoryResponse>('/admission/referrer/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
             .then(r => r.items ?? []),
 };

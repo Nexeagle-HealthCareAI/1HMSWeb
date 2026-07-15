@@ -117,8 +117,11 @@ export interface DischargeSummaryPrintData {
     patientAddress?: string;
     admittedAt: string;
     dischargedAt: string;
+    referredBy?: string;
     admittingDiagnosis?: string;
     finalDiagnosis?: string;
+    finalDiagnosisIcd10Code?: string;
+    finalDiagnosisIcd10Name?: string;
     chiefComplaint?: string;
     historyOfPresentIllness?: string;
     courseInHospital?: string;

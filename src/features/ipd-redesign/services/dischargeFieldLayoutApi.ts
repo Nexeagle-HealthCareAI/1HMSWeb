@@ -34,17 +34,18 @@ export const DEFAULT_DISCHARGE_FIELDS: DischargeFieldConfigItem[] = [
     { key: 'conditionAtDischarge', label: 'Condition at Discharge', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 0 },
     { key: 'admittingDiagnosis', label: 'Admitting Diagnosis', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 1 },
     { key: 'finalDiagnosis', label: 'Final Diagnosis', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 2 },
-    { key: 'chiefComplaint', label: 'Chief Complaint', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 3 },
-    { key: 'historyOfPresentIllness', label: 'History of Present Illness', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 4 },
-    { key: 'courseInHospital', label: 'Course in Hospital', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 5 },
-    { key: 'proceduresPerformed', label: 'Procedures Performed', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 6 },
-    { key: 'dischargeMedications', label: 'Discharge Medications', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 7 },
-    { key: 'followUpInstructions', label: 'Follow-up Instructions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 8 },
-    { key: 'followUpDate', label: 'Follow-up Date', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 9 },
-    { key: 'dietInstructions', label: 'Diet Instructions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 10 },
-    { key: 'activityRestrictions', label: 'Activity Restrictions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 11 },
-    { key: 'additionalNotes', label: 'Additional Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 12 },
-    { key: 'nonPayableAnnexure', label: 'Non-Payable Items Annexure', type: 'builtin', builtIn: true, showInPad: false, showInPrint: true, order: 13 },
+    { key: 'finalDiagnosisIcd10', label: 'ICD-10 Code', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 3 },
+    { key: 'chiefComplaint', label: 'Chief Complaint', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 4 },
+    { key: 'historyOfPresentIllness', label: 'History of Present Illness', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 5 },
+    { key: 'courseInHospital', label: 'Course in Hospital', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 6 },
+    { key: 'proceduresPerformed', label: 'Procedures Performed', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 7 },
+    { key: 'dischargeMedications', label: 'Discharge Medications', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 8 },
+    { key: 'followUpInstructions', label: 'Follow-up Instructions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 9 },
+    { key: 'followUpDate', label: 'Follow-up Date', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 10 },
+    { key: 'dietInstructions', label: 'Diet Instructions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 11 },
+    { key: 'activityRestrictions', label: 'Activity Restrictions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 12 },
+    { key: 'additionalNotes', label: 'Additional Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 13 },
+    { key: 'nonPayableAnnexure', label: 'Non-Payable Items Annexure', type: 'builtin', builtIn: true, showInPad: false, showInPrint: true, order: 14 },
 ];
 
 /**
@@ -68,18 +69,21 @@ export function mergeFieldsWithDefaults(saved: DischargeFieldConfigItem[] | unde
     return merged.sort((a, b) => a.order - b.order);
 }
 
-const fieldLayoutUrl = (doctorId: string) => `/discharge-summary/configuration/field-layout/doctorId=${encodeURIComponent(doctorId)}`;
+// Scoped per (doctorId, hospitalId) — a doctor's customization at one hospital no longer bleeds
+// into another (see alter_doctor_discharge_field_configs_add_hospital.sql).
+const fieldLayoutUrl = (doctorId: string, hospitalId: string) =>
+    `/discharge-summary/configuration/field-layout/doctorId=${encodeURIComponent(doctorId)}?hospitalId=${encodeURIComponent(hospitalId)}`;
 
 export const dischargeFieldLayoutApi = {
-    async getFieldLayout(doctorId: string): Promise<GetFieldLayoutResponse> {
+    async getFieldLayout(doctorId: string, hospitalId: string): Promise<GetFieldLayoutResponse> {
         try {
-            return await ipdApiClient.get<GetFieldLayoutResponse>(fieldLayoutUrl(doctorId));
+            return await ipdApiClient.get<GetFieldLayoutResponse>(fieldLayoutUrl(doctorId, hospitalId));
         } catch {
             return { success: false, message: 'Failed to load field layout', fields: [] };
         }
     },
 
-    async updateFieldLayout(doctorId: string, fields: DischargeFieldConfigItem[]): Promise<UpdateFieldLayoutResponse> {
-        return ipdApiClient.put<UpdateFieldLayoutResponse>(fieldLayoutUrl(doctorId), { fields });
+    async updateFieldLayout(doctorId: string, hospitalId: string, fields: DischargeFieldConfigItem[]): Promise<UpdateFieldLayoutResponse> {
+        return ipdApiClient.put<UpdateFieldLayoutResponse>(fieldLayoutUrl(doctorId, hospitalId), { fields });
     },
 };

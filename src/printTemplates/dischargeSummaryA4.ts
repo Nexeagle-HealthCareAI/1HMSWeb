@@ -102,7 +102,8 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
                     Patient ID: ${data.patientId}<br/>
                     ${data.ageGender ? `${data.ageGender}<br/>` : ''}
                     ${data.mobile ? `Mobile: ${data.mobile}<br/>` : ''}
-                    ${data.patientAddress ? `${data.patientAddress}` : ''}
+                    ${data.patientAddress ? `${data.patientAddress}<br/>` : ''}
+                    ${data.referredBy ? `Referred by: ${data.referredBy}` : ''}
                 </div>
             </div>
             <div class="box" style="text-align:right;">
@@ -115,7 +116,9 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
         </div>
 
         ${section('Admitting Diagnosis', data.admittingDiagnosis)}
-        ${section('Final Diagnosis', data.finalDiagnosis)}
+        ${section('Final Diagnosis', data.finalDiagnosisIcd10Code
+            ? `${data.finalDiagnosis ?? ''} <span style="color:#64748b;">(ICD-10: ${data.finalDiagnosisIcd10Code} — ${data.finalDiagnosisIcd10Name ?? ''})</span>`
+            : data.finalDiagnosis)}
         ${section('Chief Complaint', data.chiefComplaint)}
         ${section('History of Present Illness', data.historyOfPresentIllness)}
         ${section('Course in Hospital', data.courseInHospital)}

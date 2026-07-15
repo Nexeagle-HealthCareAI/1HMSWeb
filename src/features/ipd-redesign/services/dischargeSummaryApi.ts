@@ -31,6 +31,8 @@ export interface DischargeSummaryDraft {
     signedByDoctorName?: string | null;
     admittingDiagnosis?: string | null;
     finalDiagnosis?: string | null;
+    finalDiagnosisIcd10Code?: string | null;
+    finalDiagnosisIcd10Name?: string | null;
     chiefComplaint?: string | null;
     historyOfPresentIllness?: string | null;
     courseInHospital?: string | null;
@@ -48,6 +50,8 @@ export interface DischargeSummaryDraft {
 export interface SaveDischargeSummaryFields {
     admittingDiagnosis?: string;
     finalDiagnosis?: string;
+    finalDiagnosisIcd10Code?: string;
+    finalDiagnosisIcd10Name?: string;
     chiefComplaint?: string;
     historyOfPresentIllness?: string;
     courseInHospital?: string;
@@ -101,6 +105,32 @@ export const dischargeSummaryApi = {
             return await ipdApiClient.post('/discharge-summary/unsign', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not revoke signature on the discharge summary.'));
+        }
+    },
+
+    // Uploads the client-rendered PDF, returning a long-lived AccessToken the caller encodes into
+    // the QR code / WhatsApp link (never the AdmissionId itself — see backend PdfBlobKey/AccessToken).
+    uploadPdf: async (admissionId: string, file: Blob, hospitalId?: string): Promise<string> => {
+        try {
+            const formData = new FormData();
+            formData.append('HospitalId', hospitalIdOrThrow(hospitalId));
+            formData.append('AdmissionId', admissionId);
+            formData.append('File', file, 'discharge-summary.pdf');
+            const res = await ipdApiClient.post<{ accessToken?: string }>('/discharge-summary/upload-pdf', formData, {
+                headers: { 'Content-Type': undefined },
+            } as any);
+            if (!res.accessToken) throw new Error('No access token returned.');
+            return res.accessToken;
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not generate the shareable discharge summary PDF.'));
+        }
+    },
+
+    sendWhatsApp: async (admissionId: string, mobileNumber?: string, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/discharge-summary/send-whatsapp', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, mobileNumber });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not send the discharge summary via WhatsApp.'));
         }
     },
 

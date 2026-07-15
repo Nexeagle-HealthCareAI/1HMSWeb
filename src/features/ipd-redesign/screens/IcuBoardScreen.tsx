@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Loader2, RefreshCw, AlertCircle, HeartPulse, Activity, Wind, BedDouble, Info, LayoutGrid, Package2
+    Loader2, RefreshCw, AlertCircle, HeartPulse, Activity, Wind, BedDouble, Info, LayoutGrid, Package2, Siren, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -95,13 +95,25 @@ export const IcuBoardScreen: React.FC = () => {
                                                 }}
                                                 className="w-full text-left bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
                                             >
-                                                <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-start justify-between mb-2 gap-2">
                                                     <h4 className="font-bold text-slate-900 dark:text-white truncate">{c.patientName || 'Unknown Patient'}</h4>
-                                                    {c.onVentilator && (
-                                                        <div title="On Mechanical Ventilation" className="bg-sky-100 text-sky-700 p-1 rounded-full">
-                                                            <Wind className="h-4 w-4" />
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        {c.hasOpenRapidResponse && (
+                                                            <div title="Rapid Response active" className="bg-rose-100 text-rose-700 p-1 rounded-full animate-pulse">
+                                                                <Siren className="h-4 w-4" />
+                                                            </div>
+                                                        )}
+                                                        {c.onVentilator && (
+                                                            <div title="On Mechanical Ventilation" className="bg-sky-100 text-sky-700 p-1 rounded-full">
+                                                                <Wind className="h-4 w-4" />
+                                                            </div>
+                                                        )}
+                                                        {c.hasOverdueBundleCheck && (
+                                                            <div title="Device bundle check overdue" className="bg-amber-100 text-amber-700 p-1 rounded-full">
+                                                                <ShieldAlert className="h-4 w-4" />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 
                                                 <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
@@ -115,7 +127,7 @@ export const IcuBoardScreen: React.FC = () => {
                                                     </p>
                                                 )}
 
-                                                <div className="flex items-center gap-2 mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
+                                                <div className="flex items-center gap-2 mt-auto pt-3 border-t border-slate-100 dark:border-slate-800 flex-wrap">
                                                     <Badge variant="outline" className={cn(
                                                         "text-[10px] font-mono",
                                                         (c.apacheScore ?? 0) >= 15 ? "border-red-200 text-red-700 bg-red-50" : "bg-slate-50"
@@ -128,6 +140,17 @@ export const IcuBoardScreen: React.FC = () => {
                                                     )}>
                                                         SOFA: {c.sofaScore != null ? c.sofaScore : '--'}
                                                     </Badge>
+                                                    {c.ewsScore != null && (
+                                                        <Badge variant="outline" className={cn(
+                                                            "text-[10px] font-mono",
+                                                            c.ewsRiskBand === 'HIGH' ? "border-rose-200 text-rose-700 bg-rose-50"
+                                                                : c.ewsRiskBand === 'MEDIUM' ? "border-orange-200 text-orange-700 bg-orange-50"
+                                                                : c.ewsRiskBand === 'LOW_MEDIUM' ? "border-amber-200 text-amber-700 bg-amber-50"
+                                                                : "bg-slate-50"
+                                                        )}>
+                                                            EWS: {c.ewsScore}
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </motion.button>
                                         ))}
