@@ -1,16 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { Globe, Loader2, Search, Stethoscope } from 'lucide-react';
+import { Globe, GraduationCap, Loader2, Pencil, Search, Star, Stethoscope } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
-import { publicDirectoryDoctorsApi, type HospitalDoctorItem } from '@/features/hospital/services/publicDirectoryDoctorsApi';
+import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '@/features/hospital/services/publicDirectoryDoctorsApi';
+import { EditDoctorTileDialog } from './EditDoctorTileDialog';
+
+const initialsFor = (name?: string | null) => {
+  const cleaned = (name || '').replace(/^Dr\.?\s*/i, '').trim();
+  if (!cleaned) return '?';
+  const parts = cleaned.split(/\s+/);
+  return ((parts[0]?.[0] || '') + (parts[parts.length - 1]?.[0] || '')).toUpperCase();
+};
 
 // Admin screen: opt this hospital's doctors into the platform-wide public directory
 // (NexEagle's "find a doctor" page, spanning every opted-in hospital). Off by default —
@@ -77,15 +87,16 @@ export const PublicDirectoryConfig: React.FC = () => {
   };
 
   // Per-doctor curation — only meaningful once the hospital itself has opted in above.
-  const [doctors, setDoctors] = useState<(HospitalDoctorItem & { saving?: boolean })[]>([]);
+  const [doctors, setDoctors] = useState<(PublicDirectoryDoctorTile & { saving?: boolean })[]>([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [editingDoctor, setEditingDoctor] = useState<PublicDirectoryDoctorTile | null>(null);
 
   const loadDoctors = useCallback(async () => {
     if (!hospitalId) return;
     setDoctorsLoading(true);
     try {
-      const res = await publicDirectoryDoctorsApi.list(hospitalId);
+      const res = await publicDirectoryDoctorsApi.listTiles(hospitalId);
       setDoctors((res?.doctors ?? []).map((d) => ({ ...d })));
     } catch {
       // non-fatal — list just stays empty, matches PublicApiClientConfig's old error handling
@@ -174,7 +185,7 @@ export const PublicDirectoryConfig: React.FC = () => {
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             {isListed
-              ? translate('publicDirectory.doctorsDescription', 'Choose which of your doctors patients can find and book from the public directory.')
+              ? translate('publicDirectory.doctorsDescription', 'Choose which of your doctors patients can find and book from the public directory, and keep their public profile up to date.')
               : translate('publicDirectory.doctorsDisabledHint', 'Turn on the public directory above before curating individual doctors.')}
           </p>
         </CardHeader>
@@ -199,33 +210,97 @@ export const PublicDirectoryConfig: React.FC = () => {
               {translate('publicDirectory.noDoctors', 'No doctors found.')}
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{translate('publicDirectory.colDoctor', 'Doctor')}</TableHead>
-                  <TableHead>{translate('publicDirectory.colDepartment', 'Department')}</TableHead>
-                  <TableHead className="text-right">{translate('publicDirectory.colListed', 'Listed')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDoctors.map((d) => (
-                  <TableRow key={d.doctorId}>
-                    <TableCell className="font-medium">{d.fullName || translate('publicDirectory.unnamedDoctor', 'Unnamed doctor')}</TableCell>
-                    <TableCell className="text-muted-foreground">{d.departmentName || '—'}</TableCell>
-                    <TableCell className="text-right">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredDoctors.map((d) => (
+                <Card key={d.doctorId} className="border-gray-200 dark:border-gray-800">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar className="h-14 w-14">
+                          <AvatarImage src={d.photoUrl || undefined} alt={d.fullName || ''} />
+                          <AvatarFallback className="bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-200 font-semibold">
+                            {initialsFor(d.fullName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium truncate">
+                              {d.fullName || translate('publicDirectory.unnamedDoctor', 'Unnamed doctor')}
+                            </p>
+                            {d.reviewCount > 0 && (
+                              <span className="flex items-center gap-0.5 text-xs font-medium text-muted-foreground shrink-0">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                {d.rating?.toFixed(1)}
+                                <span>({d.reviewCount})</span>
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{d.departmentName || '—'}</p>
+                        </div>
+                      </div>
                       <Switch
                         checked={d.isPubliclyListed}
                         disabled={!isListed || d.saving}
                         onCheckedChange={(checked) => handleDoctorToggle(d.doctorId, checked)}
                       />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+
+                    {(d.licenseNumber || d.qualification || d.experienceYears != null) && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {d.qualification && (
+                          <span className="flex items-center gap-1">
+                            <GraduationCap className="h-3 w-3" />
+                            {d.qualification}
+                          </span>
+                        )}
+                        {d.experienceYears != null && (
+                          <span>
+                            {translate('publicDirectory.tile.experienceYears', '{{count}} yrs experience').replace('{{count}}', String(d.experienceYears))}
+                          </span>
+                        )}
+                        {d.licenseNumber && (
+                          <span>{translate('publicDirectory.tile.license', 'Lic. {{number}}').replace('{{number}}', d.licenseNumber)}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {d.bio && <p className="text-xs text-muted-foreground line-clamp-2">{d.bio}</p>}
+
+                    {(d.specializations.length > 0 || d.languages.length > 0) && (
+                      <div className="flex flex-wrap gap-1">
+                        {d.specializations.slice(0, 3).map((s) => (
+                          <Badge key={s} variant="secondary" className="text-[10px] px-2 py-0.5">{s}</Badge>
+                        ))}
+                        {d.languages.slice(0, 3).map((l) => (
+                          <Badge key={l} variant="outline" className="text-[10px] px-2 py-0.5">{l}</Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => setEditingDoctor(d)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {translate('publicDirectory.tile.edit', 'Edit profile')}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
+
+      <EditDoctorTileDialog
+        open={editingDoctor !== null}
+        onOpenChange={(open) => !open && setEditingDoctor(null)}
+        doctor={editingDoctor}
+        hospitalId={hospitalId || ''}
+        onSaved={loadDoctors}
+      />
     </div>
   );
 };

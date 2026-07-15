@@ -41,19 +41,24 @@ export interface DeleteAssetResponse {
 
 // Media Upload API service
 export const mediaUploadApi = {
-  // Upload profile picture
-  uploadProfilePicture: async (userId: string, file: File): Promise<ProfilePictureResponse> => {
+  // Upload profile picture. hospitalId is only set for an admin uploading on behalf of a doctor
+  // other than themselves (Public Directory tile editor) — triggers the backend's hospital-
+  // membership + doctor-belongs-to-hospital ownership guard. Self-service uploads omit it.
+  uploadProfilePicture: async (userId: string, file: File, hospitalId?: string): Promise<ProfilePictureResponse> => {
     try {
       const formData = new FormData();
       formData.append('UserId', userId);
       formData.append('File', file);
+      if (hospitalId) {
+        formData.append('HospitalId', hospitalId);
+      }
       const response = await apiClient.put(API_ENDPOINTS.USER.UPLOAD_PROFILE_PICTURE, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       return response as ProfilePictureResponse;
-    } catch (error) {      
+    } catch (error) {
       throw error;
     }
   },

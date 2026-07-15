@@ -1,0 +1,375 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useDepartmentApi } from '@/hooks/useApi';
+import { ProfilePictureUploader } from '@/components/shared/ProfilePictureUploader';
+import { QualificationSelector } from '@/features/doctor/components/QualificationSelector';
+import { SpecializationSelector } from '@/features/doctor/components/SpecializationSelector';
+import { LanguagesSelector } from './LanguagesSelector';
+import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '../services/publicDirectoryDoctorsApi';
+import { doctorReviewsApi, type AdminReviewItem } from '../services/doctorReviewsApi';
+import { Loader2, MessageSquare, Save, Star } from 'lucide-react';
+
+interface EditDoctorTileDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  doctor: PublicDirectoryDoctorTile | null;
+  hospitalId: string;
+  onSaved: () => void;
+}
+
+const parseQualifications = (raw?: string | null): string[] =>
+  (raw ?? '')
+    .split(',')
+    .map((q) => q.trim())
+    .filter(Boolean);
+
+export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
+  open,
+  onOpenChange,
+  doctor,
+  hospitalId,
+  onSaved,
+}) => {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const { data: departmentsResponse } = useDepartmentApi.getGlobalDepartments();
+
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [qualification, setQualification] = useState<string[]>([]);
+  const [departmentId, setDepartmentId] = useState('');
+  const [specializations, setSpecializations] = useState<string[]>([]);
+  const [experienceYears, setExperienceYears] = useState<number | ''>('');
+  const [bio, setBio] = useState('');
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [publicContactEmail, setPublicContactEmail] = useState('');
+  const [publicContactPhone, setPublicContactPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const [reviews, setReviews] = useState<(AdminReviewItem & { moderating?: boolean })[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewStats, setReviewStats] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
+
+  useEffect(() => {
+    if (doctor && open) {
+      setPhotoUrl(doctor.photoUrl || '');
+      setLicenseNumber(doctor.licenseNumber || '');
+      setQualification(parseQualifications(doctor.qualification));
+      setDepartmentId(doctor.departmentId || '');
+      setSpecializations(doctor.specializations || []);
+      setExperienceYears(doctor.experienceYears ?? '');
+      setBio(doctor.bio || '');
+      setLanguages(doctor.languages || []);
+      setPublicContactEmail(doctor.publicContactEmail || '');
+      setPublicContactPhone(doctor.publicContactPhone || '');
+    }
+  }, [doctor, open]);
+
+  // Reviews are fetched lazily, only while the dialog is open for a given doctor — kept out
+  // of the tile-grid's list call so the grid's initial load stays light.
+  useEffect(() => {
+    if (!doctor || !open || !hospitalId) {
+      setReviews([]);
+      return;
+    }
+    let active = true;
+    setReviewsLoading(true);
+    doctorReviewsApi.list(hospitalId, doctor.doctorId)
+      .then((res) => {
+        if (!active) return;
+        setReviews((res?.reviews ?? []).map((r) => ({ ...r })));
+        setReviewStats({ averageRating: res?.averageRating ?? 0, reviewCount: res?.reviewCount ?? 0 });
+      })
+      .catch(() => {
+        if (active) setReviews([]);
+      })
+      .finally(() => {
+        if (active) setReviewsLoading(false);
+      });
+    return () => { active = false; };
+  }, [doctor, open, hospitalId]);
+
+  const handleModerate = async (reviewId: string, nextHidden: boolean) => {
+    if (!doctor) return;
+    setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? { ...r, moderating: true } : r)));
+    try {
+      const response = await doctorReviewsApi.moderate(hospitalId, doctor.doctorId, reviewId, nextHidden);
+      if (response.success) {
+        setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? { ...r, isHidden: nextHidden } : r)));
+      } else {
+        toast({ variant: 'destructive', title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }), description: response.message ?? '' });
+      }
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }), description: e?.message ?? '' });
+    } finally {
+      setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? { ...r, moderating: false } : r)));
+    }
+  };
+
+  const departmentOptions = useMemo(() => {
+    if (!departmentsResponse?.departments) return [];
+    return departmentsResponse.departments
+      .filter((dept) => dept.isActive && dept.departmentID && dept.name?.trim())
+      .map((dept) => ({ id: String(dept.departmentID), name: dept.name }));
+  }, [departmentsResponse]);
+
+  const selectedDepartment = departmentOptions.find((d) => d.id === departmentId) || null;
+
+  const handleSave = async () => {
+    if (!doctor) return;
+    if (!doctor.hospitalDepartmentMappingId) {
+      toast({
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('publicDirectory.editDialog.missingDepartmentMapping', {
+          defaultValue: 'This doctor has no department assignment at this hospital yet — assign one from their profile first.',
+        }),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await publicDirectoryDoctorsApi.updateDoctorTile({
+        userId: doctor.userId,
+        hospitalId,
+        hospitalDepartmentMappingId: doctor.hospitalDepartmentMappingId,
+        licenseNumber: licenseNumber || undefined,
+        qualification,
+        experienceYears: experienceYears === '' ? undefined : Number(experienceYears),
+        bio: bio || undefined,
+        department: selectedDepartment?.name,
+        specializations,
+        languages,
+        publicContactEmail,
+        publicContactPhone,
+      });
+
+      if (response.success) {
+        toast({ title: t('publicDirectory.editDialog.saveSuccess', { defaultValue: 'Doctor profile updated' }) });
+        onSaved();
+        onOpenChange(false);
+      } else {
+        toast({
+          title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }),
+          description: response.message || (response.errors || []).join(', '),
+          variant: 'destructive',
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }),
+        description: e?.message ?? '',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!doctor) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {t('publicDirectory.editDialog.title', {
+              defaultValue: 'Edit {{name}}',
+              name: doctor.fullName || t('publicDirectory.unnamedDoctor', { defaultValue: 'Unnamed doctor' }),
+            })}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-2">
+          <ProfilePictureUploader
+            currentImageUrl={photoUrl}
+            targetUserId={doctor.userId}
+            hospitalId={hospitalId}
+            size="lg"
+            onImageChange={setPhotoUrl}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tile-license">
+                {t('publicDirectory.editDialog.licenseNumber', { defaultValue: 'License number' })}
+              </Label>
+              <Input id="tile-license" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tile-experience">
+                {t('publicDirectory.editDialog.experienceYears', { defaultValue: 'Years of experience' })}
+              </Label>
+              <Input
+                id="tile-experience"
+                type="number"
+                min={0}
+                value={experienceYears}
+                onChange={(e) => setExperienceYears(e.target.value === '' ? '' : Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('publicDirectory.editDialog.department', { defaultValue: 'Speciality (department)' })}</Label>
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('publicDirectory.editDialog.departmentPlaceholder', { defaultValue: 'Select department' })} />
+              </SelectTrigger>
+              <SelectContent className="max-h-56 overflow-y-auto">
+                {departmentOptions.map(({ id, name }) => (
+                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium mb-1 block">
+              {t('publicDirectory.editDialog.focusAreas', { defaultValue: 'Focus areas' })}
+            </Label>
+            <SpecializationSelector
+              departmentId={departmentId}
+              departmentName={selectedDepartment?.name || ''}
+              selectedSpecializations={specializations}
+              onSpecializationsChange={setSpecializations}
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium mb-1 block">
+              {t('publicDirectory.editDialog.qualification', { defaultValue: 'Degree / qualification' })}
+            </Label>
+            <QualificationSelector
+              selectedQualifications={qualification}
+              onQualificationsChange={setQualification}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tile-bio">{t('publicDirectory.editDialog.about', { defaultValue: 'About' })}</Label>
+            <Textarea
+              id="tile-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={4}
+              placeholder={t('publicDirectory.editDialog.aboutPlaceholder', { defaultValue: 'A short public-facing bio for patients…' })}
+            />
+          </div>
+
+          <LanguagesSelector selectedLanguages={languages} onLanguagesChange={setLanguages} />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tile-contact-email">
+                {t('publicDirectory.editDialog.publicEmail', { defaultValue: 'Public contact email' })}
+              </Label>
+              <Input
+                id="tile-contact-email"
+                type="email"
+                value={publicContactEmail}
+                onChange={(e) => setPublicContactEmail(e.target.value)}
+                placeholder={t('publicDirectory.editDialog.publicEmailPlaceholder', { defaultValue: 'Optional — shown to patients' })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tile-contact-phone">
+                {t('publicDirectory.editDialog.publicPhone', { defaultValue: 'Public contact phone' })}
+              </Label>
+              <Input
+                id="tile-contact-phone"
+                value={publicContactPhone}
+                onChange={(e) => setPublicContactPhone(e.target.value)}
+                placeholder={t('publicDirectory.editDialog.publicPhonePlaceholder', { defaultValue: 'Optional — shown to patients' })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <MessageSquare className="h-4 w-4" />
+                {t('publicDirectory.editDialog.reviews', { defaultValue: 'Reviews' })}
+              </Label>
+              {reviewStats.reviewCount > 0 && (
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  {reviewStats.averageRating.toFixed(1)}
+                  <span className="text-muted-foreground font-normal">({reviewStats.reviewCount})</span>
+                </span>
+              )}
+            </div>
+
+            {reviewsLoading ? (
+              <div className="flex justify-center py-4 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            ) : reviews.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">
+                {t('publicDirectory.editDialog.noReviews', { defaultValue: 'No reviews yet.' })}
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {reviews.map((r) => (
+                  <div key={r.reviewId} className={`rounded-lg border p-3 text-sm ${r.isHidden ? 'opacity-50 border-gray-200 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="flex items-center gap-0.5 shrink-0">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          {r.rating}
+                        </span>
+                        <span className="font-medium truncate">{r.authorName || t('publicDirectory.editDialog.anonymous', { defaultValue: 'Anonymous' })}</span>
+                        {r.isHidden && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                            {t('publicDirectory.editDialog.hidden', { defaultValue: 'Hidden' })}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs text-muted-foreground">
+                          {t('publicDirectory.editDialog.hide', { defaultValue: 'Hide' })}
+                        </span>
+                        <Switch
+                          checked={r.isHidden}
+                          disabled={r.moderating}
+                          onCheckedChange={(checked) => handleModerate(r.reviewId, checked)}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mt-1">{r.comment}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {t('common.save', { defaultValue: 'Save' })}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

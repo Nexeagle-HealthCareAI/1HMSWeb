@@ -17,6 +17,13 @@ interface ProfilePictureUploaderProps {
   disabled?: boolean;
   className?: string;
   autoUpload?: boolean; // If false, will only preview and not upload immediately
+  // Uploads/removes on behalf of a different user than the one logged in — e.g. an admin
+  // editing a doctor's photo from the Public Directory tile editor. Defaults to the
+  // logged-in user's own id, preserving existing self-service call sites unchanged.
+  targetUserId?: string;
+  // Required alongside targetUserId — triggers the backend's hospital-membership +
+  // doctor-belongs-to-hospital ownership guard on the upload.
+  hospitalId?: string;
 }
 
 export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
@@ -28,10 +35,13 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   disabled = false,
   className,
   autoUpload = true,
+  targetUserId,
+  hospitalId,
 }) => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { userId } = useAuthStore();
+  const { userId: authUserId } = useAuthStore();
+  const userId = targetUserId || authUserId;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -107,6 +117,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
       const response = await uploadMutation.mutateAsync({
         userId,
         file,
+        hospitalId,
       });
 
       if (response.success) {

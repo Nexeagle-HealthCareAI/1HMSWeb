@@ -147,10 +147,11 @@ export const useDoctorApi = {
 
 // Media Upload API hooks
 export const useMediaUploadApi = {
-  // Upload profile picture
+  // Upload profile picture. hospitalId is only set for an admin uploading on behalf of a
+  // doctor other than themselves (Public Directory tile editor).
   uploadProfilePicture: () => useMutation({
-    mutationFn: ({ userId, file }: { userId: string; file: File }) =>
-      mediaUploadApi.uploadProfilePicture(userId, file),
+    mutationFn: ({ userId, file, hospitalId }: { userId: string; file: File; hospitalId?: string }) =>
+      mediaUploadApi.uploadProfilePicture(userId, file, hospitalId),
   }),
 
   // Remove profile picture
