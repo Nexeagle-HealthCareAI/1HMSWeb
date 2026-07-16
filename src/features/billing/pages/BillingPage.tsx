@@ -529,45 +529,51 @@ export const BillingPage: React.FC = () => {
     }, [eventsData]);
 
     // ─── Render ─────
+    // Below lg: natural page scroll — the fixed-viewport/internal-scroll shell (kept at lg+ for the
+    // desktop 3-panel layout) starves the ledger's scroll region of height once the top bar, credit
+    // banner, and step rail eat the phone/tablet screen (same fix as BillingDashboard).
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-2 sm:px-4 pb-4 pt-1 gap-4 text-sm text-slate-800">
-            {/* Top bar */}
-            <div className="flex items-center justify-between gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/40 ring-1 ring-black/5 shadow-lg shadow-brand-500/5">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100" onClick={() => navigate('/billing')}>
-                        <ArrowLeft className="h-5 w-5 text-slate-500" />
-                    </Button>
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-md shadow-brand-500/30">
-                        <IndianRupee className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                        <h1 className="text-base sm:text-lg font-bold tracking-wide text-slate-900 uppercase">Billing Ledger</h1>
-                        <p className="text-[10px] text-slate-500">Charges, payments &amp; receipts</p>
+        <div className="flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-2 sm:px-4 pb-4 pt-1 gap-4 overflow-visible lg:overflow-hidden text-sm text-slate-800">
+            {/* Top bar — stacks on mobile (title row, then patient identity row) since cramming the
+                back button, brand icon, title, divider, avatar, name/badges and close button into
+                one non-wrapping row left almost nothing for any of them on a phone. Single row
+                again from sm: up, unchanged from before. */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/40 ring-1 ring-black/5 shadow-lg shadow-brand-500/5">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-3 shrink-0">
+                        <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100 shrink-0" onClick={() => navigate('/billing')}>
+                            <ArrowLeft className="h-5 w-5 text-slate-500" />
+                        </Button>
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-md shadow-brand-500/30 shrink-0">
+                            <IndianRupee className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-base sm:text-lg font-bold tracking-wide text-slate-900 uppercase whitespace-nowrap">Billing Ledger</h1>
+                            <p className="text-[10px] text-slate-500 whitespace-nowrap">Charges, payments &amp; receipts</p>
+                        </div>
                     </div>
 
                     {selectedPatient && (
-                        <div className="flex items-center gap-3 ml-3 min-w-0">
-                            <div className="h-8 w-px bg-slate-200" />
-                            <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-9 w-9 rounded-full bg-cyan-50 flex items-center justify-center text-xs font-bold text-cyan-700 border border-cyan-300 shrink-0">
-                                    {selectedPatient.name.charAt(0)}
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-slate-800 truncate">{selectedPatient.name}</h3>
-                                        <Badge variant="outline" className="text-[11px] h-5 px-1.5 shrink-0">{selectedPatient.age}Y / {selectedPatient.sex}</Badge>
-                                    </div>
-                                    <span className="text-[10px] text-cyan-700 font-mono">{selectedPatient.patientId}</span>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-rose-600" onClick={() => { setSelectedPatient(null); setEncounters([]); setSelectedEncounterId(null); setEventsData(null); }}>
-                                    <X className="h-3.5 w-3.5" />
-                                </Button>
+                        <div className="flex items-center gap-2 sm:gap-3 sm:ml-3 min-w-0">
+                            <div className="hidden sm:block h-8 w-px bg-slate-200 shrink-0" />
+                            <div className="h-9 w-9 rounded-full bg-cyan-50 flex items-center justify-center text-xs font-bold text-cyan-700 border border-cyan-300 shrink-0">
+                                {selectedPatient.name.charAt(0)}
                             </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-slate-800 truncate">{selectedPatient.name}</h3>
+                                    <Badge variant="outline" className="text-[11px] h-5 px-1.5 shrink-0">{selectedPatient.age}Y / {selectedPatient.sex}</Badge>
+                                </div>
+                                <span className="text-[10px] text-cyan-700 font-mono">{selectedPatient.patientId}</span>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-6 sm:w-6 shrink-0 text-slate-400 hover:text-rose-600" onClick={() => { setSelectedPatient(null); setEncounters([]); setSelectedEncounterId(null); setEventsData(null); }}>
+                                <X className="h-3.5 w-3.5" />
+                            </Button>
                         </div>
                     )}
                 </div>
                 {eventsData?.currentInvoice?.isReopened && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 shrink-0 max-w-[260px]" title={eventsData.currentInvoice.reopenedReason || 'No reason recorded'}>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 shrink-0 w-full sm:w-auto sm:max-w-[260px]" title={eventsData.currentInvoice.reopenedReason || 'No reason recorded'}>
                         <Unlock className="h-4 w-4 shrink-0" />
                         <div className="min-w-0 flex flex-col leading-tight">
                             <span className="text-[11px] font-bold uppercase tracking-wider">Invoice reopened</span>
@@ -641,14 +647,14 @@ export const BillingPage: React.FC = () => {
             <div className="grid grid-cols-12 lg:grid-cols-[repeat(24,minmax(0,1fr))] gap-4 flex-1 overflow-hidden">
 
                 {/* Left: patient search + visits */}
-                <Card className="col-span-12 md:col-span-3 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
+                <Card className="col-span-12 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient &amp; Visits</CardTitle>
                     </CardHeader>
                     <CardContent className="p-3 flex-1 flex flex-col min-h-0 gap-3">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} placeholder="PTID / name / mobile" className="h-9 pl-8 text-xs" autoFocus />
+                            <Input value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} placeholder="PTID / name / mobile" className="h-11 sm:h-9 pl-8 text-xs" autoFocus />
                         </div>
 
                         {patientSearch.length > 0 && (
@@ -682,7 +688,7 @@ export const BillingPage: React.FC = () => {
                             <div className="flex-1 flex flex-col min-h-0">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Visits</span>
-                                    <Button variant="outline" size="sm" className="h-6 w-6 p-0" onClick={() => loadEncounters(selectedPatient.patientId)} disabled={encountersLoading} title="Refresh visits">
+                                    <Button variant="outline" size="sm" className="h-8 w-8 sm:h-6 sm:w-6 p-0" onClick={() => loadEncounters(selectedPatient.patientId)} disabled={encountersLoading} title="Refresh visits">
                                         <RefreshCw className={cn('h-3 w-3', encountersLoading && 'animate-spin')} />
                                     </Button>
                                 </div>
@@ -740,21 +746,43 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Middle: ledger */}
-                <Card className="col-span-12 md:col-span-9 lg:col-[span_16/span_16] border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
-                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-row items-center justify-between gap-2">
-                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Ledger</CardTitle>
+                <Card className="col-span-12 lg:col-[span_16/span_16] border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
+                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-center justify-between sm:justify-start gap-2">
+                            <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider shrink-0">Ledger</CardTitle>
+                            {eventsData?.currentInvoice ? (
+                                <div className="flex items-center gap-2 min-w-0 sm:hidden">
+                                    <span className="text-sm font-bold text-slate-700 tabular-nums whitespace-nowrap shrink-0" title={eventsData.currentInvoice.invoiceNo ?? undefined}>{eventsData.currentInvoice.invoiceNo ?? '—'}</span>
+                                    <Badge
+                                        variant="outline"
+                                        className={cn(
+                                            'text-[11px] h-6 px-2.5 font-bold uppercase tracking-wider shrink-0',
+                                            isFinalized
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                                : (eventsData.currentInvoice.statusCode ?? '').toUpperCase() === 'CANCELLED'
+                                                    ? 'bg-rose-50 text-rose-700 border-rose-300'
+                                                    : 'bg-amber-50 text-amber-700 border-amber-300'
+                                        )}
+                                    >
+                                        {eventsData.currentInvoice.statusCode ?? '—'}
+                                    </Badge>
+                                </div>
+                            ) : selectedEncounterId ? (
+                                <span className="text-[10px] text-slate-400 sm:hidden">No invoice yet</span>
+                            ) : null}
+                        </div>
                         {/* Primary CTA: start a new billable visit (= a new invoice). Centered in the
                             ledger header, distinct dark premium style. Shown once a patient is selected. */}
                         {selectedPatient && (
                             <Button
                                 onClick={() => setShowNewVisit(true)}
-                                className="h-9 px-6 min-w-[220px] shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 ring-1 ring-white/10 shadow-md shadow-black/30 transition-all active:scale-[0.98]"
+                                className="h-10 sm:h-9 px-6 w-full sm:w-auto sm:min-w-[220px] shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 ring-1 ring-white/10 shadow-md shadow-black/30 transition-all active:scale-[0.98]"
                             >
                                 <Plus className="h-4 w-4 mr-0.5" />Create New Invoice
                             </Button>
                         )}
                         {eventsData?.currentInvoice ? (
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="hidden sm:flex items-center gap-2 min-w-0">
                                 <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Invoice</span>
                                 <span className="text-sm font-bold text-slate-700 tabular-nums whitespace-nowrap shrink-0" title={eventsData.currentInvoice.invoiceNo ?? undefined}>{eventsData.currentInvoice.invoiceNo ?? '—'}</span>
                                 <Badge
@@ -772,7 +800,7 @@ export const BillingPage: React.FC = () => {
                                 </Badge>
                             </div>
                         ) : selectedEncounterId ? (
-                            <span className="text-[10px] text-slate-400">No invoice yet</span>
+                            <span className="hidden sm:inline text-[10px] text-slate-400">No invoice yet</span>
                         ) : null}
                     </CardHeader>
 
@@ -791,7 +819,81 @@ export const BillingPage: React.FC = () => {
                             </div>
                         ) : (
                             <>
-                                <table className="w-full text-xs [&_thead_th]:border-r [&_thead_th]:border-slate-200 [&_tbody_td]:border-r [&_tbody_td]:border-slate-100 [&_thead_th:last-child]:border-r-0 [&_tbody_td:last-child]:border-r-0">
+                                {/* Mobile card list — the 8-column table has no room on a phone;
+                                    same charge/payment data, stacked instead. Edit/delete are
+                                    already always-visible buttons (no hover-gating to fix). */}
+                                <div className="md:hidden divide-y divide-slate-100">
+                                    {ledgerRows.map((row) => row.kind === 'charge' ? (
+                                        <div key={`c-${row.c.chargeEventId}`} className={cn('p-3', row.c.statusCode === 'VOID' && 'bg-slate-50/50 opacity-75')}>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-start gap-2 min-w-0">
+                                                    <span className={cn('h-6 w-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5', row.c.statusCode === 'VOID' ? 'bg-slate-100 text-slate-400' : 'bg-brand-50 text-brand-500')}><IndianRupee className="h-3.5 w-3.5" /></span>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={cn('font-semibold text-slate-800', row.c.statusCode === 'VOID' && 'line-through text-slate-500')}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</span>
+                                                            {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
+                                                        </div>
+                                                        {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
+                                                            <div className={cn('text-[10px] text-slate-500', row.c.statusCode === 'VOID' && 'line-through opacity-70')}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
+                                                        )}
+                                                        <div className="text-[11px] text-slate-500 mt-0.5">
+                                                            {formatIst(row.c.createdDateTime)} · {row.c.categoryCode ?? '—'} · {row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}
+                                                            {Number(row.c.discountAmount) > 0 && <span className="text-rose-600"> · − ₹{Number(row.c.discountAmount).toFixed(2)}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p className={cn('font-bold tabular-nums shrink-0', row.c.statusCode === 'VOID' ? 'text-slate-400 line-through' : 'text-slate-800')}>₹{Number(row.c.netAmount).toFixed(2)}</p>
+                                            </div>
+                                            {!isFinalized && row.c.statusCode !== 'VOID' && (
+                                                <div className="flex justify-end gap-1.5 mt-2">
+                                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 })}>
+                                                        <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                                                    </Button>
+                                                    <Button size="sm" variant="outline" className="h-8 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
+                                                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div key={`p-${row.p.paymentId}`} className={cn('p-3', row.p.paymentType === 'REFUND' ? 'bg-amber-50/30' : 'bg-emerald-50/20')}>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-start gap-2 min-w-0">
+                                                    <span className={cn('h-6 w-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5', row.p.paymentType === 'REFUND' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600')}><Wallet className="h-3.5 w-3.5" /></span>
+                                                    <div className="min-w-0">
+                                                        <p className={cn('font-semibold', row.p.paymentType === 'REFUND' ? 'text-amber-700' : 'text-emerald-700')}>{row.p.paymentType ?? 'PAYMENT'} · {row.p.paymentMode ?? '—'}</p>
+                                                        {(row.p.receiptNo || row.p.paymentDescription) && (
+                                                            <p className="text-[10px] text-slate-500 truncate">{row.p.receiptNo ? `Receipt ${row.p.receiptNo}` : ''}{row.p.paymentDescription ? ` · ${row.p.paymentDescription}` : ''}</p>
+                                                        )}
+                                                        <p className="text-[11px] text-slate-500 mt-0.5">{formatIst(row.p.createdDateTime)}</p>
+                                                    </div>
+                                                </div>
+                                                <p className={cn('font-bold tabular-nums shrink-0', row.p.paymentType === 'REFUND' ? 'text-amber-700' : 'text-emerald-700')}>
+                                                    {row.p.paymentType === 'REFUND' ? `− ₹${Number(row.p.amount).toFixed(2)}` : `₹${Number(row.p.amount).toFixed(2)}`}
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-end gap-1.5 mt-2">
+                                                <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={docBusy} title="Print this payment's receipt (A4)" onClick={() => handleDoc('receipt', 'print', row.p.paymentId, 'a4')}><Printer className="h-3.5 w-3.5" /></Button>
+                                                <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={docBusy} title="Print this payment's receipt (80mm thermal)" onClick={() => handleDoc('receipt', 'print', row.p.paymentId, 'thermal')}><Receipt className="h-3.5 w-3.5" /></Button>
+                                                <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}><Download className="h-3.5 w-3.5" /></Button>
+                                                {!isFinalized && row.p.paymentType !== 'REFUND' && (
+                                                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' })}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(eventsData?.charges?.length ?? 0) === 0 && (eventsData?.payments?.length ?? 0) === 0 && (
+                                        <div className="p-8 text-center flex flex-col items-center gap-2 text-slate-400">
+                                            <div className="h-12 w-12 rounded-2xl bg-slate-50 ring-1 ring-slate-200 flex items-center justify-center">
+                                                <Receipt className="h-6 w-6 text-slate-300" />
+                                            </div>
+                                            <p className="text-sm font-semibold text-slate-500">No entries yet</p>
+                                            <p className="text-xs">Add a charge or record a payment from the panel below.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <table className="hidden md:table w-full text-xs [&_thead_th]:border-r [&_thead_th]:border-slate-200 [&_tbody_td]:border-r [&_tbody_td]:border-slate-100 [&_thead_th:last-child]:border-r-0 [&_tbody_td:last-child]:border-r-0">
                                     <thead className="bg-slate-50/80 backdrop-blur sticky top-0 z-10">
                                         <tr className="border-b border-slate-200">
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Date</th>

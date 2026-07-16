@@ -463,8 +463,10 @@ export const AdminDashboard = () => {
             )}
           </div>
 
-          {/* Right: Navigation Tabs - Responsive Scroll Container */}
-          <nav className="w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 flex flex-nowrap overflow-x-auto gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 justify-start md:justify-end scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
+          {/* Right: Navigation Tabs — 2×2 card grid on phones (every module reachable without a
+              horizontal swipe), a single row from sm, reverting to the original inline-flex row at
+              xl+ (same pattern used for the Billing tab nav). */}
+          <nav className="w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-nowrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1.5 xl:p-1 shadow-inner shadow-white/60 dark:shadow-black/40">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
               const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
@@ -484,7 +486,7 @@ export const AdminDashboard = () => {
                   aria-pressed={isActive}
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
-                  className={`group flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 min-w-[80px] sm:min-w-[120px] ${isActive
+                  className={`group w-full xl:flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-2 xl:py-1.5 border transition-all duration-300 xl:min-w-[120px] ${isActive
                     ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white border-transparent shadow-xl shadow-brand-500/30'
                     : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70 hover:text-gray-900 dark:hover:text-gray-200'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
@@ -962,7 +964,63 @@ export const AdminDashboard = () => {
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* Mobile card list — the 7-column table has no room on a phone even with
+                    horizontal scroll (min-w-[200px] first column alone exceeds most phone widths). */}
+                <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800/50">
+                  {analyticsData?.breakdowns?.byDoctor?.length ? analyticsData.breakdowns.byDoctor.map((doc, idx) => (
+                    <div key={idx} className="p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx === 0 ? 'bg-amber-100 text-amber-700' :
+                          idx === 1 ? 'bg-gray-200 text-gray-600' :
+                            idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-brand-100 text-brand-600'
+                          }`}>
+                          {doc.doctorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-gray-900 dark:text-white truncate">{doc.doctorName}</div>
+                          <div className="text-xs text-gray-500 truncate">{doc.specialty}</div>
+                        </div>
+                        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${doc.noShow > 100 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                          {doc.noShow} no-show
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wide">Total Visits</p>
+                          <p className="font-bold text-gray-800 dark:text-gray-100 text-base">{doc.overallVisits.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wide">Unique Pts</p>
+                          <p className="font-bold text-gray-800 dark:text-gray-100 text-base">{doc.uniquePatients.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wide">Returning</p>
+                          <p className="font-bold text-brand-600 dark:text-brand-400 text-base">{doc.returningPatients.toLocaleString()} <span className="text-[10px] font-normal text-gray-400">({(doc.returningPatients / doc.overallVisits * 100).toFixed(0)}%)</span></p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wide">Share</p>
+                          <p className="font-bold text-gray-800 dark:text-gray-100 text-base">{doc.sharePercent}%</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 text-xs bg-brand-50/50 dark:bg-brand-900/10 rounded-lg p-2.5">
+                        <span className="text-brand-400 font-bold uppercase text-[9px] shrink-0">New Patients</span>
+                        <div className="flex items-center gap-3">
+                          <span className="flex flex-col items-center"><span className="font-bold text-brand-700 dark:text-brand-300">{doc.newPatients.day}</span><span className="text-[9px] text-brand-400 uppercase">Day</span></span>
+                          <span className="flex flex-col items-center"><span className="font-medium text-gray-700 dark:text-gray-300">{doc.newPatients.week}</span><span className="text-[9px] text-gray-400 uppercase">Wk</span></span>
+                          <span className="flex flex-col items-center"><span className="font-medium text-gray-700 dark:text-gray-300">{doc.newPatients.month}</span><span className="text-[9px] text-gray-400 uppercase">Mo</span></span>
+                          <span className="flex flex-col items-center"><span className="font-medium text-gray-700 dark:text-gray-300">{doc.newPatients.year}</span><span className="text-[9px] text-gray-400 uppercase">Yr</span></span>
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="px-6 py-12 text-center text-gray-400">Loading doctor data...</div>
+                  )}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-gray-100/70 dark:bg-gray-800/70 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 dark:border-gray-800">
                       <tr>

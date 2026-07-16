@@ -28,6 +28,8 @@ const RoleBasedRedirect = () => {
 const SubscriptionPage = lazy(() => import('@/features/subscription/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+// DEV-ONLY: unauthenticated mobile-UI preview harness for the Admin dashboard (see route below).
+const AdminDashboardPreview = lazy(() => import('@/features/dashboard/pages/AdminDashboardPreview').then(module => ({ default: module.default })));
 const AdminConfigModule = lazy(() => import('@/features/dashboard/components/AdminConfigModule').then(module => ({ default: module.AdminConfigModule })));
 const IpdWorkflowApp = lazy(() => import('@/features/ipd-redesign/IpdWorkflowApp').then(module => ({ default: module.default })));
 // DEV-ONLY: unauthenticated mobile-UI preview harnesses for IPD screens (see routes below).
@@ -35,6 +37,7 @@ const IpdDashboardPreview = lazy(() => import('@/features/ipd-redesign/pages/Ipd
 const BedBoardPreview = lazy(() => import('@/features/ipd-redesign/pages/BedBoardPreview').then(module => ({ default: module.default })));
 const KpiDashboardPreview = lazy(() => import('@/features/ipd-redesign/pages/KpiDashboardPreview').then(module => ({ default: module.default })));
 const AdmitPatientPreview = lazy(() => import('@/features/ipd-redesign/pages/AdmitPatientPreview').then(module => ({ default: module.default })));
+const PatientWorkspacePreview = lazy(() => import('@/features/ipd-redesign/pages/PatientWorkspacePreview').then(module => ({ default: module.default })));
 const IpdMobileReview = lazy(() => import('@/features/ipd-redesign/pages/IpdMobileReview').then(module => ({ default: module.default })));
 const ConsultantLedgerPreview = lazy(() => import('@/features/ipd-redesign/pages/ConsultantLedgerPreview').then(module => ({ default: module.default })));
 const ReferredAdmissionsPreview = lazy(() => import('@/features/ipd-redesign/pages/ReferredAdmissionsPreview').then(module => ({ default: module.default })));
@@ -63,6 +66,7 @@ const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').th
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
 // DEV-ONLY: unauthenticated mobile-UI preview harness for the Billing dashboard (see route below).
 const BillingDashboardPreview = lazy(() => import('@/features/billing/pages/BillingDashboardPreview').then(module => ({ default: module.default })));
+const BillingLedgerPreview = lazy(() => import('@/features/billing/pages/BillingLedgerPreview').then(module => ({ default: module.default })));
 const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPreviewPage').then(module => ({ default: module.PrintPreviewPage })));
 const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
 
@@ -155,6 +159,18 @@ export const AppRoutes: React.FC = () => {
           <Route path="/admit-preview" element={<AdmitPatientPreview />} />
         )}
 
+        {/* DEV-ONLY: unauthenticated Patient Workspace preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/workspace-preview"
+            element={
+              <MainLayout>
+                <PatientWorkspacePreview />
+              </MainLayout>
+            }
+          />
+        )}
+
         {/* DEV-ONLY: Consultant Ledger + Referred Admissions previews for mobile-UI iteration. */}
         {import.meta.env.DEV && (
           <Route
@@ -184,6 +200,30 @@ export const AppRoutes: React.FC = () => {
             element={
               <MainLayout>
                 <BillingDashboardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Billing Ledger ("+ New Bill") preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/billing-ledger-preview"
+            element={
+              <MainLayout>
+                <BillingLedgerPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Admin dashboard preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/admin-preview"
+            element={
+              <MainLayout>
+                <AdminDashboardPreview />
               </MainLayout>
             }
           />

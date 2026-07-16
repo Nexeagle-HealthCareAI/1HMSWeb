@@ -225,7 +225,10 @@ export const ExpenseTab: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-4 h-full print:bg-white print:p-0">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 print:hidden">
+            {/* Full-width stack on phones, not 2/3-up — unlike IPD's short digit counts, these are
+                currency amounts that can run into lakhs (₹1,63,000+); no fixed column count is wide
+                enough to guarantee they never truncate except a single full-width column. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 print:hidden">
                 <KpiStat label="Total Expenses" amount={summary.total} format={inr} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                 <KpiStat label="Pending Payment" amount={summary.pending} format={inr} icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" />
                 <KpiStat label="Categories" value={String(summary.categories)} icon={<Building2 className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-violet-100/50 text-brand-900" />
