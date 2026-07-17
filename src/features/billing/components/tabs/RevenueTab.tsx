@@ -117,10 +117,18 @@ export const RevenueTab: React.FC = () => {
         return Array.from(set).sort();
     }, [billingData]);
 
-    // Local calendar-day key (YYYY-MM-DD) for a row's date, for day/range comparison.
+    // IST calendar-day key (YYYY-MM-DD) for a row's date, for day/range comparison.
+    // Naive (offset-less) timestamps from the backend are treated as UTC (same as BillingPage's
+    // formatIst), then shifted +5:30 to get the correct IST calendar day. Without this fix,
+    // bills posted near midnight (UTC) appear on the wrong day in the date filter.
     const dayKey = (iso: string) => {
-        const d = new Date(iso);
-        return Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!iso) return '';
+        const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
+        const d = new Date(hasTz ? iso : `${iso}Z`);
+        if (Number.isNaN(d.getTime())) return '';
+        // Shift to IST (+5:30 = 19800 seconds)
+        const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+        return `${ist.getUTCFullYear()}-${String(ist.getUTCMonth() + 1).padStart(2, '0')}-${String(ist.getUTCDate()).padStart(2, '0')}`;
     };
 
     const filteredRows = useMemo(() => {
