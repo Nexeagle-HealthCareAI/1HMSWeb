@@ -28,6 +28,11 @@ const ADMIN_SCREENS: { title: string; path: string; note: string }[] = [
     { title: 'Admin Dashboard', path: '/admin-preview', note: '2×2 module nav, KPI cards, Doctor Performance card list' },
 ];
 
+const DOCTOR_SCREENS: { title: string; path: string; note: string }[] = [
+    { title: 'Doc Board (Clinical Dashboard)', path: '/docboard-preview', note: 'Current/Past/Future appointment tabs' },
+    { title: 'Write Prescription (Patient Profile)', path: '/rx-preview', note: 'Opens when tapping a UHID/patient ID; scroll to Immunizations for the table→card fix' },
+];
+
 const DEVICES = {
     'iPhone (390×844)': { w: 390, h: 844 },
     'small (360×780)': { w: 360, h: 780 },
@@ -78,8 +83,15 @@ const IpdMobileReview: React.FC = () => {
                 </div>
 
                 <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Admin</h2>
-                <div className="flex flex-wrap gap-8 justify-center sm:justify-start">
+                <div className="flex flex-wrap gap-8 justify-center sm:justify-start mb-10">
                     {ADMIN_SCREENS.map(s => (
+                        <PhoneCard key={s.path} screen={s} device={device} deviceKey={deviceKey} nonce={nonce} />
+                    ))}
+                </div>
+
+                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Doctor</h2>
+                <div className="flex flex-wrap gap-8 justify-center sm:justify-start">
+                    {DOCTOR_SCREENS.map(s => (
                         <PhoneCard key={s.path} screen={s} device={device} deviceKey={deviceKey} nonce={nonce} />
                     ))}
                 </div>

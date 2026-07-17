@@ -46,6 +46,9 @@ const InventoryManagementPage = lazy(() => import('@/features/ipd-redesign/pages
 const OtBoardPage = lazy(() => import('@/features/ipd-redesign/pages/OtBoardPage').then(module => ({ default: module.default })));
 const IcuBoardPage = lazy(() => import('@/features/ipd-redesign/pages/IcuBoardPage').then(module => ({ default: module.default })));
 const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
+// DEV-ONLY: unauthenticated mobile-UI preview harness for the Doc Board (see route below).
+const DocBoardPreview = lazy(() => import('@/features/doctor/pages/DocBoardPreview').then(module => ({ default: module.default })));
+const PatientProfilePagePreview = lazy(() => import('@/features/patient/pages/PatientProfilePagePreview').then(module => ({ default: module.default })));
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
@@ -224,6 +227,30 @@ export const AppRoutes: React.FC = () => {
             element={
               <MainLayout>
                 <AdminDashboardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Doc Board preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/docboard-preview"
+            element={
+              <MainLayout>
+                <DocBoardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated prescription-writing (patient profile) preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/rx-preview"
+            element={
+              <MainLayout>
+                <PatientProfilePagePreview />
               </MainLayout>
             }
           />

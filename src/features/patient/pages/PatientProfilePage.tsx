@@ -323,8 +323,9 @@ export const PatientProfilePage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300">
       {/* Main Content with Side Navigation */}
       <div className="flex">
-        {/* Fixed Side Navigation - Professional Design */}
-        <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 fixed h-screen overflow-y-auto transition-all duration-300 ease-in-out shadow-sm`}>
+        {/* Fixed Side Navigation - Professional Design (desktop/tablet only; mobile uses the back
+            button + single tab in the sticky header instead, since there's only one nav item) */}
+        <div className={`hidden lg:block ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 fixed h-screen overflow-y-auto transition-all duration-300 ease-in-out shadow-sm`}>
           {/* Patient Profile Header in Side Nav */}
           <div className={`${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
@@ -398,18 +399,29 @@ export const PatientProfilePage: React.FC = () => {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className={`flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} overflow-y-auto transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-950`} style={{ height: '100vh' }}>
-          <div className="ml-4">
+        <div className={`flex-1 ml-0 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'} overflow-y-auto transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-950`} style={{ height: '100vh' }}>
+          <div className="ml-0 lg:ml-4">
             {/* Patient Header - Show for all tabs */}
             {patient && (
               <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-20">
-                <div className="px-6 py-4 text-gray-900 dark:text-gray-50">
-                  <div className="flex items-center justify-between gap-4">
+                <div className="px-3 sm:px-6 py-3 sm:py-4 text-gray-900 dark:text-gray-50">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
                     {/* Left Section: Avatar + Basic Info + Actions */}
-                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                      {/* Mobile-only back button (sidebar nav is hidden below lg) */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(-1)}
+                        className="lg:hidden h-9 w-9 p-0 shrink-0"
+                        title="Back"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+
                       {/* Patient Avatar with Risk Indicator */}
                       <div className="relative flex-shrink-0">
-                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-white shadow-md">
                           <AvatarImage src="/api/placeholder/80/80" />
                           <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-brand-500 to-purple-600 text-white">
                             {patient.name.split(' ').map(n => n[0]).join('')}
@@ -422,8 +434,8 @@ export const PatientProfilePage: React.FC = () => {
 
                       {/* Patient Name and Basic Info */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3 mb-1 flex-wrap">
-                          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50 truncate">{patient.name}</h1>
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+                          <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-50 truncate">{patient.name}</h1>
                           <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
                             {riskLevel.level} Risk
                           </Badge>
@@ -439,7 +451,7 @@ export const PatientProfilePage: React.FC = () => {
                         </div>
 
                         {/* Compact Info Row */}
-                        <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
                           <span className="flex items-center gap-1">
                             <span className="font-medium text-gray-800 dark:text-gray-200">ID:</span>
                             <span className="text-brand-600 dark:text-brand-300 font-mono">{patient.id}</span>
@@ -463,14 +475,14 @@ export const PatientProfilePage: React.FC = () => {
                     </div>
 
                     {/* Right Section: Contextual Actions / Active Tab Indicator */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                       <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
                         {activeTabMeta && (
                           <>
-                            <activeTabMeta.icon className="h-5 w-5 text-primary" />
-                            <span>{activeTabMeta.label}</span>
+                            <activeTabMeta.icon className="h-5 w-5 text-primary shrink-0" />
+                            <span className="hidden sm:inline">{activeTabMeta.label}</span>
                             {activeTab === 'prescriptions' && (
-                              <div className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 px-3 py-1.5 rounded-full shadow-md ml-2">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 px-3 py-1.5 rounded-full shadow-md sm:ml-2">
                                 <Cloud className="h-3.5 w-3.5 text-white" />
                                 <span>Auto-save enabled</span>
                               </div>
@@ -479,19 +491,19 @@ export const PatientProfilePage: React.FC = () => {
                         )}
                       </div>
                       {activeTab === 'prescriptions' && (
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={handlePreview}>
+                        <div className="grid grid-cols-3 sm:flex sm:items-center gap-2">
+                          <Button variant="outline" size="sm" className="text-xs sm:text-sm h-9 sm:h-9" onClick={handlePreview}>
                             Preview
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="text-xs sm:text-sm h-8 sm:h-9 border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900/50"
+                            className="text-xs sm:text-sm h-9 sm:h-9 border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900/50"
                             onClick={handleSaveForLater}
                           >
                             Save for later
                           </Button>
-                          <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => setShowSubmitConfirm(true)}>
+                          <Button size="sm" className="text-xs sm:text-sm h-9 sm:h-9" onClick={() => setShowSubmitConfirm(true)}>
                             Submit
                           </Button>
                         </div>
@@ -504,7 +516,7 @@ export const PatientProfilePage: React.FC = () => {
 
             {/* Allergy banner — always visible so a doctor sees it before prescribing */}
             {patient && patient.allergies.length > 0 && (
-              <div className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+              <div className="mx-3 sm:mx-6 mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
                 <span><span className="font-bold">Allergies:</span> {patient.allergies.join(', ')}</span>
               </div>

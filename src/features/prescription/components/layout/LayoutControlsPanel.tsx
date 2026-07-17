@@ -296,17 +296,18 @@ export const LayoutControlsPanel = ({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={onPreview}
               disabled={!onPreview}
+              className="w-full sm:w-auto"
             >
               <Eye className="h-4 w-4 mr-2" />
               {t('prescriptionDesigner.controls.actions.preview')}
             </Button>
-            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout}>
+            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout} className="w-full sm:w-auto">
               {isSavingLayout ? t('prescriptionDesigner.controls.actions.saving') : t('prescriptionDesigner.controls.actions.save')}
             </Button>
           </div>
