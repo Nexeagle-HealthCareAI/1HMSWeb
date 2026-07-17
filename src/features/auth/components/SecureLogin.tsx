@@ -313,14 +313,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         const authStore = useAuthStore.getState();
         authStore.clearSession();
 
-        // Update auth store with new user data
+        // Set the token first (needed by the interceptor for the permissions call below) but
+        // deliberately hold off on setUser() — which flips isAuthenticated to true — until the
+        // role is actually known. LoginPage's auto-redirect effect and RouteGuard/RoleBasedRedirect
+        // all react to isAuthenticated alone; if it goes true while userRole is still null (the
+        // gap that existed here before), they treat "role not loaded yet" as "invalid role" and
+        // force a logout + redirect back to /login — which is what was happening.
         setToken(response.accessToken!);
-        setUser({
-          id: response.userId || undefined,
-          email: sanitizedUserid,
-          mobile: sanitizedUserid,
-          name: sanitizedUserid,
-        });
 
         if (response.userId && response.accessToken) {
           try {
@@ -329,6 +328,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             console.warn('Failed to fetch permissions:', error);
           }
         }
+
+        setUser({
+          id: response.userId || undefined,
+          email: sanitizedUserid,
+          mobile: sanitizedUserid,
+          name: sanitizedUserid,
+        });
 
         let hospitalResult: 'found' | 'not_registered' | 'error' = 'error';
 
@@ -459,16 +465,6 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
 
       if (response.success) {
-        // Store userId from OTP verification response
-        if (response.userId) {
-          useAuthStore.getState().setUserId(response.userId);
-        }
-
-        // Store accessToken from OTP verification response
-        if (response.accessToken) {
-          useAuthStore.getState().setToken(response.accessToken);
-        }
-
         // For OTP login, check if we have userId from the response
         const storedUserId = response.userId || useAuthStore.getState().getUserId();
 
@@ -477,10 +473,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           const authStore = useAuthStore.getState();
           authStore.clearSession();
 
-          // For OTP login, we need to set the user as authenticated
-          // Use the actual accessToken from the response instead of placeholder
+          // Set token + userId, but deliberately hold off on setUser() (which flips
+          // isAuthenticated to true) until the role is actually known — see the identical
+          // comment in handlePasswordLogin above for why: LoginPage's auto-redirect effect and
+          // RouteGuard/RoleBasedRedirect react to isAuthenticated alone, and treat "role not
+          // loaded yet" as "invalid role", forcing a premature logout + redirect to /login.
           const tokenToUse = response.accessToken || 'otp-login';
-          authStore.setAuthenticatedUser(storedUserId, tokenToUse);
+          authStore.setToken(tokenToUse);
+          authStore.setUserId(storedUserId);
 
           if (response.accessToken) {
             try {
@@ -489,6 +489,8 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
               console.warn('Failed to fetch permissions:', error);
             }
           }
+
+          authStore.setUser({ id: storedUserId });
 
           const hospitalResult = await fetchAndStoreHospitalMapping(storedUserId);
 
