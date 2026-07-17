@@ -16,10 +16,16 @@ const IPD_SCREENS: { title: string; path: string; note: string }[] = [
     { title: 'Admit Patient', path: '/admit-preview', note: '4-step wizard, opens directly' },
     { title: 'Consultant Ledger', path: '/ledger-preview', note: 'Tap a doctor to drill into the ledger' },
     { title: 'Referred Admissions', path: '/referrals-preview', note: 'Filters, referral cards, comments' },
+    { title: 'Patient Workspace', path: '/workspace-preview', note: 'Sticky section switcher, bottom-sheet nav picker' },
 ];
 
 const BILLING_SCREENS: { title: string; path: string; note: string }[] = [
     { title: 'Billing (Revenue/Expense/Incentive/Approvals)', path: '/billing-preview', note: 'Tap the tabs inside the phone to switch sections' },
+    { title: 'Billing Ledger (+ New Bill)', path: '/billing-ledger-preview', note: 'Search "Rajesh" to select the mock patient and open the ledger' },
+];
+
+const ADMIN_SCREENS: { title: string; path: string; note: string }[] = [
+    { title: 'Admin Dashboard', path: '/admin-preview', note: '2×2 module nav, KPI cards, Doctor Performance card list' },
 ];
 
 const DEVICES = {
@@ -65,8 +71,15 @@ const IpdMobileReview: React.FC = () => {
                 </div>
 
                 <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Billing</h2>
-                <div className="flex flex-wrap gap-8 justify-center sm:justify-start">
+                <div className="flex flex-wrap gap-8 justify-center sm:justify-start mb-10">
                     {BILLING_SCREENS.map(s => (
+                        <PhoneCard key={s.path} screen={s} device={device} deviceKey={deviceKey} nonce={nonce} />
+                    ))}
+                </div>
+
+                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Admin</h2>
+                <div className="flex flex-wrap gap-8 justify-center sm:justify-start">
+                    {ADMIN_SCREENS.map(s => (
                         <PhoneCard key={s.path} screen={s} device={device} deviceKey={deviceKey} nonce={nonce} />
                     ))}
                 </div>
