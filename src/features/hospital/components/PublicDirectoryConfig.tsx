@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Pencil,
   Phone,
+  Printer,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -44,6 +45,7 @@ import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '@/fea
 import { EditDoctorTileDialog } from './EditDoctorTileDialog';
 import { DoctorReviewsDialog } from './DoctorReviewsDialog';
 import { cn } from '@/lib/utils';
+import { buildDoctorQrPosterA4 } from '@/printTemplates/doctorQrPosterA4';
 
 const initialsFor = (name?: string | null) => {
   const cleaned = (name || '').replace(/^Dr\.?\s*/i, '').trim();
@@ -201,6 +203,22 @@ export const PublicDirectoryConfig: React.FC = () => {
     } finally {
       setConfirming(false);
       setPendingToggle(null);
+    }
+  };
+
+  const handlePrintQr = (doctor: PublicDirectoryDoctorTile) => {
+    if (!hospitalData) return;
+    const html = buildDoctorQrPosterA4(doctor, hospitalData.name, hospitalData.city || '');
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+      };
+    } else {
+      toast({ variant: 'destructive', title: 'Pop-up blocked', description: 'Please allow pop-ups to print the QR poster.' });
     }
   };
 
@@ -456,6 +474,15 @@ export const PublicDirectoryConfig: React.FC = () => {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                               {translate('publicDirectory.tile.edit', 'Edit profile')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="px-3"
+                              title={translate('publicDirectory.tile.printQr', 'Print QR Poster')}
+                              onClick={() => handlePrintQr(d)}
+                            >
+                              <Printer className="h-4 w-4 text-brand-600" />
                             </Button>
                             <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-800 px-3 py-1.5">
                               <span className="text-[11px] font-medium text-muted-foreground">

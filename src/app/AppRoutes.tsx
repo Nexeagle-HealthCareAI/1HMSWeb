@@ -5,6 +5,14 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RouteGuard } from '@/components/guards/RouteGuard';
 
+// Helper to break infinite redirect loops for invalid roles
+const InvalidRoleLogout = () => {
+  React.useEffect(() => {
+    useAuthStore.getState().logout();
+  }, []);
+  return <Navigate to="/login" replace />;
+};
+
 // Role-based redirect component
 const RoleBasedRedirect = () => {
   const userRole = useAuthStore.getState().getUserRole();
@@ -16,9 +24,11 @@ const RoleBasedRedirect = () => {
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
     // Receptionist and Nurse should go to appointment dashboard
     return <Navigate to="/appointment-dashboard" replace />;
+  } else if (userRole === 'Accountant') {
+    return <Navigate to="/billing" replace />;
   } else {
-    // Default fallback - redirect to login if role is not recognized
-    return <Navigate to="/" replace />;
+    // Default fallback - log out and redirect to login if role is not recognized
+    return <InvalidRoleLogout />;
   }
 };
 

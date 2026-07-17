@@ -231,7 +231,10 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         getUserRoles: () => {
-          return get().userRoles || [];
+          const roles = get().userRoles;
+          if (roles && roles.length > 0) return roles;
+          const role = get().userRole;
+          return role ? [role] : [];
         },
 
         setPermissions: (permissions: string[]) => {
