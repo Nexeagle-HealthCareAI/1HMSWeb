@@ -313,12 +313,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         const authStore = useAuthStore.getState();
         authStore.clearSession();
 
-        // Set the token first (needed by the interceptor for the permissions call below) but
-        // deliberately hold off on setUser() — which flips isAuthenticated to true — until the
-        // role is actually known. LoginPage's auto-redirect effect and RouteGuard/RoleBasedRedirect
-        // all react to isAuthenticated alone; if it goes true while userRole is still null (the
-        // gap that existed here before), they treat "role not loaded yet" as "invalid role" and
-        // force a logout + redirect back to /login — which is what was happening.
+        // Set the token first (needed by the interceptor for every call below) but deliberately
+        // hold off on setUser() — which flips isAuthenticated to true — until ALL of
+        // permissions/hospital-mapping/doctor-profile have resolved. LoginPage's auto-redirect
+        // effect and RouteGuard/RoleBasedRedirect react to isAuthenticated alone; if it goes true
+        // while any of that data is still being fetched, they can treat the incomplete state as
+        // invalid and force a logout + redirect back to /login mid-flight — which is what was
+        // happening (first with userRole, then again with hospitalId once that gap was closed).
         setToken(response.accessToken!);
 
         if (response.userId && response.accessToken) {
@@ -328,13 +329,6 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             console.warn('Failed to fetch permissions:', error);
           }
         }
-
-        setUser({
-          id: response.userId || undefined,
-          email: sanitizedUserid,
-          mobile: sanitizedUserid,
-          name: sanitizedUserid,
-        });
 
         let hospitalResult: 'found' | 'not_registered' | 'error' = 'error';
 
@@ -356,6 +350,15 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             console.info('Hospital information incomplete; skipping doctor profile fetch.');
           }
         }
+
+        // Only now — once role, hospital mapping, and doctor profile have all settled — flip
+        // isAuthenticated, so nothing downstream ever observes a partially-authenticated state.
+        setUser({
+          id: response.userId || undefined,
+          email: sanitizedUserid,
+          mobile: sanitizedUserid,
+          name: sanitizedUserid,
+        });
 
         invalidateAuth();
 
@@ -474,10 +477,11 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           authStore.clearSession();
 
           // Set token + userId, but deliberately hold off on setUser() (which flips
-          // isAuthenticated to true) until the role is actually known — see the identical
-          // comment in handlePasswordLogin above for why: LoginPage's auto-redirect effect and
-          // RouteGuard/RoleBasedRedirect react to isAuthenticated alone, and treat "role not
-          // loaded yet" as "invalid role", forcing a premature logout + redirect to /login.
+          // isAuthenticated to true) until ALL of permissions/hospital-mapping/doctor-profile
+          // have resolved — see the identical comment in handlePasswordLogin above for why:
+          // LoginPage's auto-redirect effect and RouteGuard/RoleBasedRedirect react to
+          // isAuthenticated alone, and treat any incomplete state as invalid, forcing a
+          // premature logout + redirect to /login mid-flight.
           const tokenToUse = response.accessToken || 'otp-login';
           authStore.setToken(tokenToUse);
           authStore.setUserId(storedUserId);
@@ -489,8 +493,6 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
               console.warn('Failed to fetch permissions:', error);
             }
           }
-
-          authStore.setUser({ id: storedUserId });
 
           const hospitalResult = await fetchAndStoreHospitalMapping(storedUserId);
 
@@ -508,6 +510,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           } else {
             console.info('Hospital information incomplete; skipping doctor profile fetch.');
           }
+
+          // Only now — once role, hospital mapping, and doctor profile have all settled — flip
+          // isAuthenticated, so nothing downstream ever observes a partially-authenticated state.
+          authStore.setUser({ id: storedUserId });
 
           toast({
             title: "Login Successful",
