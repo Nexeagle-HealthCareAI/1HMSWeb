@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Wallet, TrendingDown, Building2, RefreshCw, Pencil, Trash2, Loader2, Download, Printer, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { expenseService, type ExpenseItem, type UpsertExpenseRequest } from '../../services/expenseService';
+import { debounce } from 'lodash';
 import { KpiStat } from '../KpiStat';
 import { LoadingState, EmptyState, ErrorState } from '../StatePanel';
 import { inr } from '../../utils/money';
@@ -70,10 +71,16 @@ export const ExpenseTab: React.FC = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    // Committed search term — only updated after debounce fires; drives the API call.
+    const [committedSearch, setCommittedSearch] = useState('');
 
     const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'YESTERDAY' | 'CUSTOM'>('ALL');
     const [customFromDate, setCustomFromDate] = useState(new Date().toISOString().slice(0, 10));
     const [customToDate, setCustomToDate] = useState(new Date().toISOString().slice(0, 10));
+    // Committed custom dates — updated after a short debounce so partial date strings
+    // (e.g. "2026-0") don't trigger API calls on every keypress.
+    const [committedFrom, setCommittedFrom] = useState(customFromDate);
+    const [committedTo, setCommittedTo] = useState(customToDate);
     const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
 
@@ -83,7 +90,7 @@ export const ExpenseTab: React.FC = () => {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
 
-    const load = useCallback(async (silent = false) => {
+    const load = useCallback(async (silent = false, overrideSearch?: string, overrideFrom?: string, overrideTo?: string) => {
         if (silent) setRefreshing(true); else setLoading(true);
         setError(null);
 
@@ -101,15 +108,17 @@ export const ExpenseTab: React.FC = () => {
             fromDate = yStr;
             toDate = yStr;
         } else if (dateFilter === 'CUSTOM') {
-            fromDate = customFromDate;
-            toDate = customToDate;
+            // Use override values when available (passed by debounced handlers)
+            fromDate = overrideFrom ?? committedFrom;
+            toDate = overrideTo ?? committedTo;
         }
 
         const cat = categoryFilter === 'ALL' ? undefined : categoryFilter;
+        const searchTerm = overrideSearch !== undefined ? overrideSearch : committedSearch;
 
         try {
             const res = await expenseService.list({ 
-                search: search.trim() || undefined, 
+                search: searchTerm.trim() || undefined, 
                 fromDate,
                 toDate,
                 category: cat,
@@ -123,9 +132,30 @@ export const ExpenseTab: React.FC = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [search, dateFilter, customFromDate, customToDate, categoryFilter]);
+    }, [dateFilter, committedFrom, committedTo, committedSearch, categoryFilter]);
 
     useEffect(() => { load(); }, [load]);
+
+    // Debounced search: waits 450ms after the user stops typing before committing the search
+    // term and triggering an API call. Prevents a request per keystroke.
+    const debouncedSearch = useMemo(
+        () => debounce((term: string) => {
+            setCommittedSearch(term);
+        }, 450),
+        []
+    );
+    useEffect(() => () => { debouncedSearch.cancel(); }, [debouncedSearch]);
+
+    // Debounced custom date: waits 600ms after the user finishes typing a date before reloading.
+    const debouncedDateFrom = useMemo(
+        () => debounce((val: string) => { setCommittedFrom(val); }, 600),
+        []
+    );
+    const debouncedDateTo = useMemo(
+        () => debounce((val: string) => { setCommittedTo(val); }, 600),
+        []
+    );
+    useEffect(() => () => { debouncedDateFrom.cancel(); debouncedDateTo.cancel(); }, [debouncedDateFrom, debouncedDateTo]);
 
     const exportCSV = () => {
         if (items.length === 0) {
@@ -225,7 +255,10 @@ export const ExpenseTab: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-4 h-full print:bg-white print:p-0">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 print:hidden">
+            {/* Full-width stack on phones, not 2/3-up — unlike IPD's short digit counts, these are
+                currency amounts that can run into lakhs (₹1,63,000+); no fixed column count is wide
+                enough to guarantee they never truncate except a single full-width column. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 print:hidden">
                 <KpiStat label="Total Expenses" amount={summary.total} format={inr} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                 <KpiStat label="Pending Payment" amount={summary.pending} format={inr} icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" />
                 <KpiStat label="Categories" value={String(summary.categories)} icon={<Building2 className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-violet-100/50 text-brand-900" />
@@ -236,7 +269,7 @@ export const ExpenseTab: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
                         <div className="relative w-full flex-shrink-0">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="Search category, vendor…" className="pl-9 bg-white text-sm rounded-xl h-10 sm:h-9" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }} />
+                            <Input placeholder="Search category, vendor…" className="pl-9 bg-white text-sm rounded-xl h-10 sm:h-9" value={search} onChange={(e) => { setSearch(e.target.value); debouncedSearch(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { debouncedSearch.cancel(); setCommittedSearch(search); } }} />
                         </div>
                         <Select value={dateFilter} onValueChange={(v: any) => setDateFilter(v)}>
                             <SelectTrigger className="w-[calc(50%-4px)] sm:w-[130px] h-10 sm:h-9 bg-white rounded-xl text-sm">
@@ -260,9 +293,9 @@ export const ExpenseTab: React.FC = () => {
                         </Select>
                         {dateFilter === 'CUSTOM' && (
                             <div className="flex items-center gap-1 w-full">
-                                <Input type="date" className="h-10 sm:h-9 flex-1 min-w-0 bg-white rounded-xl text-sm" value={customFromDate} onChange={e => setCustomFromDate(e.target.value)} />
+                                <Input type="date" className="h-10 sm:h-9 flex-1 min-w-0 bg-white rounded-xl text-sm" value={customFromDate} onChange={e => { setCustomFromDate(e.target.value); debouncedDateFrom(e.target.value); }} />
                                 <span className="text-slate-400 shrink-0">-</span>
-                                <Input type="date" className="h-10 sm:h-9 flex-1 min-w-0 bg-white rounded-xl text-sm" value={customToDate} onChange={e => setCustomToDate(e.target.value)} />
+                                <Input type="date" className="h-10 sm:h-9 flex-1 min-w-0 bg-white rounded-xl text-sm" value={customToDate} onChange={e => { setCustomToDate(e.target.value); debouncedDateTo(e.target.value); }} />
                             </div>
                         )}
                     </div>
