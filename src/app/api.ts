@@ -102,6 +102,9 @@ export const API_ENDPOINTS = {
   SPECIALIZATIONS: {
     BY_DEPARTMENT: 'doctors/specializations',
   },
+  MEDICAL_SPECIALITIES: {
+    GET_ALL: 'doctors/medical-specialities',
+  },
   DOCTORS: {
     PROFILE: 'doctors',
     GET_ALL: 'doctors',

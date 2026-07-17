@@ -4,6 +4,7 @@ import { doctorApi } from '@/features/doctor/services/doctorApi';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { departmentApi } from '@/features/hospital/services/departmentApi';
 import { specializationApi } from '@/features/hospital/services/specializationApi';
+import { medicalSpecialityApi } from '@/features/doctor/services/medicalSpecialityApi';
 
 import { mediaUploadApi } from '@/services/mediaUploadApi';
 
@@ -111,6 +112,17 @@ export const useSpecializationApi = {
     {
       enabled: !!departmentId && !!hospitalId,
       staleTime: 5 * 60 * 1000 // 5 minutes
+    }
+  ),
+};
+
+// Medical speciality (NMC qualification-ladder catalog) API hooks
+export const useMedicalSpecialityApi = {
+  getAll: () => createApiHook(
+    ['medicalSpecialities', 'all'],
+    () => medicalSpecialityApi.getAll(),
+    {
+      staleTime: 10 * 60 * 1000, // 10 minutes — small, rarely-changing global reference list
     }
   ),
 };

@@ -26,6 +26,7 @@ export interface QuickAddUserRequest {
   medicalCouncil?: string;
   department?: string;
   specializations?: string[];
+  primaryMedicalSpecialityId?: string;
   consultFee?: number;
 }
 
@@ -49,6 +50,7 @@ export interface AdminUpdateUserRequest {
   medicalCouncil?: string;
   department?: string;
   specializations?: string[];
+  primaryMedicalSpecialityId?: string;
   consultFee?: number;
 }
 
