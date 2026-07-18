@@ -344,7 +344,7 @@ export const BedMaster = () => {
                 setExpandedFloors(prev => new Set(prev).add(req.floorNo));
             }
         } catch (e: any) {
-            toast({ title: 'Save failed', description: e?.message ?? '', variant: 'destructive' });
+            toast({ title: 'Save failed', description: extractErrorMessage(e, e?.message ?? ''), variant: 'destructive' });
         } finally {
             setIsSavingRoom(false);
         }
@@ -373,7 +373,7 @@ export const BedMaster = () => {
             setAddBedCount(1);
             await loadAll(true);
         } catch (e: any) {
-            toast({ title: 'Could not add beds', description: e?.message ?? '', variant: 'destructive' });
+            toast({ title: 'Could not add beds', description: extractErrorMessage(e, e?.message ?? ''), variant: 'destructive' });
         } finally {
             setAddingBeds(false);
         }
