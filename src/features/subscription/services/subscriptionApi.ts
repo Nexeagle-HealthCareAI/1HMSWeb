@@ -12,6 +12,9 @@ export interface SubscriptionStatusResponse {
   // Set by a CMS admin when a submitted payment is rejected (status === 'Rejected').
   rejectionReason?: string | null;
   rejectedAt?: string | null;
+  // Exact cutoff timestamp — used for a live countdown as it nears expiry, not just the
+  // whole-days daysLeft above.
+  subscriptionEndDate?: string | null;
 }
 
 export const PAYMENT_MODES = ['UPI', 'Bank Transfer', 'Cheque', 'Card', 'Cash'] as const;

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useLogout } from '@/hooks/useLogout';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
 import { SubscriptionExpiredScreen } from '@/features/subscription/components/SubscriptionExpiredScreen';
+import { SubscriptionExpiryBanner } from '@/features/subscription/components/SubscriptionExpiryBanner';
 import {
   Calendar,
   Users,
@@ -186,6 +187,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { getStatus } = useSubscriptionApi();
   const { data: subscriptionStatus } = getStatus(hospitalId);
   const isSubscriptionExpired = subscriptionStatus?.status === 'Expired' || subscriptionStatus?.status === 'Blocked';
+  // Same 3-day runway regardless of billing cycle (Monthly/Quarterly/Half-Yearly/Yearly) — it's
+  // purely a function of how close SubscriptionEndDate is, not which cycle the plan is on.
+  const showExpiryWarning = isAdminRole
+    && subscriptionStatus?.status === 'Active'
+    && subscriptionStatus?.daysLeft != null
+    && subscriptionStatus.daysLeft <= 3
+    && !!subscriptionStatus?.subscriptionEndDate;
   // Sidebar is a fixed icon-rail (collapsed only) — no expand/collapse toggle.
   const sidebarCollapsed = true;
   const triggerLogout = useLogout();
@@ -484,6 +492,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </div>
           </div>
         </header>
+
+        {showExpiryWarning && <SubscriptionExpiryBanner endDate={subscriptionStatus!.subscriptionEndDate!} />}
 
         {/* Page Content */}
         <main className={cn(

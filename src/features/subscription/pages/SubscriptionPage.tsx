@@ -182,18 +182,31 @@ export const SubscriptionPage = () => {
                                             <StatusBadge status={status.status} />
                                         </div>
 
-                                        {status.daysLeft !== undefined && status.daysLeft >= 0 && (
-                                            <div className="mt-6">
-                                                <div className="flex justify-between items-baseline text-sm font-medium mb-1.5">
-                                                    <span className="text-muted-foreground">Days Remaining</span>
-                                                    <span className="text-slate-800 dark:text-slate-200 font-bold">{status.daysLeft} days</span>
+                                        {status.daysLeft !== undefined && status.daysLeft >= 0 && (() => {
+                                            const isUrgent = status.status === 'Active' && status.daysLeft <= 3;
+                                            return (
+                                                <div className="mt-6">
+                                                    <div className="flex justify-between items-baseline text-sm font-medium mb-1.5">
+                                                        <span className={isUrgent ? 'text-red-600 dark:text-red-400 font-bold' : 'text-muted-foreground'}>
+                                                            {isUrgent ? 'Renews Soon — Days Remaining' : 'Days Remaining'}
+                                                        </span>
+                                                        <span className={cn('font-bold', isUrgent ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200')}>
+                                                            {status.daysLeft} day{status.daysLeft === 1 ? '' : 's'}
+                                                        </span>
+                                                    </div>
+                                                    <Progress
+                                                        value={Math.min(100, (status.daysLeft / (activePlan ? CYCLE_DAYS[activePlan.billingCycle] : 30)) * 100)}
+                                                        className="h-2"
+                                                        indicatorClassName={isUrgent ? 'bg-red-500' : undefined}
+                                                    />
+                                                    {isUrgent && (
+                                                        <p className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">
+                                                            Your subscription is about to end — renew now to avoid losing access.
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <Progress
-                                                    value={Math.min(100, (status.daysLeft / (activePlan ? CYCLE_DAYS[activePlan.billingCycle] : 30)) * 100)}
-                                                    className="h-2"
-                                                />
-                                            </div>
-                                        )}
+                                            );
+                                        })()}
                                     </CardContent>
                                 </Card>
                             </motion.div>
