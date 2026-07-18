@@ -828,7 +828,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-                    {(['Monthly', 'Quarterly', 'Yearly'] as BillingCycle[]).map(c => (
+                    {(['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'] as BillingCycle[]).map(c => (
                       <button
                         key={c}
                         type="button"

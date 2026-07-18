@@ -17,17 +17,19 @@ export interface SubscriptionStatusResponse {
 export const PAYMENT_MODES = ['UPI', 'Bank Transfer', 'Cheque', 'Card', 'Cash'] as const;
 export type PaymentMode = typeof PAYMENT_MODES[number];
 
-export type BillingCycle = 'Monthly' | 'Quarterly' | 'Yearly';
+export type BillingCycle = 'Monthly' | 'Quarterly' | 'Half-Yearly' | 'Yearly';
 
 export const CYCLE_DAYS: Record<BillingCycle, number> = {
   Monthly: 30,
   Quarterly: 90,
+  'Half-Yearly': 182,
   Yearly: 365,
 };
 
 export const CYCLE_LABEL: Record<BillingCycle, string> = {
   Monthly: 'month',
   Quarterly: 'quarter',
+  'Half-Yearly': '6 months',
   Yearly: 'year',
 };
 
