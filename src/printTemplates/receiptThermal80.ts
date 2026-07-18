@@ -3,10 +3,18 @@ import { format } from 'date-fns';
 
 export const buildReceiptThermal80 = (data: ReceiptPrintData, settings: PrintSettings): string => {
     const money = (n: number) => (Number.isFinite(n) ? n : 0).toFixed(2);
-    const itemRows = (data.items ?? []).map(item => `
+    const regularItems = (data.items ?? []).filter(i => !i.isExtraCharge);
+    const extraCharges = (data.items ?? []).filter(i => i.isExtraCharge);
+
+    const itemRows = regularItems.map(item => `
         <div style="margin-bottom:4px;">
             <div class="row"><span>${item.description}</span><span>${money(item.total)}</span></div>
             <div style="font-size:7pt; color:#333;">${item.qty} x ${money(item.rate)}${item.discount > 0 ? ` &nbsp;(- ${money(item.discount)})` : ''}</div>
+        </div>`).join('');
+
+    const extraChargeRows = extraCharges.map(item => `
+        <div style="margin-bottom:4px; font-weight:bold;">
+            <div class="row"><span>${item.description}</span><span>${money(item.total)}</span></div>
         </div>`).join('');
     return `
     <!DOCTYPE html>
@@ -67,6 +75,11 @@ export const buildReceiptThermal80 = (data: ReceiptPrintData, settings: PrintSet
         <div class="divider"></div>
         <div class="label bold">Services</div>
         ${itemRows}
+        ${extraCharges.length > 0 ? `
+        <div class="divider" style="border-top:1px dotted #000; margin: 4px 0;"></div>
+        <div class="label bold">Extra Charges</div>
+        ${extraChargeRows}
+        ` : ''}
         <div class="row"><span class="label">Sub Total:</span><span>${money(data.subTotal)}</span></div>
         ${data.discountTotal > 0 ? `<div class="row"><span class="label">Discount:</span><span>- ${money(data.discountTotal)}</span></div>` : ''}
         ` : ''}

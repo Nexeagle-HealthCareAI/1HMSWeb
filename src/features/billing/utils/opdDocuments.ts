@@ -72,6 +72,7 @@ const computeChargeItems = (data: EventsData) => {
             rate: c.rate ?? 0,
             discount: c.discountAmount ?? 0,
             total: c.netAmount ?? 0,
+            isExtraCharge: (c.categoryCode ?? '').toUpperCase() === 'EXTRA_CHARGE',
         };
     });
     const subTotal = charges.reduce((s, c) => s + (c.grossAmount ?? 0), 0);
