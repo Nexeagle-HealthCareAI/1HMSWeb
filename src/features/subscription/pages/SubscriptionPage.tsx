@@ -5,13 +5,13 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { CheckCircle, AlertTriangle, CreditCard, ShieldCheck, Zap, Stethoscope, BedDouble, Mail, Sparkles, LayoutGrid, Receipt } from 'lucide-react';
+import { CheckCircle, AlertTriangle, CreditCard, ShieldCheck, Zap, Stethoscope, BedDouble, Mail, Sparkles, LayoutGrid, Receipt, CalendarClock } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionApi } from '../hooks/useSubscriptionApi';
 import { SubscriptionPlanDrawer } from '../components/SubscriptionPlanDrawer';
 import { CYCLE_DAYS, CYCLE_LABEL, type BillingCycle, type SubscriptionPlan } from '../services/subscriptionApi';
-import { motion, type Variants } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const containerVariants: Variants = {
@@ -496,24 +496,37 @@ export const SubscriptionPage = () => {
                                                 <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                                                     {plan.name}
                                                 </CardTitle>
-                                                <CardDescription className="text-sm font-medium">Billed {plan.billingCycle.toLowerCase()}</CardDescription>
+                                                <CardDescription className="text-sm font-medium flex items-center gap-1.5">
+                                                    <CalendarClock className="w-3.5 h-3.5 shrink-0" /> Billed {plan.billingCycle.toLowerCase()}
+                                                </CardDescription>
                                             </CardHeader>
                                             <CardContent className="flex-grow">
-                                                <div className="mb-6 relative">
+                                                <div className="mb-6 relative min-h-[4.5rem]">
                                                     {plan.isEnterprise ? (
                                                         <div className="flex items-end gap-2">
                                                             <span className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Custom</span>
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <div className="flex items-end gap-2">
-                                                                <span className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white">₹{plan.discountedPrice}</span>
-                                                                <span className="text-muted-foreground mb-2 font-medium">/ {CYCLE_LABEL[plan.billingCycle]}</span>
-                                                            </div>
+                                                            <AnimatePresence mode="wait">
+                                                                <motion.div
+                                                                    key={`${plan.id}-${plan.discountedPrice}`}
+                                                                    initial={{ opacity: 0, y: 6 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    exit={{ opacity: 0, y: -6 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                    className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5"
+                                                                >
+                                                                    <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white break-all">
+                                                                        ₹{plan.discountedPrice.toLocaleString('en-IN')}
+                                                                    </span>
+                                                                    <span className="text-muted-foreground text-sm font-medium whitespace-nowrap">/ {CYCLE_LABEL[plan.billingCycle]}</span>
+                                                                </motion.div>
+                                                            </AnimatePresence>
                                                             {plan.discountedPrice < plan.basePrice && (
-                                                                <div className="mt-3 flex items-center gap-3">
-                                                                    <div className="text-sm text-muted-foreground line-through decoration-slate-400">₹{plan.basePrice}</div>
-                                                                    <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800">
+                                                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                                    <div className="text-sm text-muted-foreground line-through decoration-slate-400 whitespace-nowrap">₹{plan.basePrice.toLocaleString('en-IN')}</div>
+                                                                    <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800 whitespace-nowrap">
                                                                         SAVE {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
                                                                     </div>
                                                                 </div>
