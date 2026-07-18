@@ -384,8 +384,9 @@ export const appointmentApi = {
   },
 
   // Get booked slots for a doctor on a specific date
-  getBookedSlots: (doctorId: string, hospitalId: string, date: string): Promise<BookedSlotsResponse> => {
-    const url = `/appointments/patient-booked-slots?doctorId=${doctorId}&hospitalId=${hospitalId}&date=${date}`;
+  getBookedSlots: (doctorId: string, hospitalId: string, date: string, excludeAppointmentId?: string): Promise<BookedSlotsResponse> => {
+    const url = `/appointments/patient-booked-slots?doctorId=${doctorId}&hospitalId=${hospitalId}&date=${date}`
+      + (excludeAppointmentId ? `&excludeAppointmentId=${excludeAppointmentId}` : '');
     return apiClient.get(url);
   },
 

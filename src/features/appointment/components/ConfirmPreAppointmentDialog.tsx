@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { CalendarCheck, Check, Clock, Loader2, User, X, Mail, Users, FileText, Pencil, Sparkles } from 'lucide-react';
@@ -39,6 +40,7 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
 }) => {
   const { t } = useTranslation();
   const { hospitalId } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const initialDate = useMemo(() => {
     const today = new Date();
@@ -54,6 +56,10 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
   const [showSuccess, setShowSuccess] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ tokenNumber?: number; status?: string } | null>(null);
 
+  const isSearching = autoPickPhase === 'searching';
+  const isManual = autoPickPhase === 'manual';
+  const isExhausted = autoPickPhase === 'exhausted';
+
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   // Reuse the same slot-fetching hooks the normal booking flow (AppointmentBooking) uses,
@@ -66,7 +72,12 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
   const { data: bookedSlotsResponse, isLoading: bookedSlotsLoading } = useBookedSlots(
     appointment.doctorId,
     hospitalId || '',
-    formattedDate
+    formattedDate,
+    // This appointment's own (still-uncommitted) preferred StartAt would otherwise show as
+    // "booked" against itself — see DoctorBookedSlotsHandler.cs — which was silently defeating
+    // the exact-preferred-time auto-match below on every single confirmation, always falling
+    // through to a different slot even when the patient's own requested time was genuinely free.
+    appointment.appointmentId
   );
 
   // Reset state whenever the drawer opens for a (possibly different) appointment.
@@ -167,13 +178,32 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
 
       setSuccessInfo({ tokenNumber: response?.tokenNumber, status: response?.status });
       setShowSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Confirm pre-appointment failed', error);
-      toast({
-        variant: 'destructive',
-        title: 'Confirmation Failed',
-        description: 'Could not confirm this appointment. Please try again.',
-      });
+      const message: string | undefined = error?.response?.data?.message;
+      const isSlotConflict = message?.toLowerCase().includes('already booked');
+
+      if (isSlotConflict && !isManual) {
+        // Someone else took this slot between when it was picked and now — refetch this date's
+        // booked slots (staleTime would otherwise keep serving the now-wrong cached list) and
+        // let the auto-search effect find a different one, instead of leaving the receptionist
+        // stuck staring at a slot that will just fail again if they hit Confirm a second time.
+        await queryClient.invalidateQueries({
+          queryKey: ['bookedSlots', appointment.doctorId, hospitalId, formattedDate, appointment.appointmentId],
+        });
+        setSelectedTime(null);
+        setAutoPickPhase('searching');
+        toast({
+          title: 'That slot was just taken',
+          description: 'Finding the next available slot for this patient…',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Confirmation Failed',
+          description: message || 'Could not confirm this appointment. Please try again.',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -183,10 +213,6 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
     onSuccess();
     onOpenChange(false);
   };
-
-  const isSearching = autoPickPhase === 'searching';
-  const isManual = autoPickPhase === 'manual';
-  const isExhausted = autoPickPhase === 'exhausted';
 
   return (
     <AnimatePresence>

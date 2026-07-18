@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { CheckCircle, AlertTriangle, CreditCard, ShieldCheck, Zap, Stethoscope, BedDouble, Mail, Sparkles, LayoutGrid, Receipt, CalendarClock } from 'lucide-react';
@@ -140,44 +140,28 @@ export const SubscriptionPage = () => {
     const isRejected = status?.status === 'Rejected';
 
     return (
-        <div className="min-h-[calc(100vh-140px)] w-full relative overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl">
+        <div className="h-[calc(100vh-4rem)] w-full relative overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col">
             {/* Ambient Background */}
             <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-brand-500/10 blur-[120px] pointer-events-none" />
             <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
 
-            <div className="relative z-10 container mx-auto py-10 px-4 md:px-8 max-w-5xl h-full overflow-y-auto scrollbar-hide">
-                <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'current' | 'plans')} className="w-full">
-                    <div className="flex justify-center mb-8">
-                        <TabsList className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1 h-auto">
-                            <TabsTrigger
-                                value="current"
-                                className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-600 dark:text-slate-300"
-                            >
-                                <ShieldCheck className="w-4 h-4" /> Current Subscription
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="plans"
-                                className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-600 dark:text-slate-300"
-                            >
-                                <LayoutGrid className="w-4 h-4" /> All Plans
-                            </TabsTrigger>
-                        </TabsList>
-                    </div>
+            <div className="relative z-10 w-full h-full flex flex-col lg:flex-row overflow-hidden">
+                {/* Left Panel: Current Subscription & History */}
+                <div className="w-full lg:w-[360px] xl:w-[420px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-6 overflow-y-auto">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-brand-500" /> Current Plan
+                    </h2>
 
-                    {/* ── Current Subscription ─────────────────────────────────────────── */}
-                    <TabsContent value="current" className="mt-0 focus-visible:outline-none space-y-6">
+                    <div className="space-y-6">
                         {status ? (
                             <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                <Card className="border-border/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg overflow-hidden relative">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 dark:from-white/5 dark:to-white/0 pointer-events-none" />
-                                    <CardContent className="p-6 relative">
-                                        <div className="flex flex-wrap items-start justify-between gap-4">
+                                <Card className="border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg relative">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent pointer-events-none" />
+                                    <CardContent className="p-5">
+                                        <div className="flex justify-between items-start gap-2 mb-3">
                                             <div>
-                                                <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Active Plan</p>
-                                                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{activePlan?.name ?? 'No Plan Selected'}</h3>
-                                                <p className="text-sm text-muted-foreground mt-1">
-                                                    {activePlan ? `Billed ${activePlan.billingCycle}` : 'Free trial — no plan selected yet'}
-                                                </p>
+                                                <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{activePlan?.name ?? 'Unknown Plan'}</h3>
+                                                <p className="text-xs text-muted-foreground mt-0.5">{activePlan ? `Billed ${activePlan.billingCycle}` : 'Free trial'}</p>
                                             </div>
                                             <StatusBadge status={status.status} />
                                         </div>
@@ -185,25 +169,20 @@ export const SubscriptionPage = () => {
                                         {status.daysLeft !== undefined && status.daysLeft >= 0 && (() => {
                                             const isUrgent = status.status === 'Active' && status.daysLeft <= 3;
                                             return (
-                                                <div className="mt-6">
-                                                    <div className="flex justify-between items-baseline text-sm font-medium mb-1.5">
-                                                        <span className={isUrgent ? 'text-red-600 dark:text-red-400 font-bold' : 'text-muted-foreground'}>
-                                                            {isUrgent ? 'Renews Soon — Days Remaining' : 'Days Remaining'}
+                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                                    <div className="flex justify-between items-baseline text-xs font-semibold mb-1.5">
+                                                        <span className={isUrgent ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}>
+                                                            {isUrgent ? 'Renews soon' : 'Time remaining'}
                                                         </span>
-                                                        <span className={cn('font-bold', isUrgent ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200')}>
-                                                            {status.daysLeft} day{status.daysLeft === 1 ? '' : 's'}
+                                                        <span className={cn('text-sm font-bold', isUrgent ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200')}>
+                                                            {status.daysLeft} d
                                                         </span>
                                                     </div>
                                                     <Progress
                                                         value={Math.min(100, (status.daysLeft / (activePlan ? CYCLE_DAYS[activePlan.billingCycle] : 30)) * 100)}
-                                                        className="h-2"
-                                                        indicatorClassName={isUrgent ? 'bg-red-500' : undefined}
+                                                        className="h-1.5"
+                                                        indicatorClassName={isUrgent ? 'bg-red-500' : 'bg-brand-500'}
                                                     />
-                                                    {isUrgent && (
-                                                        <p className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">
-                                                            Your subscription is about to end — renew now to avoid losing access.
-                                                        </p>
-                                                    )}
                                                 </div>
                                             );
                                         })()}
@@ -211,323 +190,212 @@ export const SubscriptionPage = () => {
                                 </Card>
                             </motion.div>
                         ) : (
-                            <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
-                                    <div className="p-3 bg-blue-100 dark:bg-blue-800/50 rounded-full text-blue-600 dark:text-blue-300">
-                                        <Zap className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-blue-900 dark:text-blue-300 font-bold text-xl">No Active Subscription</h3>
-                                        <p className="text-blue-700 dark:text-blue-400 mt-2 max-w-3xl">
-                                            You currently do not have an active subscription plan. Select a plan to unlock all features.
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50 p-4 rounded-xl shadow-sm text-sm">
+                                <h3 className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5"><Zap className="w-4 h-4"/> No Plan</h3>
+                                <p className="text-blue-700 dark:text-blue-400 mt-1">Select a plan on the right to get started.</p>
+                            </div>
                         )}
 
                         {isBlocked && (
-                            <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
-                                    <div className="p-3 bg-red-100 dark:bg-red-800/50 rounded-full text-red-600 dark:text-red-400">
-                                        <AlertTriangle className="w-6 h-6" />
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/60 p-4 rounded-xl shadow-sm text-sm">
+                                <h3 className="font-bold text-red-900 dark:text-red-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4"/> Inactive</h3>
+                                <p className="text-red-700 dark:text-red-400 mt-1 leading-relaxed">Your subscription expired. Submit a payment to restore access.</p>
+                            </div>
+                        )}
+                        {isRejected && (
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/60 p-4 rounded-xl shadow-sm text-sm">
+                                <h3 className="font-bold text-red-900 dark:text-red-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4"/> Rejected</h3>
+                                <p className="text-red-700 dark:text-red-400 mt-1 leading-relaxed">Last payment rejected. Please review and resubmit.</p>
+                                {status?.rejectionReason && (
+                                    <div className="mt-2 bg-white/60 dark:bg-black/20 p-2 rounded text-red-800 dark:text-red-300 text-xs font-medium border border-red-200/50">
+                                        {status.rejectionReason}
                                     </div>
-                                    <div>
-                                        <h3 className="text-red-900 dark:text-red-300 font-bold text-xl">Subscription Inactive</h3>
-                                        <p className="text-red-700 dark:text-red-400 mt-2">
-                                            Your trial or subscription has expired. Please select a plan and submit payment to continue using EasyHMS seamlessly.
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
+                                )}
+                            </div>
+                        )}
+                        {isPendingApproval && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/60 p-4 rounded-xl shadow-sm text-sm">
+                                <h3 className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5"><CreditCard className="w-4 h-4"/> Verification Pending</h3>
+                                <p className="text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">Payment received and is currently being verified.</p>
+                            </div>
+                        )}
+                        {isPending && (
+                            <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800/60 p-4 rounded-xl shadow-sm text-sm">
+                                <h3 className="font-bold text-brand-900 dark:text-brand-300 flex items-center gap-1.5"><CreditCard className="w-4 h-4"/> Pending Payment</h3>
+                                <p className="text-brand-700 dark:text-brand-400 mt-1 leading-relaxed">Select a plan and submit payment details to continue.</p>
+                            </div>
                         )}
 
-                        {isRejected && (
-                            <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
-                                    <div className="p-3 bg-red-100 dark:bg-red-800/50 rounded-full text-red-600 dark:text-red-400">
-                                        <AlertTriangle className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-red-900 dark:text-red-300 font-bold text-xl">Payment Rejected</h3>
-                                        <p className="text-red-700 dark:text-red-400 mt-2">
-                                            Your last payment submission was rejected{status?.rejectedAt ? ` on ${new Date(status.rejectedAt).toLocaleDateString()}` : ''}.
-                                            Please review the reason below, then select a plan and resubmit your payment details.
-                                        </p>
-                                        {status?.rejectionReason && (
-                                            <div className="mt-3 bg-white/70 dark:bg-black/20 border border-red-200 dark:border-red-800/60 rounded-xl px-4 py-3">
-                                                <p className="text-xs uppercase tracking-wider text-red-500 dark:text-red-400 font-semibold mb-1">Reason from admin</p>
-                                                <p className="text-red-800 dark:text-red-300 text-sm font-medium">{status.rejectionReason}</p>
+                        <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <Sheet>
+                                <SheetTrigger asChild>
+                                    <Button variant="outline" className="w-full font-semibold shadow-sm text-slate-700 dark:text-slate-200">
+                                        <Receipt className="w-4 h-4 mr-2" /> View Billing History
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl overflow-y-auto p-0">
+                                    <div className="p-6">
+                                        <SheetHeader className="mb-6">
+                                            <SheetTitle className="flex items-center gap-2 text-xl font-bold">
+                                                <Receipt className="w-5 h-5 text-brand-500" /> Payment History
+                                            </SheetTitle>
+                                        </SheetHeader>
+                                        
+                                        {isLoadingHistory ? (
+                                            <div className="text-center py-10 text-sm text-muted-foreground">Loading payment history...</div>
+                                        ) : paymentHistory.length === 0 ? (
+                                            <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                                                No payments submitted yet.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {paymentHistory.map(entry => {
+                                                    const planName = entry.planName ?? plans.find(p => p.id === entry.planId)?.name ?? 'Unknown Plan';
+                                                    return (
+                                                        <div key={entry.paymentId} className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+                                                            <div className="flex justify-between items-start gap-4 mb-2">
+                                                                <div>
+                                                                    <p className="font-bold text-slate-900 dark:text-white text-base">{planName}</p>
+                                                                    <p className="text-sm text-muted-foreground mt-0.5">{new Date(entry.submittedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })} · {entry.paymentMode ?? 'Unknown mode'}</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="font-black text-lg text-slate-900 dark:text-white">₹{entry.amount.toLocaleString('en-IN')}</p>
+                                                                    <StatusBadge status={entry.status} />
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">Ref: {entry.reference}</div>
+                                                            {entry.isProratedSwitch && (
+                                                                <div className="mt-3 p-2 bg-brand-50 dark:bg-brand-900/20 rounded-lg text-xs text-brand-700 dark:text-brand-300 font-medium">
+                                                                    Switch from {entry.previousPlanName} {entry.proratedCreditAmount != null && `· credit applied: ₹${entry.proratedCreditAmount.toLocaleString('en-IN')}`}
+                                                                </div>
+                                                            )}
+                                                            {entry.status === 'Rejected' && entry.rejectionReason && (
+                                                                <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-xs text-red-700 dark:text-red-300 font-medium border border-red-100 dark:border-red-900/50">
+                                                                    Reason: {entry.rejectionReason}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
-                                </div>
-                            </motion.div>
-                        )}
+                                </SheetContent>
+                            </Sheet>
+                        </div>
+                    </div>
+                </div>
 
-                        {isPendingApproval && (
-                            <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
-                                    <div className="p-3 bg-amber-100 dark:bg-amber-800/50 rounded-full text-amber-600 dark:text-amber-400">
-                                        <CreditCard className="w-6 h-6" />
+                {/* Right Panel: Available Plans */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Available Plans</h2>
+                                <p className="text-sm text-muted-foreground mt-1">Upgrade your capabilities and scale seamlessly.</p>
+                            </div>
+                            
+                            {/* Toggles */}
+                            <div className="flex flex-wrap items-center gap-4">
+                                {availableCycles.length > 1 && (
+                                    <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1 shadow-inner">
+                                        {availableCycles.map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => setCycle(c)}
+                                                className={cn(
+                                                    'px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap',
+                                                    cycle === c ? 'bg-brand-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                                                )}
+                                            >
+                                                {c}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <h3 className="text-amber-900 dark:text-amber-300 font-bold text-xl">Payment Verification Pending</h3>
-                                        <p className="text-amber-700 dark:text-amber-400 mt-2">
-                                            We have received your payment details and are verifying the transaction. Your account will be fully activated shortly.
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
+                                )}
 
-                        {isPending && (
-                            <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                <div className="bg-gradient-to-r from-brand-50 to-blue-50 dark:from-brand-900/20 dark:to-blue-900/20 border border-brand-200 dark:border-brand-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
-                                    <div className="p-3 bg-brand-100 dark:bg-brand-800/50 rounded-full text-brand-600 dark:text-brand-300">
-                                        <CreditCard className="w-6 h-6" />
+                                {teamSizes.length > 1 && (
+                                    <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1 shadow-inner">
+                                        {teamSizes.map(size => (
+                                            <button
+                                                key={size}
+                                                onClick={() => setSelectedTeamSize(size)}
+                                                className={cn(
+                                                    'flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap',
+                                                    selectedTeamSize === size ? 'bg-brand-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                                                )}
+                                            >
+                                                <Stethoscope className="w-3.5 h-3.5" />
+                                                {size} Doc{size > 1 ? 's' : ''}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <h3 className="text-brand-900 dark:text-brand-300 font-bold text-xl">Complete Your Subscription</h3>
-                                        <p className="text-brand-700 dark:text-brand-400 mt-2">
-                                            You have selected a plan. Open it below to submit your payment details.
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        <div className="flex justify-center pt-2">
-                            <Button onClick={() => setActiveTab('plans')} size="lg" className="font-semibold">
-                                <LayoutGrid className="w-4 h-4 mr-2" /> {status?.planId ? 'Change Plan' : 'View Plans'}
-                            </Button>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Payment History */}
-                        <div className="pt-4">
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                <Receipt className="w-5 h-5 text-brand-500" /> Payment History
-                            </h3>
-                            {isLoadingHistory ? (
-                                <div className="text-center py-10 text-sm text-muted-foreground">Loading payment history...</div>
-                            ) : paymentHistory.length === 0 ? (
-                                <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                                    No payments submitted yet.
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Plan</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Mode</TableHead>
-                                                    <TableHead>Reference</TableHead>
-                                                    <TableHead>Submitted</TableHead>
-                                                    <TableHead>Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {paginatedHistory.map(entry => {
-                                                    const planName = entry.planName ?? plans.find(p => p.id === entry.planId)?.name ?? 'Unknown Plan';
-                                                    return (
-                                                        <React.Fragment key={entry.paymentId}>
-                                                            <TableRow>
-                                                                <TableCell className="font-medium">
-                                                                    {planName}
-                                                                    {entry.isProratedSwitch && (
-                                                                        <div className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 mt-0.5">
-                                                                            Switch from {entry.previousPlanName}
-                                                                            {entry.proratedCreditAmount != null && ` · credit ₹${entry.proratedCreditAmount.toLocaleString('en-IN')}`}
-                                                                        </div>
-                                                                    )}
-                                                                </TableCell>
-                                                                <TableCell>₹{entry.amount}</TableCell>
-                                                                <TableCell className="text-sm text-muted-foreground">{entry.paymentMode ?? '—'}</TableCell>
-                                                                <TableCell className="font-mono text-xs">{entry.reference}</TableCell>
-                                                                <TableCell className="text-sm text-muted-foreground">
-                                                                    {new Date(entry.submittedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
-                                                                </TableCell>
-                                                                <TableCell><StatusBadge status={entry.status} /></TableCell>
-                                                            </TableRow>
-                                                            {entry.status === 'Rejected' && entry.rejectionReason && (
-                                                                <TableRow className="hover:bg-transparent">
-                                                                    <TableCell colSpan={6} className="pt-0 pb-3 text-xs text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900/10">
-                                                                        Reason: {entry.rejectionReason}
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            )}
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                        {sharedFeatures.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-6 px-4 py-3 bg-brand-50/50 dark:bg-brand-900/10 rounded-xl border border-brand-100/50 dark:border-brand-800/30">
+                                <div className="text-xs font-bold uppercase tracking-widest text-brand-600/80 dark:text-brand-400/80">Included in all:</div>
+                                {sharedFeatures.map(f => (
+                                    <span key={f} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        <CheckCircle className="w-3.5 h-3.5 text-brand-500" strokeWidth={2.5} />
+                                        {f}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
 
-                                    {historyTotalPages > 1 && (
-                                        <Pagination className="mt-4">
-                                            <PaginationContent>
-                                                <PaginationItem>
-                                                    <PaginationPrevious
-                                                        href="#"
-                                                        onClick={e => { e.preventDefault(); setHistoryPage(p => Math.max(1, p - 1)); }}
-                                                        className={cn(currentHistoryPage === 1 && 'pointer-events-none opacity-50')}
-                                                    />
-                                                </PaginationItem>
-                                                {Array.from({ length: historyTotalPages }, (_, i) => i + 1).map(p => (
-                                                    <PaginationItem key={p}>
-                                                        <PaginationLink
-                                                            href="#"
-                                                            isActive={p === currentHistoryPage}
-                                                            onClick={e => { e.preventDefault(); setHistoryPage(p); }}
-                                                        >
-                                                            {p}
-                                                        </PaginationLink>
-                                                    </PaginationItem>
-                                                ))}
-                                                <PaginationItem>
-                                                    <PaginationNext
-                                                        href="#"
-                                                        onClick={e => { e.preventDefault(); setHistoryPage(p => Math.min(historyTotalPages, p + 1)); }}
-                                                        className={cn(currentHistoryPage === historyTotalPages && 'pointer-events-none opacity-50')}
-                                                    />
-                                                </PaginationItem>
-                                            </PaginationContent>
-                                        </Pagination>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </TabsContent>
-
-                    {/* ── All Plans ─────────────────────────────────────────────────────── */}
-                    <TabsContent value="plans" className="mt-0 focus-visible:outline-none">
-                        <div className="flex flex-col items-center gap-6 mt-4 mb-10">
-                            {(availableCycles.length > 1 || teamSizes.length > 1) && (
-                                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 w-full">
-                                    {availableCycles.length > 1 && (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Billing Cycle</span>
-                                            <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-                                                {availableCycles.map(c => (
-                                                    <button
-                                                        key={c}
-                                                        onClick={() => setCycle(c)}
-                                                        className={cn(
-                                                            'px-5 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap',
-                                                            cycle === c ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                                                        )}
-                                                    >
-                                                        {c}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {teamSizes.length > 1 && (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Team Size</span>
-                                            <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-                                                {teamSizes.map(size => (
-                                                    <button
-                                                        key={size}
-                                                        onClick={() => setSelectedTeamSize(size)}
-                                                        className={cn(
-                                                            'flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap',
-                                                            selectedTeamSize === size ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                                                        )}
-                                                    >
-                                                        <Stethoscope className="w-4 h-4" />
-                                                        {size} Doctor{size === 1 ? '' : 's'}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {sharedFeatures.length > 0 && (
-                                <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 max-w-3xl">
-                                    {sharedFeatures.map(f => (
-                                        <span key={f} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
-                                            {f}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mt-4 pb-12 items-start">
+                        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                             {visiblePlans.map((plan) => {
                                 const isCurrentPlan = plan.id === status?.planId;
                                 const isPopular = !isCurrentPlan && plan.id === popularPlanId;
                                 const extraFeatures = plan.features.filter(f => !sharedFeatures.includes(f));
                                 return (
-                                    <motion.div key={plan.id} variants={itemVariants} whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }} className={cn(isPopular && 'md:-mt-3')}>
+                                    <motion.div key={plan.id} variants={itemVariants} whileHover={{ y: -6 }} transition={{ type: "spring", stiffness: 300 }} className="h-full flex">
                                         <Card className={cn(
-                                            "relative h-full flex flex-col border-2 overflow-hidden transition-all duration-300",
+                                            "relative flex flex-col w-full border-2 overflow-hidden transition-all duration-300 rounded-2xl",
                                             isCurrentPlan
-                                                ? "border-brand-500 shadow-2xl shadow-brand-500/10 bg-white dark:bg-slate-900"
+                                                ? "border-brand-500 shadow-xl shadow-brand-500/20 bg-white dark:bg-slate-900"
                                                 : isPopular
-                                                    ? "border-amber-400 dark:border-amber-500 shadow-2xl shadow-amber-500/10 bg-white dark:bg-slate-900"
-                                                    : "border-transparent bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-lg hover:shadow-xl dark:border-slate-800"
+                                                    ? "border-amber-400 dark:border-amber-500 shadow-xl shadow-amber-500/10 bg-gradient-to-b from-amber-50/30 to-white dark:from-amber-900/10 dark:to-slate-900"
+                                                    : "border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md hover:border-slate-300 dark:hover:border-slate-700"
                                         )}>
                                             {isCurrentPlan && (
-                                                <>
-                                                    <div className="absolute top-0 right-0 bg-brand-500 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm z-10">
-                                                        Current Plan
-                                                    </div>
-                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
-                                                </>
+                                                <div className="absolute top-0 right-0 bg-brand-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg shadow-sm z-10">
+                                                    Current
+                                                </div>
                                             )}
                                             {isPopular && (
-                                                <>
-                                                    <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm z-10 flex items-center gap-1">
-                                                        <Sparkles className="w-3 h-3" /> Most Popular
-                                                    </div>
-                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
-                                                </>
+                                                <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg shadow-sm z-10 flex items-center gap-1">
+                                                    <Sparkles className="w-3 h-3" /> Popular
+                                                </div>
                                             )}
-                                            <CardHeader className="pb-6">
-                                                <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                                            <CardHeader className="pb-4 pt-5">
+                                                <CardTitle className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                                                     {plan.name}
                                                 </CardTitle>
-                                                <CardDescription className="text-sm font-medium flex items-center gap-1.5">
-                                                    <CalendarClock className="w-3.5 h-3.5 shrink-0" /> Billed {plan.billingCycle.toLowerCase()}
+                                                <CardDescription className="text-xs font-semibold flex items-center gap-1 mt-1">
+                                                    <CalendarClock className="w-3.5 h-3.5 text-muted-foreground" /> Billed {plan.billingCycle.toLowerCase()}
                                                 </CardDescription>
                                             </CardHeader>
-                                            <CardContent className="flex-grow">
-                                                <div className="mb-6 relative min-h-[4.5rem]">
+                                            <CardContent className="flex-grow pb-4">
+                                                <div className="mb-5">
                                                     {plan.isEnterprise ? (
-                                                        <div className="flex items-end gap-2">
-                                                            <span className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Custom</span>
-                                                        </div>
+                                                        <div className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white pt-2">Custom</div>
                                                     ) : (
                                                         <>
-                                                            <AnimatePresence mode="wait">
-                                                                <motion.div
-                                                                    key={`${plan.id}-${plan.discountedPrice}`}
-                                                                    initial={{ opacity: 0, y: 6 }}
-                                                                    animate={{ opacity: 1, y: 0 }}
-                                                                    exit={{ opacity: 0, y: -6 }}
-                                                                    transition={{ duration: 0.2 }}
-                                                                    className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5"
-                                                                >
-                                                                    <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white break-all">
-                                                                        ₹{plan.discountedPrice.toLocaleString('en-IN')}
-                                                                    </span>
-                                                                    <span className="text-muted-foreground text-sm font-medium whitespace-nowrap">/ {CYCLE_LABEL[plan.billingCycle]}</span>
-                                                                </motion.div>
-                                                            </AnimatePresence>
+                                                            <div className="flex items-baseline gap-1">
+                                                                <span className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">
+                                                                    ₹{plan.discountedPrice.toLocaleString('en-IN')}
+                                                                </span>
+                                                                <span className="text-muted-foreground text-xs font-bold uppercase tracking-wider">/ {CYCLE_LABEL[plan.billingCycle]}</span>
+                                                            </div>
                                                             {plan.discountedPrice < plan.basePrice && (
-                                                                <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                                    <div className="text-sm text-muted-foreground line-through decoration-slate-400 whitespace-nowrap">₹{plan.basePrice.toLocaleString('en-IN')}</div>
-                                                                    <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800 whitespace-nowrap">
-                                                                        SAVE {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
+                                                                <div className="mt-1.5 flex items-center gap-2">
+                                                                    <div className="text-xs text-muted-foreground line-through decoration-slate-400">₹{plan.basePrice.toLocaleString('en-IN')}</div>
+                                                                    <div className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest">
+                                                                        Save {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
                                                                     </div>
                                                                 </div>
                                                             )}
@@ -535,48 +403,45 @@ export const SubscriptionPage = () => {
                                                     )}
                                                 </div>
 
-                                                <div className="flex flex-wrap gap-2 mb-6">
-                                                    <div className="inline-flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                        <Stethoscope className="w-3.5 h-3.5 text-brand-500" />
-                                                        {plan.maxDoctors == null ? 'Unlimited doctors' : `Up to ${plan.maxDoctors} doctor${plan.maxDoctors === 1 ? '' : 's'}`}
+                                                <div className="flex flex-col gap-2 mb-5">
+                                                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-100 dark:border-slate-700/50">
+                                                        <span className="flex items-center gap-2"><Stethoscope className="w-3.5 h-3.5 text-brand-500" /> Doctors</span>
+                                                        <span>{plan.maxDoctors == null ? 'Unlimited' : plan.maxDoctors}</span>
                                                     </div>
-                                                    <div className="inline-flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                                        <BedDouble className="w-3.5 h-3.5 text-brand-500" />
-                                                        {plan.maxBeds == null ? 'Unlimited beds' : `Up to ${plan.maxBeds} beds`}
+                                                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-100 dark:border-slate-700/50">
+                                                        <span className="flex items-center gap-2"><BedDouble className="w-3.5 h-3.5 text-brand-500" /> Beds</span>
+                                                        <span>{plan.maxBeds == null ? 'Unlimited' : plan.maxBeds}</span>
                                                     </div>
                                                 </div>
 
                                                 {extraFeatures.length > 0 && (
-                                                    <ul className="space-y-4">
+                                                    <ul className="space-y-3">
                                                         {extraFeatures.map((feature: string, idx: number) => (
-                                                            <li key={idx} className="flex items-start">
-                                                                <div className="mt-0.5 bg-brand-50 dark:bg-brand-900/20 p-1 rounded-full mr-3 border border-brand-100 dark:border-brand-800/50">
-                                                                    <CheckCircle className="text-brand-500 w-3 h-3" strokeWidth={3} />
-                                                                </div>
-                                                                <span className="text-slate-700 dark:text-slate-300 font-medium">{feature}</span>
+                                                            <li key={idx} className="flex items-start text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                                <CheckCircle className="w-3.5 h-3.5 text-brand-500 mr-2 shrink-0 opacity-80" />
+                                                                <span className="leading-tight">{feature}</span>
                                                             </li>
                                                         ))}
                                                     </ul>
                                                 )}
                                             </CardContent>
-                                            <CardFooter className="pt-6 border-t border-slate-100 dark:border-slate-800/50 mt-auto">
+                                            <CardFooter className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto bg-slate-50/50 dark:bg-slate-900/30">
                                                 {plan.isEnterprise ? (
-                                                    <Button asChild className="w-full text-base font-semibold transition-all shadow-md" size="lg" variant="secondary">
+                                                    <Button asChild className="w-full text-sm font-bold shadow-sm" variant="secondary">
                                                         <a href={`mailto:info@nexeagle.com?subject=${encodeURIComponent(`Enterprise plan enquiry — ${plan.name}`)}`}>
-                                                            <Mail className="w-4 h-4 mr-2" /> Contact Us
+                                                            <Mail className="w-3.5 h-3.5 mr-2" /> Contact Us
                                                         </a>
                                                     </Button>
                                                 ) : (
                                                     <Button
                                                         className={cn(
-                                                            "w-full text-base font-semibold transition-all shadow-md",
+                                                            "w-full text-sm font-bold shadow-sm transition-all",
                                                             isPopular && !isCurrentPlan && "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
                                                         )}
-                                                        size="lg"
-                                                        variant={isCurrentPlan ? 'default' : isPopular ? 'default' : 'secondary'}
+                                                        variant={isCurrentPlan ? 'outline' : isPopular ? 'default' : 'secondary'}
                                                         onClick={() => handleSelectPlan(plan)}
                                                     >
-                                                        {isCurrentPlan ? 'Manage / Pay' : status?.status === 'Active' ? 'Switch Plan' : 'Select Plan'}
+                                                        {isCurrentPlan ? 'Manage Current Plan' : status?.status === 'Active' ? 'Switch Plan' : 'Select Plan'}
                                                     </Button>
                                                 )}
                                             </CardFooter>
@@ -585,8 +450,8 @@ export const SubscriptionPage = () => {
                                 );
                             })}
                         </motion.div>
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                </div>
             </div>
 
             <SubscriptionPlanDrawer
