@@ -107,8 +107,8 @@ const decodeJwtExpiryMs = (token: string): number | null => {
     return null;
   }
 };
-// Fallback only used if a token can't be decoded — matches the backend's real token lifetime.
-const FALLBACK_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
+// Fallback only used if a token can't be decoded — matches the backend's real token lifetime (30 days).
+const FALLBACK_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Initial state
 const initialState: AuthState = {

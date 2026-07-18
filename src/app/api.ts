@@ -138,6 +138,7 @@ export const API_ENDPOINTS = {
     GET_STATUS: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}`,
     SELECT_PLAN: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/select-plan`,
     SUBMIT_PAYMENT: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/submit-payment`,
+    GET_PAYMENT_HISTORY: (hospitalId: string) => `/api/v1/Subscription/${encodeURIComponent(hospitalId)}/payment-history`,
     // Proxied through easyHMSAPI (server-to-server to CMSAPI) — the browser has no CMS
     // credential, and CMSAPI's plan endpoints require CMS auth, so this can't hit CMS directly.
     GET_PLANS: '/api/v1/Subscription/plans',

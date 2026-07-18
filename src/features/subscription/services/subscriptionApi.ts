@@ -5,12 +5,17 @@ export interface SubscriptionStatusResponse {
   status: string;
   daysLeft?: number;
   paymentAmount?: number;
+  paymentReference?: string | null;
+  paymentMode?: string | null;
   paymentDate?: string;
   planId?: string;
   // Set by a CMS admin when a submitted payment is rejected (status === 'Rejected').
   rejectionReason?: string | null;
   rejectedAt?: string | null;
 }
+
+export const PAYMENT_MODES = ['UPI', 'Bank Transfer', 'Cheque', 'Card', 'Cash'] as const;
+export type PaymentMode = typeof PAYMENT_MODES[number];
 
 export type BillingCycle = 'Monthly' | 'Yearly';
 
@@ -40,6 +45,19 @@ const parseFeatures = (raw: unknown): string[] => {
   }
 };
 
+export interface PaymentHistoryEntry {
+  paymentId: string;
+  planId: string | null;
+  planName: string | null;
+  amount: number;
+  reference: string;
+  paymentMode: string | null;
+  status: string; // PendingApproval, Approved, Rejected
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+}
+
 export interface SelectPlanRequest {
   hospitalId: string;
   planId: string;
@@ -49,6 +67,7 @@ export interface SubmitPaymentRequest {
   hospitalId: string;
   amount: number;
   reference: string;
+  paymentMode: string;
 }
 
 export const subscriptionApi = {
@@ -85,7 +104,25 @@ export const subscriptionApi = {
   submitPayment: async (data: SubmitPaymentRequest): Promise<any> => {
     return apiClient.post(API_ENDPOINTS.SUBSCRIPTION.SUBMIT_PAYMENT(data.hospitalId), {
       amount: data.amount,
-      reference: data.reference
+      reference: data.reference,
+      paymentMode: data.paymentMode
     });
+  },
+
+  // Every past payment submission (PendingApproval/Approved/Rejected), newest first.
+  getPaymentHistory: async (hospitalId: string): Promise<PaymentHistoryEntry[]> => {
+    const response = await apiClient.get<any[]>(API_ENDPOINTS.SUBSCRIPTION.GET_PAYMENT_HISTORY(hospitalId));
+    return (response ?? []).map((p: any) => ({
+      paymentId: p.paymentId,
+      planId: p.planId ?? null,
+      planName: p.planName ?? null,
+      amount: p.amount,
+      reference: p.reference,
+      paymentMode: p.paymentMode ?? null,
+      status: p.status,
+      submittedAt: p.submittedAt,
+      reviewedAt: p.reviewedAt ?? null,
+      rejectionReason: p.rejectionReason ?? null
+    }));
   }
 };

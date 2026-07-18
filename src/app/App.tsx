@@ -10,6 +10,7 @@ import { AppRoutes } from "./AppRoutes";
 import { Toaster as SonnerToaster } from 'sonner';
 import { initOffline, offlinePersister, PERSIST_BUSTER, PERSIST_MAX_AGE } from "@/offline";
 import { OfflineBanner } from "@/components/offline/OfflineBanner";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import '@/i18n'; // Initialize i18n
 
 const queryClient = new QueryClient({
@@ -40,6 +41,7 @@ const App = () => {
               <Toaster />
               <SonnerToaster />
               <OfflineBanner />
+              <InstallPrompt />
               <AppRoutes />
             </TooltipProvider>
           </InactivityProvider>

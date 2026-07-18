@@ -23,6 +23,16 @@ export const useSubscriptionApi = () => {
     });
   };
 
+  // Get payment history
+  const getPaymentHistory = (hospitalId: string) => {
+    return useQuery({
+      queryKey: ['subscriptionPaymentHistory', hospitalId],
+      queryFn: () => subscriptionApi.getPaymentHistory(hospitalId),
+      enabled: !!hospitalId,
+      retry: false
+    });
+  };
+
   // Select a plan
   const selectPlan = useMutation({
     mutationFn: (data: SelectPlanRequest) => subscriptionApi.selectPlan(data),
@@ -36,14 +46,16 @@ export const useSubscriptionApi = () => {
   const submitPayment = useMutation({
     mutationFn: (data: SubmitPaymentRequest) => subscriptionApi.submitPayment(data),
     onSuccess: (_, variables) => {
-      // Invalidate the status query to refetch after successful payment submission
+      // Invalidate the status + history queries to refetch after successful payment submission
       queryClient.invalidateQueries({ queryKey: ['subscriptionStatus', variables.hospitalId] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionPaymentHistory', variables.hospitalId] });
     }
   });
 
   return {
     getStatus,
     getPlans,
+    getPaymentHistory,
     selectPlan,
     submitPayment
   };
