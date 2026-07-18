@@ -7,7 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Stethoscope, BedDouble, Check, Landmark, ShieldCheck, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionApi } from '../hooks/useSubscriptionApi';
-import { PAYMENT_MODES } from '../services/subscriptionApi';
+import { PAYMENT_MODES, CYCLE_LABEL } from '../services/subscriptionApi';
 import type { SubscriptionPlan } from '../services/subscriptionApi';
 
 interface Props {
@@ -60,7 +60,7 @@ export const SubscriptionPlanDrawer: React.FC<Props> = ({ hospitalId, plan, open
     };
 
     if (!plan) return null;
-    const priceSuffix = plan.billingCycle === 'Yearly' ? 'year' : 'month';
+    const priceSuffix = CYCLE_LABEL[plan.billingCycle];
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>

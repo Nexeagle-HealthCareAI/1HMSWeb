@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionApi } from '../hooks/useSubscriptionApi';
 import { SubscriptionPlanDrawer } from '../components/SubscriptionPlanDrawer';
-import type { BillingCycle, SubscriptionPlan } from '../services/subscriptionApi';
+import { CYCLE_DAYS, CYCLE_LABEL, type BillingCycle, type SubscriptionPlan } from '../services/subscriptionApi';
 import { motion, type Variants } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -71,11 +71,11 @@ export const SubscriptionPage = () => {
     );
 
     const cyclePlans = useMemo(() => plans.filter(p => p.billingCycle === cycle), [plans, cycle]);
-    // Only worth showing the Monthly/Yearly switch once a second cycle actually exists in the
-    // catalog — right now every seeded plan is Monthly, so a visible-but-empty toggle would be a
-    // dead end for the user.
+    // Only worth showing the Monthly/Quarterly/Yearly switch once a second cycle actually exists
+    // in the catalog — a visible-but-empty toggle would be a dead end for the user. Sorted by
+    // actual duration (not alphabetically) so the toggle always reads shortest-to-longest.
     const availableCycles = useMemo(
-        () => Array.from(new Set(plans.map(p => p.billingCycle))).sort(),
+        () => Array.from(new Set(plans.map(p => p.billingCycle))).sort((a, b) => CYCLE_DAYS[a] - CYCLE_DAYS[b]),
         [plans]
     );
 
@@ -200,7 +200,7 @@ export const SubscriptionPage = () => {
                                                     <span className="text-slate-800 dark:text-slate-200 font-bold">{status.daysLeft} days</span>
                                                 </div>
                                                 <Progress
-                                                    value={Math.min(100, (status.daysLeft / (activePlan?.billingCycle === 'Yearly' ? 365 : 30)) * 100)}
+                                                    value={Math.min(100, (status.daysLeft / (activePlan ? CYCLE_DAYS[activePlan.billingCycle] : 30)) * 100)}
                                                     className="h-2"
                                                 />
                                             </div>
@@ -488,7 +488,7 @@ export const SubscriptionPage = () => {
                                                         <>
                                                             <div className="flex items-end gap-2">
                                                                 <span className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white">₹{plan.discountedPrice}</span>
-                                                                <span className="text-muted-foreground mb-2 font-medium">/ {plan.billingCycle === 'Yearly' ? 'year' : 'month'}</span>
+                                                                <span className="text-muted-foreground mb-2 font-medium">/ {CYCLE_LABEL[plan.billingCycle]}</span>
                                                             </div>
                                                             {plan.discountedPrice < plan.basePrice && (
                                                                 <div className="mt-3 flex items-center gap-3">
