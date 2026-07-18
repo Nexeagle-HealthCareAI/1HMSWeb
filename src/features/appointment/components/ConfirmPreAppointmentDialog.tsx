@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { CalendarCheck, Check, Clock, Loader2, User, X } from 'lucide-react';
+import { CalendarCheck, Check, Clock, Loader2, User, X, Mail, Users, FileText, Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ import { useBookedSlots } from '../hooks/useBookedSlots';
 import { generateTimeSlotsFromShiftInfo, type GeneratedTimeSlot } from '../utils/slotGenerator';
 import { appointmentApi, type AppointmentDetail } from '../services/appointmentApi';
 import { useAuthStore } from '@/store/authStore';
-import { format } from 'date-fns';
+import { format, addDays, differenceInCalendarDays } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
 interface ConfirmPreAppointmentDialogProps {
@@ -19,6 +19,17 @@ interface ConfirmPreAppointmentDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
+
+interface SlotWithDuration extends GeneratedTimeSlot {
+  slotDurationInMinutes: number;
+}
+
+// How many days forward to search for an open slot before giving up and asking the receptionist
+// to pick manually — a doctor booked solid for two straight weeks is a data problem, not something
+// to keep silently paging through.
+const MAX_SEARCH_DAYS = 13;
+
+type AutoPickPhase = 'searching' | 'found' | 'exhausted' | 'manual';
 
 export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogProps> = ({
   appointment,
@@ -29,17 +40,21 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
   const { t } = useTranslation();
   const { hospitalId } = useAuthStore();
 
-  // State
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    appointment.startAt ? new Date(appointment.startAt) : new Date()
-  );
+  const initialDate = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const preferred = appointment.startAt ? new Date(appointment.startAt) : today;
+    return preferred >= today ? preferred : today;
+  }, [appointment.startAt]);
+
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [autoPickPhase, setAutoPickPhase] = useState<AutoPickPhase>('searching');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ tokenNumber?: number; status?: string } | null>(null);
-  const autoSelectedRef = useRef(false);
 
-  const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   // Reuse the same slot-fetching hooks the normal booking flow (AppointmentBooking) uses,
   // so this shows genuinely open slots for the doctor+date.
@@ -57,45 +72,82 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
   // Reset state whenever the drawer opens for a (possibly different) appointment.
   useEffect(() => {
     if (open) {
-      setSelectedDate(appointment.startAt ? new Date(appointment.startAt) : new Date());
+      setSelectedDate(initialDate);
       setSelectedTime(null);
+      setAutoPickPhase('searching');
       setShowSuccess(false);
       setSuccessInfo(null);
-      autoSelectedRef.current = false;
     }
-  }, [open, appointment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, appointment.appointmentId]);
 
-  const slots: GeneratedTimeSlot[] = useMemo(() => {
+  const isTimeOff = !!doctorSlotsResponse?.isTimeOff;
+  const slotsLoading = doctorSlotsLoading || bookedSlotsLoading;
+
+  const slots: SlotWithDuration[] = useMemo(() => {
     if (!doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) return [];
-    if (doctorSlotsResponse.isTimeOff) return [];
+    if (isTimeOff) return [];
 
-    const generated = generateTimeSlotsFromShiftInfo(
-      doctorSlotsResponse.shiftInfo[0].shiftDayDetails,
-      appointment.doctorId,
-      formattedDate
-    );
+    const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
+    const generated = generateTimeSlotsFromShiftInfo(shiftDayDetails, appointment.doctorId, formattedDate);
     const booked = new Set(bookedSlotsResponse?.bookedSlots || []);
-    return generated.map((slot) => ({
-      ...slot,
-      isBooked: booked.has(`${slot.time}:00`),
-    }));
-  }, [doctorSlotsResponse, bookedSlotsResponse, appointment.doctorId, formattedDate]);
+    return generated.map((slot) => {
+      const shiftDetail = shiftDayDetails.find((s) => s.shiftName === slot.shiftName);
+      return {
+        ...slot,
+        isBooked: booked.has(`${slot.time}:00`),
+        // Real per-shift duration, not a hardcoded guess — this is what actually gets sent as
+        // SlotTimeInMinutes on confirm, so the token/EndAt reflects the doctor's configured slot
+        // length instead of always assuming 15 minutes.
+        slotDurationInMinutes: shiftDetail?.slotDurationInMinutes || 15,
+      };
+    });
+  }, [doctorSlotsResponse, isTimeOff, bookedSlotsResponse, appointment.doctorId, formattedDate]);
 
-  // Default the initially-selected slot to match the patient's preferred time if it's open;
-  // otherwise leave it for the receptionist to pick any open slot.
+  // Auto-pick the next available slot: try the patient's preferred time on their preferred date
+  // first, else the earliest open slot that day, else page forward a day at a time — the
+  // receptionist never has to hunt for availability themselves. "Change slot" (below) drops out
+  // of this loop into manual picking, same UI as before, if they want to override.
   useEffect(() => {
-    if (!open || autoSelectedRef.current || slots.length === 0) return;
-    const preferredTime = appointment.startAt ? format(new Date(appointment.startAt), 'HH:mm') : null;
-    const match = preferredTime ? slots.find((s) => s.time === preferredTime && !s.isBooked) : null;
-    if (match) {
-      setSelectedTime(match.time);
+    if (!open || autoPickPhase !== 'searching' || slotsLoading) return;
+
+    const isFirstDate = formattedDate === format(initialDate, 'yyyy-MM-dd');
+    if (isFirstDate && appointment.startAt) {
+      const preferredTime = format(new Date(appointment.startAt), 'HH:mm');
+      const exactMatch = slots.find((s) => s.time === preferredTime && !s.isBooked);
+      if (exactMatch) {
+        setSelectedTime(exactMatch.time);
+        setAutoPickPhase('found');
+        return;
+      }
     }
-    autoSelectedRef.current = true;
-  }, [open, slots, appointment.startAt]);
+
+    const firstOpen = !isTimeOff ? slots.find((s) => !s.isBooked) : undefined;
+    if (firstOpen) {
+      setSelectedTime(firstOpen.time);
+      setAutoPickPhase('found');
+      return;
+    }
+
+    const daysSearched = differenceInCalendarDays(selectedDate, initialDate);
+    if (daysSearched >= MAX_SEARCH_DAYS) {
+      setAutoPickPhase('exhausted');
+      return;
+    }
+    setSelectedDate((d) => addDays(d, 1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoPickPhase, slotsLoading, slots, isTimeOff, formattedDate]);
+
+  const selectedSlotObj = slots.find((s) => s.time === selectedTime);
 
   const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
     setSelectedDate(date);
     setSelectedTime(null);
+  };
+
+  const handleChangeSlot = () => {
+    setAutoPickPhase('manual');
   };
 
   const handleConfirm = async () => {
@@ -110,7 +162,7 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
         appointmentId: appointment.appointmentId,
         hospitalId,
         startAt,
-        slotTimeInMinutes: 15,
+        slotTimeInMinutes: selectedSlotObj?.slotDurationInMinutes || 15,
       });
 
       setSuccessInfo({ tokenNumber: response?.tokenNumber, status: response?.status });
@@ -132,8 +184,9 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
     onOpenChange(false);
   };
 
-  const isTimeOff = !!doctorSlotsResponse?.isTimeOff;
-  const slotsLoading = doctorSlotsLoading || bookedSlotsLoading;
+  const isSearching = autoPickPhase === 'searching';
+  const isManual = autoPickPhase === 'manual';
+  const isExhausted = autoPickPhase === 'exhausted';
 
   return (
     <AnimatePresence>
@@ -170,13 +223,13 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
                     ) : (
                       <>
                         <CalendarCheck className="h-5 w-5" />
-                        {t('appointmentDashboard.confirmPreAppointmentTitle', { defaultValue: 'Confirm Pre-Appointment' })}
+                        {t('appointmentDashboard.confirmPreAppointmentTitle', { defaultValue: 'Confirm Appointment' })}
                       </>
                     )}
                   </h3>
                   {!showSuccess && (
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Pick a real time slot to allocate a token for this patient.
+                      Review the details below, then confirm to allocate a token.
                     </p>
                   )}
                 </div>
@@ -214,45 +267,70 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-4">
-                      {/* Patient Requested Summary */}
-                      <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800">
-                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase mb-1">Patient Requested</p>
-                        <div className="space-y-1 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Patient: </span>
-                            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[180px] flex items-center gap-1">
-                              <User className="h-3 w-3 opacity-60" />
-                              {appointment.patientFullName}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Doctor: </span>
-                            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[180px]">{appointment.doctorName || 'Dr. Unknown'}</span>
-                          </div>
-                          {appointment.startAt && (
-                            <>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">Preferred Date: </span>
-                                <span className="font-medium text-gray-900 dark:text-white">
-                                  {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">Preferred Time: </span>
-                                <span className="font-medium text-gray-900 dark:text-white">
-                                  {format(new Date(appointment.startAt), 'HH:mm')}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                <div className="space-y-4">
+                  {/* Patient details — everything captured at booking time, not just name/doctor */}
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2 tracking-wide">Patient Details</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                      <DetailRow icon={<User className="h-3 w-3" />} label="Patient" value={appointment.patientFullName} full />
+                      <DetailRow label="Age / Sex" value={[appointment.patientAge ? `${appointment.patientAge} ${appointment.patientAgeUnit || 'yrs'}` : null, appointment.patientSex].filter(Boolean).join(' · ') || '—'} />
+                      <DetailRow label="Mobile" value={appointment.patientMobile || '—'} />
+                      {appointment.patientEmail && <DetailRow icon={<Mail className="h-3 w-3" />} label="Email" value={appointment.patientEmail} full />}
+                      {appointment.guardianName && (
+                        <DetailRow
+                          icon={<Users className="h-3 w-3" />}
+                          label="Guardian"
+                          value={`${appointment.guardianRelation ? appointment.guardianRelation + ' ' : ''}${appointment.guardianName}`}
+                          full
+                        />
+                      )}
+                      <DetailRow label="Doctor" value={appointment.doctorName || 'Dr. Unknown'} full />
+                      {appointment.reason && <DetailRow icon={<FileText className="h-3 w-3" />} label="Reason" value={appointment.reason} full />}
                     </div>
+                  </div>
 
-                    <div className="flex flex-col space-y-4">
+                  {/* Slot — auto-assigned by default; "Change" drops into the manual picker below */}
+                  {!isManual && (
+                    <div className={cn(
+                      'p-3.5 rounded-lg border',
+                      isExhausted ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800' : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800'
+                    )}>
+                      {isSearching ? (
+                        <div className="flex items-center gap-2 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Finding the next available slot…
+                        </div>
+                      ) : isExhausted ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                            No open slot found in the next {MAX_SEARCH_DAYS + 1} days.
+                          </p>
+                          <Button size="sm" variant="outline" onClick={handleChangeSlot} className="h-7 text-[11px]">
+                            Pick manually
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div>
+                              <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Auto-assigned slot</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                {format(selectedDate, 'EEE, MMM dd, yyyy')} at {selectedTime}
+                              </p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={handleChangeSlot} className="h-7 text-[11px] gap-1 text-slate-500 hover:text-slate-800">
+                            <Pencil className="h-3 w-3" /> Change
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual override — same calendar + slot grid as before, only shown on request */}
+                  {isManual && (
+                    <div className="grid grid-cols-1 gap-4">
                       <div className="flex flex-col space-y-2">
                         <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Select Date</label>
                         <div className="flex justify-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg shadow-sm p-2">
@@ -333,7 +411,7 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -346,7 +424,7 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
                   </Button>
                   <Button
                     onClick={handleConfirm}
-                    disabled={!selectedDate || !selectedTime || isSubmitting}
+                    disabled={!selectedDate || !selectedTime || isSubmitting || isSearching}
                     className="bg-amber-600 hover:bg-amber-700 text-white"
                   >
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -361,3 +439,17 @@ export const ConfirmPreAppointmentDialog: React.FC<ConfirmPreAppointmentDialogPr
     </AnimatePresence>
   );
 };
+
+function DetailRow({ icon, label, value, full }: { icon?: React.ReactNode; label: string; value: string; full?: boolean }) {
+  return (
+    <div className={cn('flex items-start justify-between gap-2', full && 'col-span-2')}>
+      <span className="text-gray-500 dark:text-gray-400 shrink-0">{label}:</span>
+      <span className="font-medium text-gray-900 dark:text-white text-right flex items-center gap-1 min-w-0">
+        {icon && <span className="opacity-60 shrink-0">{icon}</span>}
+        <span className="truncate">{value}</span>
+      </span>
+    </div>
+  );
+}
+
+export default ConfirmPreAppointmentDialog;

@@ -281,6 +281,7 @@ export interface AppointmentDetail {
   patientSex: string;
   patientAge: number;
   patientAgeUnit: string;
+  patientEmail?: string | null;
   doctorId: string;
   doctorName: string | null;
   appointmentDate: string;

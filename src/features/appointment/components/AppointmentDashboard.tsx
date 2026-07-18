@@ -1680,6 +1680,11 @@ export const AppointmentDashboard = () => {
                                     {appointment.patientFullName.split('-').slice(1).join('-').trim()}
                                   </div>
                                 )}
+                                {(appointment.patientAge || appointment.patientSex) && (
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate leading-tight font-medium">
+                                    {[appointment.patientAge ? `${appointment.patientAge} ${appointment.patientAgeUnit || 'yrs'}` : null, appointment.patientSex].filter(Boolean).join(' · ')}
+                                  </div>
+                                )}
                                 {appointment.guardianName && (
                                   <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate leading-tight font-medium">
                                     {(appointment.guardianRelation || 'C/O')} {appointment.guardianName}
