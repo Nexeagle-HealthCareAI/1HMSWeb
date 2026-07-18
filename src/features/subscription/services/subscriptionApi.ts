@@ -7,6 +7,9 @@ export interface SubscriptionStatusResponse {
   paymentAmount?: number;
   paymentDate?: string;
   planId?: string;
+  // Set by a CMS admin when a submitted payment is rejected (status === 'Rejected').
+  rejectionReason?: string | null;
+  rejectedAt?: string | null;
 }
 
 export type BillingCycle = 'Monthly' | 'Yearly';

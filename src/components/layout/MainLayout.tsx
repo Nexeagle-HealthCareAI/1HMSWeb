@@ -6,6 +6,8 @@ import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
 import { useLogout } from '@/hooks/useLogout';
+import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
+import { SubscriptionExpiredScreen } from '@/features/subscription/components/SubscriptionExpiredScreen';
 import {
   Calendar,
   Users,
@@ -178,6 +180,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
   const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
+  const hospitalId = useAuthStore(state => state.hospitalId) || '';
+  const roles = useAuthStore(state => state.userRoles) || [];
+  const isAdminRole = roles.includes('Admin') || roles.includes('AdminDoctor');
+  const { getStatus } = useSubscriptionApi();
+  const { data: subscriptionStatus } = getStatus(hospitalId);
+  const isSubscriptionExpired = subscriptionStatus?.status === 'Expired' || subscriptionStatus?.status === 'Blocked';
   // Sidebar is a fixed icon-rail (collapsed only) — no expand/collapse toggle.
   const sidebarCollapsed = true;
   const triggerLogout = useLogout();
@@ -264,7 +272,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   }, [location.pathname]);
 
+  // Once the trial/subscription has expired, an admin can only reach the Subscription page —
+  // force them there on load and on any direct navigation (not just sidebar clicks).
+  useEffect(() => {
+    if (isSubscriptionExpired && isAdminRole && location.pathname !== '/subscription') {
+      navigate('/subscription', { replace: true });
+    }
+  }, [isSubscriptionExpired, isAdminRole, location.pathname, navigate]);
+
   const handleNavigation = (item: NavigationItem) => {
+    if (isSubscriptionExpired && isAdminRole && item.id !== 'subscription') {
+      setCurrentPage('subscription');
+      setSidebarOpen(false);
+      navigate('/subscription');
+      return;
+    }
     if (hospitalAccessRestricted && item.id !== 'admin') {
       setCurrentPage('admin');
       setSidebarOpen(false);
@@ -283,6 +305,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       console.error('Failed to logout cleanly', error);
     }
   };
+
+  // Non-admin roles have no subscription page to fall back to — once expired, they're fully
+  // locked out of the platform and told to go through their administrator.
+  if (isSubscriptionExpired && !isAdminRole) {
+    return <SubscriptionExpiredScreen onLogout={handleLogout} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-x-hidden">
@@ -312,7 +340,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navigation.map((item) => {
               const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
-              const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
+              const isDisabled = (isSubscriptionExpired && isAdminRole && item.id !== 'subscription')
+                || (hospitalAccessRestricted && item.id !== 'admin');
               return (
                 <div key={item.id} className="relative group">
                   {/* Active accent on the rail edge */}

@@ -67,6 +67,7 @@ export const SubscriptionPage = () => {
     const isBlocked = status?.status === 'Expired' || status?.status === 'Blocked';
     const isPending = status?.status === 'Pending';
     const isPendingApproval = status?.status === 'PendingApproval';
+    const isRejected = status?.status === 'Rejected';
 
     return (
         <div className="min-h-[calc(100vh-140px)] w-full relative overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl">
@@ -156,6 +157,29 @@ export const SubscriptionPage = () => {
                                 <p className="text-red-700 dark:text-red-400 mt-2">
                                     Your trial or subscription has expired. Please select a plan and submit payment to continue using EasyHMS seamlessly.
                                 </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {isRejected && (
+                    <motion.div variants={itemVariants} initial="hidden" animate="show" className="mb-12">
+                        <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
+                            <div className="p-3 bg-red-100 dark:bg-red-800/50 rounded-full text-red-600 dark:text-red-400">
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-red-900 dark:text-red-300 font-bold text-xl">Payment Rejected</h3>
+                                <p className="text-red-700 dark:text-red-400 mt-2">
+                                    Your last payment submission was rejected{status?.rejectedAt ? ` on ${new Date(status.rejectedAt).toLocaleDateString()}` : ''}.
+                                    Please review the reason below, then select a plan and resubmit your payment details.
+                                </p>
+                                {status?.rejectionReason && (
+                                    <div className="mt-3 bg-white/70 dark:bg-black/20 border border-red-200 dark:border-red-800/60 rounded-xl px-4 py-3">
+                                        <p className="text-xs uppercase tracking-wider text-red-500 dark:text-red-400 font-semibold mb-1">Reason from admin</p>
+                                        <p className="text-red-800 dark:text-red-300 text-sm font-medium">{status.rejectionReason}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </motion.div>

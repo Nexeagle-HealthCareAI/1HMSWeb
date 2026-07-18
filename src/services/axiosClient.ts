@@ -117,10 +117,23 @@ axiosInstance.interceptors.response.use(
           break;
         }
 
-        case 403:
+        case 403: {
           // Forbidden - user doesn't have permission
-          console.error('Access forbidden:', data);
+          const body = data as { message?: string; subscriptionExpired?: boolean } | undefined;
+          if (body?.subscriptionExpired) {
+            // Subscription expired/blocked and this user isn't Admin/AdminDoctor (HospitalAccessFilter.cs).
+            // MainLayout's proactive status check is the primary gate; this is a fallback in case
+            // some request lands before that check has resolved.
+            toast({
+              title: 'Subscription expired',
+              description: body.message || 'Please contact your administrator to renew access.',
+              variant: 'destructive',
+            });
+          } else {
+            console.error('Access forbidden:', data);
+          }
           break;
+        }
 
         case 404:
           // Not found
