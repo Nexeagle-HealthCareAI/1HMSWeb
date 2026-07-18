@@ -66,10 +66,15 @@ export interface PaymentHistoryEntry {
   amount: number;
   reference: string;
   paymentMode: string | null;
-  status: string; // PendingApproval, Approved, Rejected
+  status: string; // PendingApproval, Approved, Rejected, Superseded
   submittedAt: string;
   reviewedAt: string | null;
   rejectionReason: string | null;
+  // Set when this submission was a mid-cycle plan switch — Amount above already has the credit
+  // for the previous plan's unused days applied.
+  isProratedSwitch: boolean;
+  previousPlanName: string | null;
+  proratedCreditAmount: number | null;
 }
 
 export interface SubscriptionUsage {
@@ -90,7 +95,73 @@ export interface SubmitPaymentRequest {
   amount: number;
   reference: string;
   paymentMode: string;
+  // Present when this submission is a mid-cycle switch from an already-Active plan — carries the
+  // proration breakdown through so CMS can see/verify it before approving.
+  previousPlanId?: string;
+  previousPlanName?: string;
+  proratedCreditAmount?: number;
+  isProratedSwitch?: boolean;
 }
+
+export interface SwitchQuote {
+  isProrated: boolean;
+  previousPlanId: string | null;
+  previousPlanName: string | null;
+  daysRemaining: number;
+  totalCycleDays: number;
+  creditAmount: number;
+  newPlanPrice: number;
+  amountDue: number;
+}
+
+// Mid-cycle plan switch pricing: the hospital is only charged for the new plan minus a credit for
+// the unused days left on their current plan, prorated off what they actually paid for it (not
+// the plan's list price). Only applies when switching away from an already-Active, paid plan —
+// first-time subscribers and trial hospitals always pay the new plan's full price. The credit can
+// never exceed what was actually paid, and amountDue never goes below ₹0 (no refunds are issued
+// anywhere in this manual-payment system, so any leftover credit beyond the new plan's price is
+// forfeited rather than carried forward).
+export const computeSwitchQuote = (
+  status: SubscriptionStatusResponse | undefined,
+  previousPlan: SubscriptionPlan | undefined | null,
+  newPlan: SubscriptionPlan
+): SwitchQuote => {
+  const newPlanPrice = newPlan.discountedPrice;
+  const flatQuote: SwitchQuote = {
+    isProrated: false,
+    previousPlanId: null,
+    previousPlanName: null,
+    daysRemaining: 0,
+    totalCycleDays: 0,
+    creditAmount: 0,
+    newPlanPrice,
+    amountDue: newPlanPrice,
+  };
+
+  if (!status || status.status !== 'Active' || !previousPlan || previousPlan.id === newPlan.id) {
+    return flatQuote;
+  }
+  if (!status.paymentAmount || status.daysLeft == null) return flatQuote;
+
+  const totalCycleDays = CYCLE_DAYS[previousPlan.billingCycle];
+  const daysRemaining = Math.max(0, Math.min(status.daysLeft, totalCycleDays));
+  if (daysRemaining <= 0) return flatQuote;
+
+  const rawCredit = Math.round((status.paymentAmount * daysRemaining) / totalCycleDays);
+  const creditAmount = Math.min(rawCredit, status.paymentAmount);
+  const amountDue = Math.max(0, newPlanPrice - creditAmount);
+
+  return {
+    isProrated: true,
+    previousPlanId: previousPlan.id,
+    previousPlanName: previousPlan.name,
+    daysRemaining,
+    totalCycleDays,
+    creditAmount,
+    newPlanPrice,
+    amountDue,
+  };
+};
 
 export const subscriptionApi = {
   // Get current subscription status
@@ -127,7 +198,11 @@ export const subscriptionApi = {
     return apiClient.post(API_ENDPOINTS.SUBSCRIPTION.SUBMIT_PAYMENT(data.hospitalId), {
       amount: data.amount,
       reference: data.reference,
-      paymentMode: data.paymentMode
+      paymentMode: data.paymentMode,
+      previousPlanId: data.previousPlanId,
+      previousPlanName: data.previousPlanName,
+      proratedCreditAmount: data.proratedCreditAmount,
+      isProratedSwitch: data.isProratedSwitch
     });
   },
 
@@ -144,7 +219,10 @@ export const subscriptionApi = {
       status: p.status,
       submittedAt: p.submittedAt,
       reviewedAt: p.reviewedAt ?? null,
-      rejectionReason: p.rejectionReason ?? null
+      rejectionReason: p.rejectionReason ?? null,
+      isProratedSwitch: !!p.isProratedSwitch,
+      previousPlanName: p.previousPlanName ?? null,
+      proratedCreditAmount: p.proratedCreditAmount ?? null
     }));
   },
 

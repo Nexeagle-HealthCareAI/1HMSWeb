@@ -48,7 +48,7 @@ export const SubscriptionPage = () => {
     const { toast } = useToast();
     const hospitalId = useAuthStore(state => state.hospitalId) || '';
 
-    const { getStatus, getPlans, getPaymentHistory, selectPlan } = useSubscriptionApi();
+    const { getStatus, getPlans, getPaymentHistory } = useSubscriptionApi();
     const { data: status, isLoading: isLoadingStatus } = getStatus(hospitalId);
     const { data: plans = [], isLoading: isLoadingPlans } = getPlans();
     const { data: paymentHistory = [], isLoading: isLoadingHistory } = getPaymentHistory(hospitalId);
@@ -115,23 +115,12 @@ export const SubscriptionPage = () => {
         return tierPlans[0].features.filter(f => tierPlans.every(p => p.features.includes(f)));
     }, [tierPlans]);
 
+    // Just opens the review drawer — nothing is written to the backend until the user actually
+    // submits payment there (see useSubscriptionApi's switchPlan for why). Lets them freely
+    // browse/compare plans, or back out of an upgrade, without side effects.
     const handleSelectPlan = (plan: SubscriptionPlan) => {
-        selectPlan.mutate(
-            { hospitalId, planId: plan.id },
-            {
-                onSuccess: () => {
-                    setDrawerPlan(plan);
-                    setDrawerOpen(true);
-                },
-                onError: (error: any) => {
-                    toast({
-                        title: 'Error',
-                        description: error.response?.data?.message || 'Failed to select plan',
-                        variant: 'destructive'
-                    });
-                }
-            }
-        );
+        setDrawerPlan(plan);
+        setDrawerOpen(true);
     };
 
     if (isLoadingStatus || isLoadingPlans) {
@@ -332,7 +321,15 @@ export const SubscriptionPage = () => {
                                                     return (
                                                         <React.Fragment key={entry.paymentId}>
                                                             <TableRow>
-                                                                <TableCell className="font-medium">{planName}</TableCell>
+                                                                <TableCell className="font-medium">
+                                                                    {planName}
+                                                                    {entry.isProratedSwitch && (
+                                                                        <div className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 mt-0.5">
+                                                                            Switch from {entry.previousPlanName}
+                                                                            {entry.proratedCreditAmount != null && ` · credit ₹${entry.proratedCreditAmount.toLocaleString('en-IN')}`}
+                                                                        </div>
+                                                                    )}
+                                                                </TableCell>
                                                                 <TableCell>₹{entry.amount}</TableCell>
                                                                 <TableCell className="text-sm text-muted-foreground">{entry.paymentMode ?? '—'}</TableCell>
                                                                 <TableCell className="font-mono text-xs">{entry.reference}</TableCell>
@@ -552,9 +549,8 @@ export const SubscriptionPage = () => {
                                                         size="lg"
                                                         variant={isCurrentPlan ? 'default' : isPopular ? 'default' : 'secondary'}
                                                         onClick={() => handleSelectPlan(plan)}
-                                                        disabled={selectPlan.isPending}
                                                     >
-                                                        {isCurrentPlan ? 'Manage / Pay' : 'Select Plan'}
+                                                        {isCurrentPlan ? 'Manage / Pay' : status?.status === 'Active' ? 'Switch Plan' : 'Select Plan'}
                                                     </Button>
                                                 )}
                                             </CardFooter>
@@ -572,6 +568,8 @@ export const SubscriptionPage = () => {
                 plan={drawerPlan}
                 open={drawerOpen}
                 onOpenChange={setDrawerOpen}
+                previousPlan={activePlan ?? null}
+                subscriptionStatus={status}
             />
         </div>
     );
