@@ -17,6 +17,9 @@ import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { bedService, type BedMasterItem, type UpsertBedMasterRequest } from '@/features/hospital/services/bedService';
 import { roomService, type RoomItem, type UpsertRoomRequest } from '@/features/hospital/services/roomService';
+import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
+import { UsageLimitBadge } from '@/features/subscription/components/UsageLimitBadge';
 
 // --- Types ---
 
@@ -128,6 +131,10 @@ const extractErrorMessage = (e: unknown, fallback: string): string =>
     (axios.isAxiosError(e) && (e.response?.data as { message?: string } | undefined)?.message) || fallback;
 
 export const BedMaster = () => {
+    const hospitalId = useAuthStore(state => state.hospitalId) || '';
+    const { getUsage } = useSubscriptionApi();
+    const { data: usage, isLoading: isUsageLoading } = getUsage(hospitalId);
+
     // --- Data ---
     const [rooms, setRooms] = useState<RoomItem[]>([]);
     const [beds, setBeds] = useState<BedRecord[]>([]);
@@ -701,6 +708,11 @@ export const BedMaster = () => {
                         <Plus className="h-4 w-4" /> Add Room
                     </Button>
                 </div>
+            </div>
+
+            {/* BED CAPACITY (subscription plan limit) */}
+            <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-slate-50/80 dark:bg-slate-900/40">
+                <UsageLimitBadge label="Bed Capacity" current={usage?.currentBeds ?? 0} max={usage?.maxBeds ?? null} isLoading={isUsageLoading} />
             </div>
 
             {/* MAIN LAYOUT: Left Floor/Room Tree + Right Grid */}

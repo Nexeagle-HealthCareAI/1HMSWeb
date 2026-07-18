@@ -33,6 +33,16 @@ export const useSubscriptionApi = () => {
     });
   };
 
+  // Current doctor/bed usage vs. plan limits
+  const getUsage = (hospitalId: string) => {
+    return useQuery({
+      queryKey: ['subscriptionUsage', hospitalId],
+      queryFn: () => subscriptionApi.getUsage(hospitalId),
+      enabled: !!hospitalId,
+      retry: false
+    });
+  };
+
   // Select a plan
   const selectPlan = useMutation({
     mutationFn: (data: SelectPlanRequest) => subscriptionApi.selectPlan(data),
@@ -56,6 +66,7 @@ export const useSubscriptionApi = () => {
     getStatus,
     getPlans,
     getPaymentHistory,
+    getUsage,
     selectPlan,
     submitPayment
   };

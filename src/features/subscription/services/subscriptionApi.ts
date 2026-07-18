@@ -72,6 +72,14 @@ export interface PaymentHistoryEntry {
   rejectionReason: string | null;
 }
 
+export interface SubscriptionUsage {
+  // null = unlimited (Enterprise tier, or no subscription row yet).
+  maxDoctors: number | null;
+  currentDoctors: number;
+  maxBeds: number | null;
+  currentBeds: number;
+}
+
 export interface SelectPlanRequest {
   hospitalId: string;
   planId: string;
@@ -138,5 +146,17 @@ export const subscriptionApi = {
       reviewedAt: p.reviewedAt ?? null,
       rejectionReason: p.rejectionReason ?? null
     }));
+  },
+
+  // Current doctor/bed usage against the hospital's plan limits — powers the "X of Y used"
+  // banners in Bed Management and User Management so admins can see headroom before hitting it.
+  getUsage: async (hospitalId: string): Promise<SubscriptionUsage> => {
+    const response = await apiClient.get<any>(API_ENDPOINTS.SUBSCRIPTION.GET_USAGE(hospitalId));
+    return {
+      maxDoctors: response?.maxDoctors ?? null,
+      currentDoctors: response?.currentDoctors ?? 0,
+      maxBeds: response?.maxBeds ?? null,
+      currentBeds: response?.currentBeds ?? 0
+    };
   }
 };

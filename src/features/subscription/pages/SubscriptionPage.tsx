@@ -393,39 +393,49 @@ export const SubscriptionPage = () => {
 
                     {/* ── All Plans ─────────────────────────────────────────────────────── */}
                     <TabsContent value="plans" className="mt-0 focus-visible:outline-none">
-                        <div className="flex flex-col items-center gap-4 mt-4 mb-10">
-                            {availableCycles.length > 1 && (
-                                <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-                                    {availableCycles.map(c => (
-                                        <button
-                                            key={c}
-                                            onClick={() => setCycle(c)}
-                                            className={cn(
-                                                'px-6 py-2 rounded-full text-sm font-semibold transition-colors',
-                                                cycle === c ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                                            )}
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                        <div className="flex flex-col items-center gap-6 mt-4 mb-10">
+                            {(availableCycles.length > 1 || teamSizes.length > 1) && (
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 w-full">
+                                    {availableCycles.length > 1 && (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Billing Cycle</span>
+                                            <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
+                                                {availableCycles.map(c => (
+                                                    <button
+                                                        key={c}
+                                                        onClick={() => setCycle(c)}
+                                                        className={cn(
+                                                            'px-5 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap',
+                                                            cycle === c ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                                                        )}
+                                                    >
+                                                        {c}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
-                            {teamSizes.length > 1 && (
-                                <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-                                    {teamSizes.map(size => (
-                                        <button
-                                            key={size}
-                                            onClick={() => setSelectedTeamSize(size)}
-                                            className={cn(
-                                                'flex items-center gap-2 px-6 py-2 rounded-full text-sm font-semibold transition-colors',
-                                                selectedTeamSize === size ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                                            )}
-                                        >
-                                            <Stethoscope className="w-4 h-4" />
-                                            {size} Doctor{size === 1 ? '' : 's'}
-                                        </button>
-                                    ))}
+                                    {teamSizes.length > 1 && (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Team Size</span>
+                                            <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
+                                                {teamSizes.map(size => (
+                                                    <button
+                                                        key={size}
+                                                        onClick={() => setSelectedTeamSize(size)}
+                                                        className={cn(
+                                                            'flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap',
+                                                            selectedTeamSize === size ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                                                        )}
+                                                    >
+                                                        <Stethoscope className="w-4 h-4" />
+                                                        {size} Doctor{size === 1 ? '' : 's'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
