@@ -386,6 +386,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     }
   };
 
+  // Deliberately throws (rather than swallowing) on every path where no OTP was actually
+  // generated, and only resolves normally when one was — OTPLoginForm's handleSendOTP awaits
+  // this and only advances to the OTP-entry screen when it resolves, so a rejection here is what
+  // keeps the user on the mobile-entry step instead of showing an entry screen for a code that
+  // can never arrive. A generated-but-undelivered OTP (WhatsApp/Email both failed) still counts
+  // as success here: it's saved server-side and retrievable for support, so the user should still
+  // reach the OTP-entry screen for that case.
   const handleSendOTP = async (mobile: string) => {
     const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
 
@@ -395,38 +402,48 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         description: "Please enter a valid mobile number",
         variant: "destructive"
       });
-      return;
+      throw new Error('Invalid mobile number');
     }
 
     // Clean mobile number for API (remove non-digit characters)
     const cleanMobile = ValidationUtils.cleanMobileNumber(mobile);
 
+    let response;
     try {
-      const response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
-
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to send OTP');
-      }
-
-      // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
-      // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
-      // flags, not just success, or a total delivery failure looks identical to a real send.
-      if (response.isWhatsappSent || response.isEmailSent) {
-        toast({
-          title: "OTP Sent",
-          description: "Please check your mobile for the verification code"
-        });
-      } else {
-        toast({
-          title: "Couldn't deliver the verification code",
-          description: response.message || "We couldn't send the OTP via WhatsApp or Email. Please try again or contact support.",
-          variant: "destructive"
-        });
-      }
+      response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
     } catch (error) {
+      // Genuine network/API-level failure — no OTP was generated either way.
       toast({
         title: "Error",
         description: getErrorMessage(error),
+        variant: "destructive"
+      });
+      throw error;
+    }
+
+    if (!response.success) {
+      // No OTP was generated at all (e.g. mobile number not registered) — nothing to verify, so
+      // stay on the mobile-entry step instead of moving to an OTP screen that can never succeed.
+      toast({
+        title: "Not Registered",
+        description: response.message || "This mobile number is not registered.",
+        variant: "destructive"
+      });
+      throw new Error(response.message || 'Failed to send OTP');
+    }
+
+    // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
+    // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
+    // flags, not just success, or a total delivery failure looks identical to a real send.
+    if (response.isWhatsappSent || response.isEmailSent) {
+      toast({
+        title: "OTP Sent",
+        description: "Please check your mobile for the verification code"
+      });
+    } else {
+      toast({
+        title: "Couldn't deliver the verification code",
+        description: response.message || "We couldn't send the OTP via WhatsApp or Email. Please try again or contact support.",
         variant: "destructive"
       });
     }

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, AlertTriangle, Crown, CreditCard, ShieldCheck, Zap } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Crown, CreditCard, ShieldCheck, Zap, Stethoscope, BedDouble, Mail } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionApi } from '../hooks/useSubscriptionApi';
@@ -210,7 +210,7 @@ export const SubscriptionPage = () => {
                     </div>
                 </div>
 
-                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid lg:grid-cols-3 gap-8 mt-4 pb-12">
+                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mt-4 pb-12">
                     {visiblePlans.map((plan) => {
                         const isCurrentPlan = plan.id === status?.planId;
                         return (
@@ -236,20 +236,40 @@ export const SubscriptionPage = () => {
                                         <CardDescription className="text-sm font-medium">Billed {plan.billingCycle.toLowerCase()}</CardDescription>
                                     </CardHeader>
                                     <CardContent className="flex-grow">
-                                        <div className="mb-8 relative">
-                                            <div className="flex items-end gap-2">
-                                                <span className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white">₹{plan.discountedPrice}</span>
-                                                <span className="text-muted-foreground mb-2 font-medium">/ {plan.billingCycle === 'Yearly' ? 'year' : 'month'}</span>
-                                            </div>
-                                            {plan.discountedPrice < plan.basePrice && (
-                                                <div className="mt-3 flex items-center gap-3">
-                                                    <div className="text-sm text-muted-foreground line-through decoration-slate-400">₹{plan.basePrice}</div>
-                                                    <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800">
-                                                        SAVE {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
-                                                    </div>
+                                        <div className="mb-6 relative">
+                                            {plan.isEnterprise ? (
+                                                <div className="flex items-end gap-2">
+                                                    <span className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Custom</span>
                                                 </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex items-end gap-2">
+                                                        <span className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white">₹{plan.discountedPrice}</span>
+                                                        <span className="text-muted-foreground mb-2 font-medium">/ {plan.billingCycle === 'Yearly' ? 'year' : 'month'}</span>
+                                                    </div>
+                                                    {plan.discountedPrice < plan.basePrice && (
+                                                        <div className="mt-3 flex items-center gap-3">
+                                                            <div className="text-sm text-muted-foreground line-through decoration-slate-400">₹{plan.basePrice}</div>
+                                                            <div className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-green-200 dark:border-green-800">
+                                                                SAVE {Math.round(((plan.basePrice - plan.discountedPrice) / plan.basePrice) * 100)}%
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
+
+                                        <div className="flex flex-wrap gap-2 mb-6">
+                                            <div className="inline-flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                <Stethoscope className="w-3.5 h-3.5 text-brand-500" />
+                                                {plan.maxDoctors == null ? 'Unlimited doctors' : `Up to ${plan.maxDoctors} doctor${plan.maxDoctors === 1 ? '' : 's'}`}
+                                            </div>
+                                            <div className="inline-flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                <BedDouble className="w-3.5 h-3.5 text-brand-500" />
+                                                {plan.maxBeds == null ? 'Unlimited beds' : `Up to ${plan.maxBeds} beds`}
+                                            </div>
+                                        </div>
+
                                         <ul className="space-y-4">
                                             {plan.features.map((feature: string, idx: number) => (
                                                 <li key={idx} className="flex items-start">
@@ -262,15 +282,23 @@ export const SubscriptionPage = () => {
                                         </ul>
                                     </CardContent>
                                     <CardFooter className="pt-6 border-t border-slate-100 dark:border-slate-800/50 mt-auto">
-                                        <Button
-                                            className="w-full text-base font-semibold transition-all shadow-md"
-                                            size="lg"
-                                            variant={isCurrentPlan ? 'default' : 'secondary'}
-                                            onClick={() => handleSelectPlan(plan)}
-                                            disabled={selectPlan.isPending}
-                                        >
-                                            {isCurrentPlan ? 'Manage / Pay' : 'Select Plan'}
-                                        </Button>
+                                        {plan.isEnterprise ? (
+                                            <Button asChild className="w-full text-base font-semibold transition-all shadow-md" size="lg" variant="secondary">
+                                                <a href={`mailto:info@nexeagle.com?subject=${encodeURIComponent(`Enterprise plan enquiry — ${plan.name}`)}`}>
+                                                    <Mail className="w-4 h-4 mr-2" /> Contact Us
+                                                </a>
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                className="w-full text-base font-semibold transition-all shadow-md"
+                                                size="lg"
+                                                variant={isCurrentPlan ? 'default' : 'secondary'}
+                                                onClick={() => handleSelectPlan(plan)}
+                                                disabled={selectPlan.isPending}
+                                            >
+                                                {isCurrentPlan ? 'Manage / Pay' : 'Select Plan'}
+                                            </Button>
+                                        )}
                                     </CardFooter>
                                 </Card>
                             </motion.div>

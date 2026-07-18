@@ -18,7 +18,24 @@ export interface SubscriptionPlan {
   discountedPrice: number;
   billingCycle: BillingCycle;
   features: string[];
+  // null = unlimited (used for the Enterprise tier).
+  maxDoctors: number | null;
+  maxBeds: number | null;
+  isEnterprise: boolean;
 }
+
+// Backend stores Features as a raw JSON string, not an array.
+const parseFeatures = (raw: unknown): string[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 export interface SelectPlanRequest {
   hospitalId: string;
@@ -49,7 +66,10 @@ export const subscriptionApi = {
       basePrice: p.basePrice,
       discountedPrice: p.discountPrice,
       billingCycle: p.billingCycle,
-      features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
+      features: parseFeatures(p.features),
+      maxDoctors: p.maxDoctors ?? null,
+      maxBeds: p.maxBeds ?? null,
+      isEnterprise: !!p.isEnterprise
     }));
   },
 
