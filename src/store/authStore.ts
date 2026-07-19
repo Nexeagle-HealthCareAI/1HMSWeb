@@ -107,8 +107,8 @@ const decodeJwtExpiryMs = (token: string): number | null => {
     return null;
   }
 };
-// Fallback only used if a token can't be decoded — matches the backend's real token lifetime.
-const FALLBACK_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
+// Fallback only used if a token can't be decoded — matches the backend's real token lifetime (30 days).
+const FALLBACK_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Initial state
 const initialState: AuthState = {
@@ -138,14 +138,23 @@ export const useAuthStore = create<AuthStore>()(
       (set, get) => ({
         ...initialState,
 
-        // Set user data
+        // Set user data. Deliberately preserves the existing userRole/userRoles when `user`
+        // doesn't carry its own role/roles (the login flow always calls this with a bare
+        // {id, email, mobile, name} — role is set separately, earlier, via setUserRole() inside
+        // fetchAndStoreUserPermissions). Previously this unconditionally recomputed
+        // userRole/userRoles from `user`, which wiped the just-fetched role back to null on
+        // every call — even ones that ran after the role was correctly set — silently breaking
+        // role-based post-login navigation with no thrown error. Logout doesn't go through this
+        // (clearSession()/logout() fully reset state via set(initialState)), so preserving here
+        // is safe.
         setUser: (user: User | null) => {
+          const current = get();
           set({
             user,
             isAuthenticated: !!user,
             userId: user?.id || null,
-            userRole: user?.role || (user?.roles?.[0]) || null,
-            userRoles: user?.roles || (user?.role ? [user.role] : []),
+            userRole: user?.role || user?.roles?.[0] || current.userRole,
+            userRoles: user?.roles || (user?.role ? [user.role] : current.userRoles),
             hospitalAccessRestricted: false,
             hospitalAccessMessage: null,
             doctorProfileRestricted: false,
@@ -231,7 +240,10 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         getUserRoles: () => {
-          return get().userRoles || [];
+          const roles = get().userRoles;
+          if (roles && roles.length > 0) return roles;
+          const role = get().userRole;
+          return role ? [role] : [];
         },
 
         setPermissions: (permissions: string[]) => {

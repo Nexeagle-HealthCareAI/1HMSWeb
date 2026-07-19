@@ -30,6 +30,7 @@ import type { DoctorProfessionalData } from '@/features/doctor/services/doctorAp
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { SpecializationSelector } from './SpecializationSelector';
 import { QualificationSelector } from './QualificationSelector';
+import { PrimarySpecialityPicker } from './PrimarySpecialityPicker';
 
 interface DoctorProfileProps {
   isEditing?: boolean;
@@ -86,6 +87,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
     primaryDepartment: '',
     department: '',
     specializations: [],
+    primaryMedicalSpecialityId: '',
     hospitalId: hospitalId || '',
     hospitalDepartmentMappingId: ''
   });
@@ -155,6 +157,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
         primaryDepartment: doctorData.primaryDepartmentName || '',
         department: doctorData.doctorDepartments?.[0]?.departmentId || '',
         specializations: doctorData.doctorSpecializations?.map(s => s.specializationName) || [],
+        primaryMedicalSpecialityId: doctorData.primaryMedicalSpecialityId || '',
         hospitalId: hospitalId || '',
         hospitalDepartmentMappingId: doctorData.doctorDepartments?.[0]?.hospitalDepartmentMappingId || ''
       });
@@ -262,6 +265,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           primaryDepartment: selectedDepartmentName,
           department: selectedDepartmentName,
           specializations: profileData.specializations,
+          primaryMedicalSpecialityId: profileData.primaryMedicalSpecialityId || undefined,
           hospitalId: resolvedHospitalId
         };
 
@@ -310,7 +314,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           bio: profileData.bio,
           primaryDepartment: selectedDepartmentName,
           department: selectedDepartmentName,
-          specializations: profileData.specializations
+          specializations: profileData.specializations,
+          primaryMedicalSpecialityId: profileData.primaryMedicalSpecialityId || undefined
         };
 
         try {
@@ -457,6 +462,14 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     {doctorErrors.qualifications && (
                       <p className="text-xs text-red-600 mt-1">{doctorErrors.qualifications}</p>
                     )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <PrimarySpecialityPicker
+                      value={profileData.primaryMedicalSpecialityId || ''}
+                      onChange={(id) => handleInputChange('primaryMedicalSpecialityId', id)}
+                      disabled={!isEditing}
+                    />
                   </div>
 
                   <div>

@@ -92,7 +92,7 @@ export const PasswordLoginForm: React.FC<PasswordLoginFormProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div className="flex flex-row justify-between items-center">
         <Button
           type="button"
           variant="link"

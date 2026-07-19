@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
 import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,6 +47,11 @@ axiosInstance.interceptors.request.use(
     const csrfToken = localStorage.getItem('csrf-token');
     if (csrfToken && config.headers) {
       config.headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    // Add Save-Data header if low bandwidth mode is active
+    if (useAppStore.getState().isLowBandwidthMode && config.headers) {
+      config.headers['Save-Data'] = 'on';
     }
     
     return config;
@@ -117,10 +123,23 @@ axiosInstance.interceptors.response.use(
           break;
         }
 
-        case 403:
+        case 403: {
           // Forbidden - user doesn't have permission
-          console.error('Access forbidden:', data);
+          const body = data as { message?: string; subscriptionExpired?: boolean } | undefined;
+          if (body?.subscriptionExpired) {
+            // Subscription expired/blocked and this user isn't Admin/AdminDoctor (HospitalAccessFilter.cs).
+            // MainLayout's proactive status check is the primary gate; this is a fallback in case
+            // some request lands before that check has resolved.
+            toast({
+              title: 'Subscription expired',
+              description: body.message || 'Please contact your administrator to renew access.',
+              variant: 'destructive',
+            });
+          } else {
+            console.error('Access forbidden:', data);
+          }
           break;
+        }
 
         case 404:
           // Not found

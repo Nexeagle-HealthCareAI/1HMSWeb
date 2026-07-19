@@ -20,6 +20,7 @@ export interface PrintItem {
     rate: number;
     discount: number;
     total: number;
+    isExtraCharge?: boolean;
 }
 
 export interface InvoicePrintData {

@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { otBookingApi, type OtBoardCase } from '@/features/ipd-redesign/services/otBookingApi';
 import { surgeryCaseApi, type SurgeryStatus } from '@/features/ipd-redesign/services/surgeryCaseApi';
 import { SurgeryTransitionDialog } from '../components/SurgeryTransitionDialog';
+import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
 const BOARD_POLL_MS = 15000;
 
@@ -261,7 +262,7 @@ export const OtBoardScreen: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 font-sans relative overflow-hidden p-6 max-w-[1600px] mx-auto">
-            <div className="flex-1 overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <SubscriptionReadOnlyOverlay featureLabel="Managing OT cases" className="flex-1 overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 {boardLoading && (
                     <div className="flex items-center justify-center py-20 text-sm text-gray-400 gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" /> Loading plan board…
@@ -297,7 +298,7 @@ export const OtBoardScreen: React.FC = () => {
                         </DragOverlay>
                     </DndContext>
                 )}
-            </div>
+            </SubscriptionReadOnlyOverlay>
 
             <SurgeryTransitionDialog
                 open={transitionOpen}

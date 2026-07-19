@@ -36,7 +36,8 @@ const LoginPage = () => {
       } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
         navigate('/appointment-dashboard');
       } else if (userRole === 'Doctor') {
-        navigate('/dashboard');
+        const isMobile = window.innerWidth < 1024;
+        navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
       } else {
         // Default fallback
         navigate('/appointment-dashboard');
@@ -62,7 +63,8 @@ const LoginPage = () => {
     } else if (currentUserRole === 'Receptionist' || currentUserRole === 'Nurse') {
       navigate('/appointment-dashboard');
     } else if (currentUserRole === 'Doctor') {
-      navigate('/dashboard');
+      const isMobile = window.innerWidth < 1024;
+      navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
     } else {
       // Default fallback
       navigate('/appointment-dashboard');
@@ -86,7 +88,8 @@ const LoginPage = () => {
     } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
       navigate('/appointment-dashboard');
     } else if (userRole === 'Doctor') {
-      navigate('/dashboard');
+      const isMobile = window.innerWidth < 1024;
+      navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
     } else {
       // Default fallback - check stored role
       const storedRole = authStore.getUserRole();
@@ -95,7 +98,8 @@ const LoginPage = () => {
       } else if (storedRole === 'Receptionist' || storedRole === 'Nurse') {
         navigate('/appointment-dashboard');
       } else {
-        navigate('/dashboard');
+        const isMobile = window.innerWidth < 1024;
+        navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
       }
     }
   };

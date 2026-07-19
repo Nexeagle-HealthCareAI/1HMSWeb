@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store';
+import { useAppStore } from '@/store/appStore';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
 import { useLogout } from '@/hooks/useLogout';
+import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
+import { SubscriptionExpiryBanner } from '@/features/subscription/components/SubscriptionExpiryBanner';
+import { SubscriptionReadOnlyBanner } from '@/features/subscription/components/SubscriptionReadOnlyBanner';
+import { SubscriptionUpsellModal } from '@/features/subscription/components/SubscriptionUpsellModal';
 import {
   Calendar,
   Users,
@@ -72,9 +77,13 @@ import {
   FileBadge2,
   CheckSquare,
   XSquare,
-  HeartPulse
+  HeartPulse,
+  Wifi,
+  LayoutGrid,
+  GitBranch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -178,11 +187,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
   const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
+  const hospitalId = useAuthStore(state => state.hospitalId) || '';
+  const roles = useAuthStore(state => state.userRoles) || [];
+  const isAdminRole = roles.includes('Admin') || roles.includes('AdminDoctor');
+  const { getStatus } = useSubscriptionApi();
+  const { data: subscriptionStatus } = getStatus(hospitalId);
+  const isSubscriptionExpired = subscriptionStatus?.status === 'Expired' || subscriptionStatus?.status === 'Blocked';
+  // Same 3-day runway regardless of billing cycle (Monthly/Quarterly/Half-Yearly/Yearly) — it's
+  // purely a function of how close SubscriptionEndDate is, not which cycle the plan is on.
+  const showExpiryWarning = isAdminRole
+    && subscriptionStatus?.status === 'Active'
+    && subscriptionStatus?.daysLeft != null
+    && subscriptionStatus.daysLeft <= 3
+    && !!subscriptionStatus?.subscriptionEndDate;
   // Sidebar is a fixed icon-rail (collapsed only) — no expand/collapse toggle.
   const sidebarCollapsed = true;
   const triggerLogout = useLogout();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [isTileMenuOpen, setIsTileMenuOpen] = useState(false);
   const { currentLanguage, isRTL } = useLanguage();
   const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -197,6 +219,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const profileScore = completionPercentage;
   const authStore = useAuthStore.getState();
+  const { isLowBandwidthMode, setLowBandwidthMode } = useAppStore();
   const userRoles = authStore.getUserRoles() || ['Doctor'];
   const userId = authStore.getUserId();
   const isDoc = userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
@@ -219,17 +242,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
-    { id: 'configuration', name: t('header.configuration') || 'Configuration', icon: Settings, path: '/configuration' },
+    { id: 'configuration', name: t('header.configuration') || 'Hospital Info', icon: Building2, path: '/configuration' },
     { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
-    {
-      id: 'appointments',
-      name: t('header.appointmentScheduler'),
-      icon: Calendar,
-      path: '/appointment-dashboard',
-    },
-    { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
@@ -237,19 +252,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Filter navigation items based on user role
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin' || item.id === 'configuration' || item.id === 'subscription') {
+    if (item.id === 'admin' || item.id === 'subscription') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
     }
     if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
       return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
     }
-    if (item.id === 'appointments') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist') || userRoles.includes('Nurse');
+    if (item.id === 'configuration') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor');
     }
     if (item.id === 'billing') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
     }
-    if (item.id === 'ipd-redesign' || item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board') {
+    if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
     }
     return true;
@@ -267,13 +282,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const handleNavigation = (item: NavigationItem) => {
     if (hospitalAccessRestricted && item.id !== 'admin') {
       setCurrentPage('admin');
-      setSidebarOpen(false);
       navigate('/admin');
+      setIsTileMenuOpen(false);
       return;
     }
     setCurrentPage(item.id);
-    setSidebarOpen(false);
     navigate(item.path);
+    setIsTileMenuOpen(false);
   };
 
   const handleLogout = async () => {
@@ -286,22 +301,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-x-hidden">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`
-        fixed top-0 left-0 z-50 h-full w-24
-        bg-gradient-to-b from-[#4f46e5] to-[#3f37c9] dark:from-gray-800 dark:to-gray-900
-        border-r border-white/10 dark:border-gray-700 shadow-xl shadow-black/20
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        transform transition-transform duration-300 ease-in-out
-      `}>
+      {/* Sidebar (Desktop Only) */}
+      <div className="hidden lg:flex fixed top-0 left-0 z-50 h-full w-24 bg-gradient-to-b from-[#4f46e5] to-[#3f37c9] dark:from-gray-800 dark:to-gray-900 border-r border-white/10 dark:border-gray-700 shadow-xl shadow-black/20 flex-col">
         <div className="relative h-full w-full overflow-hidden flex flex-col">
           {/* Brand */}
           <div className="flex items-center justify-center shrink-0 h-16 border-b border-white/10">
@@ -361,20 +362,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className={`${sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'} flex flex-col h-screen overflow-x-hidden relative z-0`}>
+      <div className="lg:ml-24 flex flex-col h-[100dvh] overflow-x-hidden relative z-0 pb-16 lg:pb-0">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-              >
-                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              </Button>
+        <div className="sticky top-0 z-30 flex flex-col bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          {/* Main Header Row */}
+          <header className="px-4 lg:px-6 py-3 lg:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4 lg:gap-6">
+              {/* Brand on Mobile */}
+              <div className="flex lg:hidden items-center justify-center shrink-0">
+                <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-9 w-9 object-contain" />
+              </div>
 
               {/* Brand moved to the sidebar; the hospital control anchors the top nav. */}
               <HospitalSwitcher />
@@ -411,6 +408,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
               {/* Alerts */}
               <AlertBell />
+
+              {/* Manage Chain Button (Admin Only) */}
+              {isAdminRole && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/chain')}
+                  className="flex items-center gap-1.5 md:gap-2 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                >
+                  <GitBranch className="h-4 w-4 md:h-4 md:w-4" />
+                  <span className="hidden md:inline text-sm font-medium">Chain</span>
+                </Button>
+              )}
 
               {/* Theme Toggle */}
               <ThemeToggle
@@ -450,21 +460,186 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <User className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
                     <span>{t('header.profile')}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
+                  <DropdownMenuItem 
+                    className="flex items-center justify-between text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+                    onSelect={(e) => e.preventDefault()} // Keep menu open when toggling
+                  >
+                    <div className="flex items-center">
+                      <Wifi className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
+                      <div className="flex flex-col">
+                        <span>Data Saver Mode</span>
+                        <span className="text-[10px] text-gray-500">Reduces background fetching</span>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={isLowBandwidthMode}
+                      onCheckedChange={setLowBandwidthMode}
+                    />
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:bg-red-50 dark:focus:bg-red-500/10 cursor-pointer font-medium">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{t('common.logout')}</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-        </header>
+          </header>
+        </div>
+
+        {showExpiryWarning && <SubscriptionExpiryBanner endDate={subscriptionStatus!.subscriptionEndDate!} />}
+        {isSubscriptionExpired && <SubscriptionReadOnlyBanner isAdminRole={isAdminRole} />}
+        <SubscriptionUpsellModal isAdminRole={isAdminRole} />
 
         {/* Page Content */}
         <main className={cn(
-          "flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300 bg-gray-50 dark:bg-gray-950",
+          "flex-1 relative overflow-x-hidden overflow-y-auto transition-all duration-300 bg-gray-50 dark:bg-gray-950",
           (location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard')) ? "p-0" : "p-6"
         )}>
           {children}
+          
+          {/* Tile Grid Overlay (now positioned over content, preserving Top Bar) */}
+          <AnimatePresence>
+            {isTileMenuOpen && (
+              <motion.div
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 250, mass: 0.8 }}
+                className="absolute inset-0 z-20 bg-gray-50 dark:bg-gray-950 flex flex-col lg:hidden"
+              >
+                {/* Scrollable Grid */}
+                <div className="flex-1 overflow-y-auto px-5 py-6 pb-24 content-start">
+                  <div className="grid grid-cols-2 gap-4">
+                    {navigation.filter(item => item.id !== 'billing').map((item, i) => {
+                       const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
+                       const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
+                       return (
+                         <button
+                           key={item.id}
+                           type="button"
+                           onClick={() => {
+                             handleNavigation(item);
+                             setIsTileMenuOpen(false);
+                           }}
+                           disabled={isDisabled}
+                           className={cn(
+                             "w-full flex flex-col items-center justify-center p-6 rounded-[2rem] gap-3 transition-all relative overflow-hidden aspect-square",
+                             isActive 
+                               ? "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-xl shadow-brand-500/30"
+                               : "bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:scale-105 active:scale-95",
+                             isDisabled && "opacity-50 cursor-not-allowed grayscale hover:scale-100 active:scale-100"
+                           )}
+                         >
+                           {/* Subtle background glow for active tile */}
+                           {isActive && (
+                             <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full translate-y-4 translate-x-4"></div>
+                           )}
+                           
+                           <div className={cn(
+                             "p-3 rounded-2xl relative z-10",
+                             isActive ? "bg-white/20 text-white" : "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400"
+                           )}>
+                             <item.icon className="h-8 w-8" strokeWidth={2} />
+                           </div>
+                           
+                           <span className={cn(
+                             "font-semibold text-sm text-center leading-tight relative z-10",
+                             isActive ? "text-white" : "text-gray-700 dark:text-gray-300"
+                           )}>
+                             {item.name}
+                           </span>
+                         </button>
+                       );
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
+      </div>
+
+      {/* --- MOBILE BOTTOM NAVIGATION & TILE GRID --- */}
+      
+            {/* Fixed Bottom Bar */}
+      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
+        <button 
+          onClick={() => {
+            navigate('/appointment-dashboard');
+            setIsTileMenuOpen(false);
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+          )}
+        >
+          <Calendar className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide leading-tight text-center">OPD<br/>Appt</span>
+        </button>
+
+        <button 
+          onClick={() => {
+            navigate('/ipd-workspace');
+            setIsTileMenuOpen(false);
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/ipd-workspace') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+          )}
+        >
+          <Hotel className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/ipd-workspace') ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide">IPD</span>
+        </button>
+
+        <button 
+          onClick={() => setIsTileMenuOpen(!isTileMenuOpen)}
+          className="flex flex-col items-center justify-center relative -top-4 mx-1"
+        >
+          <div className={cn(
+            "rounded-full p-3.5 shadow-xl ring-4 ring-gray-50 dark:ring-gray-950 transition-transform active:scale-95",
+            isTileMenuOpen ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 shadow-gray-500/30" : "bg-brand-600 text-white shadow-brand-500/30"
+          )}>
+            {isTileMenuOpen ? <X className="h-5 w-5" strokeWidth={2.5} /> : <LayoutGrid className="h-5 w-5" strokeWidth={2.5} />}
+          </div>
+          <span className={cn(
+            "text-[9px] font-bold tracking-wide mt-1 absolute -bottom-4",
+            isTileMenuOpen ? "text-gray-800 dark:text-gray-200" : "text-brand-600 dark:text-brand-400"
+          )}>
+            {isTileMenuOpen ? 'Close' : 'Menu'}
+          </span>
+        </button>
+
+        <button 
+          onClick={() => {
+            navigate('/billing');
+            setIsTileMenuOpen(false);
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/billing') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+          )}
+        >
+          <IndianRupee className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/billing') ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide">Billing</span>
+        </button>
+
+        <button 
+          onClick={() => {
+            navigate('/settings');
+            setIsTileMenuOpen(false);
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/settings') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+          )}
+        >
+          <Building2 className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/settings') ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide leading-tight text-center">Info</span>
+        </button>
       </div>
 
     </div>
   );
-}; 
+};

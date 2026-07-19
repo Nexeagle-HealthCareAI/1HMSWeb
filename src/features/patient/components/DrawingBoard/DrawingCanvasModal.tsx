@@ -9,6 +9,7 @@ import { DrawingToolbar } from './DrawingToolbar';
 import { DrawTool, dataUrlToFile } from './types';
 import { drawingApi } from '@/features/patient/services/drawingApi';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface DrawingCanvasModalProps {
     open: boolean;
@@ -25,6 +26,7 @@ export const DrawingCanvasModal: React.FC<DrawingCanvasModalProps> = ({
 }) => {
     const canvasRef = useRef<DrawingCanvasRef>(null);
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
 
     const [tool, setTool] = useState<DrawTool>('pen');
     const [color, setColor] = useState('#1e293b');
@@ -51,6 +53,7 @@ export const DrawingCanvasModal: React.FC<DrawingCanvasModalProps> = ({
             toast({ title: 'Nothing to save', description: 'Draw something before inserting it into the prescription.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Saving drawings'); return; }
         setSaving(true);
         try {
             const dataUrl = canvasRef.current.exportPng();
@@ -130,7 +133,7 @@ export const DrawingCanvasModal: React.FC<DrawingCanvasModalProps> = ({
                         <Button type="button" variant="ghost" onClick={() => handleClose(false)} disabled={saving}>
                             Cancel
                         </Button>
-                        <Button type="button" onClick={handleSave} disabled={saving || history.isEmpty}>
+                        <Button type="button" onClick={handleSave} disabled={saving || history.isEmpty || isSubscriptionReadOnly}>
                             {saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                             Insert into Prescription
                         </Button>

@@ -12,6 +12,7 @@ import { ipdBillingService, type ChargeMaster, type AddChargeEventRequest } from
 import { offlineMutation, isReachable } from '@/offline';
 import { useAuthStore } from '@/store/authStore';
 import { bedService, type BedMasterItem } from '@/features/hospital/services/bedService';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 export interface AddChargeDialogProps {
     open: boolean;
@@ -34,6 +35,7 @@ interface StagedItem {
 
 export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenChange, patientId, encounterId, onSaved, onOptimistic }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [source, setSource] = useState<Source>('catalog');
 
     // Catalog
@@ -254,6 +256,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
 
     const submit = async () => {
         if (submitting) return;
+        if (isSubscriptionReadOnly) { blockAction('Adding charges'); return; }
         const currentCharge = buildCurrentCharge();
         const charges = [...stagedItems.map(s => s.charge), ...(currentCharge ? [currentCharge] : [])];
         if (charges.length === 0) {
@@ -518,7 +521,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting || (stagedItems.length === 0 && !canSubmit)} className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20">
+                    <Button onClick={submit} disabled={submitting || isSubscriptionReadOnly || (stagedItems.length === 0 && !canSubmit)} className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20">
                         {submitting
                             ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</>
                             : <><Plus className="h-4 w-4 mr-2" />{stagedItems.length > 0 ? `Add ${stagedItems.length + (canSubmit ? 1 : 0)} Items` : 'Add Item'}</>}

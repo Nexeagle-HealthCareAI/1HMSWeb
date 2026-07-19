@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, MessageSquarePlus } from 'lucide-react';
 import { roundNoteApi, type RoundNoteItem, type CreateRoundNoteFields } from '../services/roundNoteApi';
 import { formatIstDateTime, toIstDate } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -21,6 +22,7 @@ const EMPTY_FORM: CreateRoundNoteFields = { subjective: '', objective: '', asses
 
 export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [notes, setNotes] = useState<RoundNoteItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -42,8 +44,8 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
 
     const isOlderThanLock = (notedAt: string) => (Date.now() - toIstDate(notedAt).getTime()) > EDIT_LOCK_HOURS * 60 * 60 * 1000;
 
-    const openNew = () => { setForm({ ...EMPTY_FORM }); setNewOpen(true); };
-    const openAddendum = (note: RoundNoteItem) => { setAddendumFor(note); setForm({ ...EMPTY_FORM }); setAddendumReason(''); };
+    const openNew = () => { if (isSubscriptionReadOnly) { blockAction('Recording round notes'); return; } setForm({ ...EMPTY_FORM }); setNewOpen(true); };
+    const openAddendum = (note: RoundNoteItem) => { if (isSubscriptionReadOnly) { blockAction('Recording round notes'); return; } setAddendumFor(note); setForm({ ...EMPTY_FORM }); setAddendumReason(''); };
 
     const canSubmit = !!(form.subjective || form.objective || form.assessment || form.plan || form.diagnosis);
 
@@ -56,6 +58,7 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
             toast({ title: 'Incomplete', description: 'Addendum reason is required.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Recording round notes'); return; }
         setSubmitting(true);
         try {
             await roundNoteApi.create(admissionId, {
@@ -92,7 +95,7 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New note
                         </Button>
                     )}
@@ -110,7 +113,7 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
                             <div className="flex items-center justify-between gap-3 flex-wrap">
                                 <span className="text-xs font-bold text-slate-700">{formatIstDateTime(n.notedAt)}{n.doctorName ? ` · ${n.doctorName}` : ''}</span>
                                 {isActive && (
-                                    <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-brand-600" onClick={() => openAddendum(n)}>
+                                    <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-brand-600" onClick={() => openAddendum(n)} disabled={isSubscriptionReadOnly}>
                                         <MessageSquarePlus className="h-3.5 w-3.5 mr-1" /> Add addendum
                                     </Button>
                                 )}
@@ -187,7 +190,7 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={closeDialog}>Cancel</Button>
-                        <Button disabled={!canSubmit || submitting} onClick={submit} className={cn('h-11 sm:h-10 bg-brand-600 hover:bg-brand-700')}>
+                        <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className={cn('h-11 sm:h-10 bg-brand-600 hover:bg-brand-700')}>
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

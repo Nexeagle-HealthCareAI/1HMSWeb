@@ -40,8 +40,6 @@ export const useDoctorAppointmentDetails = ({
     },
     enabled: enabled && !!hospitalId && !!doctorId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Disable refetch on window focus to prevent loops
-    refetchOnMount: false, // Disable refetch on mount to prevent loops
   });
 };

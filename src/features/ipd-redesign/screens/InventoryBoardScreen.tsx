@@ -13,6 +13,7 @@ import { TransferStockPanel } from '../components/TransferStockPanel';
 import { InternalRequestsPanel } from '../components/InternalRequestsPanel';
 import { BulkStockUpload } from '../components/BulkStockUpload';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
 interface Props {
     onBack: () => void;
@@ -152,7 +153,7 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                             <p>Loading Inventory Data...</p>
                         </div>
                     ) : (
-                        <div className="h-full">
+                        <SubscriptionReadOnlyOverlay featureLabel="Managing inventory" className="h-full">
                             {tab === 'stock' && (
                                 Object.keys(storeGroups).length === 0 ? (
                                     <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
@@ -338,7 +339,7 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                                     </div>
                                 )
                             )}
-                        </div>
+                        </SubscriptionReadOnlyOverlay>
                     )}
                 </div>
             </div>

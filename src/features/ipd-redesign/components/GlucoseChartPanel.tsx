@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import { glucoseReadingApi, type GlucoseReadingItem, type GlucoseUnit } from '../services/glucoseReadingApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -19,6 +20,7 @@ const MEAL_TAGS = ['FASTING', 'POST_PRANDIAL', 'RANDOM', 'BEDTIME'];
 
 export const GlucoseChartPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [readings, setReadings] = useState<GlucoseReadingItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -42,6 +44,7 @@ export const GlucoseChartPanel: React.FC<Props> = ({ admissionId, isActive }) =>
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openNew = () => {
+        if (isSubscriptionReadOnly) { blockAction('Recording glucose readings'); return; }
         setValue(''); setUnit('mg/dL'); setMealTag('RANDOM'); setInsulinGiven(false); setInsulinUnits(''); setInsulinType('');
         setNewOpen(true);
     };
@@ -56,6 +59,7 @@ export const GlucoseChartPanel: React.FC<Props> = ({ admissionId, isActive }) =>
             toast({ title: 'Incomplete', description: 'Enter insulin units given.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Recording glucose readings'); return; }
         setSubmitting(true);
         try {
             const result = await glucoseReadingApi.record(admissionId, v, unit, {
@@ -87,7 +91,7 @@ export const GlucoseChartPanel: React.FC<Props> = ({ admissionId, isActive }) =>
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Record reading
                         </Button>
                     )}
@@ -158,7 +162,7 @@ export const GlucoseChartPanel: React.FC<Props> = ({ admissionId, isActive }) =>
                     )}
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!value || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={!value || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Loader2, PiggyBank, AlertCircle } from 'lucide-react';
+import { CreditCard, Loader2, PiggyBank, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isReachable } from '@/offline';
 import { ipdBillingService, type AddPaymentRequest, type PaymentMode, type PaymentType } from '../../services/ipdBillingService';
 import { PAYMENT_MODES } from '../../utils/constants';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 export interface AddPaymentDialogProps {
     open: boolean;
@@ -35,14 +36,18 @@ export interface AddPaymentDialogProps {
 
 export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, dueAmount, initialType, onSaved }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
     const [amount, setAmount] = useState(0);
     const [description, setDescription] = useState('');
     const [transactionId, setTransactionId] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [extraCharges, setExtraCharges] = useState<{ reason: string; amount: number }[]>([]);
 
+    const totalExtraCharges = extraCharges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
     const effectiveDue = dueAmount ?? netBalance;
+    const effectiveDueWithExtra = effectiveDue + totalExtraCharges;
     const availableCredit = netBalance < 0 ? Math.abs(netBalance) : 0;
     const exceedsCredit = paymentType === 'REFUND' && availableCredit > 0 && amount > availableCredit;
 
@@ -54,12 +59,14 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
             setAmount(type === 'REFUND' ? Math.max(0, availableCredit) : Math.max(0, effectiveDue));
             setDescription('');
             setTransactionId('');
+            setExtraCharges([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, effectiveDue, initialType]);
 
     const submit = async () => {
         if (submitting) return;
+        if (isSubscriptionReadOnly) { blockAction(paymentType === 'REFUND' ? 'Processing refunds' : 'Taking payments'); return; }
         if (amount <= 0) { toast({ title: 'Amount must be > 0', variant: 'destructive' }); return; }
         if (exceedsCredit) { toast({ title: 'Refund exceeds available credit', variant: 'destructive' }); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
@@ -75,6 +82,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                     description: description.trim() || undefined,
                     transactionId: transactionId.trim() || undefined,
                 },
+                extraCharges: extraCharges.length > 0 ? extraCharges : undefined,
             };
             const res = await ipdBillingService.addPayment(req);
             if (!res?.success) throw new Error(res?.message ?? 'Could not record payment');
@@ -112,14 +120,14 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {effectiveDue > 0 && (
+                    {effectiveDueWithExtra > 0 && (
                         <button
                             type="button"
-                            onClick={() => setAmount(Math.max(0, effectiveDue))}
+                            onClick={() => setAmount(Math.max(0, effectiveDueWithExtra))}
                             className="w-full flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-left hover:bg-emerald-50 transition-colors"
                         >
-                            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Balance Due · tap to fill</span>
-                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{effectiveDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Balance Due {totalExtraCharges > 0 ? '(incl. extra)' : ''} · tap to fill</span>
+                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{effectiveDueWithExtra.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </button>
                     )}
 
@@ -135,6 +143,78 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                             <span className="text-base font-bold text-blue-700 tabular-nums">₹{availableCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </button>
                     )}
+
+                    {/* Extra Charges */}
+                    <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                        <div className="flex justify-between items-center mb-3">
+                            <Label className="text-xs font-semibold text-slate-700">Extra Charges</Label>
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                onClick={() => setExtraCharges([...extraCharges, { reason: '', amount: 0 }])}
+                            >
+                                <Plus className="h-3 w-3 mr-1" /> Add
+                            </Button>
+                        </div>
+                        {extraCharges.length > 0 ? (
+                            <div className="space-y-2">
+                                {extraCharges.map((ec, i) => (
+                                    <div key={i} className="flex gap-2 items-start">
+                                        <div className="flex-1">
+                                            <Input 
+                                                placeholder="Reason (e.g. Night Charge)" 
+                                                value={ec.reason} 
+                                                onChange={e => {
+                                                    const nc = [...extraCharges];
+                                                    nc[i].reason = e.target.value;
+                                                    setExtraCharges(nc);
+                                                }}
+                                                className="h-9 rounded-lg text-sm"
+                                            />
+                                        </div>
+                                        <div className="w-24">
+                                            <Input 
+                                                type="number"
+                                                min={0}
+                                                placeholder="Amount" 
+                                                value={ec.amount || ''} 
+                                                onChange={e => {
+                                                    const nc = [...extraCharges];
+                                                    nc[i].amount = Number(e.target.value);
+                                                    setExtraCharges(nc);
+                                                    if (paymentType === 'PAYMENT' && Number(e.target.value) > 0) {
+                                                        const newTotal = extraCharges.reduce((s, c, idx) => s + (idx === i ? Number(e.target.value) : c.amount), 0);
+                                                        setAmount(Math.max(0, effectiveDue + newTotal));
+                                                    }
+                                                }}
+                                                className="h-9 rounded-lg text-sm"
+                                            />
+                                        </div>
+                                        <Button 
+                                            type="button" 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-9 w-9 text-slate-400 hover:text-red-600"
+                                            onClick={() => {
+                                                const nc = extraCharges.filter((_, idx) => idx !== i);
+                                                setExtraCharges(nc);
+                                                if (paymentType === 'PAYMENT') {
+                                                    const newTotal = nc.reduce((s, c) => s + c.amount, 0);
+                                                    setAmount(Math.max(0, effectiveDue + newTotal));
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-[11px] text-slate-500 italic">No extra charges added.</div>
+                        )}
+                    </div>
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -188,7 +268,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
+                    <Button onClick={submit} disabled={submitting || isSubscriptionReadOnly} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : <><CreditCard className="h-4 w-4 mr-2" />Record</>}
                     </Button>
                 </div>

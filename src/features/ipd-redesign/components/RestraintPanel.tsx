@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, ShieldOff, Clock3 } from 'lucide-react';
 import { restraintApi, type RestraintOrderItem } from '../services/restraintApi';
 import { formatIstDateTime, toIstDate } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -19,6 +20,7 @@ const INTERVAL_OPTIONS = [15, 30, 60, 120];
 
 export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [orders, setOrders] = useState<RestraintOrderItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -46,6 +48,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openStart = () => {
+        if (isSubscriptionReadOnly) { blockAction('Starting restraint orders'); return; }
         setRestraintType(''); setReason(''); setOrderedByDoctorName(''); setMonitoringIntervalMins(30);
         setFamilyNotified(false); setFamilyNotificationNotes('');
         setStartOpen(true);
@@ -56,6 +59,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             toast({ title: 'Incomplete', description: 'Type, reason and ordering doctor are required.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Starting restraint orders'); return; }
         setSubmitting(true);
         try {
             await restraintApi.start(admissionId, {
@@ -78,6 +82,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
 
     const confirmRelease = async () => {
         if (!releasing) return;
+        if (isSubscriptionReadOnly) { blockAction('Releasing restraint orders'); return; }
         setReleaseBusy(true);
         try {
             await restraintApi.release(releasing.restraintOrderId, releaseReason || undefined);
@@ -112,7 +117,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && !active && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openStart}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openStart} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Start restraint
                         </Button>
                     )}
@@ -132,7 +137,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                     <Badge variant="outline" className="text-[9px] font-bold bg-rose-100 text-rose-700 border-rose-300">ACTIVE</Badge>
                                 </div>
                                 {isActive && (
-                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => { setReleasing(active); setReleaseReason(''); }}>Release</Button>
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" disabled={isSubscriptionReadOnly} onClick={() => { if (isSubscriptionReadOnly) { blockAction('Releasing restraint orders'); return; } setReleasing(active); setReleaseReason(''); }}>Release</Button>
                                 )}
                             </div>
                             <p className="text-[13px] text-slate-700 mt-2">{active.reason}</p>
@@ -204,7 +209,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                     )}
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setStartOpen(false)}>Cancel</Button>
-                        <Button disabled={!restraintType.trim() || !reason.trim() || !orderedByDoctorName.trim() || submitting} onClick={submit} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700">
+                        <Button disabled={!restraintType.trim() || !reason.trim() || !orderedByDoctorName.trim() || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Start
                         </Button>
                     </div>
@@ -225,7 +230,7 @@ export const RestraintPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                             </div>
                             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                                 <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setReleasing(null)}>Cancel</Button>
-                                <Button disabled={releaseBusy} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmRelease}>
+                                <Button disabled={releaseBusy || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmRelease}>
                                     {releaseBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Release
                                 </Button>
                             </div>

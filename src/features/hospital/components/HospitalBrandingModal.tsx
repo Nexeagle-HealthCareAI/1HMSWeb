@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { HospitalBranding } from './HospitalBrandingConfig';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
-import { subscriptionApi, type BillingCycle } from '@/features/subscription/services/subscriptionApi';
+import { subscriptionApi, CYCLE_LABEL, type BillingCycle } from '@/features/subscription/services/subscriptionApi';
 import { cn } from '@/lib/utils';
 
 interface HospitalBrandingModalProps {
@@ -355,7 +355,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
         queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
         queryClient.invalidateQueries({ queryKey: ['hospitalUserByUserId'] });
 
-        // Optional: the admin pre-selected a plan on step 4. The 14-day trial is already stamped
+        // Optional: the admin pre-selected a plan on step 4. The 1-month trial is already stamped
         // unconditionally by the registration handler regardless of this — selecting a plan here
         // just marks it for payment later; failing to record it should not undo the registration
         // that already succeeded, so this is a soft, non-blocking follow-up call.
@@ -813,7 +813,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
             </Card>
           )}
 
-          {/* Step 4: Choose your plan (optional — the 14-day trial starts regardless) */}
+          {/* Step 4: Choose your plan (optional — the 1-month trial starts regardless) */}
           {currentStep === 4 && (
             <Card>
               <CardHeader>
@@ -822,13 +822,13 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                   Choose your plan
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Optional — you get a 14-day free trial either way. Pick a plan now if you'd like to pay early, or skip and choose one later from the Subscription page.
+                  Optional — you get a 1-month free trial either way. Pick a plan now if you'd like to pay early, or skip and choose one later from the Subscription page.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-                    {(['Monthly', 'Yearly'] as BillingCycle[]).map(c => (
+                    {(['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'] as BillingCycle[]).map(c => (
                       <button
                         key={c}
                         type="button"
@@ -868,7 +868,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                         </div>
                         <p className="text-2xl font-black text-foreground mt-2">
                           ₹{plan.discountedPrice}
-                          <span className="text-sm font-medium text-muted-foreground"> / {plan.billingCycle === 'Yearly' ? 'year' : 'month'}</span>
+                          <span className="text-sm font-medium text-muted-foreground"> / {CYCLE_LABEL[plan.billingCycle]}</span>
                         </p>
                       </button>
                     );
@@ -882,7 +882,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                   <p className="text-sm text-amber-800 dark:text-amber-300">
                     {selectedPlanId
                       ? "You'll pay for this after your hospital is created — go to Subscription to mark your payment done."
-                      : "Skip this step and start your 14-day trial — you can pick a plan anytime later."}
+                      : "Skip this step and start your 1-month trial — you can pick a plan anytime later."}
                   </p>
                 </div>
               </CardContent>

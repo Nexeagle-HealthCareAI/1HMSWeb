@@ -5,6 +5,14 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RouteGuard } from '@/components/guards/RouteGuard';
 
+// Helper to break infinite redirect loops for invalid roles
+const InvalidRoleLogout = () => {
+  React.useEffect(() => {
+    useAuthStore.getState().logout();
+  }, []);
+  return <Navigate to="/login" replace />;
+};
+
 // Role-based redirect component
 const RoleBasedRedirect = () => {
   const userRole = useAuthStore.getState().getUserRole();
@@ -12,13 +20,16 @@ const RoleBasedRedirect = () => {
   if (userRole === 'Admin') {
     return <Navigate to="/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    return <Navigate to="/dashboard" replace />;
+    const isMobile = window.innerWidth < 1024;
+    return <Navigate to={isMobile ? "/appointment-dashboard" : "/dashboard"} replace />;
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
     // Receptionist and Nurse should go to appointment dashboard
     return <Navigate to="/appointment-dashboard" replace />;
+  } else if (userRole === 'Accountant') {
+    return <Navigate to="/billing" replace />;
   } else {
-    // Default fallback - redirect to login if role is not recognized
-    return <Navigate to="/" replace />;
+    // Default fallback - log out and redirect to login if role is not recognized
+    return <InvalidRoleLogout />;
   }
 };
 
@@ -60,6 +71,7 @@ const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
+const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
 
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
@@ -332,6 +344,16 @@ export const AppRoutes: React.FC = () => {
               }
             />
             <Route
+              path="/settings"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <SettingsPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
               path="/subscription"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
@@ -532,7 +554,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>
@@ -542,7 +564,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/ledger"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -552,7 +574,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/:appointmentId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>

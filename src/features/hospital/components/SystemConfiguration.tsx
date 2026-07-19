@@ -56,7 +56,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
   );
 
   return (
-    <div className="flex bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm h-[calc(100vh-140px)] w-full relative z-10 animate-in fade-in duration-500">
+    <div className="flex bg-white dark:bg-slate-900 lg:border lg:border-gray-200 lg:dark:border-gray-800 lg:rounded-2xl overflow-hidden lg:shadow-sm h-[calc(100vh-140px)] max-lg:h-auto w-full relative z-10 animate-in fade-in duration-500 max-lg:bg-transparent">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -88,7 +88,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
           <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
             <LayoutDashboard className="h-6 w-6" />
             {!isSidebarCollapsed && (
-              <span className="font-bold text-lg tracking-tight">Settings</span>
+              <span className="font-bold text-lg tracking-tight">Hospital Info</span>
             )}
           </div>
         </div>
@@ -138,20 +138,20 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 bg-transparent">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto lg:p-8 bg-transparent max-lg:p-0">
         <div className="w-full h-full max-w-[1200px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <div className="lg:hidden">
-              <TabsList className="flex gap-2 rounded-2xl bg-muted/40 p-1">
+            <div className="lg:hidden sticky top-0 z-40 bg-gray-50/90 dark:bg-gray-950/90 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 shadow-sm dark:shadow-gray-900/50">
+              <TabsList className="flex w-full h-12 gap-1 rounded-[1.25rem] bg-gray-200/60 dark:bg-gray-800/60 p-1 shadow-inner border border-gray-200/50 dark:border-gray-700/50">
                 {navigationItems.map((item) => (
                   <TabsTrigger
                     key={item.id}
                     value={item.id}
-                    className="group relative flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
+                    className="relative flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs sm:text-sm font-semibold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-brand-600 dark:data-[state=active]:text-brand-400 data-[state=active]:shadow-sm"
                     data-testid={item.id === 'branding' ? 'hospital-info-tab' : undefined}
                   >
-                    <item.icon className="h-4 w-4 text-muted-foreground group-data-[state=active]:text-primary" />
-                    <span>{item.label}</span>
+                    <item.icon className="h-4 w-4 shrink-0 transition-transform data-[state=active]:scale-110" />
+                    <span className="truncate">{item.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>

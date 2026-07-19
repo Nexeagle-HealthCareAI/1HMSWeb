@@ -11,6 +11,8 @@ import {
     AlertTriangle, FileBadge2, ChevronsUpDown, Fingerprint, Hash, Stethoscope, Wallet, Clock3, Files,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem, type AdmissionDoctorHistoryItem, type AdmissionReferrerHistoryItem } from '../services/admissionApi';
 import { ReferrerPicker, REFERRER_LABEL } from '../components/ReferrerPicker';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -98,6 +100,7 @@ interface Props {
  */
 export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged, initialSection }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
     const [current, setCurrent] = useState<ActiveAdmissionItem>(admission);
     const [activeSection, setActiveSection] = useState<Section>(initialSection ?? 'overview');
@@ -256,6 +259,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     };
 
     const releaseBed = async () => {
+        if (isSubscriptionReadOnly) { blockAction('Releasing beds'); return; }
         setBedBusy(true);
         try {
             await bedBoardApi.releaseBed(current.admissionId);
@@ -520,7 +524,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     </button>
                 </aside>
 
-                <div className="flex-1 min-w-0 space-y-5">
+                <SubscriptionReadOnlyOverlay featureLabel="Managing this patient" className="flex-1 min-w-0 space-y-5">
                     {activeSection === 'overview' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div className="lg:col-span-2">
@@ -536,7 +540,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                                 <Button variant="outline" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
                                                     <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
                                                 </Button>
-                                                <Button variant="outline" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none text-slate-500 hover:text-rose-600" onClick={releaseBed} disabled={bedBusy}>
+                                                <Button variant="outline" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none text-slate-500 hover:text-rose-600" onClick={releaseBed} disabled={bedBusy || isSubscriptionReadOnly}>
                                                     <X className="h-3.5 w-3.5 mr-1.5" /> Release
                                                 </Button>
                                             </div>
@@ -930,7 +934,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     {activeSection === 'discharge' && (
                         <DischargeSummaryPanel admission={current} isActive={isActive} onDischarged={refreshAfterAction} />
                     )}
-                </div>
+                </SubscriptionReadOnlyOverlay>
             </div>
         </div>
     );

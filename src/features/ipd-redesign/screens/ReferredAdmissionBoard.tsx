@@ -11,6 +11,7 @@ import {
     MessageSquare, Send, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { admissionReferralApi, AdmissionReferralItem, AdmissionReferralCommentItem, CaseType, ReferralStatus } from '../services/admissionReferralApi';
+import { useAppStore } from '@/store/appStore';
 import { STATUS_TONE, STATUS_LABEL, ALL_STATUSES, CASE_TONE, CASE_LABEL, ALL_CASE_TYPES } from '../utils/referralStatus';
 import { formatIstDateTime } from '../utils/istDate';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ const formatDate = (iso?: string | null) => {
  */
 export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferral }) => {
     const { toast } = useToast();
+    const { isLowBandwidthMode } = useAppStore();
     const [referrals, setReferrals] = useState<AdmissionReferralItem[]>([]);
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
     const [totalCount, setTotalCount] = useState(0);
@@ -205,53 +207,56 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
             </div>
 
             {/* KPI tiles — informational, read-only summary of every status (including zero counts) */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
+            {/* KPI tiles — horizontal scroll on mobile */}
+            <div className="flex sm:grid sm:grid-cols-5 overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-3 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0">
+                <div className={cn('rounded-[1.25rem] border border-slate-200 p-4 min-w-[140px] sm:min-w-0 snap-start shrink-0 flex flex-col justify-center',
+                    !isLowBandwidthMode ? 'bg-white/80 backdrop-blur-xl shadow-sm' : 'bg-white')}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">All</p>
-                    <p className="text-2xl font-black text-slate-800">{totalReferrals}</p>
+                    <p className="text-3xl font-black text-slate-800 mt-1">{totalReferrals}</p>
                 </div>
                 {ALL_STATUSES.map(s => (
-                    <div key={s} className={cn('rounded-xl border p-3', STATUS_TONE[s])}>
+                    <div key={s} className={cn('rounded-[1.25rem] border p-4 min-w-[140px] sm:min-w-0 snap-start shrink-0 flex flex-col justify-center', STATUS_TONE[s],
+                        !isLowBandwidthMode ? 'bg-opacity-80 backdrop-blur-xl shadow-sm' : '')}>
                         <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{STATUS_LABEL[s]}</p>
-                        <p className="text-2xl font-black">{statusCounts[s] ?? 0}</p>
+                        <p className="text-3xl font-black mt-1">{statusCounts[s] ?? 0}</p>
                     </div>
                 ))}
             </div>
 
             {/* Filters */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
                 <div className="relative w-full sm:max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input placeholder="Search current page…" className="pl-9 h-10 sm:h-9 bg-white" value={search} onChange={e => setSearch(e.target.value)} />
+                    <Input placeholder="Search current page…" className="pl-9 h-11 sm:h-9 bg-white/80 backdrop-blur-sm rounded-xl border-slate-200/60" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Status</span>
+                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">Status</span>
                     <button type="button" onClick={() => changeStatusFilter('ALL')}
-                        className={cn('h-9 px-3 rounded-full text-xs font-bold border transition-colors',
-                            statusFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                        className={cn('h-10 sm:h-9 px-4 sm:px-3 rounded-full text-sm sm:text-xs font-bold border transition-all shrink-0',
+                            statusFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white/80 backdrop-blur-md text-slate-600 border-slate-200 hover:bg-white')}>
                         All · {totalReferrals}
                     </button>
                     {ALL_STATUSES.map(s => (
                         <button key={s} type="button" onClick={() => changeStatusFilter(s)}
-                            className={cn('h-9 px-3 rounded-full text-xs font-bold border transition-colors',
-                                statusFilter === s ? STATUS_TONE[s] + ' ring-2 ring-offset-1 ring-current' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50')}>
+                            className={cn('h-10 sm:h-9 px-4 sm:px-3 rounded-full text-sm sm:text-xs font-bold border transition-all shrink-0',
+                                statusFilter === s ? STATUS_TONE[s] + ' ring-2 ring-offset-1 ring-current shadow-md' : 'bg-white/80 backdrop-blur-md text-slate-500 border-slate-200 hover:bg-white')}>
                             {STATUS_LABEL[s]} · {statusCounts[s] ?? 0}
                         </button>
                     ))}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Case Type</span>
+                <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-2 shrink-0">Case</span>
                     <button type="button" onClick={() => changeCaseTypeFilter('ALL')}
-                        className={cn('h-9 px-3 rounded-full text-xs font-bold border transition-colors',
-                            caseTypeFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                        className={cn('h-10 sm:h-9 px-4 sm:px-3 rounded-full text-sm sm:text-xs font-bold border transition-all shrink-0',
+                            caseTypeFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white/80 backdrop-blur-md text-slate-600 border-slate-200 hover:bg-white')}>
                         All
                     </button>
                     {ALL_CASE_TYPES.map(c => (
                         <button key={c} type="button" onClick={() => changeCaseTypeFilter(c)}
-                            className={cn('h-9 px-3 rounded-full text-xs font-bold border transition-colors',
-                                caseTypeFilter === c ? CASE_TONE[c] + ' ring-2 ring-offset-1 ring-current' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50')}>
+                            className={cn('h-10 sm:h-9 px-4 sm:px-3 rounded-full text-sm sm:text-xs font-bold border transition-all shrink-0',
+                                caseTypeFilter === c ? CASE_TONE[c] + ' ring-2 ring-offset-1 ring-current shadow-md' : 'bg-white/80 backdrop-blur-md text-slate-500 border-slate-200 hover:bg-white')}>
                             {CASE_LABEL[c]}
                         </button>
                     ))}
@@ -269,7 +274,8 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                         const commentsExpanded = openComments.has(r.referralId);
                         const comments = commentsByReferral[r.referralId] ?? [];
                         return (
-                            <div key={r.referralId} className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                            <div key={r.referralId} className={cn('rounded-[1.5rem] border p-4 sm:p-5 transition-all',
+                                !isLowBandwidthMode ? 'bg-white/90 backdrop-blur-xl shadow-lg border-white/40' : 'bg-white border-slate-200')}>
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 flex-wrap">
