@@ -22,6 +22,9 @@ export interface DoctorProfessionalData {
   primaryDepartment: string;
   department: string;
   specializations: string[];
+  // Optional link into the NMC qualification-ladder catalog — additive, sits alongside the
+  // department/specializations above.
+  primaryMedicalSpecialityId?: string;
   hospitalId: string;
   hospitalDepartmentMappingId?: string;
 }
@@ -37,6 +40,9 @@ export interface DoctorProfileResponse {
   bio: string;
   primaryDepartmentID: string;
   primaryDepartmentName: string;
+  primaryMedicalSpecialityId?: string;
+  primaryMedicalSpecialityName?: string;
+  primaryMedicalSpecialityPatientFacingName?: string;
   profileCompletionPercentage: number;
   createdAt: string;
   doctorDepartments: DoctorDepartment[];
@@ -112,6 +118,7 @@ export const doctorApi = {
     primaryDepartment: string;
     department: string;
     specializations: string[];
+    primaryMedicalSpecialityId?: string;
   }) => {
     try {
       const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.UPDATE_PROFILE}`,

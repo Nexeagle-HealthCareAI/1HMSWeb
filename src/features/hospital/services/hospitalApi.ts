@@ -1,5 +1,8 @@
 import { apiClient } from '@/services/axiosClient';
 import { API_ENDPOINTS } from '@/app/api';
+import { enqueue } from '@/offline/outbox';
+import { isReachable } from '@/offline/connectivity';
+import { nanoid } from 'nanoid';
 
 // Types
 export interface HospitalRegistrationRequest {
@@ -195,6 +198,22 @@ export const hospitalApi = {
     hospitalId: string,
     data: HospitalUpdateRequest
   ): Promise<HospitalUpdateResponse> => {
+    if (!isReachable()) {
+      await enqueue({
+        clientKey: nanoid(),
+        entity: 'hospital',
+        opType: 'update',
+        request: {
+          client: 'api',
+          method: 'put',
+          url: API_ENDPOINTS.HOSPITALS.GET_BY_ID(hospitalId),
+          data
+        },
+        label: 'Hospital Settings',
+        hospitalId
+      });
+      return { success: true, message: 'Saved offline. Changes will sync when reconnected.', hospitalId };
+    }
     const response = await apiClient.put(API_ENDPOINTS.HOSPITALS.GET_BY_ID(hospitalId), data);
     return response;
   },

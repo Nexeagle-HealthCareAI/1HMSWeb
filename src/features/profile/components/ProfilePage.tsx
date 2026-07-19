@@ -654,6 +654,103 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     }
   };
 
+  const handleImageChange = (file: File | null) => {
+    // Clean up previous preview URL if it exists
+    if (previewUrlToCleanup) {
+      URL.revokeObjectURL(previewUrlToCleanup);
+    }
+
+    setSelectedProfilePictureFile(file);
+    // Update preview in local state (just for display)
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewUrlToCleanup(previewUrl);
+      setProfileData(prev => ({
+        ...prev,
+        personal: {
+          ...prev.personal,
+          profilePicture: previewUrl
+        }
+      }));
+    } else {
+      // If file is cleared, revert to original
+      setPreviewUrlToCleanup(null);
+      setProfileData(prev => ({
+        ...prev,
+        personal: {
+          ...prev.personal,
+          profilePicture: originalProfilePicture
+        }
+      }));
+    }
+  };
+
+  const handleImageRemove = async () => {
+    // Handle remove from server
+    if (!userId) {
+      toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const removeResponse = await removeMutation.mutateAsync(userId);
+
+      if (removeResponse.success) {
+        // Update the profile to remove picture URL
+        const updateData: UserProfileUpdateRequest = {
+          userId,
+          mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
+          isActive: true,
+          fullName: profileData.personal.fullName,
+          gender: profileData.personal.gender || '',
+          profilePictureURL: '',
+          employeeID: profileData.personal.employeeId || '',
+          dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
+          bloodGroup: profileData.personal.bloodGroup || '',
+          addressLine1: profileData.personal.addressLine1 || '',
+          addressLine2: profileData.personal.addressLine2 || '',
+          city: profileData.personal.city || '',
+          state: profileData.personal.state || '',
+          country: profileData.personal.country || '',
+          pincode: profileData.personal.pincode || '',
+          emergencyContactName: profileData.personal.emergencyContactName || '',
+          emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
+        };
+
+        await updateUserDetailsMutation.mutateAsync(updateData);
+
+        // Update local state
+        setProfileData(prev => ({
+          ...prev,
+          personal: {
+            ...prev.personal,
+            profilePicture: ''
+          }
+        }));
+        setOriginalProfilePicture('');
+
+        // Refresh queries
+        queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+        queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
+
+        toast({
+          title: 'Success',
+          description: 'Profile picture removed successfully',
+        });
+
+        // Exit edit mode after successful removal
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Error removing profile picture:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove profile picture',
+        variant: 'destructive',
+      });
+    }
+  };
+
 
 
   // Show loading state while fetching user details
@@ -669,7 +766,145 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6 transition-all duration-300">
+    <>
+    {/* --- MOBILE ANDROID APP VIEW --- */}
+    <div className="md:hidden min-h-screen bg-gray-50 dark:bg-gray-950 pb-[100px] animate-in fade-in slide-in-from-bottom-4 duration-300">
+      {/* Native-style Header */}
+      <div className="bg-brand-600 dark:bg-gray-900 text-white p-4 shadow-md sticky top-0 z-20 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/20 rounded-full h-10 w-10 shrink-0 -ml-2">
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <h1 className="text-xl font-medium tracking-wide">{t('profilePage.header.title')}</h1>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => {
+            if (isEditing) {
+              if (previewUrlToCleanup) {
+                URL.revokeObjectURL(previewUrlToCleanup);
+                setPreviewUrlToCleanup(null);
+              }
+              setProfileData(prev => ({ ...prev, personal: { ...prev.personal, profilePicture: originalProfilePicture } }));
+              setSelectedProfilePictureFile(null);
+            }
+            setIsEditing(!isEditing);
+          }}
+          className="text-white hover:bg-white/20 rounded-full"
+        >
+          {isEditing ? <span className="font-semibold">{t('profilePage.header.cancel')}</span> : <Edit3 className="h-5 w-5" />}
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {/* Profile Header Block */}
+        <div className="bg-white dark:bg-gray-900 px-6 py-8 flex flex-col items-center border-b border-gray-200 dark:border-gray-800 shadow-sm relative">
+          <div className="relative mb-4">
+            <ProfilePictureUploader
+              currentImageUrl={profileData.personal.profilePicture}
+              onFileSelect={handleImageChange}
+              onRemove={handleImageRemove}
+              isEditing={isEditing}
+              isUploading={uploadMutation.isPending}
+            />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{profileData.personal.fullName || 'User Profile'}</h2>
+          <p className="text-sm text-gray-500 mt-1">{profileData.personal.email}</p>
+          <Badge variant="outline" className="mt-3 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 border-brand-200 dark:border-brand-800">
+            {roleFromStore}
+          </Badge>
+        </div>
+
+        {/* Settings List */}
+        <div className="mt-4 pb-20">
+          <div className="px-5 py-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">{t('profilePage.tabs.personal')}</div>
+          <div className="bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+            
+            <div className="p-4 flex flex-col gap-1 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors">
+              <label className="text-xs font-medium text-gray-500">{t('profilePage.personal.fullName')}</label>
+              {isEditing ? (
+                <Input value={profileData.personal.fullName} onChange={(e) => handleInputChange('personal', 'fullName', e.target.value)} className="border-b-2 border-x-0 border-t-0 border-brand-500 rounded-none px-0 focus-visible:ring-0 focus-visible:border-brand-600 bg-transparent" />
+              ) : (
+                <div className="text-base text-gray-900 dark:text-gray-100">{profileData.personal.fullName || '—'}</div>
+              )}
+            </div>
+
+            <div className="p-4 flex flex-col gap-1 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors">
+              <label className="text-xs font-medium text-gray-500">{t('profilePage.personal.phone')}</label>
+              {isEditing ? (
+                <Input value={profileData.personal.phone} onChange={(e) => handleInputChange('personal', 'phone', e.target.value)} type="tel" className="border-b-2 border-x-0 border-t-0 border-brand-500 rounded-none px-0 focus-visible:ring-0 focus-visible:border-brand-600 bg-transparent" />
+              ) : (
+                <div className="text-base text-gray-900 dark:text-gray-100">{profileData.personal.phone || '—'}</div>
+              )}
+            </div>
+
+            <div className="p-4 flex flex-col gap-1 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors">
+              <label className="text-xs font-medium text-gray-500">{t('profilePage.personal.gender')}</label>
+              {isEditing ? (
+                <Select value={profileData.personal.gender} onValueChange={(v) => handleInputChange('personal', 'gender', v)}>
+                  <SelectTrigger className="border-b-2 border-x-0 border-t-0 border-brand-500 rounded-none px-0 focus:ring-0 bg-transparent">
+                    <SelectValue placeholder={t('profilePage.personal.genderSelect')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">{t('profilePage.personal.genderMale')}</SelectItem>
+                    <SelectItem value="Female">{t('profilePage.personal.genderFemale')}</SelectItem>
+                    <SelectItem value="Other">{t('profilePage.personal.genderOther')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-base text-gray-900 dark:text-gray-100">{profileData.personal.gender || '—'}</div>
+              )}
+            </div>
+
+          </div>
+
+          <div className="px-5 py-2 mt-6 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">Address & Contact</div>
+          <div className="bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+            <div className="p-4 flex flex-col gap-1 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors">
+              <label className="text-xs font-medium text-gray-500">Address Line 1</label>
+              {isEditing ? (
+                <Input value={(profileData.personal as any).addressLine1 || ''} onChange={(e) => handleInputChange('personal', 'addressLine1', e.target.value)} className="border-b-2 border-x-0 border-t-0 border-brand-500 rounded-none px-0 focus-visible:ring-0 focus-visible:border-brand-600 bg-transparent" />
+              ) : (
+                <div className="text-base text-gray-900 dark:text-gray-100">{(profileData.personal as any).addressLine1 || '—'}</div>
+              )}
+            </div>
+            <div className="p-4 flex flex-col gap-1 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors">
+              <label className="text-xs font-medium text-gray-500">City & State</label>
+              {isEditing ? (
+                <div className="flex gap-2">
+                  <Input placeholder="City" value={(profileData.personal as any).city || ''} onChange={(e) => handleInputChange('personal', 'city', e.target.value)} className="border-b-2 border-x-0 border-t-0 border-brand-500 rounded-none px-0 focus-visible:ring-0 bg-transparent flex-1" />
+                  <Input placeholder="State" value={(profileData.personal as any).state || ''} onChange={(e) => handleInputChange('personal', 'state', e.target.value)} className="border-b-2 border-x-0 border-t-0 border-brand-500 rounded-none px-0 focus-visible:ring-0 bg-transparent flex-1" />
+                </div>
+              ) : (
+                <div className="text-base text-gray-900 dark:text-gray-100">{[(profileData.personal as any).city, (profileData.personal as any).state].filter(Boolean).join(', ') || '—'}</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Action Button (FAB) for Save */}
+        {isEditing && (
+          <div className="fixed bottom-[90px] right-6 z-50 animate-in zoom-in duration-300">
+            <Button
+              onClick={handleSave}
+              disabled={updateUserDetailsMutation.isPending}
+              className="h-16 px-6 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-2"
+            >
+              {updateUserDetailsMutation.isPending ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Save className="h-6 w-6" />
+              )}
+              <span className="font-semibold text-lg">{t('profilePage.header.save')}</span>
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* --- DESKTOP VIEW --- */}
+    <div className="hidden md:block min-h-screen bg-gradient-subtle p-4 lg:p-6 transition-all duration-300">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -731,101 +966,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               )}
               <ProfilePictureUploader
                 currentImageUrl={profileData.personal.profilePicture}
-                onFileSelect={(file) => {
-                  // Clean up previous preview URL if it exists
-                  if (previewUrlToCleanup) {
-                    URL.revokeObjectURL(previewUrlToCleanup);
-                  }
-
-                  setSelectedProfilePictureFile(file);
-                  // Update preview in local state (just for display)
-                  if (file) {
-                    const previewUrl = URL.createObjectURL(file);
-                    setPreviewUrlToCleanup(previewUrl);
-                    setProfileData(prev => ({
-                      ...prev,
-                      personal: {
-                        ...prev.personal,
-                        profilePicture: previewUrl
-                      }
-                    }));
-                  } else {
-                    // If file is cleared, revert to original
-                    setPreviewUrlToCleanup(null);
-                    setProfileData(prev => ({
-                      ...prev,
-                      personal: {
-                        ...prev.personal,
-                        profilePicture: originalProfilePicture
-                      }
-                    }));
-                  }
-                }}
-                onRemove={async () => {
-                  // Handle remove from server
-                  if (!userId) {
-                    toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
-                    return;
-                  }
-
-                  try {
-                    const removeResponse = await removeMutation.mutateAsync(userId);
-
-                    if (removeResponse.success) {
-                      // Update the profile to remove picture URL
-                      const updateData: UserProfileUpdateRequest = {
-                        userId,
-                        mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
-                        isActive: true,
-                        fullName: profileData.personal.fullName,
-                        gender: profileData.personal.gender || '',
-                        profilePictureURL: '',
-                        employeeID: profileData.personal.employeeId || '',
-                        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
-                        bloodGroup: profileData.personal.bloodGroup || '',
-                        addressLine1: profileData.personal.addressLine1 || '',
-                        addressLine2: profileData.personal.addressLine2 || '',
-                        city: profileData.personal.city || '',
-                        state: profileData.personal.state || '',
-                        country: profileData.personal.country || '',
-                        pincode: profileData.personal.pincode || '',
-                        emergencyContactName: profileData.personal.emergencyContactName || '',
-                        emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
-                      };
-
-                      await updateUserDetailsMutation.mutateAsync(updateData);
-
-                      // Update local state
-                      setProfileData(prev => ({
-                        ...prev,
-                        personal: {
-                          ...prev.personal,
-                          profilePicture: ''
-                        }
-                      }));
-                      setOriginalProfilePicture('');
-
-                      // Refresh queries
-                      queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
-                      queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
-
-                      toast({
-                        title: 'Success',
-                        description: 'Profile picture removed successfully',
-                      });
-
-                      // Exit edit mode after successful removal
-                      setIsEditing(false);
-                    }
-                  } catch (error) {
-                    console.error('Error removing profile picture:', error);
-                    toast({
-                      title: 'Error',
-                      description: 'Failed to remove profile picture. Please try again.',
-                      variant: 'destructive',
-                    });
-                  }
-                }}
+                onFileSelect={handleImageChange}
+                onRemove={handleImageRemove}
+                isEditing={isEditing}
+                isUploading={uploadMutation.isPending}
                 size="lg"
                 disabled={!isEditing}
                 autoUpload={false}
@@ -1392,6 +1536,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 };
 

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import { fluidEntryApi, type FluidEntryItem, type FluidDayTotal, type FluidDirection } from '../services/fluidEntryApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -19,6 +20,7 @@ const OUT_SUBTYPES = ['Urine', 'Vomitus', 'RT_Aspirate', 'Drain_A', 'Drain_B', '
 
 export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [entries, setEntries] = useState<FluidEntryItem[]>([]);
     const [totals, setTotals] = useState<FluidDayTotal[]>([]);
     const [loading, setLoading] = useState(true);
@@ -42,6 +44,7 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openEntry = (dir: FluidDirection, initialSubtype?: string) => {
+        if (isSubscriptionReadOnly) { blockAction('Recording fluid entries'); return; }
         setDirection(dir);
         setSubtype(initialSubtype ?? (dir === 'IN' ? IN_SUBTYPES[0] : OUT_SUBTYPES[0]));
         setVolumeMl('');
@@ -56,6 +59,7 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
             toast({ title: 'Incomplete', description: 'Enter a valid volume.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Recording fluid entries'); return; }
         setSubmitting(true);
         try {
             await fluidEntryApi.record(admissionId, direction, subtype, vol, { routeOrSite: routeOrSite || undefined, notes: notes || undefined });
@@ -100,12 +104,12 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
             {isActive && (
                 <div className="flex flex-wrap gap-2">
                     {IN_SUBTYPES.map(s => (
-                        <Button key={s} size="sm" variant="outline" className="h-10 sm:h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => openEntry('IN', s)}>
+                        <Button key={s} size="sm" variant="outline" className="h-10 sm:h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => openEntry('IN', s)} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1" /> {s}
                         </Button>
                     ))}
                     {OUT_SUBTYPES.map(s => (
-                        <Button key={s} size="sm" variant="outline" className="h-10 sm:h-9 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => openEntry('OUT', s)}>
+                        <Button key={s} size="sm" variant="outline" className="h-10 sm:h-9 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => openEntry('OUT', s)} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1" /> {s.replace('_', ' ')}
                         </Button>
                     ))}
@@ -153,7 +157,7 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setEntryOpen(false)}>Cancel</Button>
-                        <Button disabled={!volumeMl || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={!volumeMl || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

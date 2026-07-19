@@ -307,6 +307,10 @@ export interface AddPaymentRequest {
         transactionId?: string;
         amount: number;
     };
+    extraCharges?: Array<{
+        reason: string;
+        amount: number;
+    }>;
 }
 
 export interface AddPaymentResponse {

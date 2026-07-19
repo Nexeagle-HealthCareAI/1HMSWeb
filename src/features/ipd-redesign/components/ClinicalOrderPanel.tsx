@@ -13,6 +13,7 @@ import {
 } from '../services/clinicalOrderApi';
 import { ipdBillingService, type ChargeMaster } from '@/features/billing/services/ipdBillingService';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 const EMPTY_LINE: ClinicalOrderLineInput = { itemName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', urgency: undefined, scheduledAt: undefined, isHighAlert: false, isDailyRecurringCharge: false, qty: 1 };
 
@@ -48,6 +49,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
     showMedicationFields, showUrgency, showScheduledAt,
 }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [orders, setOrders] = useState<ClinicalOrderItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [pickerItems, setPickerItems] = useState<ChargeMaster[]>([]);
@@ -78,7 +80,10 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
             .catch(() => setPickerItems([]));
     }, [itemPickerCategoryCodes]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const openNew = () => { setLines([{ ...EMPTY_LINE }]); setNotes(''); setNewOpen(true); };
+    const openNew = () => {
+        if (isSubscriptionReadOnly) { blockAction('Placing orders'); return; }
+        setLines([{ ...EMPTY_LINE }]); setNotes(''); setNewOpen(true);
+    };
     const addLine = () => setLines(ls => [...ls, { ...EMPTY_LINE }]);
     const removeLine = (i: number) => setLines(ls => ls.filter((_, idx) => idx !== i));
     const setLine = (i: number, patch: Partial<ClinicalOrderLineInput>) =>
@@ -96,6 +101,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
             toast({ title: 'Incomplete', description: `Every line needs a ${itemLabel.toLowerCase()}.`, variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Placing orders'); return; }
         setSubmitting(true);
         try {
             await clinicalOrderApi.placeOrder(admissionId, orderType, lines, notes || undefined);
@@ -111,6 +117,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
 
     const confirmDiscontinue = async () => {
         if (!discontinuing) return;
+        if (isSubscriptionReadOnly) { blockAction('Discontinuing orders'); return; }
         setDiscontinueBusy(true);
         try {
             await clinicalOrderApi.discontinueLine(discontinuing.orderLineId, discontinueReason || undefined);
@@ -134,7 +141,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                         <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', loading && 'animate-spin')} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New order
                         </Button>
                     )}
@@ -188,7 +195,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                         </div>
                                         {l.statusCode === 'ACTIVE' && isActive && (
                                             <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-rose-600 shrink-0"
-                                                onClick={() => { setDiscontinuing({ orderLineId: l.orderLineId, itemName: l.itemName || 'this item' }); setDiscontinueReason(''); }}>
+                                                onClick={() => { if (isSubscriptionReadOnly) { blockAction('Discontinuing orders'); return; } setDiscontinuing({ orderLineId: l.orderLineId, itemName: l.itemName || 'this item' }); setDiscontinueReason(''); }}>
                                                 <X className="h-3.5 w-3.5 mr-1" /> Discontinue
                                             </Button>
                                         )}
@@ -312,7 +319,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
 
                         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                             <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                            <Button disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                            <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                                 {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Place order
                             </Button>
                         </div>
@@ -335,7 +342,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                             </div>
                             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                                 <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setDiscontinuing(null)}>Cancel</Button>
-                                <Button disabled={discontinueBusy} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700" onClick={confirmDiscontinue}>
+                                <Button disabled={discontinueBusy || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700" onClick={confirmDiscontinue}>
                                     {discontinueBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Discontinue
                                 </Button>
                             </div>

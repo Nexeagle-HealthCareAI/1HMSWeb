@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isReachable } from '@/offline';
 import { cn } from '@/lib/utils';
 import { ipdBillingService } from '../../services/ipdBillingService';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 export interface EditChargeDialogProps {
     open: boolean;
@@ -26,6 +27,7 @@ export interface EditChargeDialogProps {
 // or discount-cap gate; that workflow was removed so any user can freely correct a mistake.
 export const EditChargeDialog: React.FC<EditChargeDialogProps> = ({ open, onOpenChange, charge, onSaved }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [displayName, setDisplayName] = useState('');
     const [qty, setQty] = useState(1);
     const [rate, setRate] = useState(0);
@@ -52,6 +54,7 @@ export const EditChargeDialog: React.FC<EditChargeDialogProps> = ({ open, onOpen
 
     const submit = async () => {
         if (!canSubmit || !charge) return;
+        if (isSubscriptionReadOnly) { blockAction('Editing charges'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Editing a charge requires an internet connection.', variant: 'destructive' }); return; }
         setSubmitting(true);
         try {
@@ -124,7 +127,7 @@ export const EditChargeDialog: React.FC<EditChargeDialogProps> = ({ open, onOpen
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={!canSubmit} className="flex-1 rounded-xl bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-500/20">
+                    <Button onClick={submit} disabled={!canSubmit || isSubscriptionReadOnly} className="flex-1 rounded-xl bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-500/20">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : <><Pencil className="h-4 w-4 mr-2" />Save Changes</>}
                     </Button>
                 </div>

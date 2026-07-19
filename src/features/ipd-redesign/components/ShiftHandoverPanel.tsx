@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, Check } from 'lucide-react';
 import { shiftHandoverApi, type ShiftHandoverNoteItem, type ShiftCode } from '../services/shiftHandoverApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -28,6 +29,7 @@ const guessShift = (): ShiftCode => {
 
 export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, outgoingNurseDefaultName }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [notes, setNotes] = useState<ShiftHandoverNoteItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -58,6 +60,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openNew = () => {
+        if (isSubscriptionReadOnly) { blockAction('Recording shift handovers'); return; }
         setMode('structured');
         setShiftCode(guessShift());
         setOutgoingNurseName(outgoingNurseDefaultName ?? '');
@@ -74,6 +77,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
             toast({ title: 'Incomplete', description: mode === 'freeText' ? 'Free-text note is required.' : 'Situation is required.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Recording shift handovers'); return; }
         setSubmitting(true);
         try {
             await shiftHandoverApi.create(admissionId, {
@@ -97,10 +101,11 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
         }
     };
 
-    const openAck = (note: ShiftHandoverNoteItem) => { setAckingId(note.shiftHandoverNoteId); setAckName(''); };
+    const openAck = (note: ShiftHandoverNoteItem) => { if (isSubscriptionReadOnly) { blockAction('Acknowledging handovers'); return; } setAckingId(note.shiftHandoverNoteId); setAckName(''); };
 
     const confirmAck = async () => {
         if (!ackingId || !ackName.trim()) return;
+        if (isSubscriptionReadOnly) { blockAction('Acknowledging handovers'); return; }
         setAckBusy(true);
         try {
             await shiftHandoverApi.acknowledge(ackingId, ackName.trim());
@@ -123,7 +128,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> New handover
                         </Button>
                     )}
@@ -147,7 +152,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                                 {n.incomingAckAt ? (
                                     <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Acknowledged by {n.incomingNurseName}</span>
                                 ) : isActive ? (
-                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => openAck(n)}>Acknowledge</Button>
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => openAck(n)} disabled={isSubscriptionReadOnly}>Acknowledge</Button>
                                 ) : null}
                             </div>
                             {n.isFreeText ? (
@@ -228,7 +233,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
 
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>
@@ -247,7 +252,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setAckingId(null)}>Cancel</Button>
-                        <Button disabled={!ackName.trim() || ackBusy} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmAck}>
+                        <Button disabled={!ackName.trim() || ackBusy || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmAck}>
                             {ackBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Acknowledge
                         </Button>
                     </div>

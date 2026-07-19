@@ -8,6 +8,7 @@ import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import { consentApi, type ConsentTemplateItem, type ConsentRecordItem } from '../services/consentApi';
 import { formatIstDateTime } from '../utils/istDate';
 import { SignaturePad } from './SignaturePad';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -17,6 +18,7 @@ interface Props {
 
 export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilterTypeCode }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [templates, setTemplates] = useState<ConsentTemplateItem[]>([]);
     const [records, setRecords] = useState<ConsentRecordItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openSign = () => {
+        if (isSubscriptionReadOnly) { blockAction('Capturing consent'); return; }
         const preferred = prefilterTypeCode ? templates.find(t => t.typeCode === prefilterTypeCode) : undefined;
         setTemplateId(preferred?.consentTemplateId ?? templates[0]?.consentTemplateId ?? '');
         setProcedureName('');
@@ -58,6 +61,7 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
             toast({ title: 'Incomplete', description: 'Template, signed-by name and relation are required.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Capturing consent'); return; }
         setSubmitting(true);
         try {
             await consentApi.sign(admissionId, templateId, {
@@ -86,7 +90,7 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && templates.length > 0 && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openSign}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openSign} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Capture consent
                         </Button>
                     )}
@@ -156,7 +160,7 @@ export const ConsentPanel: React.FC<Props> = ({ admissionId, isActive, prefilter
                     <SignaturePad onChange={setSignatureDataUrl} />
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setSignOpen(false)}>Cancel</Button>
-                        <Button disabled={!templateId || !signedByName.trim() || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={!templateId || !signedByName.trim() || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Sign
                         </Button>
                     </div>

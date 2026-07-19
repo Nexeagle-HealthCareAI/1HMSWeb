@@ -96,6 +96,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [previousBranding, setPreviousBranding] = useState<HospitalBranding | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [saveSuccessTick, setSaveSuccessTick] = useState(false);
 
   const fieldLabels: Record<StringFieldKey, string> = useMemo(
     () => ({
@@ -405,13 +406,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           if (hospitalId) {
             queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
           }
-          confetti({
-            particleCount: 150,
-            spread: 80,
-            origin: { y: 0.6 },
-            colors: ['#3b82f6', '#10b981', '#f59e0b']
-          });
-          setShowCompletionModal(true);
+          // Use subtle inline sync status instead of intrusive modal/confetti on mobile
+          setSaveSuccessTick(true);
+          setTimeout(() => setSaveSuccessTick(false), 3000);
         }
       }
     } catch (err) {
@@ -583,7 +580,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             {translate('hospitalBranding.subtitle', 'Add your hospital details')}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden sm:flex flex-wrap gap-2">
           {isExistingHospital && !isEditMode && (
             <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
               {translate('hospitalBranding.buttons.editDetails', 'Edit details')}
@@ -630,15 +627,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         className="grid gap-6"
       >
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+            <CardHeader className="max-sm:pb-2 max-sm:px-4">
+              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
                 <Building2 className="h-5 w-5" />
                 {t('hospitalBranding.sections.core.title')}
               </CardTitle>
               <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.core.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="hospitalName" className="flex items-center gap-2">
@@ -698,15 +695,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+            <CardHeader className="max-sm:pb-2 max-sm:px-4">
+              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
                 <Phone className="h-5 w-5" />
                 {t('hospitalBranding.sections.contact.title')}
               </CardTitle>
               <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.contact.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contact" className="flex items-center gap-2">
@@ -805,15 +802,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+            <CardHeader className="max-sm:pb-2 max-sm:px-4">
+              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
                 <MapPin className="h-5 w-5" />
                 {t('hospitalBranding.sections.location.title')}
               </CardTitle>
               <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.location.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
               <div className="space-y-2">
                 <Label htmlFor="location" className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
@@ -980,15 +977,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+            <CardHeader className="max-sm:pb-2 max-sm:px-4">
+              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
                 <FileText className="h-5 w-5" />
                 {t('hospitalBranding.sections.config.title')}
               </CardTitle>
               <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.config.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="registrationNumber" className="flex items-center gap-2">
@@ -1100,6 +1097,66 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           </Card>
         </motion.div>
       </motion.div>
+
+      {/* Mobile Sticky Footer Buttons */}
+      <div className="sm:hidden fixed bottom-16 left-0 right-0 p-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-50 flex flex-col gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
+        <AnimatePresence>
+          {saveSuccessTick && !isEditMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 py-2 rounded-xl text-sm font-medium"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Saved successfully
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="flex gap-3">
+          {isExistingHospital && !isEditMode && !saveSuccessTick && (
+            <Button onClick={handleStartEdit} variant="outline" className="w-full h-12 text-base font-semibold rounded-xl">
+              {translate('hospitalBranding.buttons.editDetails', 'Edit details')}
+            </Button>
+          )}
+          {isExistingHospital && isEditMode && (
+            <>
+              <Button variant="outline" onClick={handleCancelEdit} className="flex-1 h-12 text-base font-semibold rounded-xl">
+                {translate('hospitalBranding.buttons.cancel', 'Cancel')}
+              </Button>
+              <Button
+                onClick={handleSaveBranding}
+                disabled={updateHospitalMutation.isPending || isSaveDisabled}
+                className="flex-[2] h-12 text-base font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition-all"
+              >
+                {updateHospitalMutation.isPending ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
+                    <Save className="h-5 w-5" />
+                  </motion.div>
+                ) : (
+                  <Save className="h-5 w-5 mr-2" />
+                )}
+                {updateHospitalMutation.isPending
+                  ? translate('hospitalBranding.buttons.saving', 'Saving...')
+                  : translate('hospitalBranding.buttons.saveChanges', 'Save changes')}
+              </Button>
+            </>
+          )}
+          {!isExistingHospital && (
+            <Button
+              onClick={handleSaveBranding}
+              disabled={registerHospitalMutation.isPending || isSaveDisabled}
+              className="w-full h-12 text-base font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white"
+            >
+              <Save className="h-5 w-5 mr-2" />
+              {registerHospitalMutation.isPending
+                ? translate('hospitalBranding.buttons.saving', 'Saving...')
+                : translate('hospitalBranding.buttons.saveInfo', 'Save information')}
+            </Button>
+          )}
+        </div>
+      </div>
 
       <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
         <DialogContent className="max-w-md">

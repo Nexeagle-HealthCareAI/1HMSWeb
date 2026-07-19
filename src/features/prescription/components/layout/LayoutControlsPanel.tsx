@@ -91,7 +91,7 @@ export const LayoutControlsPanel = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -296,17 +296,18 @@ export const LayoutControlsPanel = ({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={onPreview}
               disabled={!onPreview}
+              className="w-full sm:w-auto"
             >
               <Eye className="h-4 w-4 mr-2" />
               {t('prescriptionDesigner.controls.actions.preview')}
             </Button>
-            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout}>
+            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout} className="w-full sm:w-auto">
               {isSavingLayout ? t('prescriptionDesigner.controls.actions.saving') : t('prescriptionDesigner.controls.actions.save')}
             </Button>
           </div>

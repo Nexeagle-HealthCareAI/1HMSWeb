@@ -29,7 +29,7 @@ import { Department as ApiDepartment, ApiDoctor } from '../services/appointmentA
 import { useQueryClient } from '@tanstack/react-query';
 import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
 import { useAuthStore } from '@/store/authStore';
-
+import { useAppStore } from '@/store/appStore';
 export interface Doctor {
   id: string;
   name: string;
@@ -141,6 +141,9 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   const userId = useAuthStore((state) => state.userId);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const storedHospitalId = useAuthStore((state) => state.hospitalId);
+
+  // App settings
+  const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
 
   // Fetch hospital user information using the userId from auth store
   const {
@@ -681,130 +684,130 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     );
   }
 
-  return (
-    <div className="bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+  const renderDepartmentSection = () => (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-5 h-5 rounded-md bg-brand-500/20 flex items-center justify-center">
+          <span className="text-[10px]">🏢</span>
+        </div>
+        <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">{t('appointmentBooking.departmentSelection')}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {departments.slice(0, 4).map((dept, i) => (
+          <motion.button
+            key={dept.id}
+            onClick={() => handleDepartmentSelect(dept.id)}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all text-xs font-semibold ${selectedDepartment === dept.id
+              ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white border-transparent shadow-lg shadow-brand-500/30'
+              : 'bg-white border-gray-200 hover:border-brand-300 hover:bg-brand-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
+          >
+            <dept.icon className="h-5 w-5" />
+            <span className="leading-tight">{dept.name}</span>
+          </motion.button>
+        ))}
+      </div>
+      {departments.length > 4 && (
+        <div className="mt-2">
+          <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
+            <SelectTrigger className="h-8 text-xs bg-background">
+              <SelectValue placeholder={t('appointmentBooking.moreDepartments')} />
+            </SelectTrigger>
+            <SelectContent className="z-50">
+              {departments.slice(4).map((dept) => (
+                <SelectItem key={dept.id} value={dept.id} className="text-xs">
+                  <div className="flex items-center gap-2">
+                    <dept.icon className="h-3 w-3" />
+                    <span>{dept.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
 
-
-
-      <div className="flex flex-col lg:flex-row items-stretch">
-
-        {/* ═══════════════════════════ SIDEBAR ═══════════════════════════ */}
-        <div className="hidden lg:flex flex-col w-80 flex-shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm h-full">
-
-
-          <div className="flex-1 p-4 space-y-5">
-            {/* Department Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md bg-brand-500/20 flex items-center justify-center">
-                  <span className="text-[10px]">🏢</span>
-                </div>
-                <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">{t('appointmentBooking.departmentSelection')}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {departments.slice(0, 4).map((dept, i) => (
-                  <motion.button
-                    key={dept.id}
-                    onClick={() => handleDepartmentSelect(dept.id)}
-                    whileTap={{ scale: 0.95 }}
-                    whileHover={{ scale: 1.02 }}
-                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all text-xs font-semibold ${selectedDepartment === dept.id
-                      ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white border-transparent shadow-lg shadow-brand-500/30'
-                      : 'bg-white border-gray-200 hover:border-brand-300 hover:bg-brand-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
-                  >
-                    <dept.icon className="h-5 w-5" />
-                    <span className="leading-tight">{dept.name}</span>
-                  </motion.button>
-                ))}
-              </div>
-              {departments.length > 4 && (
-                <div className="mt-2">
-                  <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
-                    <SelectTrigger className="h-8 text-xs bg-background">
-                      <SelectValue placeholder={t('appointmentBooking.moreDepartments')} />
-                    </SelectTrigger>
-                    <SelectContent className="z-50">
-                      {departments.slice(4).map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id} className="text-xs">
-                          <div className="flex items-center gap-2">
-                            <dept.icon className="h-3 w-3" />
-                            <span>{dept.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+  const renderDoctorSection = () => (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-5 h-5 rounded-md bg-brand-500/20 flex items-center justify-center">
+          <span className="text-[10px]">👨‍⚕️</span>
+        </div>
+        <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">{t('appointmentBooking.availableDoctors')}</span>
+      </div>
+      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+        {doctorsLoading ? (
+          <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500 animate-pulse">
+            {t('appointmentBooking.loadingDoctors')}
+          </div>
+        ) : doctorsError ? (
+          <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-center text-xs text-red-400">
+            {t('appointmentBooking.errorLoadingDoctors')}
+          </div>
+        ) : doctorsResponse?.doctors?.length ? (
+          doctorsResponse.doctors.map((doctor) => (
+            <motion.button
+              key={doctor.doctorId}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                handleDoctorSelect({
+                  id: doctor.doctorId,
+                  name: doctor.doctorName,
+                  department: selectedDepartmentData?.name || '',
+                  specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
+                });
+              }}
+              className={`w-full p-3 rounded-xl border text-left transition-all text-xs relative overflow-hidden ${selectedDoctor?.id === doctor.doctorId
+                ? 'border-brand-200 bg-brand-50 dark:border-brand-500/50 dark:bg-gradient-to-r dark:from-brand-500/20 dark:to-brand-500/10 shadow-sm'
+                : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 dark:hover:border-brand-400/30 hover:bg-brand-50/30 dark:hover:bg-white/10'}`}
+            >
+              {selectedDoctor?.id === doctor.doctorId && (
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-500/10 to-brand-500/5 pointer-events-none" />
               )}
-            </div>
-
-            {/* Doctor Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md bg-brand-500/20 flex items-center justify-center">
-                  <span className="text-[10px]">👨‍⚕️</span>
+              <div className="flex items-center gap-2 relative z-10">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${selectedDoctor?.id === doctor.doctorId ? 'bg-brand-100 dark:bg-brand-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                  👨‍⚕️
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">{t('appointmentBooking.availableDoctors')}</span>
-              </div>
-              <div className="space-y-2">
-                {doctorsLoading ? (
-                  <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500 animate-pulse">
-                    {t('appointmentBooking.loadingDoctors')}
-                  </div>
-                ) : doctorsError ? (
-                  <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-center text-xs text-red-400">
-                    {t('appointmentBooking.errorLoadingDoctors')}
-                  </div>
-                ) : doctorsResponse?.doctors?.length ? (
-                  doctorsResponse.doctors.map((doctor) => (
-                    <motion.button
-                      key={doctor.doctorId}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        handleDoctorSelect({
-                          id: doctor.doctorId,
-                          name: doctor.doctorName,
-                          department: selectedDepartmentData?.name || '',
-                          specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
-                        });
-                      }}
-                      className={`w-full p-3 rounded-xl border text-left transition-all text-xs relative overflow-hidden ${selectedDoctor?.id === doctor.doctorId
-                        ? 'border-brand-200 bg-brand-50 dark:border-brand-500/50 dark:bg-gradient-to-r dark:from-brand-500/20 dark:to-brand-500/10 shadow-sm'
-                        : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 dark:hover:border-brand-400/30 hover:bg-brand-50/30 dark:hover:bg-white/10'}`}
-                    >
-                      {selectedDoctor?.id === doctor.doctorId && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-brand-500/10 to-brand-500/5 pointer-events-none" />
-                      )}
-                      <div className="flex items-center gap-2 relative z-10">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${selectedDoctor?.id === doctor.doctorId ? 'bg-brand-100 dark:bg-brand-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
-                          👨‍⚕️
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className={`font-bold leading-tight truncate ${selectedDoctor?.id === doctor.doctorId ? 'text-brand-700 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{doctor.doctorName}</div>
-                          <div className="text-gray-400 text-[10px] truncate">{doctor.specializations?.join(', ') || t('appointmentBooking.generalSpecialization')}</div>
-                          {isDoctorOnTimeOff(doctor.doctorId) && (
-                            <span className="inline-block mt-0.5 text-[11px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
-                              🚫 On Leave
-                            </span>
-                          )}
-                        </div>
-                        {selectedDoctor?.id === doctor.doctorId && (
-                          <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    </motion.button>
-                  ))
-                ) : (
-                  <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500">
-                    {t('appointmentBooking.noDoctorsAvailable')}
+                <div className="min-w-0 flex-1">
+                  <div className={`font-bold leading-tight truncate ${selectedDoctor?.id === doctor.doctorId ? 'text-brand-700 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{doctor.doctorName}</div>
+                  <div className="text-gray-400 text-[10px] truncate">{doctor.specializations?.join(', ') || t('appointmentBooking.generalSpecialization')}</div>
+                  {isDoctorOnTimeOff(doctor.doctorId) && (
+                    <span className="inline-block mt-0.5 text-[11px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
+                      🚫 On Leave
+                    </span>
+                  )}
+                </div>
+                {selectedDoctor?.id === doctor.doctorId && (
+                  <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
                 )}
               </div>
-            </div>
+            </motion.button>
+          ))
+        ) : (
+          <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500">
+            {t('appointmentBooking.noDoctorsAvailable')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+      <div className="flex flex-col lg:flex-row items-stretch">
+
+        {/* ═══════════════════════════ SIDEBAR ═══════════════════════════ */}
+        <div className={`hidden lg:flex flex-col w-80 flex-shrink-0 bg-white/95 dark:bg-gray-900/95 border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm h-full ${!isLowBandwidthMode ? 'backdrop-blur-sm' : ''}`}>
+          <div className="flex-1 p-4 space-y-5">
+            {renderDepartmentSection()}
+            {renderDoctorSection()}
 
             {/* Legend */}
             <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3">
@@ -841,6 +844,16 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           <div className="px-4 pb-6 pt-4 lg:px-6">
             <div className="max-w-4xl mx-auto space-y-5">
 
+              {/* MOBILE ONLY: Department and Doctor Selection */}
+              <div className="lg:hidden space-y-5">
+                <div className="rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-white/10 p-4 shadow-sm">
+                  {renderDepartmentSection()}
+                </div>
+                <div className="rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-white/10 p-4 shadow-sm">
+                  {renderDoctorSection()}
+                </div>
+              </div>
+
               {/* Selected Doctor Status */}
               {selectedDoctor && (
                 <div className="hidden lg:flex items-center justify-between mb-1">
@@ -859,7 +872,6 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                   </motion.div>
                 </div>
               )}
-
 
               {/* ── DATE SELECTION ── */}
               <motion.div

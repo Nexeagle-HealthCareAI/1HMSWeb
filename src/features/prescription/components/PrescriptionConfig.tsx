@@ -58,7 +58,7 @@ export const PrescriptionConfig: React.FC = () => {
                         <div className="flex-1 w-full space-y-1.5">
                             <Label htmlFor="department-select" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('prescriptionDesigner.selectingDoctor.department')}</Label>
                             <Select value={selectedDepartmentId} onValueChange={setSelectedDepartmentId}>
-                                <SelectTrigger id="department-select" className="bg-white dark:bg-gray-950">
+                                <SelectTrigger id="department-select" className="bg-white dark:bg-gray-950 max-sm:border-transparent max-sm:rounded-xl max-sm:h-12">
                                     <SelectValue placeholder={t('prescriptionDesigner.selectingDoctor.selectDepartment')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -81,7 +81,7 @@ export const PrescriptionConfig: React.FC = () => {
                                 onValueChange={setSelectedDoctorId}
                                 disabled={!selectedDepartmentId}
                             >
-                                <SelectTrigger id="doctor-select" className="bg-white dark:bg-gray-950">
+                                <SelectTrigger id="doctor-select" className="bg-white dark:bg-gray-950 max-sm:border-transparent max-sm:rounded-xl max-sm:h-12">
                                     <SelectValue placeholder={selectedDepartmentId ? (filteredDoctors.length > 0 ? t('prescriptionDesigner.selectingDoctor.selectDoctor') : t('prescriptionDesigner.selectingDoctor.noDoctorsInDept')) : t('prescriptionDesigner.selectingDoctor.selectDepartmentFirst')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -101,7 +101,7 @@ export const PrescriptionConfig: React.FC = () => {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-10 px-4 gap-2 whitespace-nowrap"
+                                className="h-10 max-sm:h-12 max-sm:rounded-xl px-4 gap-2 whitespace-nowrap"
                                 onClick={() => designer.generatePreview().then(() => designer.openPreviewInNewTab())}
                                 disabled={!selectedDoctorId}
                             >

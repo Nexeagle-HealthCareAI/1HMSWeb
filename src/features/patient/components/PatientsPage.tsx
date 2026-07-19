@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { ReferrersPanel } from './ReferrersPanel';
 import { PatientMergeDialog } from './PatientMergeDialog';
+import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -803,6 +804,7 @@ export const PatientsPage: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-2 sm:p-4 lg:p-6">
+        <SubscriptionReadOnlyOverlay featureLabel="Managing patients">
         {activeTab === 'referrers' && (
           <ReferrersPanel />
         )}
@@ -2084,6 +2086,7 @@ export const PatientsPage: React.FC = () => {
             </div>
           )
         }
+        </SubscriptionReadOnlyOverlay>
 
       </main >
 

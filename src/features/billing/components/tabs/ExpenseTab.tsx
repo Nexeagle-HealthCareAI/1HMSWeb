@@ -19,6 +19,7 @@ import { debounce } from 'lodash';
 import { KpiStat } from '../KpiStat';
 import { LoadingState, EmptyState, ErrorState } from '../StatePanel';
 import { inr } from '../../utils/money';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 // Common hospital expense buckets. FOOD covers canteen / tea / refreshments / meals;
 // PHARMACY_PURCHASE = medicine stock; EQUIPMENT, CONSUMABLES, etc.; OTHER for anything else.
@@ -65,6 +66,7 @@ const emptyForm = (): FormState => ({
 });
 
 export const ExpenseTab: React.FC = () => {
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [items, setItems] = useState<ExpenseItem[]>([]);
     const [summary, setSummary] = useState({ total: 0, pending: 0, categories: 0 });
     const [loading, setLoading] = useState(true);
@@ -194,8 +196,13 @@ export const ExpenseTab: React.FC = () => {
         window.print();
     };
 
-    const openAdd = () => { setForm(emptyForm()); setDialogOpen(true); };
+    const openAdd = () => {
+        if (isSubscriptionReadOnly) { blockAction('Adding an expense'); return; }
+        setForm(emptyForm());
+        setDialogOpen(true);
+    };
     const openEdit = (e: ExpenseItem) => {
+        if (isSubscriptionReadOnly) { blockAction('Editing expenses'); return; }
         setForm({
             expenseId: e.expenseId,
             expenseDate: e.expenseDate ? format(new Date(e.expenseDate), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
@@ -211,6 +218,7 @@ export const ExpenseTab: React.FC = () => {
     };
 
     const save = async () => {
+        if (isSubscriptionReadOnly) { blockAction(form.expenseId ? 'Editing expenses' : 'Adding an expense'); return; }
         const amount = parseFloat(form.amount || '0');
         if (!form.categoryCode) { toast({ title: 'Category required', variant: 'destructive' }); return; }
         if (!(amount > 0)) { toast({ title: 'Enter a valid amount', variant: 'destructive' }); return; }
@@ -240,6 +248,7 @@ export const ExpenseTab: React.FC = () => {
 
     const doDelete = async () => {
         if (!deleteId) return;
+        if (isSubscriptionReadOnly) { blockAction('Deleting an expense'); return; }
         setDeleting(true);
         try {
             await expenseService.remove(deleteId);
@@ -314,7 +323,7 @@ export const ExpenseTab: React.FC = () => {
                         <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0" onClick={() => load(true)} disabled={refreshing || loading}>
                             <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
                         </Button>
-                        <Button size="sm" className="h-10 sm:h-9 gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-xs shadow-md shadow-rose-500/20 flex-1 xl:flex-none" onClick={openAdd}>
+                        <Button size="sm" className="h-10 sm:h-9 gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-xs shadow-md shadow-rose-500/20 flex-1 xl:flex-none" onClick={openAdd} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5" /> Add Expense
                         </Button>
                     </div>
@@ -349,8 +358,8 @@ export const ExpenseTab: React.FC = () => {
                                             <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', e.statusCode === 'PAID' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200')}>{e.statusCode}</Badge>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => setDeleteId(e.expenseId)}><Trash2 className="h-4 w-4" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500" onClick={() => openEdit(e)} disabled={isSubscriptionReadOnly}><Pencil className="h-4 w-4" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Deleting an expense'); return; } setDeleteId(e.expenseId); }} disabled={isSubscriptionReadOnly}><Trash2 className="h-4 w-4" /></Button>
                                         </div>
                                     </div>
                                 </div>
@@ -383,8 +392,8 @@ export const ExpenseTab: React.FC = () => {
                                         <TableCell className="text-right font-mono font-bold text-slate-800 tabular-nums">{inr(e.amount)}</TableCell>
                                         <TableCell className="text-right whitespace-nowrap pr-2 print:hidden">
                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-brand-600" onClick={() => openEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-rose-600" onClick={() => setDeleteId(e.expenseId)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-brand-600" onClick={() => openEdit(e)} disabled={isSubscriptionReadOnly}><Pencil className="h-3.5 w-3.5" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-rose-600" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Deleting an expense'); return; } setDeleteId(e.expenseId); }} disabled={isSubscriptionReadOnly}><Trash2 className="h-3.5 w-3.5" /></Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -467,7 +476,7 @@ export const ExpenseTab: React.FC = () => {
                     </div>
                     <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
-                        <Button onClick={save} disabled={saving} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700">
+                        <Button onClick={save} disabled={saving || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700">
                             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : (form.expenseId ? 'Update' : 'Add')}
                         </Button>
                     </div>
@@ -483,7 +492,7 @@ export const ExpenseTab: React.FC = () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={doDelete} disabled={deleting} className="bg-rose-600 hover:bg-rose-700">
+                        <AlertDialogAction onClick={doDelete} disabled={deleting || isSubscriptionReadOnly} className="bg-rose-600 hover:bg-rose-700">
                             {deleting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting…</> : 'Delete'}
                         </AlertDialogAction>
                     </AlertDialogFooter>

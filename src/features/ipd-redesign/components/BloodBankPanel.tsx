@@ -12,6 +12,7 @@ import {
     type BloodComponent, type BloodGroup, type CrossmatchResult, type TransfusionReaction,
 } from '../services/bloodBankApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -32,6 +33,7 @@ const statusBadge = (status: string) => cn(
 
 export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [loading, setLoading] = useState(true);
     const [reservedBags, setReservedBags] = useState<AdmissionBloodBag[]>([]);
     const [transfusions, setTransfusions] = useState<TransfusionEventRecord[]>([]);
@@ -73,6 +75,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     useEffect(() => { if (poolOpen) searchPool(); }, [poolOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const reserve = async (bagId: string, crossmatchResult: CrossmatchResult) => {
+        if (isSubscriptionReadOnly) { blockAction('Reserving blood units'); return; }
         setReservingBagId(bagId);
         try {
             await bloodBankApi.reserveBag(bagId, admissionId, crossmatchResult);
@@ -87,6 +90,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     };
 
     const openTransfuse = (bagId: string) => {
+        if (isSubscriptionReadOnly) { blockAction('Recording transfusions'); return; }
         setTransfuseBagId(bagId);
         setVolumeGivenMl('');
         setVitalsBefore('');
@@ -110,6 +114,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             toast({ title: 'Reaction notes are required when a reaction is recorded', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Recording transfusions'); return; }
         setTransfuseBusy(true);
         try {
             await bloodBankApi.transfuse({
@@ -183,7 +188,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                             <span className="text-slate-500"> · {b.bagNumber} · {b.volumeMl}ml · expires {formatIstDateTime(b.expiresAt)}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
-                                            <Button size="sm" variant="outline" className="h-9 sm:h-7 text-[11px] w-full sm:w-auto" disabled={reservingBagId === b.bloodBagId}
+                                            <Button size="sm" variant="outline" className="h-9 sm:h-7 text-[11px] w-full sm:w-auto" disabled={reservingBagId === b.bloodBagId || isSubscriptionReadOnly}
                                                 onClick={() => reserve(b.bloodBagId, 'COMPATIBLE')}>
                                                 {reservingBagId === b.bloodBagId ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />} Reserve (compatible)
                                             </Button>
@@ -213,7 +218,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                     {b.crossmatchResult && <Badge variant="outline" className="text-[10px]">{b.crossmatchResult}</Badge>}
                                 </div>
                                 {isActive && b.status === 'RESERVED' && (
-                                    <Button size="sm" className="h-9 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700" onClick={() => openTransfuse(b.bloodBagId)}>
+                                    <Button size="sm" className="h-9 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700" disabled={isSubscriptionReadOnly} onClick={() => openTransfuse(b.bloodBagId)}>
                                         Record transfusion
                                     </Button>
                                 )}
@@ -260,7 +265,7 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                         )}
                         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                             <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setTransfuseBagId(null)}>Cancel</Button>
-                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={transfuseBusy} onClick={submitTransfuse}>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={transfuseBusy || isSubscriptionReadOnly} onClick={submitTransfuse}>
                                 {transfuseBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
                             </Button>
                         </div>

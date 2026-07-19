@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Check, ActivitySquare } from 'lucide-react';
 import { earlyWarningApi, type EarlyWarningScoreEntry, type EwsConsciousnessLevel } from '../services/earlyWarningApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -28,6 +29,7 @@ const RISK_TONE: Record<string, string> = {
  *  feeds on the Overview tab, and the ICU Board's EWS badge for the at-a-glance version. */
 export const EarlyWarningScorePanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [history, setHistory] = useState<EarlyWarningScoreEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
@@ -52,6 +54,7 @@ export const EarlyWarningScorePanel: React.FC<Props> = ({ admissionId, isActive 
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openDialog = () => {
+        if (isSubscriptionReadOnly) { blockAction('Recording early warning scores'); return; }
         earlyWarningApi.getAutoFill(admissionId).then(fill => {
             setRespiratoryRate(fill.respiratoryRate != null ? String(fill.respiratoryRate) : '');
             setSpo2(fill.spo2 != null ? String(fill.spo2) : '');
@@ -65,6 +68,7 @@ export const EarlyWarningScorePanel: React.FC<Props> = ({ admissionId, isActive 
     };
 
     const submit = async () => {
+        if (isSubscriptionReadOnly) { blockAction('Recording early warning scores'); return; }
         setBusy(true);
         try {
             const res = await earlyWarningApi.recordScore(admissionId, {
@@ -105,7 +109,7 @@ export const EarlyWarningScorePanel: React.FC<Props> = ({ admissionId, isActive 
                     )}
                 </div>
                 {isActive && (
-                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openDialog}>
+                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openDialog} disabled={isSubscriptionReadOnly}>
                         <Plus className="h-3.5 w-3.5 mr-1.5" /> Record score
                     </Button>
                 )}
@@ -172,7 +176,7 @@ export const EarlyWarningScorePanel: React.FC<Props> = ({ admissionId, isActive 
                     </label>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="ghost" className="h-10 sm:h-9" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button disabled={busy} onClick={submit} className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={busy || isSubscriptionReadOnly} onClick={submit} className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700">
                             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import {
     creditApprovalService, type CreditApprovalItem,
 } from '../services/creditApprovalService';
@@ -49,6 +50,7 @@ interface Props {
 
 export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly = true, statusFilter, hideWhenEmpty = true }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const userRoles = useAuthStore(s => s.userRoles);
     const canDecide = userRoles?.includes('Admin') || userRoles?.includes('AdminDoctor');
 
@@ -84,6 +86,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
 
     const submitDecision = async () => {
         if (!decideCtx || decideBusy) return;
+        if (isSubscriptionReadOnly) { blockAction(decideCtx.decision === 'APPROVED' ? 'Approving credit requests' : 'Rejecting credit requests'); return; }
         if (decideCtx.decision === 'REJECTED' && !decideNote.trim()) {
             toast({ title: 'Reason required', description: 'Document why this credit request is being rejected.', variant: 'destructive' });
             return;
@@ -203,14 +206,16 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                                         size="sm"
                                         variant="outline"
                                         className="h-9 sm:h-7 flex-1 sm:flex-none text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
-                                        onClick={() => { setDecideCtx({ item: it, decision: 'REJECTED' }); setDecideNote(''); }}
+                                        disabled={isSubscriptionReadOnly}
+                                        onClick={() => { if (isSubscriptionReadOnly) { blockAction('Rejecting credit requests'); return; } setDecideCtx({ item: it, decision: 'REJECTED' }); setDecideNote(''); }}
                                     >
                                         <X className="h-3 w-3 mr-1" /> Reject
                                     </Button>
                                     <Button
                                         size="sm"
                                         className="h-9 sm:h-7 flex-1 sm:flex-none text-xs bg-emerald-600 hover:bg-emerald-700"
-                                        onClick={() => { setDecideCtx({ item: it, decision: 'APPROVED' }); setDecideNote(''); }}
+                                        disabled={isSubscriptionReadOnly}
+                                        onClick={() => { if (isSubscriptionReadOnly) { blockAction('Approving credit requests'); return; } setDecideCtx({ item: it, decision: 'APPROVED' }); setDecideNote(''); }}
                                     >
                                         <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
                                     </Button>
@@ -262,7 +267,7 @@ export const CreditApprovalsCard: React.FC<Props> = ({ encounterId, pendingOnly 
                         <AlertDialogAction
                             className={decideCtx?.decision === 'APPROVED' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}
                             onClick={(e) => { e.preventDefault(); submitDecision(); }}
-                            disabled={decideBusy}
+                            disabled={decideBusy || isSubscriptionReadOnly}
                         >
                             {decideBusy ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</> : (decideCtx?.decision === 'APPROVED' ? 'Approve' : 'Reject')}
                         </AlertDialogAction>

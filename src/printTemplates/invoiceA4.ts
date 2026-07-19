@@ -10,7 +10,10 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
     };
     const st = statusMap[data.status] ?? statusMap.OPEN;
 
-    const rows = data.items.map((item, idx) => `
+    const regularItems = data.items.filter(i => !i.isExtraCharge);
+    const extraCharges = data.items.filter(i => i.isExtraCharge);
+
+    const rows = regularItems.map((item, idx) => `
         <tr style="background:${idx % 2 ? '#f8fafc' : '#ffffff'};">
             <td style="text-align:center; color:#94a3b8;">${idx + 1}</td>
             <td style="font-weight:600; color:#0f172a;">${item.description}${item.period ? `<div style="font-size:8pt; font-weight:400; color:#64748b; margin-top:2px;">📅 ${item.period}</div>` : ''}</td>
@@ -18,6 +21,16 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
             <td style="text-align:center;">${item.qty}</td>
             <td style="text-align:right; color:#b91c1c;">${item.discount > 0 ? '- ' + inr(item.discount) : '—'}</td>
             <td style="text-align:right; font-weight:700; color:#0f172a;">${inr(item.total)}</td>
+        </tr>`).join('');
+
+    const extraChargeRows = extraCharges.map((item, idx) => `
+        <tr style="background:#fff7ed;">
+            <td style="text-align:center; color:#94a3b8;">${idx + 1}</td>
+            <td style="font-weight:600; color:#c2410c;">${item.description}</td>
+            <td style="text-align:right;">${inr(item.rate)}</td>
+            <td style="text-align:center;">${item.qty}</td>
+            <td style="text-align:right; color:#b91c1c;">—</td>
+            <td style="text-align:right; font-weight:700; color:#c2410c;">${inr(item.total)}</td>
         </tr>`).join('');
 
     return `
@@ -116,6 +129,26 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
                 ${rows || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:24px;">No charges on this invoice.</td></tr>'}
             </tbody>
         </table>
+
+        ${extraCharges.length > 0 ? `
+        <div style="margin-top:22px; position:relative; z-index:1;">
+            <div style="font-size:8pt; text-transform:uppercase; letter-spacing:1px; color:#c2410c; font-weight:700; margin-bottom:6px;">Extra Charges</div>
+            <table class="items" style="margin-top:0;">
+                <thead>
+                    <tr style="background:#ea580c;">
+                        <th style="width:36px; text-align:center;">#</th>
+                        <th>Description</th>
+                        <th style="text-align:right; width:90px;">Rate</th>
+                        <th style="text-align:center; width:50px;">Qty</th>
+                        <th style="text-align:right; width:90px;">Discount</th>
+                        <th style="text-align:right; width:100px;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${extraChargeRows}
+                </tbody>
+            </table>
+        </div>` : ''}
 
         <div class="totals">
             <table>

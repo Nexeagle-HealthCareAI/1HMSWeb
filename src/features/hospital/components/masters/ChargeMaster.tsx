@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Filter, Plus, Download, MoreVertical,
-    Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw
+    Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw,
+    Stethoscope, FlaskConical, Activity, Syringe, Pill, LayoutGrid
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,17 @@ import {
 // Short code prefix per category — used to auto-generate a default Charge Code (e.g. LAB-001).
 const CATEGORY_CODE_PREFIX: Record<string, string> = {
     CONSULT: 'CON', LAB: 'LAB', RAD: 'RAD', PROCEDURE: 'PRO', SERVICE: 'SVC', CONSUMABLE: 'CSM', OTHER: 'GEN',
+};
+
+const getCategoryStyles = (category: string) => {
+    switch(category) {
+        case 'CONSULT': return { color: 'border-emerald-500', icon: Stethoscope, bg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' };
+        case 'LAB': return { color: 'border-blue-500', icon: FlaskConical, bg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' };
+        case 'RAD': return { color: 'border-purple-500', icon: Activity, bg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' };
+        case 'PROCEDURE': return { color: 'border-rose-500', icon: Syringe, bg: 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' };
+        case 'CONSUMABLE': return { color: 'border-amber-500', icon: Pill, bg: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' };
+        default: return { color: 'border-gray-400', icon: LayoutGrid, bg: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+    }
 };
 
 // --- Types ---
@@ -339,17 +351,19 @@ export const ChargeMaster = () => {
             {/* TOOLBAR */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
                 <div className="flex-1 w-full flex flex-col sm:flex-row gap-3">
-                    <div className="relative w-full sm:max-w-xs">
+                    <div className="relative w-full sm:max-w-xs shrink-0">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             id="charge-search"
                             placeholder="Search charges (Ctrl+K)..."
-                            className="pl-9 bg-white dark:bg-slate-900 shadow-sm"
+                            className="pl-9 bg-white dark:bg-slate-900 shadow-sm max-sm:rounded-xl max-sm:h-12 max-sm:border-transparent max-sm:bg-gray-100/80 max-sm:dark:bg-slate-800"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                    
+                    {/* DESKTOP DROPDOWNS */}
+                    <div className="hidden sm:flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
                         <Select value={filterAppliesTo} onValueChange={setFilterAppliesTo}>
                             <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900 shadow-sm h-10">
                                 <SelectValue placeholder="Module" />
@@ -388,13 +402,30 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* MOBILE HORIZONTAL CHIPS */}
+                    <div className="sm:hidden flex gap-2 overflow-x-auto hide-scrollbar pb-1 px-1 -mx-1 snap-x">
+                        {['ALL', 'CONSULT', 'LAB', 'RAD', 'PROCEDURE', 'SERVICE', 'CONSUMABLE'].map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setFilterCategory(cat)}
+                                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide capitalize snap-center transition-all ${
+                                    filterCategory === cat 
+                                    ? 'bg-brand-600 text-white shadow-md' 
+                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-gray-700'
+                                }`}
+                            >
+                                {cat === 'ALL' ? 'All' : cat.toLowerCase()}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                    <Button variant="outline" size="sm" onClick={() => loadCharges(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
+                    <Button variant="outline" size="sm" onClick={() => loadCharges(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300 max-sm:hidden">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
+                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 max-sm:hidden">
                         <Plus className="h-4 w-4" /> New Charge
                     </Button>
                 </div>
@@ -403,8 +434,8 @@ export const ChargeMaster = () => {
 
             {/* TABLE */}
             <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
-                <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
-                    <table className="w-full text-sm text-left">
+                <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none">
+                    <table className="w-full text-sm text-left max-lg:hidden">
                         <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
                             <tr>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Display Name</th>
@@ -503,6 +534,80 @@ export const ChargeMaster = () => {
                             )}
                         </tbody>
                     </table>
+
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden flex flex-col gap-3 pb-20 mt-2">
+                        {loading && Array.from({ length: 4 }).map((_, i) => (
+                            <Skeleton key={`skm-${i}`} className="h-24 w-full rounded-2xl" />
+                        ))}
+                        {!loading && loadError && (
+                            <div className="flex flex-col items-center gap-2 text-rose-600 py-12">
+                                <AlertCircle className="h-8 w-8" />
+                                <p className="font-semibold">{loadError}</p>
+                            </div>
+                        )}
+                        {!loading && !loadError && filteredCharges.map(charge => {
+                            const catStyle = getCategoryStyles(charge.categoryCode);
+                            const Icon = catStyle.icon;
+                            return (
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                whileTap={{ scale: 0.98 }}
+                                key={`mob-${charge.id}`}
+                                className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-100/50 dark:border-gray-800/50 rounded-2xl p-4 shadow-sm flex flex-col gap-3 relative border-l-4 ${catStyle.color}`}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-start gap-3 pr-4">
+                                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${catStyle.bg}`}>
+                                            <Icon className="h-4 w-4" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <h3 className="font-bold text-gray-900 dark:text-white text-base leading-tight">
+                                                {charge.displayName}
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{charge.categoryCode}</span>
+                                                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                                                <span className="text-xs text-gray-400 font-medium">{charge.appliesTo}</span>
+                                                {charge.maxDiscountPercent > 0 && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 font-mono font-bold">
+                                                        Disc {charge.maxDiscountPercent}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end shrink-0 pt-1">
+                                        <span className="font-mono font-bold text-lg text-gray-900 dark:text-white">
+                                            ₹{charge.defaultRate.toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="border-t border-gray-100 dark:border-gray-800/60 pt-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Switch
+                                            checked={charge.isActive}
+                                            onCheckedChange={() => handleToggleActive(charge.id)}
+                                            className="data-[state=checked]:bg-green-500 scale-75 origin-left"
+                                        />
+                                        <span className={`text-xs font-medium ${charge.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                                            {charge.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-brand-600 bg-gray-50 dark:bg-slate-800/50 rounded-full" onClick={() => handleOpenDrawer(charge)}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" onClick={() => handleDeleteCharge(charge.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )})}
+                    </div>
                 </div>
 
                 {/* RATE CARDS: payer-type override + room-class multiplier */}
@@ -577,7 +682,7 @@ export const ChargeMaster = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[100]"
                             onClick={() => setIsDrawerOpen(false)}
                         />
                         <motion.div
@@ -585,7 +690,7 @@ export const ChargeMaster = () => {
                             animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
                             exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[110] flex flex-col"
                         >
                             {/* Drawer Header */}
                             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
@@ -600,7 +705,7 @@ export const ChargeMaster = () => {
                             </div>
 
                             {/* Drawer Content */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                            <div className="flex-1 overflow-y-auto p-6 max-sm:p-4 space-y-8 max-sm:space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800 pb-24">
 
                                 <section className="space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
@@ -825,7 +930,7 @@ export const ChargeMaster = () => {
                             </div>
 
                             {/* Drawer Footer */}
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+                            <div className="p-4 max-lg:pb-24 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                                 <Button variant="ghost" onClick={() => setIsDrawerOpen(false)} className="text-gray-500">Cancel</Button>
                                 <div className="flex gap-2 w-full sm:w-auto">
                                     <Button
@@ -860,6 +965,14 @@ export const ChargeMaster = () => {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* MOBILE FAB */}
+            <button 
+                className="sm:hidden fixed bottom-[90px] right-6 h-14 w-14 bg-brand-600 text-white rounded-2xl shadow-xl flex items-center justify-center z-40 hover:bg-brand-700 active:scale-95 transition-all shadow-brand-500/30"
+                onClick={() => handleOpenDrawer(null)}
+            >
+                <Plus className="h-6 w-6" />
+            </button>
         </div>
     );
 };

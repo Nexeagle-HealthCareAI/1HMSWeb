@@ -28,7 +28,7 @@
         "subtitle": "Primary and secondary contact details"
       },
       "location": {
-        "title": "Location details",
+        "title": "Address details",
         "subtitle": "Full address and locality"
       },
       "config": {
@@ -43,7 +43,7 @@
       "contact": "Primary Contact",
       "alternateContact": "Alternate Contact",
       "website": "Website",
-      "location": "Location",
+      "location": "Full Street Address",
       "city": "City",
       "state": "State",
       "country": "Country",

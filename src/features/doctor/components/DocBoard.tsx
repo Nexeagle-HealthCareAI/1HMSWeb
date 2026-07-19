@@ -120,6 +120,7 @@ import { PrescriptionLayout } from '@/features/prescription/components/layout/Pr
 import { useToast } from '@/hooks/use-toast';
 import { RescheduleDialog } from '../../appointment/components/RescheduleDialog';
 import { AppointmentDetail } from '../../appointment/services/appointmentApi';
+import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
 const pastDateUpperBound = format(subDays(new Date(), 1), 'yyyy-MM-dd');
 const futureDateLowerBound = format(addDays(new Date(), 1), 'yyyy-MM-dd');
@@ -128,7 +129,9 @@ const futureDateLowerBound = format(addDays(new Date(), 1), 'yyyy-MM-dd');
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
 const DoctorAnalyticsPage = lazy(() => import('./DoctorAnalyticsPage').then(module => ({ default: module.DoctorAnalyticsPage })));
 
-interface PatientAppointment {
+import { MobileAppointmentCard } from './MobileAppointmentCard';
+
+export interface PatientAppointment {
   appointmentId: string;
   patientFullName: string;
   patientId: string;
@@ -224,7 +227,7 @@ export const ClinicalDashboard: React.FC = () => {
 
   // Auto-collapse sidebar on mount for maximizing screen real estate
   const setGlobalSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
-
+  const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
   useEffect(() => {
     setGlobalSidebarCollapsed(true);
   }, [setGlobalSidebarCollapsed]);
@@ -1065,7 +1068,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Main Content - Mobile Responsive */}
         {activeNavButton === 'appointments' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <SubscriptionReadOnlyOverlay featureLabel="Managing appointments" className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
             {/* Loading - Mobile Responsive */}
             {isDataLoading && (
               <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-8 text-center shadow-lg">
@@ -1244,20 +1247,20 @@ export const ClinicalDashboard: React.FC = () => {
                 className="flex flex-col lg:flex-row gap-3 lg:gap-6 items-start"
               >
                 <div
-                  className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} lg:sticky lg:self-start transition-all duration-300 z-10`}
+                  className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} sticky lg:self-start transition-all duration-300 z-50`}
                   style={{ top: `${tabBarStickyOffset}px` }}
                 >
-                  <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl shadow-sm h-full lg:min-h-[calc(100vh-160px)] flex flex-col backdrop-blur-md">
-                    <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center lg:flex-col lg:gap-4' : 'justify-between'}`}>
+                  <div className="bg-white/95 dark:bg-slate-900/95 border border-gray-200/70 dark:border-slate-800 rounded-2xl lg:shadow-sm lg:h-full lg:min-h-[calc(100vh-160px)] flex lg:flex-col backdrop-blur-xl shadow-[0_4px_20px_rgb(0,0,0,0.08)] max-lg:p-1">
+                    <div className={`hidden lg:flex p-4 items-center ${isSidebarCollapsed ? 'justify-center lg:flex-col lg:gap-4' : 'justify-between'}`}>
                       {!isSidebarCollapsed && (
-                        <div className="hidden lg:block text-xs font-bold text-gray-400 uppercase tracking-widest pl-2">
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-2">
                           Views
                         </div>
                       )}
                       <button
                         type="button"
                         onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                        className="hidden lg:inline-flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 p-2 text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-300 transition-all hover:shadow-md"
+                        className="inline-flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 p-2 text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-300 transition-all hover:shadow-md"
                         aria-label={isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
                       >
                         {isSidebarCollapsed ? (
@@ -1271,9 +1274,9 @@ export const ClinicalDashboard: React.FC = () => {
                     <TooltipProvider delayDuration={0}>
                       <TabsList
                         id="appointment-views-nav"
-                        className={`flex flex-col w-full bg-transparent h-auto gap-2 p-3`}
+                        className={`flex flex-row overflow-x-auto lg:flex-col w-full bg-transparent h-auto gap-1 lg:gap-2 p-0 lg:p-3 max-lg:hide-scrollbar`}
                       >
-                        {appointmentTabsConfig.map(({ value, label, subLabel, Icon, accent, iconColor }) => {
+                        {appointmentTabsConfig.map(({ value, label, subLabel, Icon }) => {
                           const isActive = activeTab === value;
 
                           if (isSidebarCollapsed) {
@@ -1283,7 +1286,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   <TabsTrigger
                                     value={value}
                                     disabled={isDoctorExperienceLocked}
-                                    className={`relative flex flex-col items-center justify-center w-full gap-1 h-auto py-2 rounded-xl transition-all duration-300 ${isActive
+                                    className={`relative flex flex-col items-center justify-center w-full gap-1 h-auto py-2 rounded-xl transition-all duration-300 hidden lg:flex ${isActive
                                       ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30'
                                       : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
                                       } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1306,26 +1309,29 @@ export const ClinicalDashboard: React.FC = () => {
                               key={value}
                               value={value}
                               disabled={isDoctorExperienceLocked}
-                              className={`group relative flex w-full items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 border border-transparent ${isActive
-                                ? 'bg-white dark:bg-gray-800 shadow-md border-gray-100 dark:border-gray-700'
-                                : 'hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
+                              className={`group relative flex flex-1 lg:w-full items-center justify-center lg:justify-start gap-1.5 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-xl transition-all duration-300 border border-transparent whitespace-nowrap ${isActive
+                                ? 'bg-white dark:bg-gray-800 shadow-sm border-gray-200/50 dark:border-gray-700 max-lg:bg-gray-100 dark:max-lg:bg-gray-800'
+                                : 'hover:bg-gray-100/50 dark:hover:bg-gray-800/50 max-lg:text-gray-500'
                                 } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                                <Icon className="h-5 w-5" />
+                              <div className={`p-1.5 lg:p-2 rounded-lg transition-colors hidden lg:block ${isActive ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                                <Icon className="h-4 w-4 lg:h-5 lg:w-5" />
+                              </div>
+                              <div className={`block lg:hidden ${isActive ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500'}`}>
+                                <Icon className="h-4 w-4" />
                               </div>
 
-                              <div className="flex flex-col flex-1 min-w-0">
-                                <span className={`font-semibold text-sm ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                              <div className="flex flex-col flex-none lg:flex-1 min-w-0 items-center lg:items-start">
+                                <span className={`font-bold text-xs lg:text-sm ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
                                   {label}
                                 </span>
-                                <span className="text-xs text-gray-400 truncate">
+                                <span className="hidden lg:block text-xs text-gray-400 truncate">
                                   {subLabel}
                                 </span>
                               </div>
 
                               {isActive && (
-                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-lg bg-brand-600`}></div>
+                                <div className={`hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-lg bg-brand-600`}></div>
                               )}
                             </TabsTrigger>
                           );
@@ -1355,7 +1361,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                             <Calendar className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total Today</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Total Today</span>
                         </div>
                         <div className="text-3xl font-bold text-brand-900 dark:text-white">{currentAppointmentCounts.all}</div>
                       </div>
@@ -1366,7 +1372,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-orange-100/80 dark:bg-orange-900/50 rounded-lg text-orange-600 dark:text-orange-400">
                             <Clock className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60">Vitals Required</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60 min-w-0 break-words">Vitals Required</span>
                         </div>
                         <div className="text-3xl font-bold text-orange-900 dark:text-white">{currentAppointmentCounts.vitalsRequired}</div>
                       </div>
@@ -1377,7 +1383,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg text-emerald-600 dark:text-emerald-400">
                             <UserCheck className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60 min-w-0 break-words">Completed</span>
                         </div>
                         <div className="text-3xl font-bold text-emerald-900 dark:text-white">{currentAppointmentCounts.completed}</div>
                       </div>
@@ -1388,7 +1394,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-red-100/80 dark:bg-red-900/50 rounded-lg text-red-600 dark:text-red-400">
                             <UserX className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-red-900/60 dark:text-red-200/60">Cancelled</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-red-900/60 dark:text-red-200/60 min-w-0 break-words">Cancelled</span>
                         </div>
                         <div className="text-3xl font-bold text-red-900 dark:text-white">{currentAppointmentCounts.cancelled}</div>
                       </div>
@@ -1564,127 +1570,41 @@ export const ClinicalDashboard: React.FC = () => {
                     {/* Mobile Card View */}
                     <div className="md:hidden space-y-3">
                       {currentAppointments.length > 0 ? (
-                        currentAppointments.map((appointment) => (
-                          <div
-                            key={appointment.appointmentId}
-                            className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 min-w-0">
-                                <button
-                                  onClick={() => handlePatientIdClick(appointment)}
-                                  className="text-sm font-semibold text-brand-600 dark:text-brand-300 hover:text-brand-800 dark:hover:text-brand-200 inline-flex items-center gap-1 transition-colors"
-                                >
-                                  {appointment.patientId}
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
-                                <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
-                                {appointment.phone && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end gap-1 text-right">
-                                {getStatusBadge(appointment.finalStatusCode)}
-                                <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                  {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                </div>
-                                <div className="text-[11px] text-gray-400 dark:text-gray-500">
-                                  {format(new Date(appointment.startAt), 'EEE, MMM dd')}
-                                </div>
-                              </div>
-                            </div>
+                        currentAppointments.map((appointment) => {
+                          // Determine the primary action based on status (similar to desktop table logic)
+                          let primaryActionLabel = '';
+                          let onPrimaryActionClick: ((app: PatientAppointment) => void) | undefined = undefined;
 
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-100 px-3 py-1 text-xs font-semibold">
-                                <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
-                                <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
-                              </div>
-                              <Badge variant="outline" className="text-[11px] bg-brand-50 text-brand-700 border-brand-200">
-                                {(!appointment.appointmentType || appointment.appointmentType === 'New')
-                                  ? t('docBoard.table.newCase', { defaultValue: 'New Case' })
-                                  : appointment.appointmentType}
-                              </Badge>
-                            </div>
+                          if (['READY', 'AWAITING_RECONSULT'].includes(appointment.finalStatusCode)) {
+                            primaryActionLabel = 'Start Consult';
+                            onPrimaryActionClick = handlePatientIdClick;
+                          } else if (appointment.finalStatusCode === 'UNDER_CONSULT') {
+                            primaryActionLabel = 'Complete Consult';
+                            onPrimaryActionClick = handleMarkDoneClick;
+                          } else if (appointment.finalStatusCode === 'VITALS_REQUIRED') {
+                            primaryActionLabel = 'Start Consult';
+                            onPrimaryActionClick = handlePatientIdClick;
+                          }
 
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(String(appointment.finalStatusCode || '').toUpperCase()) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenLabAttachments(appointment)}
-                                  className="h-8 px-3 text-xs font-semibold text-brand-600 border-brand-200 hover:bg-brand-50 dark:hover:bg-brand-900/30"
-                                >
-                                  <Upload className="h-3 w-3 mr-1" />
-                                  {t('docBoard.table.addLabReport', { defaultValue: 'Lab report' })}
-                                </Button>
-                              )}
-
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAddBillClick(appointment)}
-                                className="h-8 px-3 text-xs font-semibold text-brand-600 border-brand-200 hover:bg-brand-50 dark:hover:bg-brand-900/30"
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
-                              </Button>
-
-                              <AdviseAdmissionSheet
-                                hospitalId={hospitalId || ''}
-                                doctorId={doctorId || ''}
-                                patientId={appointment.patientId}
-                                appointmentId={appointment.appointmentId}
-                                trigger={
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 mr-2"
-                                  >
-                                    <BedDouble className="h-3 w-3 mr-1" />
-                                    Advise Admission
-                                  </Button>
-                                }
-                              />
-
-                              {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                appointment.finalStatusCode
-                              ) && (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-900/30 mr-2"
-                                      onClick={() => handleRescheduleClick(appointment)}
-                                    >
-                                      <Calendar className="h-3 w-3 mr-1" />
-                                      {t('common.reschedule', { defaultValue: 'Reschedule' })}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                      onClick={() => handleCancelClick(appointment)}
-                                    >
-                                      <X className="h-3 w-3 mr-1" />
-                                      {t('common.cancel')}
-                                    </Button>
-                                  </>
-                                )}
-
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-3 text-xs font-semibold bg-brand-50 text-brand-700 border-brand-200 hover:bg-brand-100"
-                                disabled={!hospitalId || !doctorId}
-                                onClick={() => openPrescriptionPreview(appointment)}
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                {t('common.print')}
-                              </Button>
-                            </div>
-                          </div>
-                        ))
+                          return (
+                            <MobileAppointmentCard
+                              key={appointment.appointmentId}
+                              appointment={appointment}
+                              hospitalId={hospitalId || null}
+                              doctorId={doctorId || null}
+                              referral={referralsByPatient[appointment.patientId]}
+                              getStatusBadge={getStatusBadge}
+                              onPatientIdClick={handlePatientIdClick}
+                              onOpenLabAttachments={handleOpenLabAttachments}
+                              onAddBillClick={handleAddBillClick}
+                              onRescheduleClick={handleRescheduleClick}
+                              onCancelClick={handleCancelClick}
+                              onPrintClick={openPrescriptionPreview}
+                              primaryActionLabel={primaryActionLabel}
+                              onPrimaryActionClick={onPrimaryActionClick}
+                            />
+                          );
+                        })
                       ) : (
                         <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
                           {t('docBoard.empty.current')}
@@ -1930,7 +1850,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Calendar className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Total</span>
                           </div>
                           <div className="text-3xl font-bold text-brand-900 dark:text-white">{pastAppointmentsSummary.total}</div>
                         </div>
@@ -1941,7 +1861,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-rose-100/80 dark:bg-rose-900/50 rounded-lg text-rose-600 dark:text-rose-400">
                               <UserX className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-rose-900/60 dark:text-rose-200/60">No Show</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-rose-900/60 dark:text-rose-200/60 min-w-0 break-words">No Show</span>
                           </div>
                           <div className="text-3xl font-bold text-rose-900 dark:text-white">{pastAppointmentsSummary.noShow}</div>
                         </div>
@@ -1952,7 +1872,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg text-emerald-600 dark:text-emerald-400">
                               <UserCheck className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60 min-w-0 break-words">Completed</span>
                           </div>
                           <div className="text-3xl font-bold text-emerald-900 dark:text-white">{pastAppointmentsSummary.completed}</div>
                         </div>
@@ -1963,7 +1883,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Activity className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Ready Status</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Ready Status</span>
                           </div>
                           <div className="text-3xl font-bold text-brand-900 dark:text-white">{pastAppointmentsSummary.ready}</div>
                         </div>
@@ -2017,74 +1937,27 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="md:hidden space-y-3">
                         {currentAppointments.length > 0 ? (
                           currentAppointments.map((appointment) => (
-                            <div
+                            <MobileAppointmentCard
                               key={appointment.appointmentId}
-                              className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1 min-w-0">
-                                  <button
-                                    onClick={() => handlePatientIdClick(appointment)}
-                                    className="text-sm font-semibold text-brand-600 dark:text-brand-300 hover:text-brand-800 dark:hover:text-brand-200 inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    {appointment.patientId}
-                                    <ExternalLink className="h-3 w-3" />
-                                  </button>
-                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName?.split('-')[0].trim()}</p>
-                                  {appointment.patientFullName?.includes('-') && (
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight">
-                                      {appointment.patientFullName.split('-').slice(1).join('-').trim()}
-                                    </p>
-                                  )}
-                                  {appointment.phone && (
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end gap-1 text-right">
-                                  {getStatusBadge(appointment.finalStatusCode)}
-                                  <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
-                                  <div className="font-medium text-gray-900 dark:text-white text-sm">
-                                    {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
-                                  </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
-                                  #{appointment.tokenDetails?.tokenNumber || 'N/A'}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs bg-brand-50 text-brand-700 border-brand-200 font-medium">
-                                  {appointment.appointmentType || t('docBoard.table.newCase')}
-                                </Badge>
-                              </div>
-
-                              <div className="mt-3 flex flex-wrap gap-2 items-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                                  disabled={!hospitalId || !doctorId}
-                                  onClick={() => openPrescriptionPreview(appointment)}
-                                >
-                                  <PrinterIcon className="h-3.5 w-3.5 mr-1.5" />
-                                  {t('common.print')}
-                                </Button>
-
-                                {appointment.finalStatusCode === 'COMPLETED' && (
-                                  <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium ml-auto">
-                                    <Check className="h-4 w-4" />
-                                    <span>Completed</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                              appointment={appointment}
+                              hospitalId={hospitalId || null}
+                              doctorId={doctorId || null}
+                              referral={referralsByPatient[appointment.patientId]}
+                              getStatusBadge={getStatusBadge}
+                              onPatientIdClick={handlePatientIdClick}
+                              onOpenLabAttachments={handleOpenLabAttachments}
+                              onAddBillClick={handleAddBillClick}
+                              onRescheduleClick={handleRescheduleClick}
+                              onCancelClick={handleCancelClick}
+                              onPrintClick={openPrescriptionPreview}
+                            />
                           ))
                         ) : (
                           <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
-                            {t('docBoard.empty.past')}
+                            <div className="flex flex-col items-center gap-3">
+                              <Calendar className="h-6 w-6 opacity-40" />
+                              <span className="text-sm font-medium">{t('docBoard.empty.past')}</span>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2257,7 +2130,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Calendar className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total Upcoming</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Total Upcoming</span>
                           </div>
                           <div className="text-3xl font-bold text-brand-900 dark:text-white">{futureAppointmentsSummary.total}</div>
                         </div>
@@ -2310,108 +2183,27 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="md:hidden space-y-3">
                         {currentAppointments.length > 0 ? (
                           currentAppointments.map((appointment) => (
-                            <div
+                            <MobileAppointmentCard
                               key={appointment.appointmentId}
-                              className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1 min-w-0">
-                                  <button
-                                    onClick={() => handlePatientIdClick(appointment)}
-                                    className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    {appointment.patientId}
-                                    <ExternalLink className="h-3 w-3" />
-                                  </button>
-                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName?.split('-')[0].trim()}</p>
-                                  {appointment.patientFullName?.includes('-') && (
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight">
-                                      {appointment.patientFullName.split('-').slice(1).join('-').trim()}
-                                    </p>
-                                  )}
-                                  {appointment.phone && (
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end gap-1 text-right">
-                                  {getStatusBadge(appointment.finalStatusCode)}
-                                  <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
-                                  <div className="font-medium text-gray-900 dark:text-white text-sm">
-                                    {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                  </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {format(new Date(appointment.startAt), 'MMM dd')}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
-                                  #{appointment.tokenDetails?.tokenNumber || 'N/A'}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
-                                  {appointment.appointmentType || t('docBoard.table.newCase')}
-                                </Badge>
-                              </div>
-
-                              <div className="mt-3 flex flex-wrap gap-2 items-center">
-                                <AdviseAdmissionSheet
-                                  hospitalId={hospitalId || ''}
-                                  doctorId={doctorId || ''}
-                                  patientId={appointment.patientId}
-                                  appointmentId={appointment.appointmentId}
-                                  trigger={
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 mr-2"
-                                    >
-                                      <BedDouble className="h-3.5 w-3.5 mr-1" />
-                                      Advise Admission
-                                    </Button>
-                                  }
-                                />
-
-                                {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                  appointment.finalStatusCode
-                                ) && (
-                                    <>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 px-3 text-xs font-semibold text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-900/20 mr-2"
-                                        onClick={() => handleRescheduleClick(appointment)}
-                                      >
-                                        <Calendar className="h-3.5 w-3.5 mr-1" />
-                                        {t('common.reschedule', { defaultValue: 'Reschedule' })}
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                        onClick={() => handleCancelClick(appointment)}
-                                      >
-                                        <X className="h-3.5 w-3.5 mr-1" />
-                                        {t('common.cancel')}
-                                      </Button>
-                                    </>
-                                  )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                                  disabled={!hospitalId || !doctorId}
-                                  onClick={() => openPrescriptionPreview(appointment)}
-                                >
-                                  <PrinterIcon className="h-3.5 w-3.5 mr-1.5" />
-                                  <span className="sr-only">{t('common.print')}</span>
-                                </Button>
-                              </div>
-                            </div>
+                              appointment={appointment}
+                              hospitalId={hospitalId || null}
+                              doctorId={doctorId || null}
+                              referral={referralsByPatient[appointment.patientId]}
+                              getStatusBadge={getStatusBadge}
+                              onPatientIdClick={handlePatientIdClick}
+                              onOpenLabAttachments={handleOpenLabAttachments}
+                              onAddBillClick={handleAddBillClick}
+                              onRescheduleClick={handleRescheduleClick}
+                              onCancelClick={handleCancelClick}
+                              onPrintClick={openPrescriptionPreview}
+                            />
                           ))
                         ) : (
                           <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
-                            {t('docBoard.empty.future')}
+                            <div className="flex flex-col items-center gap-3">
+                              <Calendar className="h-6 w-6 opacity-40" />
+                              <span className="text-sm font-medium">{t('docBoard.empty.future')}</span>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2606,7 +2398,7 @@ export const ClinicalDashboard: React.FC = () => {
                 </div>
               </Tabs>
             )}
-          </div>
+          </SubscriptionReadOnlyOverlay>
         )}
 
         {/* Doctor Calendar - embedded in DocBoard */}
@@ -2636,9 +2428,12 @@ export const ClinicalDashboard: React.FC = () => {
                 onValueChange={(value) => handleSettingsTabChange(value as 'fields' | 'personalized' | 'layout')}
                 className="flex flex-col md:flex-row gap-4"
               >
-                <div className={`flex md:flex-col w-full ${isSettingsNavCollapsed ? 'md:w-16 lg:w-20' : 'md:w-60 lg:w-64'} gap-2 md:gap-3`}>
-                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md p-3 md:min-h-[460px] flex flex-col gap-4">
-                    <div className="hidden md:flex items-center justify-end mb-10">
+                <div
+                  className={`w-full ${isSettingsNavCollapsed ? 'md:w-16 lg:w-20' : 'md:w-60 lg:w-64'} sticky md:self-start transition-all duration-300 z-40`}
+                  style={{ top: `${tabBarStickyOffset}px` }}
+                >
+                  <div className={`border border-gray-200/70 dark:border-slate-800 rounded-2xl md:shadow-sm md:h-full md:min-h-[460px] flex md:flex-col shadow-[0_4px_20px_rgb(0,0,0,0.08)] max-md:p-1 ${!isLowBandwidthMode ? 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl' : 'bg-white dark:bg-slate-900'}`}>
+                    <div className="hidden md:flex items-center justify-end mb-10 p-2">
                       <button
                         type="button"
                         onClick={() => setIsSettingsNavCollapsed((prev) => !prev)}
@@ -2654,15 +2449,14 @@ export const ClinicalDashboard: React.FC = () => {
 
                     <TooltipProvider delayDuration={150}>
                       <TabsList
-                        className={`flex md:flex-col w-full bg-gray-100 dark:bg-gray-800/80 rounded-xl overflow-x-auto md:overflow-visible no-scrollbar ${isSettingsNavCollapsed ? 'items-center gap-1.5 p-1.5' : 'md:items-stretch gap-2 md:gap-3 p-2'
-                          }`}
+                        className={`flex flex-row overflow-x-auto md:flex-col w-full bg-transparent h-auto gap-1 md:gap-3 p-0 md:p-2 max-md:hide-scrollbar`}
                       >
                         {(isSettingsNavCollapsed ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <TabsTrigger
                                 value="fields"
-                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-green-50 dark:hover:bg-green-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 hidden md:flex data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-green-50 dark:hover:bg-green-900/20`}
                               >
                                 <Settings className="h-5 w-5" />
                               </TabsTrigger>
@@ -2672,10 +2466,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TabsTrigger
                             value="fields"
-                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20 overflow-hidden"
+                            className="flex-1 md:flex-none w-auto md:w-full flex items-center justify-center md:justify-start gap-1.5 md:gap-2 px-3 py-2 text-sm md:text-sm data-[state=active]:bg-white md:data-[state=active]:bg-green-600 data-[state=active]:text-green-700 md:data-[state=active]:text-white data-[state=active]:shadow-sm md:data-[state=active]:shadow-md transition-all duration-200 hover:bg-gray-100/50 md:hover:bg-green-50 md:dark:hover:bg-green-900/20 overflow-hidden rounded-xl border border-transparent md:data-[state=active]:border-transparent data-[state=active]:border-gray-200/50"
                           >
                             <Settings className="h-4 w-4 flex-shrink-0" />
-                            <span className="font-medium truncate block w-full text-left">{isMobile ? 'Fields' : t('docBoard.settings.fields')}</span>
+                            <span className="font-bold md:font-medium truncate block w-auto md:w-full text-center md:text-left">{isMobile ? 'Fields' : t('docBoard.settings.fields')}</span>
                           </TabsTrigger>
                         ))}
 
@@ -2684,7 +2478,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <TooltipTrigger asChild>
                               <TabsTrigger
                                 value="personalized"
-                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-purple-50 dark:hover:bg-purple-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 hidden md:flex data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-purple-50 dark:hover:bg-purple-900/20`}
                               >
                                 <Database className="h-5 w-5" />
                               </TabsTrigger>
@@ -2694,10 +2488,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TabsTrigger
                             value="personalized"
-                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 overflow-hidden"
+                            className="flex-1 md:flex-none w-auto md:w-full flex items-center justify-center md:justify-start gap-1.5 md:gap-2 px-3 py-2 text-sm md:text-sm data-[state=active]:bg-white md:data-[state=active]:bg-purple-600 data-[state=active]:text-purple-700 md:data-[state=active]:text-white data-[state=active]:shadow-sm md:data-[state=active]:shadow-md transition-all duration-200 hover:bg-gray-100/50 md:hover:bg-purple-50 md:dark:hover:bg-purple-900/20 overflow-hidden rounded-xl border border-transparent md:data-[state=active]:border-transparent data-[state=active]:border-gray-200/50"
                           >
                             <Database className="h-4 w-4 flex-shrink-0" />
-                            <span className="font-medium truncate block w-full text-left">{isMobile ? 'Library' : t('docBoard.settings.personalData')}</span>
+                            <span className="font-bold md:font-medium truncate block w-auto md:w-full text-center md:text-left">{isMobile ? 'Library' : t('docBoard.settings.personalData')}</span>
                           </TabsTrigger>
                         ))}
 
@@ -2707,7 +2501,7 @@ export const ClinicalDashboard: React.FC = () => {
                               <TabsTrigger
                                 value="layout"
                                 onClick={handleLayoutTabClick}
-                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-brand-50 dark:hover:bg-brand-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 hidden md:flex data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-brand-50 dark:hover:bg-brand-900/20`}
                               >
                                 <LayoutDashboard className="h-5 w-5" />
                               </TabsTrigger>
@@ -2718,10 +2512,10 @@ export const ClinicalDashboard: React.FC = () => {
                           <TabsTrigger
                             value="layout"
                             onClick={handleLayoutTabClick}
-                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-brand-50 dark:hover:bg-brand-900/20 overflow-hidden"
+                            className="flex-1 md:flex-none w-auto md:w-full flex items-center justify-center md:justify-start gap-1.5 md:gap-2 px-3 py-2 text-sm md:text-sm data-[state=active]:bg-white md:data-[state=active]:bg-brand-600 data-[state=active]:text-brand-700 md:data-[state=active]:text-white data-[state=active]:shadow-sm md:data-[state=active]:shadow-md transition-all duration-200 hover:bg-gray-100/50 md:hover:bg-brand-50 md:dark:hover:bg-brand-900/20 overflow-hidden rounded-xl border border-transparent md:data-[state=active]:border-transparent data-[state=active]:border-gray-200/50"
                           >
                             <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
-                            <span className="font-medium truncate block w-full text-left">{isMobile ? 'Layout' : t('docBoard.settings.layoutLab')}</span>
+                            <span className="font-bold md:font-medium truncate block w-auto md:w-full text-center md:text-left">{isMobile ? 'Layout' : t('docBoard.settings.layoutLab')}</span>
                           </TabsTrigger>
                         ))}
                       </TabsList>
@@ -2729,14 +2523,14 @@ export const ClinicalDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm flex flex-col overflow-hidden">
+                <div className={`flex-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm flex flex-col overflow-hidden ${!isLowBandwidthMode ? 'backdrop-blur-md bg-white/95 dark:bg-gray-900/95' : ''}`}>
                   <TabsContent value="fields" className="m-0 flex-1 flex flex-col">
                     <PrescriptionCustomizePanel key="fields-panel" showCloseButton={false} defaultTab="fields" />
                   </TabsContent>
-                  <TabsContent value="personalized" className="m-0 flex-1 flex flex-col">
+                  <TabsContent value="personalized" className="m-0 flex-1 min-w-0 flex flex-col">
                     <PrescriptionCustomizePanel key="personalized-panel" showCloseButton={false} defaultTab="personalized" />
                   </TabsContent>
-                  <TabsContent value="layout" className="m-0 flex-1 flex flex-col p-2 sm:p-4">
+                  <TabsContent value="layout" className="m-0 flex-1 min-w-0 flex flex-col p-2 sm:p-4 overflow-x-hidden">
                     <PrescriptionLayout refreshToken={layoutRefreshToken} />
                   </TabsContent>
                 </div>

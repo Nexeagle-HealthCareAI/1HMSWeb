@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Pencil,
   Phone,
+  Printer,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -44,6 +45,7 @@ import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '@/fea
 import { EditDoctorTileDialog } from './EditDoctorTileDialog';
 import { DoctorReviewsDialog } from './DoctorReviewsDialog';
 import { cn } from '@/lib/utils';
+import { buildDoctorQrPosterA4 } from '@/printTemplates/doctorQrPosterA4';
 
 const initialsFor = (name?: string | null) => {
   const cleaned = (name || '').replace(/^Dr\.?\s*/i, '').trim();
@@ -204,9 +206,25 @@ export const PublicDirectoryConfig: React.FC = () => {
     }
   };
 
+  const handlePrintQr = (doctor: PublicDirectoryDoctorTile) => {
+    if (!hospitalData) return;
+    const html = buildDoctorQrPosterA4(doctor, hospitalData.name, hospitalData.city || '');
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+      };
+    } else {
+      toast({ variant: 'destructive', title: 'Pop-up blocked', description: 'Please allow pop-ups to print the QR poster.' });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Card className="border-gray-200 dark:border-gray-800">
+      <Card className="border-gray-200 dark:border-gray-800 max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Globe className="h-5 w-5 text-brand-600 dark:text-brand-400" />
@@ -261,7 +279,7 @@ export const PublicDirectoryConfig: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-gray-200 dark:border-gray-800">
+      <Card className="border-gray-200 dark:border-gray-800 max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Stethoscope className="h-5 w-5 text-brand-600 dark:text-brand-400" />
@@ -312,7 +330,8 @@ export const PublicDirectoryConfig: React.FC = () => {
                           'relative h-full overflow-hidden rounded-2xl border shadow-sm transition-all duration-300 hover:shadow-lg',
                           d.isPubliclyListed
                             ? 'border-emerald-200 dark:border-emerald-900'
-                            : 'border-gray-200 dark:border-gray-800'
+                            : 'border-gray-200 dark:border-gray-800',
+                          'max-sm:rounded-none max-sm:border-x-0 max-sm:shadow-none max-sm:border-b max-sm:border-t-0 max-sm:border-gray-200 max-sm:dark:border-gray-800'
                         )}
                       >
                         <div
@@ -447,18 +466,27 @@ export const PublicDirectoryConfig: React.FC = () => {
                             </p>
                           )}
 
-                          <div className="flex items-center gap-2 pt-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 gap-2"
-                              onClick={() => setEditingDoctor(d)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {translate('publicDirectory.tile.edit', 'Edit profile')}
-                            </Button>
-                            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-800 px-3 py-1.5">
-                              <span className="text-[11px] font-medium text-muted-foreground">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
+                            <div className="flex gap-2 w-full sm:w-auto sm:flex-1">
+                              <Button
+                                variant="outline"
+                                className="flex-1 gap-2 h-11 sm:h-9 text-sm"
+                                onClick={() => setEditingDoctor(d)}
+                              >
+                                <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                                {translate('publicDirectory.tile.edit', 'Edit profile')}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="px-3 h-11 sm:h-9"
+                                title={translate('publicDirectory.tile.printQr', 'Print QR Poster')}
+                                onClick={() => handlePrintQr(d)}
+                              >
+                                <Printer className="h-5 w-5 sm:h-4 sm:w-4 text-brand-600" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center justify-between sm:justify-center gap-2 rounded-xl sm:rounded-full border border-gray-200 dark:border-gray-800 px-4 sm:px-3 py-1.5 h-11 sm:h-auto w-full sm:w-auto">
+                              <span className="text-[13px] sm:text-[11px] font-medium text-muted-foreground">
                                 {translate('publicDirectory.tile.public', 'Public')}
                               </span>
                               <Switch

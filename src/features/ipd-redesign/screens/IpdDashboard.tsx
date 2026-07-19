@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { PrintDischargeButton } from '../components/PrintDischargeButton';
 import { PrintAdmissionButton } from '../components/PrintAdmissionButton';
 import { PrintTokenButton } from '../components/PrintTokenButton';
@@ -77,11 +79,13 @@ interface Props {
  */
 export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenReferredAdmissions, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const isMobile = useIsMobile();
     // Reactive (not a one-off getHospitalId() grab) so that if this screen mounts before the
     // persisted auth store finishes hydrating hospitalId, load() below re-runs automatically the
     // moment it becomes available instead of throwing synchronously and crashing the dashboard.
     const { hospitalId } = useAuthStore();
+    const { isLowBandwidthMode } = useAppStore();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     // KPIs always reflect the current active census, independent of the list's status filter.
     const [activeAdmissions, setActiveAdmissions] = useState<ActiveAdmissionItem[]>([]);
@@ -219,17 +223,23 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                         <p className="text-brand-100 text-xs sm:text-sm font-medium mt-1 drop-shadow-sm">Tap a patient to manage their bed, medications, and discharge.</p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
-                        {/* Quick nav — 2-col tap grid on mobile, frosted inline pill on desktop */}
-                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-2 sm:gap-1.5 sm:p-1.5 sm:bg-black/10 sm:backdrop-blur-xl sm:border sm:border-white/10 sm:rounded-2xl sm:shadow-inner w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto mt-4 sm:mt-0">
+                        {/* Quick nav — horizontal scroll on mobile, frosted inline pill on desktop */}
+                        <div className={cn(
+                            "flex items-center gap-2 sm:gap-1.5 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-1.5",
+                            !isLowBandwidthMode ? "sm:bg-black/10 sm:backdrop-blur-xl sm:border sm:border-white/10 sm:rounded-2xl sm:shadow-inner" : ""
+                        )}>
                             {([
                                 { short: 'Bed Board', full: 'Live Bed Board', icon: LayoutGrid, onClick: onOpenBedBoard },
+                                { short: 'Admit Referrals', full: 'Admission Referral Board', icon: UserPlus, onClick: onOpenReferredAdmissions },
                                 { short: 'KPI', full: 'KPI Dashboard', icon: Gauge, onClick: onOpenKpiDashboard },
                                 { short: 'Ledger', full: 'Consultant Ledger', icon: Stethoscope, onClick: onOpenConsultantLedger },
-                                { short: 'Referrals', full: 'Referred Admissions', icon: UserPlus, onClick: onOpenReferredAdmissions },
                             ] as const).map(({ short, full, icon: Icon, onClick }) => (
                                 <button key={short} onClick={onClick}
-                                    className="flex items-center justify-center sm:justify-start h-11 sm:h-10 px-3 sm:px-4 rounded-xl shrink-0 text-[13px] sm:text-sm font-bold text-white bg-white/10 sm:bg-transparent border border-white/15 sm:border-0 hover:bg-white/20 active:scale-[0.97] transition-all">
+                                    className={cn(
+                                        "flex items-center justify-center sm:justify-start h-10 sm:h-10 px-4 sm:px-4 rounded-full sm:rounded-xl shrink-0 text-[13px] sm:text-sm font-bold text-white snap-center active:scale-[0.97] transition-all whitespace-nowrap",
+                                        !isLowBandwidthMode ? "bg-white/20 sm:bg-transparent backdrop-blur-md border border-white/20 sm:border-0 hover:bg-white/30 shadow-sm" : "bg-brand-700 sm:bg-transparent border border-brand-500"
+                                    )}>
                                     <Icon className="h-4 w-4 mr-2 text-brand-100 sm:text-brand-200 shrink-0" />
                                     <span className="sm:hidden truncate">{short}</span>
                                     <span className="hidden sm:inline">{full}</span>
@@ -237,7 +247,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                             ))}
                         </div>
                         {/* Admit — desktop header button; on mobile the sticky bottom bar handles this. */}
-                        <button onClick={onAdmit} className="hidden sm:flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10">
+                        <button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} className="hidden sm:flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10">
                             <Plus className="h-4 w-4 mr-2" /> Admit Patient
                         </button>
                     </div>
@@ -306,7 +316,9 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     {/* Mobile Card Layout */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
                         {paginatedAdmissions.map(a => (
-                            <div key={a.admissionId} className="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm flex flex-col gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]" onClick={() => onOpenWorkspace(a)}>
+                            <div key={a.admissionId} className={cn("border border-slate-200/60 rounded-[2rem] p-4 sm:p-5 flex flex-col gap-4 cursor-pointer transition-all active:scale-[0.98]",
+                                !isLowBandwidthMode ? "bg-white/80 backdrop-blur-xl shadow-lg shadow-brand-500/5 hover:shadow-xl hover:shadow-brand-500/10" : "bg-white shadow-sm hover:shadow-md"
+                            )} onClick={() => onOpenWorkspace(a)}>
                                 <div className="flex justify-between items-start gap-3">
                                     <div>
                                         <p className="font-bold text-slate-900 text-base leading-tight">{a.patientName || '—'}</p>
@@ -542,8 +554,8 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             </div>
 
             {/* Mobile-only sticky primary action — thumb-reachable Admit button */}
-            <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 px-4 pb-4 pt-8 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none">
-                <button onClick={onAdmit} className="pointer-events-auto w-full h-14 flex items-center justify-center rounded-2xl text-base font-bold bg-brand-600 text-white shadow-xl shadow-brand-600/30 active:scale-[0.98] transition-all">
+            <div className="sm:hidden fixed bottom-16 inset-x-0 z-30 px-4 pb-4 pt-8 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none">
+                <button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} className="pointer-events-auto w-full h-14 flex items-center justify-center rounded-2xl text-base font-bold bg-brand-600 text-white shadow-xl shadow-brand-600/30 active:scale-[0.98] transition-all">
                     <Plus className="h-5 w-5 mr-2" /> Admit Patient
                 </button>
             </div>
@@ -552,20 +564,40 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
 };
 
 const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.ReactNode; tone: string; sub?: string }> = ({ label, value, icon, tone, sub }) => {
+    const { isLowBandwidthMode } = useAppStore();
     const tones: Record<string, string> = {
+        indigo: 'bg-brand-50/70 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 border-brand-100/50 dark:border-brand-800/30',
+        emerald: 'bg-emerald-50/70 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-800/30',
+        sky: 'bg-sky-50/70 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400 border-sky-100/50 dark:border-sky-800/30',
+        rose: 'bg-rose-50/70 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-100/50 dark:border-rose-800/30',
+        amber: 'bg-amber-50/70 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100/50 dark:border-amber-800/30',
+    };
+    
+    // Fallback simple colors for low bandwidth
+    const fallbackTones: Record<string, string> = {
         indigo: 'bg-brand-50 border-brand-100 text-brand-700',
         emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
         sky: 'bg-sky-50 border-sky-100 text-sky-700',
         rose: 'bg-rose-50 border-rose-100 text-rose-700',
         amber: 'bg-amber-50 border-amber-100 text-amber-700',
     };
+
     return (
-        <div className={cn('rounded-2xl border p-3 sm:p-5 shadow-sm transition-all hover:shadow-md', tones[tone])}>
-            <div className="flex items-center gap-1.5 opacity-80 mb-1 sm:mb-2">
-                <span className="hidden sm:inline shrink-0">{icon}</span>
+        <div className={cn(
+            'rounded-3xl border p-4 sm:p-5 transition-all overflow-hidden relative group',
+            !isLowBandwidthMode ? 'backdrop-blur-md shadow-lg shadow-slate-200/50 hover:shadow-xl hover:-translate-y-1' : 'shadow-sm',
+            !isLowBandwidthMode ? tones[tone] : fallbackTones[tone]
+        )}>
+            {!isLowBandwidthMode && (
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    {icon}
+                </div>
+            )}
+            <div className="flex items-center gap-2 opacity-80 mb-2 relative z-10">
+                <span className="inline shrink-0">{icon}</span>
                 <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider sm:tracking-widest truncate">{label}</p>
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900">{value}</p>
+            <p className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white relative z-10">{value}</p>
             {sub && <p className="text-xs font-semibold mt-1 opacity-75">{sub}</p>}
         </div>
     );

@@ -5,6 +5,14 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RouteGuard } from '@/components/guards/RouteGuard';
 
+// Helper to break infinite redirect loops for invalid roles
+const InvalidRoleLogout = () => {
+  React.useEffect(() => {
+    useAuthStore.getState().logout();
+  }, []);
+  return <Navigate to="/login" replace />;
+};
+
 // Role-based redirect component
 const RoleBasedRedirect = () => {
   const userRole = useAuthStore.getState().getUserRole();
@@ -12,13 +20,16 @@ const RoleBasedRedirect = () => {
   if (userRole === 'Admin') {
     return <Navigate to="/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    return <Navigate to="/dashboard" replace />;
+    const isMobile = window.innerWidth < 1024;
+    return <Navigate to={isMobile ? "/appointment-dashboard" : "/dashboard"} replace />;
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
     // Receptionist and Nurse should go to appointment dashboard
     return <Navigate to="/appointment-dashboard" replace />;
+  } else if (userRole === 'Accountant') {
+    return <Navigate to="/billing" replace />;
   } else {
-    // Default fallback - redirect to login if role is not recognized
-    return <Navigate to="/" replace />;
+    // Default fallback - log out and redirect to login if role is not recognized
+    return <InvalidRoleLogout />;
   }
 };
 
@@ -46,6 +57,9 @@ const InventoryManagementPage = lazy(() => import('@/features/ipd-redesign/pages
 const OtBoardPage = lazy(() => import('@/features/ipd-redesign/pages/OtBoardPage').then(module => ({ default: module.default })));
 const IcuBoardPage = lazy(() => import('@/features/ipd-redesign/pages/IcuBoardPage').then(module => ({ default: module.default })));
 const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
+// DEV-ONLY: unauthenticated mobile-UI preview harness for the Doc Board (see route below).
+const DocBoardPreview = lazy(() => import('@/features/doctor/pages/DocBoardPreview').then(module => ({ default: module.default })));
+const PatientProfilePagePreview = lazy(() => import('@/features/patient/pages/PatientProfilePagePreview').then(module => ({ default: module.default })));
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
@@ -57,6 +71,7 @@ const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
+const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
 
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
@@ -229,6 +244,30 @@ export const AppRoutes: React.FC = () => {
           />
         )}
 
+        {/* DEV-ONLY: unauthenticated Doc Board preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/docboard-preview"
+            element={
+              <MainLayout>
+                <DocBoardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated prescription-writing (patient profile) preview for mobile-UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/rx-preview"
+            element={
+              <MainLayout>
+                <PatientProfilePagePreview />
+              </MainLayout>
+            }
+          />
+        )}
+
         {/* DEV-ONLY: one-page mobile review gallery embedding every IPD preview in a phone frame. */}
         {import.meta.env.DEV && (
           <Route path="/ipd-mobile-review" element={<IpdMobileReview />} />
@@ -300,6 +339,16 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <AdminConfigModule />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <SettingsPage />
                   </MainLayout>
                 </RouteGuard>
               }
@@ -505,7 +554,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>
@@ -515,7 +564,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/ledger"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -525,7 +574,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/:appointmentId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>

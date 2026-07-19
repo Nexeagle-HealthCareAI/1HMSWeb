@@ -13,11 +13,12 @@ import { isReachable } from '@/offline';
 import { cn } from '@/lib/utils';
 import {
     IndianRupee, Banknote, CreditCard, Smartphone, Building2, Wallet,
-    Loader2, X, AlertCircle,
+    Loader2, X, AlertCircle, Plus, Trash2,
 } from 'lucide-react';
 import {
     ipdBillingService, type PaymentType, type PaymentMode,
 } from '../services/ipdBillingService';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface AddPaymentModalProps {
     open: boolean;
@@ -40,12 +41,17 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
     open, onOpenChange, encounterId, patientId, netBalance, onPaid,
 }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
     const [amount, setAmount] = useState<number>(0);
     const [transactionId, setTransactionId] = useState('');
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [extraCharges, setExtraCharges] = useState<{ reason: string; amount: number }[]>([]);
+
+    const totalExtraCharges = extraCharges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const effectiveNetBalance = netBalance + totalExtraCharges;
 
     useEffect(() => {
         if (open) {
@@ -54,17 +60,19 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
             setAmount(Math.max(0, netBalance));
             setTransactionId('');
             setDescription('');
+            setExtraCharges([]);
         }
     }, [open, netBalance]);
 
     const needsTxnId = paymentMode !== 'CASH';
-    const availableCredit = netBalance < 0 ? Math.abs(netBalance) : 0;
-    const exceedsBalance = paymentType === 'PAYMENT' && amount > Math.max(0, netBalance);
+    const availableCredit = effectiveNetBalance < 0 ? Math.abs(effectiveNetBalance) : 0;
+    const exceedsBalance = paymentType === 'PAYMENT' && amount > Math.max(0, effectiveNetBalance);
     const exceedsCredit = paymentType === 'REFUND' && availableCredit > 0 && amount > availableCredit;
     const canSubmit = amount > 0 && !exceedsCredit && !submitting;
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
+        if (isSubscriptionReadOnly) { blockAction(paymentType === 'REFUND' ? 'Processing refunds' : 'Taking payments'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
         setSubmitting(true);
         try {
@@ -78,6 +86,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                     transactionId: transactionId.trim() || undefined,
                     description: description.trim() || undefined,
                 },
+                extraCharges: extraCharges.length > 0 ? extraCharges : undefined,
             });
             if (!res.success) {
                 throw new Error(res.message ?? 'Payment failed');
@@ -135,16 +144,88 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                     ) : (
                         <div className={cn(
                             'rounded-lg border px-3 py-2 flex items-center justify-between text-sm',
-                            netBalance > 0
+                            effectiveNetBalance > 0
                                 ? 'border-amber-200 bg-amber-50 text-amber-700'
                                 : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                         )}>
-                            <span className="font-semibold">Outstanding balance</span>
+                            <span className="font-semibold">Total Payable {totalExtraCharges > 0 ? '(incl. extra charges)' : ''}</span>
                             <span className="font-extrabold flex items-center">
-                                <IndianRupee className="h-3.5 w-3.5" />{Math.max(0, netBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                <IndianRupee className="h-3.5 w-3.5" />{Math.max(0, effectiveNetBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                             </span>
                         </div>
                     )}
+
+                    {/* Extra Charges */}
+                    <div className="border border-slate-200 rounded-md p-3 bg-slate-50">
+                        <div className="flex justify-between items-center mb-2">
+                            <Label className="text-xs font-semibold text-slate-700">Extra Charges</Label>
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-xs text-brand-600 hover:text-brand-700"
+                                onClick={() => setExtraCharges([...extraCharges, { reason: '', amount: 0 }])}
+                            >
+                                <Plus className="h-3 w-3 mr-1" /> Add
+                            </Button>
+                        </div>
+                        {extraCharges.length > 0 ? (
+                            <div className="space-y-2">
+                                {extraCharges.map((ec, i) => (
+                                    <div key={i} className="flex gap-2 items-start">
+                                        <div className="flex-1">
+                                            <Input 
+                                                placeholder="Reason (e.g. Night Charge)" 
+                                                value={ec.reason} 
+                                                onChange={e => {
+                                                    const nc = [...extraCharges];
+                                                    nc[i].reason = e.target.value;
+                                                    setExtraCharges(nc);
+                                                }}
+                                                className="h-8 text-xs"
+                                            />
+                                        </div>
+                                        <div className="w-24">
+                                            <Input 
+                                                type="number"
+                                                min={0}
+                                                placeholder="Amount" 
+                                                value={ec.amount || ''} 
+                                                onChange={e => {
+                                                    const nc = [...extraCharges];
+                                                    nc[i].amount = Number(e.target.value);
+                                                    setExtraCharges(nc);
+                                                    if (paymentType === 'PAYMENT' && Number(e.target.value) > 0) {
+                                                        const newTotal = extraCharges.reduce((s, c, idx) => s + (idx === i ? Number(e.target.value) : c.amount), 0);
+                                                        setAmount(Math.max(0, netBalance + newTotal));
+                                                    }
+                                                }}
+                                                className="h-8 text-xs"
+                                            />
+                                        </div>
+                                        <Button 
+                                            type="button" 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8 text-slate-400 hover:text-red-600"
+                                            onClick={() => {
+                                                const nc = extraCharges.filter((_, idx) => idx !== i);
+                                                setExtraCharges(nc);
+                                                if (paymentType === 'PAYMENT') {
+                                                    const newTotal = nc.reduce((s, c) => s + c.amount, 0);
+                                                    setAmount(Math.max(0, netBalance + newTotal));
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-[11px] text-slate-500 italic">No extra charges added.</div>
+                        )}
+                    </div>
 
                     {/* Type tabs */}
                     <div>
@@ -250,7 +331,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                         <X className="h-4 w-4 mr-1" /> Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700">
+                    <Button onClick={handleSubmit} disabled={!canSubmit || isSubscriptionReadOnly} className="bg-brand-600 hover:bg-brand-700">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : 'Record Payment'}
                     </Button>
                 </DialogFooter>

@@ -7,6 +7,7 @@ export interface AppState {
   sidebarCollapsed: boolean;
   currentRoute: string;
   breadcrumbs: Array<{ label: string; path: string }>;
+  isLowBandwidthMode: boolean;
   
   // Loading States
   globalLoading: boolean;
@@ -41,6 +42,9 @@ export interface AppActions {
   // Navigation
   setCurrentRoute: (route: string) => void;
   setBreadcrumbs: (breadcrumbs: Array<{ label: string; path: string }>) => void;
+  
+  // Settings
+  setLowBandwidthMode: (mode: boolean) => void;
   
   // Loading
   setGlobalLoading: (loading: boolean) => void;
@@ -83,6 +87,7 @@ const initialState: AppState = {
   sidebarCollapsed: true,
   currentRoute: '/',
   breadcrumbs: [],
+  isLowBandwidthMode: false,
   globalLoading: false,
   loadingStates: {},
   modals: {},
@@ -126,6 +131,11 @@ export const useAppStore = create<AppStore>()(
 
         setBreadcrumbs: (breadcrumbs: Array<{ label: string; path: string }>) => {
           set({ breadcrumbs });
+        },
+
+        // Settings actions
+        setLowBandwidthMode: (mode: boolean) => {
+          set({ isLowBandwidthMode: mode });
         },
 
         // Loading actions
@@ -279,6 +289,7 @@ export const useAppStore = create<AppStore>()(
         partialize: (state) => ({
           sidebarCollapsed: state.sidebarCollapsed,
           features: state.features,
+          isLowBandwidthMode: state.isLowBandwidthMode,
         }),
       }
     ),

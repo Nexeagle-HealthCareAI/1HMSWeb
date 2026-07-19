@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
 import { useDepartmentApi } from '@/hooks/useApi';
 import { SpecializationSelector } from '@/features/doctor/components/SpecializationSelector';
+import { PrimarySpecialityPicker } from '@/features/doctor/components/PrimarySpecialityPicker';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 
 interface Props {
@@ -24,7 +25,7 @@ const DOCTOR_ROLES = ['doctor', 'admindoctor'];
 
 const EMPTY = {
   fullName: '', mobileNumber: '', email: '', password: '', confirm: '', roles: [] as string[],
-  licenseNumber: '', qualification: '', experienceYears: '', department: '', consultFee: '',
+  licenseNumber: '', qualification: '', experienceYears: '', department: '', consultFee: '', primaryMedicalSpecialityId: '',
 };
 
 // Snapshot of the just-created member, used for the share-login screen.
@@ -44,12 +45,14 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
   const { getAllRoles, quickAddUser, updateUser, shareCredentials } = useUserManagementApi();
   const rolesQuery = getAllRoles();
   // The roles table holds a system role plus a per-hospital copy of each role (same name),
-  // so the raw list repeats names. Show each role type once.
+  // so the raw list repeats names. Show each role type once. Team members can only be onboarded
+  // as Doctor or AdminDoctor — other role types aren't assignable from this form.
   const roles = useMemo(() => {
     const seen = new Set<string>();
     return (rolesQuery.data?.allRoles ?? []).filter(r => {
       const key = r.roleName?.trim().toLowerCase();
       if (!key || seen.has(key)) return false;
+      if (!DOCTOR_ROLES.includes(key)) return false;
       seen.add(key);
       return true;
     });
@@ -73,6 +76,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
         experienceYears: initialData.experienceYears ? String(initialData.experienceYears) : '',
         department: initialData.department || '',
         consultFee: initialData.consultFee ? String(initialData.consultFee) : '',
+        primaryMedicalSpecialityId: initialData.primaryMedicalSpecialityId || '',
       });
       if (initialData.specializations) {
         setSpecializations(initialData.specializations);
@@ -152,6 +156,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
           experienceYears: isDoctor && form.experienceYears ? Number(form.experienceYears) : undefined,
           department: isDoctor && selectedDepartment ? selectedDepartment.name : undefined,
           specializations: isDoctor && specializations.length ? specializations : undefined,
+          primaryMedicalSpecialityId: isDoctor && form.primaryMedicalSpecialityId ? form.primaryMedicalSpecialityId : undefined,
           consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
         });
         if (res.success !== false) {
@@ -171,6 +176,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
           experienceYears: isDoctor && form.experienceYears ? Number(form.experienceYears) : undefined,
           department: isDoctor && selectedDepartment ? selectedDepartment.name : undefined,
           specializations: isDoctor && specializations.length ? specializations : undefined,
+          primaryMedicalSpecialityId: isDoctor && form.primaryMedicalSpecialityId ? form.primaryMedicalSpecialityId : undefined,
           consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
         });
         if (res.success !== false) {
@@ -374,6 +380,14 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
                         disabled={!form.department}
                       />
                     </div>
+                  </div>
+
+                  {/* Optional — categorizes this doctor on the public Doctor Dekho listing */}
+                  <div className="pt-1">
+                    <PrimarySpecialityPicker
+                      value={form.primaryMedicalSpecialityId}
+                      onChange={(id) => set('primaryMedicalSpecialityId', id)}
+                    />
                   </div>
                 </div>
               )}

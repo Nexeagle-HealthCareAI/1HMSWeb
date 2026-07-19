@@ -423,7 +423,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           </form>
         </div>
 
-        <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0">
+        <div className="p-4 pb-[120px] sm:pb-6 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0">
           {!hideSkipButton && (
             <div className="flex items-start gap-2 mb-4 px-1 opacity-80 hover:opacity-100 transition-opacity">
               <span className="text-base mt-0.5">💡</span>

@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { usePrescriptionFieldLayout } from '@/features/prescription/hooks/usePrescriptionFieldLayout';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { prescriptionFieldConfigApi } from '@/features/prescription/services/prescriptionFieldConfigApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -592,6 +593,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const resolvedPatientName = safeDecode(searchParams.get('patientName')) || '';
 
   const { getDoctorId, getHospitalId, getUserId } = useAuthStore();
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   const { toast } = useToast();
   const [apiPreferences, setApiPreferences] = useState<any>(null);
   const [isLoadingApiPreferences, setIsLoadingApiPreferences] = useState(false);
@@ -706,6 +708,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
         });
         return false;
       }
+      if (isSubscriptionReadOnly) { blockAction('Submitting a prescription'); return false; }
 
       try {
         const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
@@ -855,6 +858,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
       if (!resolvedPatientId || !resolvedAppointmentId) {
         return false;
       }
+      if (isSubscriptionReadOnly) { blockAction('Saving a prescription draft'); return false; }
 
       try {
         const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
@@ -2325,7 +2329,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             <div className="w-full flex flex-col gap-4">
               <AdmissionStatusBanner hospitalId={getHospitalId?.() || ''} patientId={resolvedPatientId} />
               {/* Top Action Bar — pinned above all sections */}
-              <div className="flex justify-end gap-2 mb-2" style={{ order: -1 }}>
+              <div className="flex flex-wrap justify-end gap-2 mb-2" style={{ order: -1 }}>
                 <VoiceRxSheet
                   hospitalId={getHospitalId?.() || ''}
                   doctorId={getDoctorId() || ''}
@@ -4362,8 +4366,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           onClick={() => setActiveMedicationId(medication.id)}
                         >
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
-                              <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-full bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-200 px-2 font-semibold">
                                   #{index + 1}
                                 </span>
@@ -4376,7 +4380,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                 )}
                               </div>
                               {summaryParts && (
-                                <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[50%] text-right" title={summaryParts}>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate w-full sm:w-auto sm:max-w-[50%] text-left sm:text-right" title={summaryParts}>
                                   {summaryParts}
                                 </span>
                               )}
@@ -4915,7 +4919,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               </Select>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {/* Issued Date */}
                               {selectedTemplate && (
                                 <div className="space-y-1">
@@ -4947,7 +4951,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                             {/* From/To Date Row */}
                             {selectedTemplate && (selectedTemplate.showFields.fromDate || selectedTemplate.showFields.toDate) && (
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {selectedTemplate.showFields.fromDate && (
                                   <div className="space-y-1">
                                     <Label className="text-xs text-gray-600">From date</Label>
@@ -5077,9 +5081,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <span className="flex items-center gap-2">Immunizations</span>,
                   <div className="space-y-4">
                     {/* Minimal grid: Vaccine | Status | Date | Dose | Next Due | Expand */}
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-xs border border-gray-200 dark:border-gray-700 rounded-md">
-                        <thead className="bg-brand-100 dark:bg-slate-800">
+                    <div className="md:overflow-x-auto">
+                      <table className="w-full text-xs block md:table md:border md:border-gray-200 md:dark:border-gray-700 md:rounded-md">
+                        <thead className="hidden md:table-header-group bg-brand-100 dark:bg-slate-800">
                           <tr>
                             <th className="p-2 font-semibold text-left">Vaccine</th>
                             <th className="p-2 font-semibold text-left w-40 md:w-56">Status</th>
@@ -5090,11 +5094,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             <th className="p-2 font-semibold text-left"></th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="block md:table-row-group space-y-3 md:space-y-0">
                           {(Array.isArray(prescriptionData.immunizations) ? prescriptionData.immunizations : []).map((entry, idx) => (
                             <React.Fragment key={idx}>
-                              <tr className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-gray-800">
-                                <td className="p-2">
+                              <tr className="flex flex-col gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 md:table-row md:flex-row md:gap-0 md:p-0 md:rounded-none md:border-0 md:border-b md:border-gray-100 md:dark:border-gray-800">
+                                <td className="md:p-2">
+                                  <span className="md:hidden block text-[10px] font-semibold uppercase text-gray-500 mb-1">Vaccine</span>
                                   <Input
                                     placeholder="e.g. Hepatitis B"
                                     value={entry.name || ''}
@@ -5106,7 +5111,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                     className="h-8 text-xs bg-white dark:bg-slate-900"
                                   />
                                 </td>
-                                <td className="p-2 w-40 md:w-56">
+                                <td className="md:p-2 md:w-40 lg:w-56">
+                                  <span className="md:hidden block text-[10px] font-semibold uppercase text-gray-500 mb-1">Status</span>
                                   <Select
                                     value={entry.status || 'given'}
                                     onValueChange={val => {
@@ -5129,7 +5135,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="p-2">
+                                <td className="md:p-2">
+                                  <span className="md:hidden block text-[10px] font-semibold uppercase text-gray-500 mb-1">Date</span>
                                   <Input
                                     type="date"
                                     value={entry.date || ''}
@@ -5141,7 +5148,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                     className="h-8 text-xs bg-white dark:bg-slate-900"
                                   />
                                 </td>
-                                <td className="p-2 w-16 md:w-20">
+                                <td className="md:p-2 md:w-16 lg:w-20">
+                                  <span className="md:hidden block text-[10px] font-semibold uppercase text-gray-500 mb-1">Dose</span>
                                   <Input
                                     placeholder="Dose 1 / Booster"
                                     value={entry.doseNumber || ''}
@@ -5150,10 +5158,11 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                       next[idx] = { ...entry, doseNumber: e.target.value };
                                       setPrescriptionData(prev => ({ ...prev, immunizations: next }));
                                     }}
-                                    className="h-8 text-xs bg-white dark:bg-slate-900 w-14 md:w-16"
+                                    className="h-8 text-xs bg-white dark:bg-slate-900 w-full md:w-14 lg:w-16"
                                   />
                                 </td>
-                                <td className="p-2">
+                                <td className="md:p-2">
+                                  <span className="md:hidden block text-[10px] font-semibold uppercase text-gray-500 mb-1">Next Due</span>
                                   <Input
                                     type="date"
                                     value={entry.nextDueDate || ''}
@@ -5166,7 +5175,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                   />
                                 </td>
 
-                                <td className="p-2">
+                                <td className="md:p-2 flex justify-end md:table-cell">
                                   <Button
                                     variant="outline"
                                     size="icon"

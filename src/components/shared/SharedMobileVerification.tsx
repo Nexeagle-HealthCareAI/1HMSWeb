@@ -247,7 +247,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             value={mobile}
             onChange={handleMobileChange}
             placeholder={t('mobileVerification.placeholders.mobile')}
-            className={`h-10 pl-10 text-sm ${errors.mobile ? 'border-red-500' : ''}`}
+            className={`h-12 pl-10 text-sm ${errors.mobile ? 'border-red-500' : ''}`}
             disabled={isLoading || mobileDisabled}
           />
         </div>
@@ -263,7 +263,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
         <Button
           onClick={handleSendOTP}
           disabled={!mobile || isLoading || mobileDisabled || !allowSendOTP}
-          className="w-full h-10 bg-primary text-white font-medium text-sm rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+          className="w-full h-12 bg-primary text-white font-medium text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
         >
           {isLoading ? (
             <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
               value={otp}
               onChange={handleOtpChange}
               placeholder={t('mobileVerification.placeholders.otp')}
-              className={`h-10 text-center tracking-widest text-sm font-mono ${
+              className={`h-12 text-center tracking-widest text-sm font-mono ${
                 errors.otp || hasVerificationError ? 'border-red-500' : ''
               }`}
               maxLength={6}
@@ -337,7 +337,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             <Button
               onClick={handleVerifyOTP}
               disabled={otp.length !== 6 || isLoading}
-              className="w-full h-10 bg-primary text-white font-medium text-sm rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              className="w-full h-12 bg-primary text-white font-medium text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -369,7 +369,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
                   variant="outline"
                   onClick={onBack}
                   disabled={isLoading}
-                  className="flex-1 h-10"
+                  className="flex-1 h-12"
                 >
                   {t('common.back')}
                 </Button>
@@ -379,7 +379,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
                   type="button"
                   onClick={onNext}
                   disabled={isLoading || !otpSent}
-                  className="flex-1 h-10 bg-primary text-white"
+                  className="flex-1 h-12 bg-primary text-white text-base"
                 >
                   {t('common.next')}
                 </Button>

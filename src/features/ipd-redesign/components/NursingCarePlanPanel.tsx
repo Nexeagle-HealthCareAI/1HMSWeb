@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, Check, X } from 'lucide-react';
 import { nursingCarePlanApi, type NursingCarePlanItemModel } from '../services/nursingCarePlanApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -18,6 +19,7 @@ interface Props {
 
 export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [items, setItems] = useState<NursingCarePlanItemModel[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -41,13 +43,17 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
 
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const openNew = () => { setDiagnosis(''); setGoal(''); setInterventions(''); setNewOpen(true); };
+    const openNew = () => {
+        if (isSubscriptionReadOnly) { blockAction('Adding care plan items'); return; }
+        setDiagnosis(''); setGoal(''); setInterventions(''); setNewOpen(true);
+    };
 
     const submit = async () => {
         if (!diagnosis.trim() || submitting) {
             toast({ title: 'Incomplete', description: 'Nursing diagnosis is required.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Adding care plan items'); return; }
         setSubmitting(true);
         try {
             await nursingCarePlanApi.create(admissionId, diagnosis.trim(), goal || undefined, interventions || undefined);
@@ -63,6 +69,7 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
 
     const confirmResolve = async () => {
         if (!resolving) return;
+        if (isSubscriptionReadOnly) { blockAction('Resolving care plan items'); return; }
         setResolveBusy(true);
         try {
             await nursingCarePlanApi.resolve(resolving.item.carePlanItemId, resolving.status, resolutionNotes || undefined);
@@ -99,10 +106,10 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                 </div>
                 {isActive && item.statusCode === 'ACTIVE' && (
                     <div className="flex gap-1.5 shrink-0">
-                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs text-emerald-600 hover:bg-emerald-50" onClick={() => { setResolving({ item, status: 'RESOLVED' }); setResolutionNotes(''); }}>
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs text-emerald-600 hover:bg-emerald-50" disabled={isSubscriptionReadOnly} onClick={() => { if (isSubscriptionReadOnly) { blockAction('Resolving care plan items'); return; } setResolving({ item, status: 'RESOLVED' }); setResolutionNotes(''); }}>
                             <Check className="h-3.5 w-3.5 mr-1" /> Resolve
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-rose-600" onClick={() => { setResolving({ item, status: 'DISCONTINUED' }); setResolutionNotes(''); }}>
+                        <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs text-slate-400 hover:text-rose-600" disabled={isSubscriptionReadOnly} onClick={() => { if (isSubscriptionReadOnly) { blockAction('Resolving care plan items'); return; } setResolving({ item, status: 'DISCONTINUED' }); setResolutionNotes(''); }}>
                             <X className="h-3.5 w-3.5 mr-1" /> Discontinue
                         </Button>
                     </div>
@@ -120,7 +127,7 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNew} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Add diagnosis
                         </Button>
                     )}
@@ -168,7 +175,7 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!diagnosis.trim() || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={!diagnosis.trim() || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>
@@ -189,7 +196,7 @@ export const NursingCarePlanPanel: React.FC<Props> = ({ admissionId, isActive })
                             </div>
                             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                                 <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setResolving(null)}>Cancel</Button>
-                                <Button disabled={resolveBusy} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmResolve}>
+                                <Button disabled={resolveBusy || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmResolve}>
                                     {resolveBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm
                                 </Button>
                             </div>

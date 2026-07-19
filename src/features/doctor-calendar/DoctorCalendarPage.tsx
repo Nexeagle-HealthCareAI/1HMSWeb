@@ -21,12 +21,15 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useAppStore } from '@/store';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
 export const DoctorCalendarPage: React.FC = () => {
   const { t } = useTranslation();
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -106,6 +109,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const { toast } = useToast();
   const { getUserId } = useAuthStore();
   const userId = getUserId() || '';
+  const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
 
   // Direct doctor API call for lazy loading - independent of dashboard
   const { data: doctorProfile, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
@@ -742,6 +746,7 @@ export const DoctorCalendarPage: React.FC = () => {
 
   // Action handlers
   const handleAddOverride = () => {
+    if (isSubscriptionReadOnly) { blockAction('Adding schedule overrides'); return; }
     // Open PersonalizedScheduleModal
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -1193,7 +1198,7 @@ export const DoctorCalendarPage: React.FC = () => {
 
 
       {/* Main Content Area with Calendar and Gamification Sidebar */}
-      <div className="flex-1 px-6 pb-6 overflow-hidden">
+      <SubscriptionReadOnlyOverlay featureLabel="Managing your calendar" className="flex-1 px-6 pb-6 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
           {/* Calendar Column */}
           <div className="lg:col-span-9 h-full flex flex-col">
@@ -1234,7 +1239,7 @@ export const DoctorCalendarPage: React.FC = () => {
             />
           </div>
         </div>
-      </div>
+      </SubscriptionReadOnlyOverlay>
 
       {/* Enhanced CSS for modern calendar styling */}
       <style>{`

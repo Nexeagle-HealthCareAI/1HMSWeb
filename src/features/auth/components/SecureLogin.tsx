@@ -7,6 +7,7 @@ import { useAuthApi, useInvalidateQueries } from '@/hooks/useApi';
 import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import {
   PasswordLoginForm,
   OTPLoginForm,
@@ -16,7 +17,7 @@ import {
 } from '@/features/auth/components';
 import { PasswordResetSuccessModal } from '@/components/modals';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
+import { Building2, AlertCircle, ArrowRight, X, Download } from 'lucide-react';
 import { HospitalBrandingModal } from '@/features/hospital/components/HospitalBrandingModal';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { API_ENDPOINTS } from '@/app/api';
@@ -52,11 +53,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Password reset success state
   const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(false);
 
-  // Hospital mapping 404 state
   const [showHospitalMapping404, setShowHospitalMapping404] = useState(false);
   const [showHospitalBrandingModal, setShowHospitalBrandingModal] = useState(false);
+  const [hospitalSelectionError, setHospitalSelectionError] = useState<string | null>(null);
 
-  // Helper function to get user-friendly error messages
+  const { isInstallable, promptInstall } = useInstallPrompt();
+
+  // Reset form and validation errors when switching login type
   const getErrorMessage = (error: any): string => {
     // If it's already a user-friendly message, return it
     if (error instanceof Error && !error.message.includes('Request failed')) {
@@ -313,14 +316,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         const authStore = useAuthStore.getState();
         authStore.clearSession();
 
-        // Update auth store with new user data
+        // Set the token first (needed by the interceptor for every call below) but deliberately
+        // hold off on setUser() — which flips isAuthenticated to true — until ALL of
+        // permissions/hospital-mapping/doctor-profile have resolved. LoginPage's auto-redirect
+        // effect and RouteGuard/RoleBasedRedirect react to isAuthenticated alone; if it goes true
+        // while any of that data is still being fetched, they can treat the incomplete state as
+        // invalid and force a logout + redirect back to /login mid-flight — which is what was
+        // happening (first with userRole, then again with hospitalId once that gap was closed).
         setToken(response.accessToken!);
-        setUser({
-          id: response.userId || undefined,
-          email: sanitizedUserid,
-          mobile: sanitizedUserid,
-          name: sanitizedUserid,
-        });
 
         if (response.userId && response.accessToken) {
           try {
@@ -351,6 +354,15 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           }
         }
 
+        // Only now — once role, hospital mapping, and doctor profile have all settled — flip
+        // isAuthenticated, so nothing downstream ever observes a partially-authenticated state.
+        setUser({
+          id: response.userId || undefined,
+          email: sanitizedUserid,
+          mobile: sanitizedUserid,
+          name: sanitizedUserid,
+        });
+
         invalidateAuth();
 
         toast({
@@ -377,6 +389,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     }
   };
 
+  // Deliberately throws (rather than swallowing) on every path where no OTP was actually
+  // generated, and only resolves normally when one was — OTPLoginForm's handleSendOTP awaits
+  // this and only advances to the OTP-entry screen when it resolves, so a rejection here is what
+  // keeps the user on the mobile-entry step instead of showing an entry screen for a code that
+  // can never arrive. A generated-but-undelivered OTP (WhatsApp/Email both failed) still counts
+  // as success here: it's saved server-side and retrievable for support, so the user should still
+  // reach the OTP-entry screen for that case.
   const handleSendOTP = async (mobile: string) => {
     const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
 
@@ -386,38 +405,48 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         description: "Please enter a valid mobile number",
         variant: "destructive"
       });
-      return;
+      throw new Error('Invalid mobile number');
     }
 
     // Clean mobile number for API (remove non-digit characters)
     const cleanMobile = ValidationUtils.cleanMobileNumber(mobile);
 
+    let response;
     try {
-      const response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
-
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to send OTP');
-      }
-
-      // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
-      // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
-      // flags, not just success, or a total delivery failure looks identical to a real send.
-      if (response.isWhatsappSent || response.isEmailSent) {
-        toast({
-          title: "OTP Sent",
-          description: "Please check your mobile for the verification code"
-        });
-      } else {
-        toast({
-          title: "Couldn't deliver the verification code",
-          description: response.message || "We couldn't send the OTP via WhatsApp or Email. Please try again or contact support.",
-          variant: "destructive"
-        });
-      }
+      response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
     } catch (error) {
+      // Genuine network/API-level failure — no OTP was generated either way.
       toast({
         title: "Error",
         description: getErrorMessage(error),
+        variant: "destructive"
+      });
+      throw error;
+    }
+
+    if (!response.success) {
+      // No OTP was generated at all (e.g. mobile number not registered) — nothing to verify, so
+      // stay on the mobile-entry step instead of moving to an OTP screen that can never succeed.
+      toast({
+        title: "Not Registered",
+        description: response.message || "This mobile number is not registered.",
+        variant: "destructive"
+      });
+      throw new Error(response.message || 'Failed to send OTP');
+    }
+
+    // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
+    // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
+    // flags, not just success, or a total delivery failure looks identical to a real send.
+    if (response.isWhatsappSent || response.isEmailSent) {
+      toast({
+        title: "OTP Sent",
+        description: "Please check your mobile for the verification code"
+      });
+    } else {
+      toast({
+        title: "Couldn't deliver the verification code",
+        description: response.message || "We couldn't send the OTP via WhatsApp or Email. Please try again or contact support.",
         variant: "destructive"
       });
     }
@@ -459,16 +488,6 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
 
       if (response.success) {
-        // Store userId from OTP verification response
-        if (response.userId) {
-          useAuthStore.getState().setUserId(response.userId);
-        }
-
-        // Store accessToken from OTP verification response
-        if (response.accessToken) {
-          useAuthStore.getState().setToken(response.accessToken);
-        }
-
         // For OTP login, check if we have userId from the response
         const storedUserId = response.userId || useAuthStore.getState().getUserId();
 
@@ -477,10 +496,15 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           const authStore = useAuthStore.getState();
           authStore.clearSession();
 
-          // For OTP login, we need to set the user as authenticated
-          // Use the actual accessToken from the response instead of placeholder
+          // Set token + userId, but deliberately hold off on setUser() (which flips
+          // isAuthenticated to true) until ALL of permissions/hospital-mapping/doctor-profile
+          // have resolved — see the identical comment in handlePasswordLogin above for why:
+          // LoginPage's auto-redirect effect and RouteGuard/RoleBasedRedirect react to
+          // isAuthenticated alone, and treat any incomplete state as invalid, forcing a
+          // premature logout + redirect to /login mid-flight.
           const tokenToUse = response.accessToken || 'otp-login';
-          authStore.setAuthenticatedUser(storedUserId, tokenToUse);
+          authStore.setToken(tokenToUse);
+          authStore.setUserId(storedUserId);
 
           if (response.accessToken) {
             try {
@@ -506,6 +530,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           } else {
             console.info('Hospital information incomplete; skipping doctor profile fetch.');
           }
+
+          // Only now — once role, hospital mapping, and doctor profile have all settled — flip
+          // isAuthenticated, so nothing downstream ever observes a partially-authenticated state.
+          authStore.setUser({ id: storedUserId });
 
           toast({
             title: "Login Successful",
@@ -904,7 +932,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   return (
     <LoginLayout
       title="NexEagle 1HMS"
-      subtitle="Healthcare Management System"
+
       isLoading={loginMutation.isPending}
       loadingMessage="Signing you in..."
     >
@@ -945,6 +973,19 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           </p>
         </div>
       </div>
+
+      {isInstallable && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <Button
+            onClick={async () => await promptInstall()}
+            variant="outline"
+            className="w-full h-12 flex items-center justify-center gap-2 border-primary/30 hover:bg-primary/5 text-primary"
+          >
+            <Download className="w-5 h-5" />
+            <span className="font-semibold text-base">Install Web App</span>
+          </Button>
+        </div>
+      )}
     </LoginLayout>
   );
 }; 
