@@ -28,8 +28,8 @@ export const PrescriptionLayout = ({ refreshToken }: PrescriptionLayoutProps) =>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2 min-w-0">
+        <div className="space-y-6 min-w-0">
           <LayoutControlsPanel
             margins={designer.layoutMargins}
             onMarginsChange={designer.updateMargins}
@@ -42,25 +42,27 @@ export const PrescriptionLayout = ({ refreshToken }: PrescriptionLayoutProps) =>
             typography={designer.typography}
             onTypographyChange={designer.updateTypography}
             onSaveLayout={designer.saveLayoutSettings}
-
+            onPreview={designer.generatePreview}
             isSavingLayout={designer.isSavingLayout}
             validUpto={designer.validUpto}
             onValidUptoChange={designer.setValidUpto}
           />
         </div>
-        <PreviewPanel
-          previewUrl={designer.previewUrl}
+        <div className="min-w-0">
+          <PreviewPanel
+            previewUrl={designer.previewUrl}
 
-          isGenerating={designer.isGeneratingPreview}
+            isGenerating={designer.isGeneratingPreview}
 
-          onOpen={designer.openPreviewInNewTab}
-          isTestEnabled={Boolean(designer.templateMeta || designer.serverTemplateUri)}
-          margins={designer.layoutMargins}
-          typography={designer.typography}
-          overflowStrategy={designer.overflowStrategy}
-          templateFile={designer.templateFile}
-          templateUrl={designer.serverTemplateUri}
-        />
+            onOpen={designer.openPreviewInNewTab}
+            isTestEnabled={Boolean(designer.templateMeta || designer.serverTemplateUri)}
+            margins={designer.layoutMargins}
+            typography={designer.typography}
+            overflowStrategy={designer.overflowStrategy}
+            templateFile={designer.templateFile}
+            templateUrl={designer.serverTemplateUri}
+          />
+        </div>
       </div>
       <TemplateUploadSuccessModal
         open={designer.templateUploadSuccessOpen}

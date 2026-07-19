@@ -1361,7 +1361,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                             <Calendar className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total Today</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Total Today</span>
                         </div>
                         <div className="text-3xl font-bold text-brand-900 dark:text-white">{currentAppointmentCounts.all}</div>
                       </div>
@@ -1372,7 +1372,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-orange-100/80 dark:bg-orange-900/50 rounded-lg text-orange-600 dark:text-orange-400">
                             <Clock className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60">Vitals Required</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60 min-w-0 break-words">Vitals Required</span>
                         </div>
                         <div className="text-3xl font-bold text-orange-900 dark:text-white">{currentAppointmentCounts.vitalsRequired}</div>
                       </div>
@@ -1383,7 +1383,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg text-emerald-600 dark:text-emerald-400">
                             <UserCheck className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60 min-w-0 break-words">Completed</span>
                         </div>
                         <div className="text-3xl font-bold text-emerald-900 dark:text-white">{currentAppointmentCounts.completed}</div>
                       </div>
@@ -1394,7 +1394,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-red-100/80 dark:bg-red-900/50 rounded-lg text-red-600 dark:text-red-400">
                             <UserX className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-red-900/60 dark:text-red-200/60">Cancelled</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-red-900/60 dark:text-red-200/60 min-w-0 break-words">Cancelled</span>
                         </div>
                         <div className="text-3xl font-bold text-red-900 dark:text-white">{currentAppointmentCounts.cancelled}</div>
                       </div>
@@ -1850,7 +1850,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Calendar className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Total</span>
                           </div>
                           <div className="text-3xl font-bold text-brand-900 dark:text-white">{pastAppointmentsSummary.total}</div>
                         </div>
@@ -1861,7 +1861,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-rose-100/80 dark:bg-rose-900/50 rounded-lg text-rose-600 dark:text-rose-400">
                               <UserX className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-rose-900/60 dark:text-rose-200/60">No Show</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-rose-900/60 dark:text-rose-200/60 min-w-0 break-words">No Show</span>
                           </div>
                           <div className="text-3xl font-bold text-rose-900 dark:text-white">{pastAppointmentsSummary.noShow}</div>
                         </div>
@@ -1872,7 +1872,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg text-emerald-600 dark:text-emerald-400">
                               <UserCheck className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60 min-w-0 break-words">Completed</span>
                           </div>
                           <div className="text-3xl font-bold text-emerald-900 dark:text-white">{pastAppointmentsSummary.completed}</div>
                         </div>
@@ -1883,7 +1883,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Activity className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Ready Status</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Ready Status</span>
                           </div>
                           <div className="text-3xl font-bold text-brand-900 dark:text-white">{pastAppointmentsSummary.ready}</div>
                         </div>
@@ -2130,7 +2130,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Calendar className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total Upcoming</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60 min-w-0 break-words">Total Upcoming</span>
                           </div>
                           <div className="text-3xl font-bold text-brand-900 dark:text-white">{futureAppointmentsSummary.total}</div>
                         </div>
@@ -2527,10 +2527,10 @@ export const ClinicalDashboard: React.FC = () => {
                   <TabsContent value="fields" className="m-0 flex-1 flex flex-col">
                     <PrescriptionCustomizePanel key="fields-panel" showCloseButton={false} defaultTab="fields" />
                   </TabsContent>
-                  <TabsContent value="personalized" className="m-0 flex-1 flex flex-col">
+                  <TabsContent value="personalized" className="m-0 flex-1 min-w-0 flex flex-col">
                     <PrescriptionCustomizePanel key="personalized-panel" showCloseButton={false} defaultTab="personalized" />
                   </TabsContent>
-                  <TabsContent value="layout" className="m-0 flex-1 flex flex-col p-2 sm:p-4">
+                  <TabsContent value="layout" className="m-0 flex-1 min-w-0 flex flex-col p-2 sm:p-4 overflow-x-hidden">
                     <PrescriptionLayout refreshToken={layoutRefreshToken} />
                   </TabsContent>
                 </div>

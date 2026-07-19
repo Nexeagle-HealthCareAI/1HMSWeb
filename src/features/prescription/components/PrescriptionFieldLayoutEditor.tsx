@@ -41,70 +41,74 @@ const FieldRow: React.FC<RowProps> = ({ field, update, onRemove }) => {
       as="div"
       dragListener={false}
       dragControls={controls}
-      className="flex items-center gap-2 sm:gap-3 p-2.5 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2.5 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
     >
-      {/* Drag handle */}
-      <button
-        type="button"
-        onPointerDown={(e) => controls.start(e)}
-        className="touch-none cursor-grab active:cursor-grabbing text-slate-400 hover:text-brand-600 shrink-0"
-        title="Drag to reorder"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        {/* Drag handle */}
+        <button
+          type="button"
+          onPointerDown={(e) => controls.start(e)}
+          className="touch-none cursor-grab active:cursor-grabbing text-slate-400 hover:text-brand-600 shrink-0"
+          title="Drag to reorder"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
 
-      {/* Label (rename) */}
-      <div className="min-w-0 flex-1">
-        <Input
-          value={field.label}
-          onChange={e => update(field.key, { label: e.target.value })}
-          className="h-9 rounded-md"
-        />
-        {!field.builtIn && (
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-600">Custom · {typeLabel(field.type)}</span>
+        {/* Label (rename) */}
+        <div className="min-w-0 flex-1">
+          <Input
+            value={field.label}
+            onChange={e => update(field.key, { label: e.target.value })}
+            className="h-9 rounded-md"
+          />
+          {!field.builtIn && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-600">Custom · {typeLabel(field.type)}</span>
+          )}
+        </div>
+
+        {/* Delete (custom fields only) */}
+        {!field.builtIn && onRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(field.key)}
+            className="shrink-0 text-slate-400 hover:text-red-600"
+            title="Delete this custom field"
+            aria-label="Delete custom field"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         )}
       </div>
 
-      {/* Delete (custom fields only) */}
-      {!field.builtIn && onRemove && (
+      <div className="flex items-center gap-2 sm:gap-3 pl-7 sm:pl-0">
+        {/* Show in pad */}
         <button
           type="button"
-          onClick={() => onRemove(field.key)}
-          className="shrink-0 text-slate-400 hover:text-red-600"
-          title="Delete this custom field"
-          aria-label="Delete custom field"
+          onClick={() => update(field.key, { showInPad: !field.showInPad, showInPrint: !field.showInPad ? field.showInPrint : false })}
+          className={`flex-1 sm:flex-none sm:w-24 shrink-0 flex items-center justify-center gap-1 h-9 rounded-md text-xs font-semibold border transition-colors ${
+            field.showInPad ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
+          }`}
+          title="Show this field in the consultation pad"
         >
-          <Trash2 className="h-4 w-4" />
+          {field.showInPad ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          {field.showInPad ? 'In pad' : 'Hidden'}
         </button>
-      )}
 
-      {/* Show in pad */}
-      <button
-        type="button"
-        onClick={() => update(field.key, { showInPad: !field.showInPad, showInPrint: !field.showInPad ? field.showInPrint : false })}
-        className={`w-20 sm:w-24 shrink-0 flex items-center justify-center gap-1 h-9 rounded-md text-xs font-semibold border transition-colors ${
-          field.showInPad ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
-        }`}
-        title="Show this field in the consultation pad"
-      >
-        {field.showInPad ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-        {field.showInPad ? 'In pad' : 'Hidden'}
-      </button>
-
-      {/* Show on print */}
-      <button
-        type="button"
-        onClick={() => field.showInPad && update(field.key, { showInPrint: !field.showInPrint })}
-        disabled={!field.showInPad}
-        className={`w-20 sm:w-24 shrink-0 flex items-center justify-center gap-1 h-9 rounded-md text-xs font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-          field.showInPrint && field.showInPad ? 'bg-brand-50 text-brand-700 border-brand-200' : 'bg-gray-100 text-gray-500 border-gray-200'
-        }`}
-        title={field.showInPad ? 'Include this field on the printed prescription' : 'Enable “In pad” first'}
-      >
-        <Printer className="h-3.5 w-3.5" />
-        {field.showInPrint && field.showInPad ? 'Print' : 'No print'}
-      </button>
+        {/* Show on print */}
+        <button
+          type="button"
+          onClick={() => field.showInPad && update(field.key, { showInPrint: !field.showInPrint })}
+          disabled={!field.showInPad}
+          className={`flex-1 sm:flex-none sm:w-24 shrink-0 flex items-center justify-center gap-1 h-9 rounded-md text-xs font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            field.showInPrint && field.showInPad ? 'bg-brand-50 text-brand-700 border-brand-200' : 'bg-gray-100 text-gray-500 border-gray-200'
+          }`}
+          title={field.showInPad ? 'Include this field on the printed prescription' : 'Enable “In pad” first'}
+        >
+          <Printer className="h-3.5 w-3.5" />
+          {field.showInPrint && field.showInPad ? 'Print' : 'No print'}
+        </button>
+      </div>
     </Reorder.Item>
   );
 };
