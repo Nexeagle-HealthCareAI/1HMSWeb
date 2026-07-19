@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -51,7 +52,22 @@ export function useInstallPrompt() {
   }, []);
 
   const promptInstall = async () => {
-    if (!deferredPrompt) return false;
+    if (isIos) {
+      toast({
+        title: "Install on iOS",
+        description: "Tap the Share button and select 'Add to Home Screen'.",
+      });
+      return false;
+    }
+
+    if (!deferredPrompt) {
+      toast({
+        title: "Manual Installation Required",
+        description: "Automatic install isn't available right now (usually due to testing on a non-HTTPS IP or incognito mode). Please use your browser's menu and select 'Install App' or 'Add to Home Screen'.",
+        duration: 5000,
+      });
+      return false;
+    }
     
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
@@ -62,7 +78,7 @@ export function useInstallPrompt() {
     return outcome === "accepted";
   };
 
-  const isInstallable = !isStandalone && (!!deferredPrompt || isIos);
+  const isInstallable = !isStandalone;
 
   return { promptInstall, isInstallable, isIos, isStandalone };
 }

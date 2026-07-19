@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { usePrescriptionFieldLayout } from '@/features/prescription/hooks/usePrescriptionFieldLayout';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { prescriptionFieldConfigApi } from '@/features/prescription/services/prescriptionFieldConfigApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -592,6 +593,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const resolvedPatientName = safeDecode(searchParams.get('patientName')) || '';
 
   const { getDoctorId, getHospitalId, getUserId } = useAuthStore();
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   const { toast } = useToast();
   const [apiPreferences, setApiPreferences] = useState<any>(null);
   const [isLoadingApiPreferences, setIsLoadingApiPreferences] = useState(false);
@@ -706,6 +708,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
         });
         return false;
       }
+      if (isSubscriptionReadOnly) { blockAction('Submitting a prescription'); return false; }
 
       try {
         const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
@@ -855,6 +858,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
       if (!resolvedPatientId || !resolvedAppointmentId) {
         return false;
       }
+      if (isSubscriptionReadOnly) { blockAction('Saving a prescription draft'); return false; }
 
       try {
         const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';

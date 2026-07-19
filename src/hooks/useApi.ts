@@ -66,11 +66,43 @@ export const useHospitalApi = {
   ),
   // Register hospital
   registerHospital: () => createMutationHook(hospitalApi.registerHospital),
-  // Update hospital
-  updateHospital: (hospitalId: string) =>
-    createMutationHook((data: Parameters<typeof hospitalApi.updateHospital>[1]) =>
-      hospitalApi.updateHospital(hospitalId, data)
-    ),
+  updateHospital: (hospitalId: string) => {
+    const queryClient = useQueryClient();
+    return createMutationHook(
+      (data: Parameters<typeof hospitalApi.updateHospital>[1]) => hospitalApi.updateHospital(hospitalId, data),
+      {
+        onMutate: async (newData) => {
+          // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+          await queryClient.cancelQueries({ queryKey: ['hospital', hospitalId] });
+          
+          // Snapshot the previous value
+          const previousData = queryClient.getQueryData(['hospital', hospitalId]);
+          
+          // Optimistically update to the new value
+          queryClient.setQueryData(['hospital', hospitalId], (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              ...newData
+            };
+          });
+          
+          // Return a context object with the snapshotted value
+          return { previousData };
+        },
+        // If the mutation fails, use the context returned from onMutate to roll back
+        onError: (err, newData, context: any) => {
+          if (context?.previousData) {
+            queryClient.setQueryData(['hospital', hospitalId], context.previousData);
+          }
+        },
+        // Always refetch after error or success to ensure server sync
+        onSettled: () => {
+          queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
+        },
+      }
+    );
+  },
   // Get hospital by ID
   getHospitalById: (hospitalId: string) => createApiHook(
     ['hospital', hospitalId],

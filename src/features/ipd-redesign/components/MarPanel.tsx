@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChevronLeft, ChevronRight, Loader2, Check, ShieldAlert, Clock3, Plus } from 'lucide-react';
 import { marApi, type MarLineItem, type MarSlotItem, type MedicationActionStatus } from '../services/marApi';
 import { formatIstTime, formatIstDayLabel, istDateKey, istDayStartUtc } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -49,6 +50,7 @@ const isActionable = (status: MarSlotItem['status']): boolean =>
  */
 export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [dayKey, setDayKey] = useState(() => istDateKey(new Date()));
     const [lines, setLines] = useState<MarLineItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -82,6 +84,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
     };
 
     const openAdminister = (line: MarLineItem, slot: MarSlotItem | null) => {
+        if (isSubscriptionReadOnly) { blockAction('Recording medication administration'); return; }
         setActing({ line, slot });
         setActionStatus('ADMINISTERED');
         setAdministeredDose(line.dose ?? '');
@@ -101,6 +104,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
 
     const submit = async () => {
         if (!acting || !canSubmit || submitting) return;
+        if (isSubscriptionReadOnly) { blockAction('Recording medication administration'); return; }
         setSubmitting(true);
         try {
             const scheduledFor = acting.slot ? acting.slot.scheduledForUtc : new Date().toISOString();
@@ -157,7 +161,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                                     {line.instructions && <p className="text-[11px] text-slate-400 italic mt-0.5">{line.instructions}</p>}
                                 </div>
                                 {isActive && line.isAdHocOnly && (
-                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => openAdminister(line, null)}>
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs" onClick={() => openAdminister(line, null)} disabled={isSubscriptionReadOnly}>
                                         <Plus className="h-3.5 w-3.5 mr-1" /> Log PRN dose
                                     </Button>
                                 )}
@@ -169,7 +173,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                                         <button
                                             key={idx}
                                             type="button"
-                                            disabled={!isActive || !isActionable(slot.status)}
+                                            disabled={!isActive || !isActionable(slot.status) || isSubscriptionReadOnly}
                                             onClick={() => openAdminister(line, slot)}
                                             className={cn(
                                                 'h-10 sm:h-8 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 transition-colors',
@@ -258,7 +262,7 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
 
                             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
                                 <Button variant="outline" className="h-11 sm:h-10" onClick={() => setActing(null)}>Cancel</Button>
-                                <Button disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                                <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                                     {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Record
                                 </Button>
                             </div>

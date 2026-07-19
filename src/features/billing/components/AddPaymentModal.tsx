@@ -18,6 +18,7 @@ import {
 import {
     ipdBillingService, type PaymentType, type PaymentMode,
 } from '../services/ipdBillingService';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface AddPaymentModalProps {
     open: boolean;
@@ -40,6 +41,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
     open, onOpenChange, encounterId, patientId, netBalance, onPaid,
 }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
     const [amount, setAmount] = useState<number>(0);
@@ -70,6 +72,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
+        if (isSubscriptionReadOnly) { blockAction(paymentType === 'REFUND' ? 'Processing refunds' : 'Taking payments'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
         setSubmitting(true);
         try {
@@ -328,7 +331,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                         <X className="h-4 w-4 mr-1" /> Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700">
+                    <Button onClick={handleSubmit} disabled={!canSubmit || isSubscriptionReadOnly} className="bg-brand-600 hover:bg-brand-700">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : 'Record Payment'}
                     </Button>
                 </DialogFooter>

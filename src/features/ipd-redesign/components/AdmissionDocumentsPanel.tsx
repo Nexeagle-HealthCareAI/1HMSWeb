@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, FileText, Image as ImageIcon, FileType2, File as FileIcon, Eye, Trash2, X, Check, Files } from 'lucide-react';
 import { admissionDocumentApi, validateDocumentFile, ALLOWED_DOCUMENT_EXTENSIONS, type AdmissionDocumentItem } from '../services/admissionDocumentApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -28,6 +29,7 @@ const formatFileSize = (bytes?: number | null): string => {
 
 export const AdmissionDocumentsPanel: React.FC<Props> = ({ admissionId }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(true);
     const [documents, setDocuments] = useState<AdmissionDocumentItem[]>([]);
@@ -48,6 +50,7 @@ export const AdmissionDocumentsPanel: React.FC<Props> = ({ admissionId }) => {
 
     const handleFilesPicked = async (files: FileList | null) => {
         if (!files || files.length === 0) return;
+        if (isSubscriptionReadOnly) { blockAction('Uploading documents'); if (fileInputRef.current) fileInputRef.current.value = ''; return; }
         const list = Array.from(files);
 
         const invalid = list.map(f => ({ file: f, error: validateDocumentFile(f) })).find(x => x.error);
@@ -75,6 +78,7 @@ export const AdmissionDocumentsPanel: React.FC<Props> = ({ admissionId }) => {
     };
 
     const confirmDelete = async (documentId: string) => {
+        if (isSubscriptionReadOnly) { blockAction('Deleting documents'); return; }
         setDeleteBusy(true);
         try {
             await admissionDocumentApi.delete(documentId, admissionId);
@@ -104,7 +108,7 @@ export const AdmissionDocumentsPanel: React.FC<Props> = ({ admissionId }) => {
                     <input
                         ref={fileInputRef} type="file" multiple className="hidden"
                         accept={ALLOWED_DOCUMENT_EXTENSIONS.join(',')}
-                        disabled={uploading}
+                        disabled={uploading || isSubscriptionReadOnly}
                         onChange={e => handleFilesPicked(e.target.files)}
                     />
                 </label>
@@ -152,7 +156,7 @@ export const AdmissionDocumentsPanel: React.FC<Props> = ({ admissionId }) => {
                                         <span className="text-[11px] font-semibold text-rose-700">Delete this document?</span>
                                         <div className="flex items-center gap-2">
                                             <Button size="sm" variant="ghost" className="h-9 sm:h-8 text-xs" onClick={() => setPendingDeleteId(null)}>Cancel</Button>
-                                            <Button size="sm" className="h-9 sm:h-8 text-xs bg-rose-600 hover:bg-rose-700" disabled={deleteBusy} onClick={() => confirmDelete(doc.documentId)}>
+                                            <Button size="sm" className="h-9 sm:h-8 text-xs bg-rose-600 hover:bg-rose-700" disabled={deleteBusy || isSubscriptionReadOnly} onClick={() => confirmDelete(doc.documentId)}>
                                                 {deleteBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null} Delete
                                             </Button>
                                         </div>
@@ -162,7 +166,7 @@ export const AdmissionDocumentsPanel: React.FC<Props> = ({ admissionId }) => {
                                         <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs flex-1 sm:flex-none" onClick={() => window.open(doc.storageUrl, '_blank', 'noopener,noreferrer')}>
                                             <Eye className="h-3.5 w-3.5 mr-1.5" /> View
                                         </Button>
-                                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs text-rose-600 hover:bg-rose-50 flex-1 sm:flex-none" onClick={() => setPendingDeleteId(doc.documentId)}>
+                                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs text-rose-600 hover:bg-rose-50 flex-1 sm:flex-none" disabled={isSubscriptionReadOnly} onClick={() => { if (isSubscriptionReadOnly) { blockAction('Deleting documents'); return; } setPendingDeleteId(doc.documentId); }}>
                                             <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
                                         </Button>
                                     </div>

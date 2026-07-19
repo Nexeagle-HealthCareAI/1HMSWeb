@@ -18,6 +18,7 @@ import { Loader2, User, Edit3, Save, X, Phone, MapPin, Calendar, CreditCard, Hea
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { PatientProfileData, UpdatePatientProfileData } from '../services/patientProfileApi';
 import { appointmentApi, type AppointmentDetail } from '@/features/appointment/services/appointmentApi';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface PatientProfileModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
   patientName
 }) => {
   const { t } = useTranslation();
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   const {
     patientProfile,
     isLoading,
@@ -142,6 +144,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubscriptionReadOnly) { blockAction('Editing patient profiles'); return; }
     // Combine Full Name and Reference Name
     const combinedName = referenceName ? `${formData.fullName} - ${referenceName}` : formData.fullName;
     handleSave({
@@ -653,7 +656,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   </Button>
                   <Button
                     onClick={handleSubmit}
-                    disabled={isUpdating}
+                    disabled={isUpdating || isSubscriptionReadOnly}
                     className="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white text-xs"
                   >
                     {isUpdating ? (
@@ -670,7 +673,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   </Button>
                 </>
               ) : (
-                <Button onClick={handleEdit} className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs">
+                <Button onClick={() => isSubscriptionReadOnly ? blockAction('Editing patient profiles') : handleEdit()} disabled={isSubscriptionReadOnly} className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs">
                   <Edit3 className="mr-1 h-3 w-3" />
                   Edit Profile
                 </Button>

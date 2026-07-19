@@ -8,8 +8,9 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
 import { useLogout } from '@/hooks/useLogout';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
-import { SubscriptionExpiredScreen } from '@/features/subscription/components/SubscriptionExpiredScreen';
 import { SubscriptionExpiryBanner } from '@/features/subscription/components/SubscriptionExpiryBanner';
+import { SubscriptionReadOnlyBanner } from '@/features/subscription/components/SubscriptionReadOnlyBanner';
+import { SubscriptionUpsellModal } from '@/features/subscription/components/SubscriptionUpsellModal';
 import {
   Calendar,
   Users,
@@ -78,7 +79,8 @@ import {
   XSquare,
   HeartPulse,
   Wifi,
-  LayoutGrid
+  LayoutGrid,
+  GitBranch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -240,17 +242,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
-    { id: 'configuration', name: t('header.configuration') || 'Configuration', icon: Settings, path: '/configuration' },
+    { id: 'configuration', name: t('header.configuration') || 'Hospital Info', icon: Building2, path: '/configuration' },
     { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
-    {
-      id: 'appointments',
-      name: t('header.appointmentScheduler'),
-      icon: Calendar,
-      path: '/appointment-dashboard',
-    },
-    { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'ipd-redesign', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
@@ -258,19 +252,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Filter navigation items based on user role
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin' || item.id === 'configuration' || item.id === 'subscription') {
+    if (item.id === 'admin' || item.id === 'subscription') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
     }
     if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
       return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
     }
-    if (item.id === 'appointments') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist') || userRoles.includes('Nurse');
+    if (item.id === 'configuration') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor');
     }
     if (item.id === 'billing') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
     }
-    if (item.id === 'ipd-redesign' || item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board') {
+    if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
     }
     return true;
@@ -285,27 +279,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   }, [location.pathname]);
 
-  // Once the trial/subscription has expired, an admin can only reach the Subscription page —
-  // force them there on load and on any direct navigation (not just sidebar clicks).
-  useEffect(() => {
-    if (isSubscriptionExpired && isAdminRole && location.pathname !== '/subscription') {
-      navigate('/subscription', { replace: true });
-    }
-  }, [isSubscriptionExpired, isAdminRole, location.pathname, navigate]);
-
   const handleNavigation = (item: NavigationItem) => {
-    if (isSubscriptionExpired && isAdminRole && item.id !== 'subscription') {
-      setCurrentPage('subscription');
-      navigate('/subscription');
-      return;
-    }
     if (hospitalAccessRestricted && item.id !== 'admin') {
       setCurrentPage('admin');
       navigate('/admin');
+      setIsTileMenuOpen(false);
       return;
     }
     setCurrentPage(item.id);
     navigate(item.path);
+    setIsTileMenuOpen(false);
   };
 
   const handleLogout = async () => {
@@ -315,12 +298,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       console.error('Failed to logout cleanly', error);
     }
   };
-
-  // Non-admin roles have no subscription page to fall back to — once expired, they're fully
-  // locked out of the platform and told to go through their administrator.
-  if (isSubscriptionExpired && !isAdminRole) {
-    return <SubscriptionExpiredScreen onLogout={handleLogout} />;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-x-hidden">
@@ -336,8 +313,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navigation.map((item) => {
               const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
-              const isDisabled = (isSubscriptionExpired && isAdminRole && item.id !== 'subscription')
-                || (hospitalAccessRestricted && item.id !== 'admin');
+              const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
               return (
                 <div key={item.id} className="relative group">
                   {/* Active accent on the rail edge */}
@@ -433,6 +409,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {/* Alerts */}
               <AlertBell />
 
+              {/* Manage Chain Button (Admin Only) */}
+              {isAdminRole && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/chain')}
+                  className="flex items-center gap-1.5 md:gap-2 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                >
+                  <GitBranch className="h-4 w-4 md:h-4 md:w-4" />
+                  <span className="hidden md:inline text-sm font-medium">Chain</span>
+                </Button>
+              )}
+
               {/* Theme Toggle */}
               <ThemeToggle
                 variant="ghost"
@@ -500,6 +489,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </div>
 
         {showExpiryWarning && <SubscriptionExpiryBanner endDate={subscriptionStatus!.subscriptionEndDate!} />}
+        {isSubscriptionExpired && <SubscriptionReadOnlyBanner isAdminRole={isAdminRole} />}
+        <SubscriptionUpsellModal isAdminRole={isAdminRole} />
 
         {/* Page Content */}
         <main className={cn(
@@ -521,7 +512,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 {/* Scrollable Grid */}
                 <div className="flex-1 overflow-y-auto px-5 py-6 pb-24 content-start">
                   <div className="grid grid-cols-2 gap-4">
-                    {navigation.filter(item => item.id !== 'subscription').map((item, i) => {
+                    {navigation.filter(item => item.id !== 'billing').map((item, i) => {
                        const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
                        const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
                        return (
@@ -529,8 +520,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                            key={item.id}
                            type="button"
                            onClick={() => {
-                             setIsTileMenuOpen(false);
                              handleNavigation(item);
+                             setIsTileMenuOpen(false);
                            }}
                            disabled={isDisabled}
                            className={cn(
@@ -572,34 +563,48 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* --- MOBILE BOTTOM NAVIGATION & TILE GRID --- */}
       
-      {/* Fixed Bottom Bar */}
-      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
+            {/* Fixed Bottom Bar */}
+      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
         <button 
           onClick={() => {
             navigate('/appointment-dashboard');
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-2 rounded-2xl w-16 transition-colors",
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
             location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >
-          <Home className="h-6 w-6 mb-1" strokeWidth={location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? 2.5 : 2} />
-          <span className="text-[10px] font-medium tracking-wide">Home</span>
+          <Calendar className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide leading-tight text-center">OPD<br/>Appt</span>
+        </button>
+
+        <button 
+          onClick={() => {
+            navigate('/ipd-workspace');
+            setIsTileMenuOpen(false);
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/ipd-workspace') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+          )}
+        >
+          <Hotel className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/ipd-workspace') ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide">IPD</span>
         </button>
 
         <button 
           onClick={() => setIsTileMenuOpen(!isTileMenuOpen)}
-          className="flex flex-col items-center justify-center relative -top-5"
+          className="flex flex-col items-center justify-center relative -top-4 mx-1"
         >
           <div className={cn(
-            "rounded-full p-4 shadow-xl ring-4 ring-gray-50 dark:ring-gray-950 transition-transform active:scale-95",
+            "rounded-full p-3.5 shadow-xl ring-4 ring-gray-50 dark:ring-gray-950 transition-transform active:scale-95",
             isTileMenuOpen ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 shadow-gray-500/30" : "bg-brand-600 text-white shadow-brand-500/30"
           )}>
-            {isTileMenuOpen ? <X className="h-6 w-6" strokeWidth={2.5} /> : <LayoutGrid className="h-6 w-6" strokeWidth={2.5} />}
+            {isTileMenuOpen ? <X className="h-5 w-5" strokeWidth={2.5} /> : <LayoutGrid className="h-5 w-5" strokeWidth={2.5} />}
           </div>
           <span className={cn(
-            "text-[10px] font-bold tracking-wide mt-1",
+            "text-[9px] font-bold tracking-wide mt-1 absolute -bottom-4",
             isTileMenuOpen ? "text-gray-800 dark:text-gray-200" : "text-brand-600 dark:text-brand-400"
           )}>
             {isTileMenuOpen ? 'Close' : 'Menu'}
@@ -608,33 +613,33 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         <button 
           onClick={() => {
-            navigate('/subscription');
+            navigate('/billing');
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-2 rounded-2xl w-16 transition-colors",
-            location.pathname.includes('/subscription') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/billing') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >
-          <CreditCard className="h-6 w-6 mb-1" strokeWidth={location.pathname.includes('/subscription') ? 2.5 : 2} />
-          <span className="text-[10px] font-medium tracking-wide">Plans</span>
+          <IndianRupee className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/billing') ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide">Billing</span>
         </button>
 
         <button 
           onClick={() => {
-            navigate(profileTarget);
+            navigate('/settings');
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-2 rounded-2xl w-16 transition-colors",
-            location.pathname.includes('/profile') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
+            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            location.pathname.includes('/settings') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >
-          <User className="h-6 w-6 mb-1" strokeWidth={location.pathname.includes('/profile') ? 2.5 : 2} />
-          <span className="text-[10px] font-medium tracking-wide">Profile</span>
+          <Building2 className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/settings') ? 2.5 : 2} />
+          <span className="text-[9px] font-medium tracking-wide leading-tight text-center">Info</span>
         </button>
       </div>
 
     </div>
   );
-}; 
+};

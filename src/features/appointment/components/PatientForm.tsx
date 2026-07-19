@@ -16,6 +16,7 @@ import { useAppStore } from '@/store/appStore';
 import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
 import { toast } from '@/hooks/use-toast';
 import { patientProfileApi } from '@/features/patient/services/patientProfileApi';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 // Define types locally to avoid import issues
 interface Doctor {
@@ -192,6 +193,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   // Fuzzy duplicate detection (only while entering a brand-new patient).
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
   const [dupDismissed, setDupDismissed] = useState(false);
@@ -542,6 +544,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   const performBooking = async () => {
+    if (isSubscriptionReadOnly) {
+      blockAction(editAppointment ? 'Editing appointments' : 'Booking appointments');
+      return;
+    }
     setIsSubmitting(true);
     try {
       // Generate patient ID automatically before sending request
@@ -1495,7 +1501,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <Button
             type="submit"
             form="patient-form"
-            disabled={isSubmitting || isBookingLoading || !isFormReady}
+            disabled={isSubmitting || isBookingLoading || !isFormReady || isSubscriptionReadOnly}
             className="flex-1 md:flex-none md:min-w-[280px] h-10 md:h-11 md:text-base bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 gap-2 shadow-lg shadow-brand-500/30"
           >
             {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -1550,6 +1556,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             </Button>
             <Button
               type="button"
+              disabled={isSubscriptionReadOnly}
               className="bg-amber-600 hover:bg-amber-700 text-white"
               onClick={() => { setShowDupConfirm(false); performBooking(); }}
             >

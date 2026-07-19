@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,14 @@ export const AdminDashboard = () => {
   // Fix: Ensure setCurrentView is defined
   const [dateFilter, setDateFilter] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentView, setCurrentView] = useState('dashboard');
+  const location = useLocation();
+  const [currentView, setCurrentView] = useState<string>((location.state as any)?.view || 'dashboard');
+
+  useEffect(() => {
+    if ((location.state as any)?.view) {
+      setCurrentView((location.state as any).view);
+    }
+  }, [location.state]);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [regulatoryBannerDismissed, setRegulatoryBannerDismissed] = useState(() => {

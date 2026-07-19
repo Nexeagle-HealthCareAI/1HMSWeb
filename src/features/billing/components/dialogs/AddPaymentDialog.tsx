@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isReachable } from '@/offline';
 import { ipdBillingService, type AddPaymentRequest, type PaymentMode, type PaymentType } from '../../services/ipdBillingService';
 import { PAYMENT_MODES } from '../../utils/constants';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 export interface AddPaymentDialogProps {
     open: boolean;
@@ -35,6 +36,7 @@ export interface AddPaymentDialogProps {
 
 export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpenChange, patientId, encounterId, netBalance, dueAmount, initialType, onSaved }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
     const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
     const [amount, setAmount] = useState(0);
@@ -64,6 +66,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
 
     const submit = async () => {
         if (submitting) return;
+        if (isSubscriptionReadOnly) { blockAction(paymentType === 'REFUND' ? 'Processing refunds' : 'Taking payments'); return; }
         if (amount <= 0) { toast({ title: 'Amount must be > 0', variant: 'destructive' }); return; }
         if (exceedsCredit) { toast({ title: 'Refund exceeds available credit', variant: 'destructive' }); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
@@ -265,7 +268,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
+                    <Button onClick={submit} disabled={submitting || isSubscriptionReadOnly} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : <><CreditCard className="h-4 w-4 mr-2" />Record</>}
                     </Button>
                 </div>

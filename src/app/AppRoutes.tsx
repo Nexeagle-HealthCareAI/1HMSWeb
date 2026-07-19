@@ -68,6 +68,7 @@ const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
+const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
 
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
@@ -316,6 +317,16 @@ export const AppRoutes: React.FC = () => {
               }
             />
             <Route
+              path="/settings"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <SettingsPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
               path="/subscription"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
@@ -516,7 +527,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>
@@ -526,7 +537,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/ledger"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -536,7 +547,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/:appointmentId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>

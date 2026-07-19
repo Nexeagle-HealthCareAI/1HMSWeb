@@ -45,12 +45,14 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
   const { getAllRoles, quickAddUser, updateUser, shareCredentials } = useUserManagementApi();
   const rolesQuery = getAllRoles();
   // The roles table holds a system role plus a per-hospital copy of each role (same name),
-  // so the raw list repeats names. Show each role type once.
+  // so the raw list repeats names. Show each role type once. Team members can only be onboarded
+  // as Doctor or AdminDoctor — other role types aren't assignable from this form.
   const roles = useMemo(() => {
     const seen = new Set<string>();
     return (rolesQuery.data?.allRoles ?? []).filter(r => {
       const key = r.roleName?.trim().toLowerCase();
       if (!key || seen.has(key)) return false;
+      if (!DOCTOR_ROLES.includes(key)) return false;
       seen.add(key);
       return true;
     });

@@ -40,6 +40,7 @@ import { PatientProfileData } from '../services/patientProfileApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
 import { PatientProfileModal } from '../components/PatientProfileModal';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface PatientData {
   id: string;
@@ -78,6 +79,7 @@ export const PatientProfilePage: React.FC = () => {
     getHospitalId,
     getDoctorId,
   } = useAuthStore();
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
 
   // Use patientId from route params or query params
   const patientId = routePatientId || queryPatientId;
@@ -253,6 +255,7 @@ export const PatientProfilePage: React.FC = () => {
   };
 
   const handleSaveForLater = async () => {
+    if (isSubscriptionReadOnly) { blockAction('Saving a prescription draft'); return; }
     if (ePrescriptionPadRef.current) {
       await ePrescriptionPadRef.current.saveDraft();
     }
@@ -488,10 +491,11 @@ export const PatientProfilePage: React.FC = () => {
                             size="sm"
                             className="text-xs sm:text-sm h-8 sm:h-9 border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900/50"
                             onClick={handleSaveForLater}
+                            disabled={isSubscriptionReadOnly}
                           >
                             Save for later
                           </Button>
-                          <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => setShowSubmitConfirm(true)}>
+                          <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => isSubscriptionReadOnly ? blockAction('Submitting a prescription') : setShowSubmitConfirm(true)} disabled={isSubscriptionReadOnly}>
                             Submit
                           </Button>
                         </div>

@@ -104,6 +104,7 @@ import { ipdBillingService } from '@/features/billing/services/ipdBillingService
 import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
 import { getOpdDocHtml, buildPrintSettingsFromHospital, type OpdDocKind } from '@/features/billing/utils/opdDocuments';
 import { useHospitalApi } from '@/hooks/useApi';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -113,6 +114,9 @@ export const AppointmentDashboard = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { mutateAsync: cancelAppointmentMutation, isPending: isCancellingMutation } = useCancelAppointment();
+  // Subscription expired -> viewing stays fully enabled, write actions (cancel/reschedule/edit/
+  // confirm/vitals/billing) get disabled — see useSubscriptionReadOnly's doc comment.
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   // Hospital profile drives the print header (name/address/GSTIN) for OPD documents.
   const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
   const [searchTerm, setSearchTerm] = useState('');
@@ -239,6 +243,7 @@ export const AppointmentDashboard = () => {
   };
 
   const handleRescheduleClick = (appointment: AppointmentDetail) => {
+    if (isSubscriptionReadOnly) { blockAction('Rescheduling appointments'); return; }
     setAppointmentToReschedule(appointment);
     setShowRescheduleDialog(true);
   };
@@ -249,6 +254,7 @@ export const AppointmentDashboard = () => {
   };
 
   const handleConfirmPreAppointmentClick = (appointment: AppointmentDetail) => {
+    if (isSubscriptionReadOnly) { blockAction('Confirming appointments'); return; }
     setAppointmentToConfirm(appointment);
     setShowConfirmPreAppointmentDialog(true);
   };
@@ -259,6 +265,7 @@ export const AppointmentDashboard = () => {
   };
 
   const handleEditClick = (appointment: AppointmentDetail) => {
+    if (isSubscriptionReadOnly) { blockAction('Editing appointments'); return; }
     setAppointmentToEdit(appointment);
     setShowEditAppointment(true);
   };
@@ -286,7 +293,7 @@ export const AppointmentDashboard = () => {
       case 'PRE_APPOINTMENT':
         return (
           <Badge
-            className="bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
+            className={`bg-amber-50 text-amber-700 border-amber-200 transition-colors text-xs px-1.5 py-0.5 font-medium ${isSubscriptionReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-amber-100'}`}
             onClick={() => appointment && handleConfirmPreAppointmentClick(appointment)}
           >
             {statusLabels.PRE_APPOINTMENT}
@@ -295,7 +302,7 @@ export const AppointmentDashboard = () => {
       case 'VITALS_REQUIRED':
         return (
           <Badge
-            className="bg-red-50 text-red-700 border-red-200 cursor-pointer hover:bg-red-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
+            className={`bg-red-50 text-red-700 border-red-200 transition-colors text-xs px-1.5 py-0.5 font-medium ${isSubscriptionReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-red-100'}`}
             onClick={() => appointment && handleVitalsClick(appointment)}
           >
             {statusLabels.VITALS_REQUIRED}
@@ -304,7 +311,7 @@ export const AppointmentDashboard = () => {
       case 'READY':
         return (
           <Badge
-            className="bg-green-50 text-green-700 border-green-200 cursor-pointer hover:bg-green-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
+            className={`bg-green-50 text-green-700 border-green-200 transition-colors text-xs px-1.5 py-0.5 font-medium ${isSubscriptionReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-green-100'}`}
             onClick={() => appointment && handleVitalsClick(appointment)}
           >
             {statusLabels.READY}
@@ -328,6 +335,7 @@ export const AppointmentDashboard = () => {
   };
 
   const handleVitalsClick = (appointment: AppointmentDetail) => {
+    if (isSubscriptionReadOnly) { blockAction('Recording vitals'); return; }
     setSelectedPatient(appointment);
     setShowVitalsForm(true);
   };
@@ -424,6 +432,8 @@ export const AppointmentDashboard = () => {
       return;
     }
 
+    if (isSubscriptionReadOnly) { blockAction('Billing'); return; }
+
     setAppointmentForBilling(appointment);
     setBillConsultCtx({ autoConsult: false, fee: 0 });
     setBillPaymentMode('cash');
@@ -457,6 +467,7 @@ export const AppointmentDashboard = () => {
   // patient has arrived. Backend is idempotent, so this won't double-charge.
   const handleCollectConsult = async (markPaid: boolean) => {
     if (!appointmentForBilling?.patientId || billBusy) return;
+    if (isSubscriptionReadOnly) { blockAction('Billing'); return; }
     if (!isReachable()) { toast({ title: 'Needs connection', description: 'Billing the consult requires an internet connection.', variant: 'destructive' }); return; }
     setBillBusy(true);
     try {
@@ -528,6 +539,7 @@ export const AppointmentDashboard = () => {
   // Uses the visit's encounter when known, otherwise the ledger resolves the patient by id.
   const goToBilling = (appt: AppointmentDetail | null) => {
     if (!appt?.patientId) return;
+    if (isSubscriptionReadOnly) { blockAction('Billing'); return; }
     const enc = billStatus?.encounterId;
     const base = enc ? `/billing/${enc}` : '/billing/ledger';
     handleAddBillModalChange(false);
@@ -1109,12 +1121,14 @@ export const AppointmentDashboard = () => {
   };
 
   const handleCancelClick = (appointment: AppointmentDetail) => {
+    if (isSubscriptionReadOnly) { blockAction('Cancelling appointments'); return; }
     setAppointmentToCancel(appointment);
     setCancelDialogOpen(true);
   };
 
   const handleCancelConfirm = async () => {
     if (!appointmentToCancel || !hospitalId) return;
+    if (isSubscriptionReadOnly) { blockAction('Cancelling appointments'); return; }
 
     setIsCancelling(true);
     try {
@@ -1905,7 +1919,7 @@ export const AppointmentDashboard = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={appointment.finalStatusCode === 'CANCELLED'}
+                                    disabled={appointment.finalStatusCode === 'CANCELLED' || (isSubscriptionReadOnly && !appointment.consultPaid)}
                                     title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
                                     className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${appointment.finalStatusCode === 'CANCELLED'
                                       ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
@@ -1940,6 +1954,7 @@ export const AppointmentDashboard = () => {
                                     >
                                       {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                                         <DropdownMenuItem
+                                          disabled={isSubscriptionReadOnly}
                                           onClick={() => handleVitalsClick(appointment)}
                                           className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-fuchsia-600 dark:text-fuchsia-400 focus:text-fuchsia-700 focus:bg-fuchsia-50 dark:focus:bg-fuchsia-900/20 cursor-pointer transition-colors"
                                         >
@@ -1949,6 +1964,7 @@ export const AppointmentDashboard = () => {
                                       )}
                                       {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
                                         <DropdownMenuItem
+                                          disabled={isSubscriptionReadOnly}
                                           onClick={() => handleConfirmPreAppointmentClick(appointment)}
                                           className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-amber-600 dark:text-amber-400 focus:text-amber-700 focus:bg-amber-50 dark:focus:bg-amber-900/20 cursor-pointer transition-colors"
                                         >
@@ -1957,7 +1973,7 @@ export const AppointmentDashboard = () => {
                                         </DropdownMenuItem>
                                       )}
                                       <DropdownMenuItem
-                                        disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                        disabled={isSubscriptionReadOnly || ['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                         onClick={() => handleRescheduleClick(appointment)}
                                         className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-brand-600 dark:text-brand-400 focus:text-brand-700 focus:bg-brand-50 dark:focus:bg-brand-900/20 cursor-pointer transition-colors"
                                       >
@@ -1965,7 +1981,7 @@ export const AppointmentDashboard = () => {
                                         Reschedule
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
-                                        disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                        disabled={isSubscriptionReadOnly || ['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                         onClick={() => handleEditClick(appointment)}
                                         className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 focus:text-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 cursor-pointer transition-colors"
                                       >
@@ -1974,7 +1990,7 @@ export const AppointmentDashboard = () => {
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator className="my-1 bg-slate-100 dark:bg-slate-800" />
                                       <DropdownMenuItem
-                                        disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                        disabled={isSubscriptionReadOnly || ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                         onClick={() => handleCancelClick(appointment)}
                                         className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 focus:text-rose-700 focus:bg-rose-50 dark:focus:bg-rose-900/20 cursor-pointer transition-colors"
                                       >
@@ -2086,12 +2102,12 @@ export const AppointmentDashboard = () => {
                                 {/* Primary Action */}
                                 <div className="flex-1 mr-2">
                                   {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
-                                    <Button size="sm" onClick={() => handleVitalsClick(appointment)} className="h-8 w-full text-xs font-bold rounded-lg bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-400 shadow-sm transition-all">
+                                    <Button size="sm" disabled={isSubscriptionReadOnly} onClick={() => handleVitalsClick(appointment)} className="h-8 w-full text-xs font-bold rounded-lg bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-400 shadow-sm transition-all">
                                       <Heart className="h-3 w-3 mr-1.5" /> Vitals
                                     </Button>
                                   )}
                                   {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
-                                    <Button size="sm" onClick={() => handleConfirmPreAppointmentClick(appointment)} className="h-8 w-full text-xs font-bold rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 shadow-sm transition-all">
+                                    <Button size="sm" disabled={isSubscriptionReadOnly} onClick={() => handleConfirmPreAppointmentClick(appointment)} className="h-8 w-full text-xs font-bold rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 shadow-sm transition-all">
                                       <CheckCircle2 className="h-3 w-3 mr-1.5" /> Confirm
                                     </Button>
                                   )}
@@ -2104,6 +2120,7 @@ export const AppointmentDashboard = () => {
                                     <Button
                                       variant="outline"
                                       size="icon"
+                                      disabled={isSubscriptionReadOnly && !appointment.consultPaid}
                                       title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
                                       onClick={() => handleAddBillClick(appointment)}
                                       className={`h-8 w-8 rounded-lg shadow-sm transition-all ${appointment.consultPaid ? 'border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'border-amber-200 text-amber-700 bg-white dark:bg-zinc-800 dark:border-zinc-700'}`}
@@ -2131,8 +2148,8 @@ export const AppointmentDashboard = () => {
                                       {activeTab !== 'past' && (
                                         <>
                                           <DropdownMenuSeparator className="dark:bg-zinc-800 my-1" />
-                                          <DropdownMenuItem 
-                                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                          <DropdownMenuItem
+                                            disabled={isSubscriptionReadOnly || ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                             onClick={() => handleCancelClick(appointment)}
                                             className="py-2.5 font-medium text-rose-600 dark:text-rose-400 focus:text-rose-700 focus:bg-rose-50 dark:focus:bg-rose-900/20 cursor-pointer rounded-lg"
                                           >
@@ -2479,17 +2496,17 @@ export const AppointmentDashboard = () => {
                   billStatus?.consultPaid ? null : (
                     <>
                       {!billStatus?.consultCharged && (
-                        <Button variant="outline" onClick={() => handleCollectConsult(false)} disabled={billBusy} className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300">
+                        <Button variant="outline" onClick={() => handleCollectConsult(false)} disabled={billBusy || isSubscriptionReadOnly} className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300">
                           {t('appointmentDashboard.addBill.markUnpaid')}
                         </Button>
                       )}
-                      <Button onClick={() => handleCollectConsult(true)} disabled={billBusy} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                      <Button onClick={() => handleCollectConsult(true)} disabled={billBusy || isSubscriptionReadOnly} className="bg-emerald-600 text-white hover:bg-emerald-700">
                         {billBusy ? t('appointmentDashboard.addBill.saving') : t('appointmentDashboard.addBill.markPaid')}
                       </Button>
                     </>
                   )
                 ) : (
-                  <Button onClick={() => goToBilling(appointmentForBilling)} className="bg-brand-600 text-white hover:bg-brand-700">
+                  <Button onClick={() => goToBilling(appointmentForBilling)} disabled={isSubscriptionReadOnly} className="bg-brand-600 text-white hover:bg-brand-700">
                     {t('appointmentDashboard.addBill.goToBilling', { defaultValue: 'Go to Billing' })}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>

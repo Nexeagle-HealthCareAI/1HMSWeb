@@ -17,6 +17,7 @@ import {
 } from '../services/ipdBillingService';
 import { offlineMutation } from '@/offline';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface AddChargesModalProps {
     open: boolean;
@@ -56,6 +57,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
     open, onOpenChange, encounterId, patientId, appliesToFilter, onCharged,
 }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [catalog, setCatalog] = useState<ChargeMaster[]>([]);
     const [loadingCatalog, setLoadingCatalog] = useState(false);
     const [search, setSearch] = useState('');
@@ -128,6 +130,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
+        if (isSubscriptionReadOnly) { blockAction('Adding charges'); return; }
         setSubmitting(true);
         try {
             const charges = validLines.map(l => ({
@@ -339,7 +342,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                         <X className="h-4 w-4 mr-1" /> Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700">
+                    <Button onClick={handleSubmit} disabled={!canSubmit || isSubscriptionReadOnly} className="bg-brand-600 hover:bg-brand-700">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Posting…</> : `Post ${validLines.length} Charge${validLines.length !== 1 ? 's' : ''}`}
                     </Button>
                 </DialogFooter>

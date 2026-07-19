@@ -7,6 +7,7 @@ import { useAuthApi, useInvalidateQueries } from '@/hooks/useApi';
 import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import {
   PasswordLoginForm,
   OTPLoginForm,
@@ -16,7 +17,7 @@ import {
 } from '@/features/auth/components';
 import { PasswordResetSuccessModal } from '@/components/modals';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
+import { Building2, AlertCircle, ArrowRight, X, Download } from 'lucide-react';
 import { HospitalBrandingModal } from '@/features/hospital/components/HospitalBrandingModal';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { API_ENDPOINTS } from '@/app/api';
@@ -52,11 +53,13 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Password reset success state
   const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(false);
 
-  // Hospital mapping 404 state
   const [showHospitalMapping404, setShowHospitalMapping404] = useState(false);
   const [showHospitalBrandingModal, setShowHospitalBrandingModal] = useState(false);
+  const [hospitalSelectionError, setHospitalSelectionError] = useState<string | null>(null);
 
-  // Helper function to get user-friendly error messages
+  const { isInstallable, promptInstall } = useInstallPrompt();
+
+  // Reset form and validation errors when switching login type
   const getErrorMessage = (error: any): string => {
     // If it's already a user-friendly message, return it
     if (error instanceof Error && !error.message.includes('Request failed')) {
@@ -970,6 +973,19 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           </p>
         </div>
       </div>
+
+      {isInstallable && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <Button
+            onClick={async () => await promptInstall()}
+            variant="outline"
+            className="w-full h-12 flex items-center justify-center gap-2 border-primary/30 hover:bg-primary/5 text-primary"
+          >
+            <Download className="w-5 h-5" />
+            <span className="font-semibold text-base">Install Web App</span>
+          </Button>
+        </div>
+      )}
     </LoginLayout>
   );
 }; 

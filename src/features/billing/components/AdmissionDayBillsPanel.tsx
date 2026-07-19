@@ -13,6 +13,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { ipdBillingService, type AdmissionDayBillsData, type AdmissionDayView } from '../services/ipdBillingService';
 import { buildInterimBillA4 } from '@/printTemplates/interimBillA4';
 import { openPrintHtml } from '@/utils/printUtils';
@@ -44,6 +45,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
     const { toast } = useToast();
     const { hospitalId: authHospitalId } = useAuthStore();
     const hid = hospitalId ?? authHospitalId ?? undefined;
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
 
     const [data, setData] = useState<AdmissionDayBillsData | null>(null);
     const [loading, setLoading] = useState(false);
@@ -76,6 +78,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
 
     const handleClose = async () => {
         if (!encounterId || busy) return;
+        if (isSubscriptionReadOnly) { blockAction('Closing the day\'s bill'); return; }
         setBusy(true);
         try {
             const res = await ipdBillingService.closeVisitDay(encounterId, hid);
@@ -92,6 +95,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
 
     const handleReopen = async () => {
         if (!reopenTarget?.admissionDayBillId || !reopenReason.trim() || busy) return;
+        if (isSubscriptionReadOnly) { blockAction('Reopening the day\'s bill'); return; }
         setBusy(true);
         try {
             const res = await ipdBillingService.reopenVisitDay(reopenTarget.admissionDayBillId, reopenReason.trim(), hid);
@@ -145,7 +149,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                 </CardTitle>
                 <div className="flex items-center gap-2">
                     {openDay && (
-                        <Button size="sm" onClick={handleClose} disabled={busy}
+                        <Button size="sm" onClick={handleClose} disabled={busy || isSubscriptionReadOnly}
                             className="h-8 px-3 rounded-lg text-xs bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white">
                             {busy ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Lock className="h-3.5 w-3.5 mr-1" />}
                             Close Day {openDay.dayNumber}
@@ -237,7 +241,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                                                 </Button>
                                             )}
                                             {day.dayNumber === lastClosedDayNo && (
-                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-amber-700 hover:bg-amber-50" onClick={() => { setReopenTarget(day); setReopenReason(''); }} disabled={busy}>
+                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-amber-700 hover:bg-amber-50" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Reopening the day\'s bill'); return; } setReopenTarget(day); setReopenReason(''); }} disabled={busy}>
                                                     <Unlock className="h-3 w-3 mr-1" /> Reopen
                                                 </Button>
                                             )}

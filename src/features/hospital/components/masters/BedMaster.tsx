@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Filter, Plus, Edit2, Bed, DoorOpen, BedDouble, Archive, User, AlertCircle, X,
-    CheckSquare, Settings2, Trash2, RefreshCw, Loader2, ChevronDown, ChevronRight, Building2,
+    CheckSquare, Settings2, Trash2, RefreshCw, Loader2, ChevronDown, ChevronRight, ChevronLeft, Building2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { bedService, type BedMasterItem, type UpsertBedMasterRequest } from '@/features/hospital/services/bedService';
 import { roomService, type RoomItem, type UpsertRoomRequest } from '@/features/hospital/services/roomService';
 import { useAuthStore } from '@/store/authStore';
@@ -147,6 +148,7 @@ export const BedMaster = () => {
     // Deactivated beds are hidden from the bed lists by default — they're kept for history but
     // shouldn't look "still there" after being deactivated. Toggle to bring them back into view.
     const [showInactive, setShowInactive] = useState(false);
+    const [viewMode, setViewMode] = useState<'rooms' | 'beds'>('rooms');
 
     // Left-panel navigation: 'ALL' | `floor:<floorNo>` | `room:<roomId>` | 'UNASSIGNED'
     const [selectedNode, setSelectedNode] = useState('ALL');
@@ -258,6 +260,19 @@ export const BedMaster = () => {
         if (parsedNode.kind === 'ALL') return rooms.filter(matchesFilters);
         return [];
     }, [rooms, parsedNode, matchesFilters]);
+
+    const allBedsForRightPanel = useMemo(() => {
+        if (parsedNode.kind !== 'ALL' && parsedNode.kind !== 'floor') return [];
+        return beds.filter(b => {
+            if (parsedNode.kind === 'floor' && b.floorNo !== parsedNode.floorNo && (b.floorNo || UNASSIGNED_FLOOR) !== parsedNode.floorNo) return false;
+            if (!showInactive && !b.isActive) return false;
+            const matchesSearch = !searchTerm || b.bedCode.toLowerCase().includes(searchTerm.toLowerCase())
+                || b.wardCode.toLowerCase().includes(searchTerm.toLowerCase())
+                || (b.roomCode && b.roomCode.toLowerCase().includes(searchTerm.toLowerCase()));
+            const matchesWardType = filterWardType === 'ALL' || b.wardType === filterWardType;
+            return matchesSearch && matchesWardType;
+        });
+    }, [beds, searchTerm, filterWardType, showInactive, parsedNode]);
 
     // --- Navigation actions ---
     const toggleFloorExpand = (floorNo: string) => {
@@ -552,7 +567,8 @@ export const BedMaster = () => {
         return (
             <motion.div
                 layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key={bed.id}
-                className={`relative bg-white dark:bg-slate-900 rounded-xl border shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md ${isChecked ? 'border-brand-400 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-gray-200 dark:border-gray-800'} ${!bed.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                whileTap={{ scale: 0.98 }}
+                className={`relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-xl border shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md ${isChecked ? 'border-brand-400 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-gray-200 dark:border-gray-800'} ${!bed.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
             >
                 {bed.isActive && (
                     <button
@@ -625,7 +641,8 @@ export const BedMaster = () => {
         return (
             <motion.div
                 layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key={room.roomId}
-                className={`relative bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md cursor-pointer ${!room.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                whileTap={{ scale: 0.98 }}
+                className={`relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md cursor-pointer ${!room.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
                 onClick={() => selectRoom(room)}
             >
                 <div className={`h-1.5 w-full ${isFull ? 'bg-amber-400' : 'bg-emerald-400'}`} />
@@ -700,11 +717,11 @@ export const BedMaster = () => {
                     </label>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" size="sm" onClick={() => loadAll(true)} disabled={refreshing || loading} className="gap-1.5">
+                <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    <Button variant="outline" size="sm" onClick={() => loadAll(true)} disabled={refreshing || loading} className="gap-1.5 max-sm:hidden">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button onClick={() => handleOpenRoomDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
+                    <Button onClick={() => handleOpenRoomDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 max-sm:hidden">
                         <Plus className="h-4 w-4" /> Add Room
                     </Button>
                 </div>
@@ -786,7 +803,29 @@ export const BedMaster = () => {
                 {/* RIGHT PANEL */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-slate-950/50">
                     <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-500 dark:text-gray-400">
+                        {parsedNode.kind !== 'ALL' && (
+                            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 mr-1 -ml-2 rounded-full" onClick={() => setSelectedNode('ALL')}>
+                                <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                        )}
                         <Building2 className="h-4 w-4" /> {rightPanelTitle}
+                        
+                        {(parsedNode.kind === 'ALL' || parsedNode.kind === 'floor') && (
+                            <div className="ml-auto flex items-center bg-gray-200/50 dark:bg-slate-800/50 rounded-lg p-1 border border-gray-200/80 dark:border-gray-800/80">
+                                <button
+                                    onClick={() => setViewMode('rooms')}
+                                    className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", viewMode === 'rooms' ? "bg-white dark:bg-slate-700 text-brand-700 dark:text-brand-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}
+                                >
+                                    Rooms
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('beds')}
+                                    className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", viewMode === 'beds' ? "bg-white dark:bg-slate-700 text-brand-700 dark:text-brand-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}
+                                >
+                                    Beds
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {selectedBedIds.size > 0 && (
@@ -824,16 +863,30 @@ export const BedMaster = () => {
                     )}
 
                     {!loading && !loadError && (parsedNode.kind === 'ALL' || parsedNode.kind === 'floor') && (
-                        roomsForRightPanel.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 ml:grid-cols-3 2xl:grid-cols-4 gap-4">
-                                {roomsForRightPanel.map(renderRoomCard)}
-                            </div>
+                        viewMode === 'rooms' ? (
+                            roomsForRightPanel.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 ml:grid-cols-3 2xl:grid-cols-4 gap-4">
+                                    {roomsForRightPanel.map(renderRoomCard)}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
+                                    <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+                                    <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">{rooms.length === 0 ? 'No rooms configured yet' : 'No rooms match your filters'}</p>
+                                    <p className="text-sm mt-1 max-w-sm">{rooms.length === 0 ? 'Click "Add Room" to set up a floor, room number and its beds in one step.' : 'Try a different search or ward type filter.'}</p>
+                                </div>
+                            )
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
-                                <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                                <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">{rooms.length === 0 ? 'No rooms configured yet' : 'No rooms match your filters'}</p>
-                                <p className="text-sm mt-1 max-w-sm">{rooms.length === 0 ? 'Click "Add Room" to set up a floor, room number and its beds in one step.' : 'Try a different search or ward type filter.'}</p>
-                            </div>
+                            allBedsForRightPanel.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 ml:grid-cols-3 2xl:grid-cols-4 gap-4">
+                                    {allBedsForRightPanel.map(renderBedCard)}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
+                                    <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+                                    <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No beds found</p>
+                                    <p className="text-sm mt-1 max-w-sm">Try a different search or filter, or add beds to a room.</p>
+                                </div>
+                            )
                         )
                     )}
 
@@ -889,13 +942,13 @@ export const BedMaster = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[100]"
                             onClick={() => setIsRoomDrawerOpen(false)}
                         />
                         <motion.div
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[110] flex flex-col"
                         >
                             <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600">
                                 <div className="flex items-center gap-3 min-w-0">
@@ -999,7 +1052,7 @@ export const BedMaster = () => {
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
+                            <div className="p-4 max-lg:pb-24 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
                                 <Button variant="ghost" onClick={() => setIsRoomDrawerOpen(false)}>Cancel</Button>
                                 <Button disabled={isSavingRoom || !isRoomValid} onClick={handleSaveRoom} className="bg-brand-600 hover:bg-brand-700 text-white">
                                     {isSavingRoom ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : (editingRoom.roomId ? 'Save' : 'Create Room + Beds')}
@@ -1016,13 +1069,13 @@ export const BedMaster = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[100]"
                             onClick={() => setIsBedDrawerOpen(false)}
                         />
                         <motion.div
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[110] flex flex-col"
                         >
                             <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600">
                                 <div className="flex items-center gap-3 min-w-0">
@@ -1135,7 +1188,7 @@ export const BedMaster = () => {
                                 </section>
                             </div>
 
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
+                            <div className="p-4 max-lg:pb-24 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
                                 <Button variant="ghost" onClick={() => setIsBedDrawerOpen(false)}>Cancel</Button>
                                 <motion.button
                                     disabled={isSavingBed || isSuccess || !isBedValid}
@@ -1151,6 +1204,14 @@ export const BedMaster = () => {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* MOBILE FAB */}
+            <button 
+                className="sm:hidden fixed bottom-[90px] right-6 h-14 w-14 bg-brand-600 text-white rounded-2xl shadow-xl flex items-center justify-center z-40 hover:bg-brand-700 active:scale-95 transition-all shadow-brand-500/30"
+                onClick={() => handleOpenRoomDrawer(null)}
+            >
+                <Plus className="h-6 w-6" />
+            </button>
 
             <Dialog open={!!resultModal} onOpenChange={(open) => !open && setResultModal(null)}>
                 <DialogContent>

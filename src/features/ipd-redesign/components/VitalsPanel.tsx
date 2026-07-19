@@ -10,6 +10,7 @@ import { vitalsApi, type VitalReadingItem, type RecordVitalReadingFields } from 
 import { VitalsTrendChart } from './VitalsTrendChart';
 import { EarlyWarningScorePanel } from './EarlyWarningScorePanel';
 import { formatIstDateTime } from '../utils/istDate';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
     admissionId: string;
@@ -20,6 +21,7 @@ const EMPTY_FORM: RecordVitalReadingFields = {};
 
 export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [readings, setReadings] = useState<VitalReadingItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<'table' | 'chart'>('chart');
@@ -47,6 +49,7 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             toast({ title: 'Incomplete', description: 'Enter at least one vital value.', variant: 'destructive' });
             return;
         }
+        if (isSubscriptionReadOnly) { blockAction('Recording vitals'); return; }
         setSubmitting(true);
         try {
             await vitalsApi.record(admissionId, form);
@@ -81,7 +84,7 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                         <RefreshCw className={loading ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} /> Refresh
                     </Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={() => { setForm({ ...EMPTY_FORM }); setNewOpen(true); }}>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Recording vitals'); return; } setForm({ ...EMPTY_FORM }); setNewOpen(true); }} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" /> Record reading
                         </Button>
                     )}
@@ -201,7 +204,7 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                         <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!hasAnyValue || submitting} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button disabled={!hasAnyValue || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

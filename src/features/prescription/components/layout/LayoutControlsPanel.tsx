@@ -91,7 +91,7 @@ export const LayoutControlsPanel = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

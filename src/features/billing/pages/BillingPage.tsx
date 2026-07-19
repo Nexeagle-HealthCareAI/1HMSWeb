@@ -43,6 +43,7 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { downloadHtmlAsPdf, openBlankPrintWindow, writeAndPrint } from '@/utils/printUtils';
 import { getOpdDocHtml, buildPrintSettingsFromHospital, splitChargePeriod, type OpdDocKind } from '../utils/opdDocuments';
 import { Download } from 'lucide-react';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 // Render a backend timestamp in IST. Naive (offset-less) timestamps are treated as UTC,
 // since the backend stores UTC — so they convert correctly to Asia/Kolkata.
@@ -81,6 +82,9 @@ export const BillingPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const initialPatientId = searchParams.get('patientId');
     const { hospitalId } = useAuthStore();
+    // Subscription expired -> viewing/printing the ledger stays fully enabled, every write below
+    // (visits, charges, payments, void, discount, finalize/reopen) is gated.
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
     const [invoicing, setInvoicing] = useState(false);
     const [docBusy, setDocBusy] = useState(false);
@@ -234,6 +238,7 @@ export const BillingPage: React.FC = () => {
 
     const handleCreateVisit = async () => {
         if (!selectedPatient || creatingVisit) return;
+        if (isSubscriptionReadOnly) { blockAction('Creating a new visit'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Opening a new visit requires an internet connection.', variant: 'destructive' }); return; }
         setCreatingVisit(true);
         try {
@@ -256,6 +261,7 @@ export const BillingPage: React.FC = () => {
 
     const handleVoid = async () => {
         if (!voidConfirm || !selectedPatient || voidBusy) return;
+        if (isSubscriptionReadOnly) { blockAction(voidConfirm.kind === 'charge' ? 'Removing charges' : 'Removing payments'); return; }
         setVoidBusy(true);
         try {
             const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
@@ -279,6 +285,7 @@ export const BillingPage: React.FC = () => {
     // out an invoice-level discount, which was never real cash collected and so can never be
     // refunded (see the AddPaymentDialog netBalance fix above for the same distinction).
     const openRefundProcess = () => {
+        if (isSubscriptionReadOnly) { blockAction('Processing refunds'); return; }
         setAddPaymentInitialType('REFUND');
         setShowAddPayment(true);
     };
@@ -287,6 +294,7 @@ export const BillingPage: React.FC = () => {
     // the bill, then finalize. After this no charges/payments can be added until reopened.
     const handleFinalize = async () => {
         if (!selectedPatient || !selectedEncounterId || invoicing) return;
+        if (isSubscriptionReadOnly) { blockAction('Finalizing the invoice'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Finalizing an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setInvoicing(true);
         try {
@@ -306,6 +314,7 @@ export const BillingPage: React.FC = () => {
     // Reopen a finalized invoice back to DRAFT (audit reason required) so it can be edited again.
     const handleReopen = async () => {
         if (!selectedPatient || !selectedEncounterId || !reopenReason.trim() || invoicing) return;
+        if (isSubscriptionReadOnly) { blockAction('Reopening the invoice'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Reopening an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setInvoicing(true);
         try {
@@ -326,6 +335,7 @@ export const BillingPage: React.FC = () => {
     // discount amount so the invoice net (and the due) update. Passing 0 clears it.
     const handleApplyDiscount = async (explicitAmount?: number) => {
         if (!selectedPatient || !selectedEncounterId || invoicing) return;
+        if (isSubscriptionReadOnly) { blockAction('Applying a discount'); return; }
         let amount: number;
         if (explicitAmount !== undefined) {
             amount = explicitAmount;
@@ -775,7 +785,7 @@ export const BillingPage: React.FC = () => {
                             ledger header, distinct dark premium style. Shown once a patient is selected. */}
                         {selectedPatient && (
                             <Button
-                                onClick={() => setShowNewVisit(true)}
+                                onClick={() => isSubscriptionReadOnly ? blockAction('Creating a new visit') : setShowNewVisit(true)}
                                 className="h-10 sm:h-9 px-6 w-full sm:w-auto sm:min-w-[220px] shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 ring-1 ring-white/10 shadow-md shadow-black/30 transition-all active:scale-[0.98]"
                             >
                                 <Plus className="h-4 w-4 mr-0.5" />Create New Invoice
@@ -846,10 +856,10 @@ export const BillingPage: React.FC = () => {
                                             </div>
                                             {!isFinalized && row.c.statusCode !== 'VOID' && (
                                                 <div className="flex justify-end gap-1.5 mt-2">
-                                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 })}>
+                                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Editing charges'); return; } setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 }); }}>
                                                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                                                     </Button>
-                                                    <Button size="sm" variant="outline" className="h-8 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
+                                                    <Button size="sm" variant="outline" className="h-8 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Removing charges'); return; } setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' }); }}>
                                                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                                                     </Button>
                                                 </div>
@@ -877,7 +887,7 @@ export const BillingPage: React.FC = () => {
                                                 <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={docBusy} title="Print this payment's receipt (80mm thermal)" onClick={() => handleDoc('receipt', 'print', row.p.paymentId, 'thermal')}><Receipt className="h-3.5 w-3.5" /></Button>
                                                 <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}><Download className="h-3.5 w-3.5" /></Button>
                                                 {!isFinalized && row.p.paymentType !== 'REFUND' && (
-                                                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' })}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Removing payments'); return; } setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                                 )}
                                             </div>
                                         </div>
@@ -934,10 +944,10 @@ export const BillingPage: React.FC = () => {
                                                 <td className="px-2 py-2 text-right whitespace-nowrap">
                                                     {!isFinalized && row.c.statusCode !== 'VOID' && (
                                                         <div className="inline-flex items-center gap-0.5">
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 })}>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Editing charges'); return; } setEditChargeTarget({ chargeEventId: row.c.chargeEventId, displayName: row.c.displayName ?? undefined, qty: Number(row.c.qty), rate: Number(row.c.rate), discountAmount: Number(row.c.discountAmount) || 0 }); }}>
                                                                 <Pencil className="h-3.5 w-3.5" />
                                                             </Button>
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Removing charges'); return; } setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' }); }}>
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
                                                         </div>
@@ -975,7 +985,7 @@ export const BillingPage: React.FC = () => {
                                                             <Download className="h-3.5 w-3.5" />
                                                         </Button>
                                                         {!isFinalized && row.p.paymentType !== 'REFUND' && (
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' })}>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Removing payments'); return; } setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' }); }}>
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
                                                         )}
@@ -1065,7 +1075,7 @@ export const BillingPage: React.FC = () => {
                         <div className="grid grid-cols-1 gap-2">
                             {/* Add Item supports staging several items via "+ Add another" inside the
                                 sheet and posting them together — no separate bulk-add flow needed. */}
-                            <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]">
+                            <Button onClick={() => isSubscriptionReadOnly ? blockAction('Adding charges') : setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]">
                                 <Plus className="h-4 w-4 mr-1" /> Add Item
                             </Button>
                             {/* Payments are decoupled from finalize: a finalized invoice can still be
@@ -1073,31 +1083,31 @@ export const BillingPage: React.FC = () => {
                                 and, separately, a real credit (totals.balance < 0, raw ledger) must
                                 still be refundable even once due <= 0, since due <= 0 is also true
                                 for a credit balance (it was disabling refunds on finalized bills). */}
-                            <Button onClick={() => { setAddPaymentInitialType('PAYMENT'); setShowAddPayment(true); }} disabled={!selectedEncounterId || (isFinalized && due <= 0 && totals.balance >= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                            <Button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Taking payments'); return; } setAddPaymentInitialType('PAYMENT'); setShowAddPayment(true); }} disabled={!selectedEncounterId || (isFinalized && due <= 0 && totals.balance >= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Take Payment
                             </Button>
                             {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
                             {selectedEncounterId && (
-                                <Button onClick={() => setShowDayWise(true)} variant="outline" className="h-10 rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50">
+                                <Button onClick={() => isSubscriptionReadOnly ? blockAction('Day-wise billing') : setShowDayWise(true)} variant="outline" className="h-10 rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50">
                                     <CalendarDays className="h-4 w-4 mr-1" /> Day-wise billing
                                 </Button>
                             )}
                             {/* Overall (invoice-level) discount — opens a premium drawer. */}
                             {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && (
-                                <Button onClick={() => { setDiscountInput(overallDiscount > 0 ? String(overallDiscount) : ''); setDiscountMode('amount'); setShowDiscount(true); }} variant="outline" className="h-10 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
+                                <Button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Applying a discount'); return; } setDiscountInput(overallDiscount > 0 ? String(overallDiscount) : ''); setDiscountMode('amount'); setShowDiscount(true); }} variant="outline" className="h-10 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
                                     <Percent className="h-4 w-4 mr-1" /> {overallDiscount > 0 ? 'Edit Discount' : 'Add Discount'}
                                 </Button>
                             )}
                             {/* The bill builds automatically as items are added or a payment is taken —
                                 no manual "generate / update invoice" step. Locking is the only bill action. */}
                             {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && (
-                                <Button onClick={() => setShowFinalizeConfirm(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:text-emerald-300">
+                                <Button onClick={() => isSubscriptionReadOnly ? blockAction('Finalizing the invoice') : setShowFinalizeConfirm(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:text-emerald-300">
                                     <Lock className="h-4 w-4 mr-1" /> Lock Bill
                                 </Button>
                             )}
                             {/* Unlock a finalized bill (audit reason required). */}
                             {selectedEncounterId && isFinalized && (
-                                <Button onClick={() => setReopenOpen(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800 dark:text-amber-300">
+                                <Button onClick={() => isSubscriptionReadOnly ? blockAction('Reopening the invoice') : setReopenOpen(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800 dark:text-amber-300">
                                     <Unlock className="h-4 w-4 mr-1" /> Unlock Bill
                                 </Button>
                             )}

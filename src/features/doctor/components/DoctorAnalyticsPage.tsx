@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store';
 import { doctorAnalyticsApi, type UI_AnalyticsData, type TimeBucketKey } from '../services/doctorAnalyticsApi';
 
 export const DoctorAnalyticsPage: React.FC = () => {
@@ -20,6 +21,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
     const [timeBucket, setTimeBucket] = useState<TimeBucketKey>('thisYear');
     const [analyticsData, setAnalyticsData] = useState<UI_AnalyticsData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
 
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
 
@@ -117,21 +119,46 @@ export const DoctorAnalyticsPage: React.FC = () => {
     return (
         <div className="space-y-6 animate-in fade-in duration-500 p-4 min-h-screen bg-gray-50/50 dark:bg-slate-950/50">
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+            <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8 p-4 md:p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl' : 'bg-white dark:bg-slate-900'}`}>
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                        <TrendingUp className="h-8 w-8 text-brand-600" />
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2 md:gap-3">
+                        <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-brand-600" />
                         {t('analytics.title')}
                     </h2>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">{t('analytics.description')}</p>
+                    <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1">{t('analytics.description')}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-500 hidden md:block">{t('analytics.timeRange')}:</span>
+
+                {/* Mobile Segmented Control */}
+                <div className="flex md:hidden w-full overflow-x-auto hide-scrollbar -mx-1 px-1 py-1 gap-2">
+                    {[
+                        { id: 'today', label: t('analytics.periods.today') },
+                        { id: 'yesterday', label: t('analytics.periods.yesterday') },
+                        { id: 'last7Days', label: t('analytics.periods.last7Days') },
+                        { id: 'thisMonth', label: t('analytics.periods.thisMonth') },
+                        { id: 'thisYear', label: t('analytics.periods.thisYear') },
+                        { id: 'prevYear', label: t('analytics.periods.prevYear') }
+                    ].map((v) => (
+                        <button
+                            key={v.id}
+                            onClick={() => setTimeBucket(v.id as TimeBucketKey)}
+                            className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200 ${timeBucket === v.id
+                                    ? "bg-brand-600 text-white shadow-md shadow-brand-500/20"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                }`}
+                        >
+                            {v.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Desktop Select */}
+                <div className="hidden md:flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-500">{t('analytics.timeRange')}:</span>
                     <Select value={timeBucket} onValueChange={(v) => setTimeBucket(v as TimeBucketKey)}>
-                        <SelectTrigger className="w-[180px] bg-white dark:bg-slate-800 rounded-xl border-gray-200 dark:border-slate-700">
+                        <SelectTrigger className="w-[180px] bg-white dark:bg-slate-800 rounded-xl border-gray-200 dark:border-slate-700 shadow-sm">
                             <SelectValue placeholder={t('analytics.periods.thisMonth')} />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl border-gray-100 dark:border-slate-800">
+                        <SelectContent className="rounded-xl border-gray-100 dark:border-slate-800 shadow-lg">
                             <SelectItem value="today">{t('analytics.periods.today')}</SelectItem>
                             <SelectItem value="yesterday">{t('analytics.periods.yesterday')}</SelectItem>
                             <SelectItem value="last7Days">{t('analytics.periods.last7Days')}</SelectItem>
@@ -166,10 +193,12 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 />
 
                 {/* New vs Returning - Custom KPI Card */}
-                <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-900 shadow-lg shadow-purple-500/5 col-span-1 md:col-span-2">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Users className="h-24 w-24 text-purple-600" />
-                    </div>
+                <Card className={`relative overflow-hidden group transition-all duration-300 border-0 col-span-1 md:col-span-2 ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg hover:shadow-xl shadow-purple-500/5' : 'bg-white dark:bg-slate-900'}`}>
+                    {!isLowBandwidthMode && (
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Users className="h-24 w-24 text-purple-600" />
+                        </div>
+                    )}
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
@@ -213,7 +242,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Age Distribution */}
-                <Card className="lg:col-span-1 shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
+                <Card className={`lg:col-span-1 border-0 rounded-3xl overflow-hidden ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg' : 'bg-white dark:bg-slate-900'}`}>
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <Users className="h-5 w-5 text-pink-500" />
@@ -243,7 +272,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 </Card>
 
                 {/* No-Shows & Cancellations */}
-                <Card className="lg:col-span-1 shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
+                <Card className={`lg:col-span-1 border-0 rounded-3xl overflow-hidden ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg' : 'bg-white dark:bg-slate-900'}`}>
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <AlertCircle className="h-5 w-5 text-red-500" />
@@ -295,7 +324,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 </Card>
 
                 {/* BMI Distribution */}
-                <Card className="lg:col-span-1 shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
+                <Card className={`lg:col-span-1 border-0 rounded-3xl overflow-hidden ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg' : 'bg-white dark:bg-slate-900'}`}>
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <Scale className="h-5 w-5 text-brand-500" />
@@ -328,7 +357,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
             {/* Vitals Deep Dive */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Blood Pressure Distribution */}
-                <Card className="shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
+                <Card className={`shadow-lg border-0 rounded-3xl overflow-hidden ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg' : 'bg-white dark:bg-slate-900'}`}>
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <Heart className="h-5 w-5 text-rose-500" />
@@ -382,7 +411,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 </Card>
 
                 {/* Weight Ranges */}
-                <Card className="shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
+                <Card className={`shadow-lg border-0 rounded-3xl overflow-hidden ${!isLowBandwidthMode ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg' : 'bg-white dark:bg-slate-900'}`}>
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <Activity className="h-5 w-5 text-brand-500" />
@@ -480,6 +509,8 @@ interface KpiCardProps {
 }
 
 const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon: Icon, color, period, footerText, overallValue }) => {
+    const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
+
     // Quick mapping for background/text based on color name
     const colorMap: Record<string, { bg: string, text: string, iconBg: string }> = {
         'blue': { bg: 'bg-brand-50 dark:bg-brand-900/20', text: 'text-brand-600', iconBg: 'bg-brand-50 dark:bg-brand-900/30' },
@@ -493,10 +524,12 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon:
     const theme = colorMap[color] || colorMap['blue'];
 
     return (
-        <Card className={`relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-900 shadow-lg ${theme.bg}`}>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Icon className={`h-24 w-24 ${theme.text}`} />
-            </div>
+        <Card className={`relative overflow-hidden group transition-all duration-300 border-0 ${!isLowBandwidthMode ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-md shadow-lg hover:shadow-xl shadow-brand-500/5' : 'bg-white dark:bg-slate-900'} ${theme.bg}`}>
+            {!isLowBandwidthMode && (
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Icon className={`h-24 w-24 ${theme.text}`} />
+                </div>
+            )}
             <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                     <div className={`p-2 rounded-xl ${theme.iconBg}`}>

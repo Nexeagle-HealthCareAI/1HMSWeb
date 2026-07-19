@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { BedDouble, ArrowLeft, LogOut, ArrowLeftRight, Loader2, X, Check } from 'lucide-react';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
+import { useAppStore } from '@/store/appStore';
 
 const FREE_TONE: Record<string, string> = {
     AVAILABLE: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -21,7 +22,6 @@ const OCCUPIED_TONE = 'border-rose-200 bg-rose-50 text-rose-700';
 const BED_POLL_MS = 20000;
 const FLASH_MS = 1800;
 
-// Small pulsing dot — the "this is live" signal next to the heading.
 const LiveDot: React.FC<{ className?: string }> = ({ className }) => (
     <span className={cn('relative inline-flex h-2 w-2', className)}>
         <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
@@ -39,21 +39,95 @@ const bedCardVariants = {
     exit: { opacity: 0, scale: 0.9, transition: { duration: 0.15 } },
 };
 
+const AnimatedBedTile: React.FC<{ bed: BedBoardItem; occupied: boolean; flashing: boolean; onClick: () => void }> = ({ bed, occupied, flashing, onClick }) => {
+    const { isLowBandwidthMode } = useAppStore();
+    const statusCode = bed.statusCode ?? 'AVAILABLE';
+    const isCleaning = statusCode === 'CLEANING';
+    const isReserved = statusCode === 'RESERVED';
+    
+    const tone = occupied ? OCCUPIED_TONE : (FREE_TONE[statusCode] ?? FREE_TONE.AVAILABLE);
+
+    return (
+        <motion.button
+            layout
+            variants={bedCardVariants}
+            initial="hidden"
+            animate={flashing ? { opacity: 1, scale: [1, 1.1, 1], y: 0 } : 'show'}
+            exit="exit"
+            transition={flashing ? { duration: 0.5, ease: 'easeOut' } : undefined}
+            whileHover={occupied ? { scale: 1.04 } : undefined}
+            whileTap={occupied ? { scale: 0.96 } : undefined}
+            onClick={onClick}
+            disabled={!occupied}
+            className={cn('w-full rounded-2xl border-2 p-3 text-left flex flex-col min-w-0 transition-all relative overflow-hidden', tone,
+                occupied ? 'hover:shadow-md cursor-pointer active:scale-[0.97]' : 'cursor-default opacity-90',
+                flashing && (occupied ? 'ring-4 ring-rose-400' : 'ring-4 ring-emerald-400'),
+                !isLowBandwidthMode ? 'shadow-sm backdrop-blur-md' : ''
+            )}>
+            
+            <div className="relative w-full h-24 mb-3 rounded-[1rem] border-4 border-black/10 bg-black/5 overflow-hidden flex flex-col items-center justify-start pt-2 shrink-0 shadow-inner">
+                <div className="w-12 h-4 bg-white/90 rounded-full shadow-sm z-10" />
+                {occupied && (
+                    <div className="absolute top-3.5 w-8 h-8 bg-rose-200/90 rounded-full z-20 border-2 border-white/80 shadow-sm" />
+                )}
+                <motion.div 
+                    animate={occupied && !isLowBandwidthMode ? { scaleY: [1, 1.05, 1], y: [0, -1, 0] } : {}}
+                    transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                    className={cn(
+                        "absolute bottom-0 w-full rounded-t-2xl z-30 border-t-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] origin-bottom",
+                        occupied ? "bg-rose-400 border-rose-300 h-[65%]" : "bg-emerald-200 border-emerald-100 h-[50%]",
+                        isCleaning && "bg-amber-200 border-amber-100",
+                        isReserved && "bg-sky-200 border-sky-100"
+                    )}>
+                    <div className="w-full h-2.5 bg-white/20 mt-1" />
+                </motion.div>
+                {isCleaning && !isLowBandwidthMode && (
+                    <motion.div 
+                        animate={{ y: ["-100%", "300%"] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-x-0 h-12 z-40 bg-gradient-to-b from-transparent via-white/80 to-transparent" 
+                    />
+                )}
+            </div>
+            
+            <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="font-mono text-[13px] font-black truncate text-slate-900">{bed.bedCode}</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider shrink-0 opacity-80">{occupied ? 'OCCUPIED' : statusCode}</span>
+            </div>
+            
+            {occupied ? (
+                <div className="min-w-0 mt-1">
+                    <p className="text-sm font-bold truncate leading-tight text-slate-900">{bed.patientName || '?'}</p>
+                    <p className="text-[11px] opacity-75 truncate mt-0.5 font-medium">{bed.patientAge ?? ''}{bed.patientSex ?? ''} · {bed.admissionNo}</p>
+                    {bed.admissionToken && <p className="text-[10px] font-bold text-rose-800 mt-1.5 truncate bg-rose-100/50 inline-block px-1.5 py-0.5 rounded-md border border-rose-200/50">Tkn: {bed.admissionToken}</p>}
+                </div>
+            ) : (
+                <p className="text-[11px] mt-auto pt-1 opacity-70 font-semibold">₹{bed.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
+            )}
+        </motion.button>
+    );
+};
+
+const CensusTile: React.FC<{ label: string; value: number; tone: 'rose' | 'emerald' | 'slate' }> = ({ label, value, tone }) => {
+    const tones: Record<string, string> = {
+        rose: 'border-rose-100 bg-rose-50 text-rose-700',
+        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+        slate: 'border-slate-200 bg-slate-50 text-slate-700',
+    };
+    return (
+        <div className={cn('rounded-xl border px-3 py-2 shadow-sm', tones[tone])}>
+            <p className="text-[10px] font-bold uppercase tracking-wider truncate opacity-80">{label}</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">{value}</p>
+        </div>
+    );
+};
+
 type ActionMode = 'menu' | 'transfer' | 'discharge' | null;
 
 interface Props {
     onBack: () => void;
 }
 
-/**
- * Live bed board — real GET /bed/board data, occupied and free beds both shown. Occupancy is
- * derived from the ACTIVE BedAssignment (admissionId present), not BedMaster.StatusCode alone —
- * that field is a separate housekeeping flag no handler touches yet. Assigning a bed to an
- * unassigned admission happens on the dashboard's admissions list (or at admit time); this screen
- * covers what happens to an already-occupied bed: transfer, release, or discharge. Polls silently
- * every 20s and flashes whichever bed's occupancy actually changed, so it reads as "live" rather
- * than a static table.
- */
 export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
     const { toast } = useToast();
     const [items, setItems] = useState<BedBoardItem[]>([]);
@@ -215,45 +289,17 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                                     <p className="font-bold text-slate-900 text-sm sm:text-base truncate">{ward}</p>
                                     <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 shrink-0">{occ}/{beds.length} occupied</Badge>
                                 </div>
-                                <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                                <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                                     <AnimatePresence initial={false}>
-                                        {beds.map(b => {
-                                            const occupied = !!b.admissionId;
-                                            const tone = occupied ? OCCUPIED_TONE : (FREE_TONE[b.statusCode ?? 'AVAILABLE'] ?? FREE_TONE.AVAILABLE);
-                                            const flashing = flashIds.has(b.bedId);
-                                            return (
-                                                <motion.button
-                                                    key={b.bedId}
-                                                    type="button"
-                                                    layout
-                                                    variants={bedCardVariants}
-                                                    initial="hidden"
-                                                    animate={flashing ? { opacity: 1, scale: [1, 1.1, 1], y: 0 } : 'show'}
-                                                    exit="exit"
-                                                    transition={flashing ? { duration: 0.5, ease: 'easeOut' } : undefined}
-                                                    whileHover={occupied ? { scale: 1.04 } : undefined}
-                                                    whileTap={occupied ? { scale: 0.96 } : undefined}
-                                                    onClick={() => openBed(b)}
-                                                    disabled={!occupied}
-                                                    className={cn('w-full min-h-[78px] rounded-xl border-2 p-2.5 text-left flex flex-col min-w-0', tone,
-                                                        occupied ? 'hover:shadow-md cursor-pointer active:scale-[0.97]' : 'cursor-default opacity-90',
-                                                        flashing && (occupied ? 'ring-4 ring-rose-300' : 'ring-4 ring-emerald-300'))}>
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <span className="font-mono text-[11px] font-bold truncate">{b.bedCode}</span>
-                                                        <span className="text-[8.5px] font-bold uppercase tracking-wider shrink-0">{occupied ? 'OCCUPIED' : (b.statusCode ?? 'AVAILABLE')}</span>
-                                                    </div>
-                                                      {occupied ? (
-                                                          <div className="mt-1.5 min-w-0">
-                                                              <p className="text-[13px] font-bold truncate leading-tight">{b.patientName || '?'}</p>
-                                                              <p className="text-[10px] opacity-80 truncate mt-0.5">{b.patientAge ?? ''}{b.patientSex ?? ''} · {b.admissionNo}</p>
-                                                              {b.admissionToken && <p className="text-[10px] font-bold text-rose-800 mt-0.5 truncate">Token: {b.admissionToken}</p>}
-                                                          </div>
-                                                      ) : (
-                                                        <p className="text-[11px] mt-auto pt-1.5 opacity-70">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
-                                                    )}
-                                                </motion.button>
-                                            );
-                                        })}
+                                        {beds.map(b => (
+                                            <AnimatedBedTile 
+                                                key={b.bedId} 
+                                                bed={b} 
+                                                occupied={!!b.admissionId} 
+                                                flashing={flashIds.has(b.bedId)} 
+                                                onClick={() => openBed(b)} 
+                                            />
+                                        ))}
                                     </AnimatePresence>
                                 </motion.div>
                             </motion.div>
@@ -336,16 +382,4 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
     );
 };
 
-const CensusTile: React.FC<{ label: string; value: number; tone: 'rose' | 'emerald' | 'slate' }> = ({ label, value, tone }) => {
-    const tones: Record<string, string> = {
-        rose: 'border-rose-100 bg-rose-50 text-rose-700',
-        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-        slate: 'border-slate-200 bg-slate-50 text-slate-700',
-    };
-    return (
-        <div className={cn('rounded-xl border px-3 py-2 shadow-sm', tones[tone])}>
-            <p className="text-[10px] font-bold uppercase tracking-wider truncate opacity-80">{label}</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">{value}</p>
-        </div>
-    );
-};
+

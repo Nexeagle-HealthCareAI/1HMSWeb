@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Download, Share, PlusSquare, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 export function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
+  const location = useLocation();
   const { isInstallable, promptInstall, isIos, isStandalone } = useInstallPrompt();
+
+  const isLoginPage = location.pathname === '/' || location.pathname === '/login';
 
   useEffect(() => {
     // If the app is installed, never show
@@ -15,13 +19,14 @@ export function InstallPrompt() {
     }
 
     if (isInstallable) {
-      // Delay showing the floating pill by a little bit to let the page load
-      const timer = setTimeout(() => setShowPrompt(true), 2000);
+      // Show immediately on login page, delay slightly otherwise
+      const delay = isLoginPage ? 100 : 2000;
+      const timer = setTimeout(() => setShowPrompt(true), delay);
       return () => clearTimeout(timer);
     } else {
       setShowPrompt(false);
     }
-  }, [isInstallable, isStandalone]);
+  }, [isInstallable, isStandalone, isLoginPage]);
 
   const handleInstallClick = async () => {
     await promptInstall();
@@ -42,7 +47,7 @@ export function InstallPrompt() {
           animate={{ y: 0, opacity: 1, x: "-50%" }}
           exit={{ y: 50, opacity: 0, x: "-50%" }}
           transition={{ type: "spring", bounce: 0.4, duration: 0.6 }}
-          className="fixed bottom-[85px] left-1/2 z-[100] md:hidden pointer-events-none w-[90%] max-w-[320px] touch-none"
+          className={`fixed ${isLoginPage ? 'bottom-8' : 'bottom-[85px]'} left-1/2 z-[100] pointer-events-none w-[90%] max-w-[320px] touch-none transition-all duration-500`}
         >
           <div className="relative pointer-events-auto">
             {isIos ? (

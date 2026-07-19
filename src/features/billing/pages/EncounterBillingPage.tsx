@@ -28,6 +28,7 @@ import { offlineCachedRead, isReachable } from '@/offline';
 import { AddChargesModal } from '../components/AddChargesModal';
 import { AddPaymentModal } from '../components/AddPaymentModal';
 import { DiscountApprovalsCard } from '../components/DiscountApprovalsCard';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -91,6 +92,7 @@ export const EncounterBillingPage: React.FC = () => {
     const wardBed = searchParams.get('wardBed') ?? undefined;
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
 
     const [data, setData] = useState<GetEncounterEventsResponse['data'] | null>(null);
     const [loading, setLoading] = useState(true);
@@ -149,6 +151,7 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleGenerateInvoice = async () => {
         if (!encounterId || !patientId) return;
+        if (isSubscriptionReadOnly) { blockAction('Generating an invoice'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Generating an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setGeneratingInvoice(true);
         try {
@@ -168,6 +171,7 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleFinalize = async () => {
         if (!encounterId || !patientId) return;
+        if (isSubscriptionReadOnly) { blockAction('Finalizing the bill'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Finalizing a bill requires an internet connection.', variant: 'destructive' }); return; }
         setFinalizing(true);
         try {
@@ -184,6 +188,7 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleReopen = async () => {
         if (!encounterId || !patientId || !reopenReason.trim()) return;
+        if (isSubscriptionReadOnly) { blockAction('Reopening the bill'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Reopening a bill requires an internet connection.', variant: 'destructive' }); return; }
         setFinalizing(true);
         try {
@@ -216,15 +221,18 @@ export const EncounterBillingPage: React.FC = () => {
     };
 
     const handleCancelCharge = (row: BillingChargeRow) => {
+        if (isSubscriptionReadOnly) { blockAction('Removing charges'); return; }
         setVoidConfirm({ kind: 'charge', id: row.chargeEventId, label: row.displayName ?? 'Charge' });
     };
 
     const handleDeletePayment = (row: BillingPaymentRow) => {
+        if (isSubscriptionReadOnly) { blockAction('Removing payments'); return; }
         setVoidConfirm({ kind: 'payment', id: row.paymentId, label: `${row.paymentType ?? 'Payment'} · ${inr(row.amount)}` });
     };
 
     const handleVoid = async () => {
         if (!voidConfirm || !patientId || voidBusy) return;
+        if (isSubscriptionReadOnly) { blockAction(voidConfirm.kind === 'charge' ? 'Removing charges' : 'Removing payments'); return; }
         setVoidBusy(true);
         try {
             const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
@@ -381,7 +389,7 @@ export const EncounterBillingPage: React.FC = () => {
                         <Button
                             size="sm"
                             className="bg-brand-600 hover:bg-brand-700 gap-1.5"
-                            onClick={() => setAddChargesOpen(true)}
+                            onClick={() => isSubscriptionReadOnly ? blockAction('Adding charges') : setAddChargesOpen(true)}
                             disabled={isFinalized}
                         >
                             <Plus className="h-4 w-4" /> Add Charges
@@ -392,7 +400,7 @@ export const EncounterBillingPage: React.FC = () => {
                             variant={postedUnbilledCount > 0 ? 'default' : 'outline'}
                             className={cn('gap-1.5', postedUnbilledCount > 0 && 'bg-emerald-600 hover:bg-emerald-700')}
                             onClick={handleGenerateInvoice}
-                            disabled={generatingInvoice || (postedUnbilledCount === 0 && !!invoice)}
+                            disabled={generatingInvoice || isSubscriptionReadOnly || (postedUnbilledCount === 0 && !!invoice)}
                             title={
                                 isFinalized
                                     ? 'Invoice is finalized'
@@ -410,8 +418,8 @@ export const EncounterBillingPage: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                                onClick={() => setFinalizeOpen(true)}
-                                disabled={finalizing}
+                                onClick={() => isSubscriptionReadOnly ? blockAction('Finalizing the bill') : setFinalizeOpen(true)}
+                                disabled={finalizing || isSubscriptionReadOnly}
                             >
                                 {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
                                 Finalize
@@ -429,7 +437,8 @@ export const EncounterBillingPage: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
-                                onClick={() => setReopenOpen(true)}
+                                onClick={() => isSubscriptionReadOnly ? blockAction('Reopening the bill') : setReopenOpen(true)}
+                                disabled={isSubscriptionReadOnly}
                             >
                                 <Unlock className="h-4 w-4" /> Reopen
                             </Button>
@@ -441,8 +450,8 @@ export const EncounterBillingPage: React.FC = () => {
                             size="sm"
                             variant="outline"
                             className="gap-1.5 border-brand-300 text-brand-700 hover:bg-brand-50"
-                            onClick={() => setAddPaymentOpen(true)}
-                            disabled={!invoice}
+                            onClick={() => isSubscriptionReadOnly ? blockAction('Taking payments') : setAddPaymentOpen(true)}
+                            disabled={!invoice || isSubscriptionReadOnly}
                             title={invoice ? '' : 'Generate the bill first to record a payment'}
                         >
                             <Plus className="h-4 w-4" /> Record Payment
@@ -472,7 +481,7 @@ export const EncounterBillingPage: React.FC = () => {
                                 <Receipt className="h-8 w-8 text-slate-300 mx-auto" />
                                 <p className="text-sm font-semibold text-slate-600">No charges yet</p>
                                 <p className="text-xs text-slate-400 mb-2">Add charges from your charge master or as one-off lines.</p>
-                                <Button size="sm" variant="outline" onClick={() => setAddChargesOpen(true)}>
+                                <Button size="sm" variant="outline" onClick={() => isSubscriptionReadOnly ? blockAction('Adding charges') : setAddChargesOpen(true)}>
                                     <Plus className="h-3.5 w-3.5 mr-1" /> Add the first charge
                                 </Button>
                             </div>
@@ -648,7 +657,7 @@ export const EncounterBillingPage: React.FC = () => {
                                 <Wallet className="h-8 w-8 text-slate-300 mx-auto" />
                                 <p className="text-sm font-semibold text-slate-600">No payments yet</p>
                                 {invoice ? (
-                                    <Button size="sm" variant="outline" onClick={() => setAddPaymentOpen(true)}>
+                                    <Button size="sm" variant="outline" onClick={() => isSubscriptionReadOnly ? blockAction('Taking payments') : setAddPaymentOpen(true)}>
                                         <Plus className="h-3.5 w-3.5 mr-1" /> Record the first payment
                                     </Button>
                                 ) : (

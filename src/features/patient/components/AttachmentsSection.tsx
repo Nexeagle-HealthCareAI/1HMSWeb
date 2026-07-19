@@ -13,6 +13,7 @@ import {
 import { FileImage, Plus, Eye, Upload, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Trash, XCircle, CheckCircle } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { useToast } from "@/hooks/use-toast";
 import { labApi, AttachmentItem } from '../services/labApi';
 
@@ -84,6 +85,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
   const effectiveAppointmentId = rawAppointmentId ? decodeURIComponent(rawAppointmentId) : '';
 
   const { hospitalId: storedHospitalId, doctorId: storedDoctorId } = useAuthStore();
+  const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   const hospitalId = storedHospitalId || ""; // Fallback handled by store usually
   // Prefer the appointment's own doctor (passed in by the caller) over the logged-in user's
   // doctor profile — the uploader (front desk/admin) often isn't the treating doctor themselves.
@@ -231,6 +233,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                     size="icon"
                     className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                     onClick={() => handleDeleteClick(start + idx, attName, id)}
+                    disabled={isSubscriptionReadOnly}
                     aria-label="Delete attachment"
                   >
                     <Trash className="h-4 w-4" />
@@ -428,6 +431,8 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
       return;
     }
 
+    if (isSubscriptionReadOnly) { blockAction('Uploading lab attachments'); return; }
+
     try {
       const response = await labApi.uploadAttachment({
         fileName,
@@ -463,6 +468,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
   };
 
   const handleDeleteClick = (globalIndex: number, attName: string, attachmentId?: string) => {
+    if (isSubscriptionReadOnly) { blockAction('Deleting lab attachments'); return; }
     setItemToDelete({ index: globalIndex, name: attName, id: attachmentId });
     setDeleteConfirmationOpen(true);
   };
@@ -665,7 +671,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                   </div>
 
                   <div className="flex justify-end">
-                    <Button onClick={handleAddAttachment} className="h-9 text-sm">
+                    <Button onClick={handleAddAttachment} disabled={isSubscriptionReadOnly} className="h-9 text-sm">
                       <Upload className="h-4 w-4 mr-2" />
                       Save attachment
                     </Button>
