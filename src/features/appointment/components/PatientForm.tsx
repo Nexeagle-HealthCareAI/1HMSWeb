@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse, type AppointmentDetail } from '../services/appointmentApi';
@@ -12,6 +12,7 @@ import { isReachable } from '@/offline';
 import { useReferrers, useCreateReferrer } from '../hooks/useReferrers';
 import type { Referrer } from '../services/referrerApi';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
 import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
 import { toast } from '@/hooks/use-toast';
 import { patientProfileApi } from '@/features/patient/services/patientProfileApi';
@@ -197,6 +198,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
   const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
   const { getUserId } = useAuthStore();
+  const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
 
   // OPD consult fee: shown + collectable only for SAME-DAY bookings when Billing Policy
   // OPD trigger = AUTO and the doctor has a consult fee. Future bookings are handled later
@@ -697,10 +699,30 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="w-[96vw] max-w-[1600px] h-[92vh] max-h-[92vh] p-0 flex flex-col gap-0 rounded-2xl border border-border/60 shadow-2xl overflow-hidden bg-background dark:bg-gray-900">
+      <DialogContent className="w-full h-[100dvh] max-w-none max-h-none p-0 flex flex-col gap-0 rounded-none border-none shadow-none sm:w-[96vw] sm:max-w-[1600px] sm:h-[92vh] sm:max-h-[92vh] sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-2xl overflow-hidden bg-background dark:bg-gray-900 !m-0 !top-0 !left-0 !translate-x-0 !translate-y-0 sm:!top-1/2 sm:!left-1/2 sm:!-translate-x-1/2 sm:!-translate-y-1/2 data-[state=open]:sm:animate-in data-[state=closed]:sm:animate-out [&>button.absolute]:hidden">
         {/* Sticky Header */}
-        <DialogHeader className="p-3 md:p-4 border-b bg-gradient-to-br from-brand-50 via-white to-white dark:from-brand-950/30 dark:via-gray-900 dark:to-gray-900 z-10 shrink-0 text-left space-y-0">
-          <div className="pr-8 space-y-1.5">
+        <DialogHeader className="p-0 sm:p-4 border-b bg-white sm:bg-gradient-to-br sm:from-brand-50 sm:via-white sm:to-white dark:bg-gray-900 dark:sm:from-brand-950/30 dark:sm:via-gray-900 dark:sm:to-gray-900 z-10 shrink-0 text-left space-y-0 relative">
+          
+          {/* Mobile Top App Bar */}
+          <div className="sm:hidden flex items-center h-14 px-1 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
+            <button type="button" onClick={onCancel} className="p-3 text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-800 rounded-full transition-colors shrink-0">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <div className="flex-1 px-1 min-w-0">
+              <DialogTitle className="text-[17px] font-bold text-gray-900 dark:text-white truncate tracking-tight">
+                {editAppointment ? t('patientForm.editTitle', { defaultValue: 'Edit Appointment' }) : t('patientForm.title')}
+              </DialogTitle>
+            </div>
+            {showConsult && (
+              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 mr-3 shrink-0 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
+                <span className="text-xs">⚡</span>
+                <span className="font-bold text-[9px] uppercase tracking-widest leading-none">Auto Bill</span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Title Bar */}
+          <div className="hidden sm:block pr-8 space-y-1.5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/30">
@@ -715,34 +737,39 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </DialogDescription>
                 </div>
               </div>
-              {showConsult && (
-                <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm shrink-0">
-                  <span className="text-sm">⚡</span>
-                  <span className="font-bold text-[10px] md:text-xs uppercase tracking-widest">Auto Bill Enabled</span>
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                {showConsult && (
+                  <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm shrink-0">
+                    <span className="text-sm">⚡</span>
+                    <span className="font-bold text-[10px] md:text-xs uppercase tracking-widest">Auto Bill Enabled</span>
+                  </div>
+                )}
+                <button type="button" onClick={onCancel} className="p-2 -mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors shrink-0">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Appointment Details (left) + Patient Search (top-right on desktop, stacked on mobile) */}
-          <div className="mt-3 flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-3">
-            <div className="overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 no-scrollbar lg:flex-1 lg:min-w-0">
-              <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-white/80 dark:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-brand-200/60 dark:border-brand-700 shadow-sm whitespace-nowrap text-brand-800 dark:text-brand-200">
+          <div className="px-3 pb-3 pt-2 sm:p-0 sm:mt-3 flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-3">
+            <div className="overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 no-scrollbar lg:flex-1 lg:min-w-0">
+              <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-gray-50 dark:bg-gray-800/50 sm:bg-white/80 dark:sm:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-gray-200/60 sm:border-brand-200/60 dark:border-gray-700 dark:sm:border-brand-700 shadow-sm whitespace-nowrap text-gray-800 sm:text-brand-800 dark:text-gray-200 dark:sm:text-brand-200">
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <User className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
                   <span className="font-semibold">{doctor.name}</span>
                 </div>
-                <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+                <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <Calendar className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
                   <span className="font-semibold">{dateFormatter.format(new Date(selectedSlot.date))}</span>
                 </div>
-                <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+                <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <Clock className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
                   <span className="font-semibold">{formatTime(selectedSlot.time)}</span>
                 </div>
-                <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+                <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <span className="text-sm">⏱️</span>
                   <span className="font-semibold">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
@@ -786,7 +813,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </div>
                   {showSearchResults && searchResults.length > 0 && (
                     <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border bg-popover shadow-xl">
-                      <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
+                      <div className={`sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b z-10 flex justify-between items-center ${!isLowBandwidthMode ? 'backdrop-blur-sm' : ''}`}>
                         <span>Matching patients</span>
                         <button
                           type="button"
@@ -1456,7 +1483,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         </ScrollArea>
 
         {/* Sticky Footer */}
-        <div className="p-3 md:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 shrink-0 flex justify-end gap-3 md:gap-4 mt-auto">
+        <div className={`p-3 pb-[120px] sm:pb-4 md:p-4 border-t bg-background/95 shrink-0 flex justify-end gap-3 md:gap-4 mt-auto ${!isLowBandwidthMode ? 'backdrop-blur supports-[backdrop-filter]:bg-background/85' : ''}`}>
           <Button
             type="button"
             variant="outline"

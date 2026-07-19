@@ -20,7 +20,8 @@ const RoleBasedRedirect = () => {
   if (userRole === 'Admin') {
     return <Navigate to="/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    return <Navigate to="/dashboard" replace />;
+    const isMobile = window.innerWidth < 1024;
+    return <Navigate to={isMobile ? "/appointment-dashboard" : "/dashboard"} replace />;
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
     // Receptionist and Nurse should go to appointment dashboard
     return <Navigate to="/appointment-dashboard" replace />;

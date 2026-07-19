@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -117,6 +117,7 @@ export const AppointmentDashboard = () => {
   const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
@@ -129,6 +130,7 @@ export const AppointmentDashboard = () => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('tokenNo');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showVitalsForm, setShowVitalsForm] = useState(false);
+  const fabConstraintsRef = useRef(null);
 
   const [selectedPatient, setSelectedPatient] = useState<AppointmentDetail | null>(null);
 
@@ -648,6 +650,18 @@ export const AppointmentDashboard = () => {
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [appointments]);
 
+  const departmentOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    appointments.forEach((appointment) => {
+      const deptName = appointment.departmentName;
+      if (!deptName) return;
+      if (!map.has(deptName)) {
+        map.set(deptName, deptName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [appointments]);
+
   const isDefaultFilterState =
     !searchTerm.trim() &&
     selectedDoctor === 'all' &&
@@ -682,6 +696,8 @@ export const AppointmentDashboard = () => {
 
       const doctorValue = getDoctorFilterValue(appointment.doctorId, appointment.doctorName);
       const matchesDoctor = selectedDoctor === 'all' || (!!doctorValue && doctorValue === selectedDoctor);
+
+      const matchesDepartment = selectedDepartment === 'all' || appointment.departmentName === selectedDepartment;
 
       // Filter by status if on current tab
       let matchesStatus = true;
@@ -751,7 +767,7 @@ export const AppointmentDashboard = () => {
         }
       }
 
-      const result = matchesSearch && matchesDoctor && matchesStatus && matchesDateRange && matchesType;
+      const result = matchesSearch && matchesDoctor && matchesDepartment && matchesStatus && matchesDateRange && matchesType;
 
       // Debug status filtering specifically
       if (activeTab === 'current' && selectedStatus !== 'all') {
@@ -955,7 +971,7 @@ export const AppointmentDashboard = () => {
     }
 
     return sortedFiltered;
-  }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments, isDefaultFilterState, sortColumn, sortDirection]);
+  }, [searchTerm, selectedDoctor, selectedDepartment, selectedStatus, startDate, endDate, activeTab, appointments, isDefaultFilterState, sortColumn, sortDirection]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
@@ -1190,31 +1206,10 @@ export const AppointmentDashboard = () => {
     );
   };
 
-  if (showBooking) {
-    return (
-      <div className="bg-gray-50 dark:bg-gray-950">
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm relative z-10">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <button
-              onClick={() => setShowBooking(false)}
-              className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm font-semibold border border-gray-200 dark:border-gray-700"
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-              <span>{t('common.back')}</span>
-            </button>
-            <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black text-gray-900 dark:text-white tracking-tight">{t('appointmentDashboard.bookNewAppointment')}</h1>
-            </div>
-          </div>
-        </div>
-        <AppointmentBooking refreshToken={bookingRefreshToken} />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4">
+    <>
+      {/* Dashboard View - Hidden on desktop when booking is active */}
+      <div className={`flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4 ${showBooking ? 'md:hidden' : ''}`}>
       {!isLowBandwidthMode && (
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-100/40 via-slate-50 to-slate-50 dark:from-brand-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
       )}
@@ -1259,7 +1254,7 @@ export const AppointmentDashboard = () => {
           </div>
 
           {/* Right: Navigation Tabs */}
-          <nav className="flex flex-wrap gap-2 bg-black/20 dark:bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 shadow-inner min-w-[220px] justify-end mt-3 sm:mt-0">
+          <nav className="flex w-full sm:w-auto bg-black/20 dark:bg-black/40 backdrop-blur-md rounded-2xl p-1 sm:p-1.5 shadow-inner mt-3 sm:mt-0 relative overflow-hidden">
             {[
               { key: 'current', label: t('appointmentDashboard.tabs.current'), Icon: Clock, desc: 'Active Queue' },
               { key: 'past', label: t('appointmentDashboard.tabs.past'), Icon: Calendar, desc: 'History' },
@@ -1271,21 +1266,13 @@ export const AppointmentDashboard = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`group flex-1 lg:flex-none min-w-[100px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-3 py-1.5 border transition-all duration-300 text-[12px] relative overflow-hidden ${isActive
-                    ? 'bg-brand-500/20 text-white border-brand-400/40 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                    : 'bg-transparent border-transparent text-brand-100/70 hover:bg-white/10 hover:text-white'
-                    } hover:-translate-y-0.5`}
+                  className={`group flex-1 sm:flex-none min-w-[90px] flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 rounded-xl px-2 py-2.5 sm:py-2 border transition-all duration-300 relative overflow-hidden ${isActive
+                    ? 'bg-white text-brand-600 border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] z-10 scale-[1.02]'
+                    : 'bg-transparent border-transparent text-brand-50 hover:bg-white/10'
+                    }`}
                 >
-                  {isActive && <div className="absolute inset-0 bg-gradient-to-r from-brand-400/20 to-brand-400/20 animate-pulse" />}
-                  <div className="flex items-center gap-1.5 text-[12px] font-bold relative z-10">
-                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20 shadow-inner' : 'bg-white/10'}`}>
-                      <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-brand-200'}`} />
-                    </span>
-                    <span className="tracking-wide">{tab.label}</span>
-                  </div>
-                  <span className={`hidden sm:block text-[10px] leading-snug relative z-10 ${isActive ? 'text-brand-100' : 'text-brand-200/50'}`}>
-                    {tab.desc}
-                  </span>
+                  <Icon className={`h-4 w-4 sm:h-4 sm:w-4 ${isActive ? 'text-brand-500' : 'opacity-80'}`} />
+                  <span className={`text-[12px] sm:text-[13px] tracking-wide ${isActive ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
                 </button>
               );
             })}
@@ -1429,6 +1416,24 @@ export const AppointmentDashboard = () => {
                   </Select>
                 </div>
 
+                {/* Department Filter Dropdown */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60 whitespace-nowrap">{t('appointmentDashboard.departmentLabel', { defaultValue: 'Department' })}</label>
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium">
+                      <SelectValue placeholder={t('appointmentDashboard.allDepartments', { defaultValue: 'All Departments' })} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-brand-100/50 dark:border-zinc-800 backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 shadow-xl">
+                      <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">{t('appointmentDashboard.allDepartments', { defaultValue: 'All Departments' })}</SelectItem>
+                      {departmentOptions.map((dept) => (
+                        <SelectItem key={dept.value} value={dept.value} className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">
+                          {dept.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Date Range Filter - Only show for Past and Future tabs */}
                 {(activeTab === 'past' || activeTab === 'future') && (() => {
                   const today = new Date();
@@ -1491,7 +1496,7 @@ export const AppointmentDashboard = () => {
               <DrawerTrigger asChild>
                 <Button variant="outline" className="h-11 w-11 p-0 shrink-0 rounded-xl bg-white/90 dark:bg-zinc-900/90 border-brand-100/50 dark:border-zinc-800 shadow-sm relative">
                   <Filter className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  {((selectedDoctor !== 'all') || (startDate !== '') || (endDate !== '')) && (
+                  {((selectedDoctor !== 'all') || (selectedDepartment !== 'all') || (startDate !== '') || (endDate !== '')) && (
                     <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-zinc-900"></span>
                   )}
                 </Button>
@@ -1513,6 +1518,24 @@ export const AppointmentDashboard = () => {
                         {doctorOptions.map((doctor) => (
                           <SelectItem key={doctor.value} value={doctor.value}>
                             {doctor.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Department Filter Dropdown */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60">{t('appointmentDashboard.departmentLabel', { defaultValue: 'Department' })}</label>
+                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                      <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl">
+                        <SelectValue placeholder={t('appointmentDashboard.allDepartments', { defaultValue: 'All Departments' })} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('appointmentDashboard.allDepartments', { defaultValue: 'All Departments' })}</SelectItem>
+                        {departmentOptions.map((dept) => (
+                          <SelectItem key={dept.value} value={dept.value}>
+                            {dept.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2023,9 +2046,9 @@ export const AppointmentDashboard = () => {
                       <p className="text-brand-900/70 dark:text-brand-200/70 text-sm font-bold tracking-wide">No appointments found</p>
                     </div>
                   ) : (
-                    <div className={`bg-white dark:bg-zinc-900/60 shadow-sm border-t border-b border-gray-100 dark:border-zinc-800/50 overflow-hidden divide-y divide-gray-100 dark:divide-zinc-800/50 ${!isLowBandwidthMode ? 'backdrop-blur-md' : ''}`}>
+                    <div className="flex flex-col gap-3 px-2 pt-2 pb-24">
                       {currentAppointments.map((appointment) => (
-                        <div key={appointment.appointmentId} className="p-3 active:bg-gray-50 dark:active:bg-zinc-800/80 transition-colors relative group">
+                        <div key={appointment.appointmentId} className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800/80 overflow-hidden active:scale-[0.98] transition-all relative group">
                           {/* Main Row */}
                           <div className="flex gap-3 relative z-10">
                             {/* Avatar */}
@@ -2448,7 +2471,7 @@ export const AppointmentDashboard = () => {
                 )}
               </div>
 
-              <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
+              <div className="p-4 pb-[120px] sm:pb-6 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
                 <Button variant="outline" onClick={() => handleAddBillModalChange(false)} disabled={billBusy}>
                   {t('common.close', { defaultValue: 'Close' })}
                 </Button>
@@ -2603,7 +2626,7 @@ export const AppointmentDashboard = () => {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
+              <div className="p-4 pb-[120px] sm:pb-6 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
                 <Button
                   variant="outline"
                   onClick={handleCancelDialogClose}
@@ -2708,16 +2731,62 @@ export const AppointmentDashboard = () => {
         onOpenChange={setShowQuickGuide}
       />
 
+      {/* Floating Action Button Constraints Area (Mobile Only) */}
+      <div className="md:hidden fixed inset-0 pointer-events-none z-40" ref={fabConstraintsRef} />
+
       {/* Floating Action Button (Mobile Only) */}
-      <div className="md:hidden fixed bottom-[90px] right-4 z-50">
+      <motion.div 
+        drag
+        dragConstraints={fabConstraintsRef}
+        dragElastic={0.1}
+        dragMomentum={false}
+        whileTap={{ scale: 0.95 }}
+        onTap={handleBookingClick}
+        className="md:hidden fixed bottom-[120px] right-4 z-50 pointer-events-auto flex items-center justify-center cursor-grab active:cursor-grabbing"
+      >
         <Button
-          onClick={handleBookingClick}
-          className="h-14 w-14 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white shadow-xl shadow-brand-600/30 flex items-center justify-center active:scale-95 transition-all"
+          className="h-14 px-5 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-xl shadow-brand-600/30 flex items-center gap-2 transition-colors pointer-events-none"
         >
-          <Plus className="h-7 w-7" />
+          <Plus className="h-6 w-6" />
+          <span className="font-bold text-sm tracking-wide">{t('appointmentDashboard.bookAppointment', 'Book Appointment')}</span>
         </Button>
-      </div>
+      </motion.div>
     </div >
+
+      {/* Booking Flow Overlay (Mobile Slide-up, Desktop Inline) */}
+      <AnimatePresence>
+        {showBooking && (
+          <motion.div
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[100] bg-gray-50 dark:bg-gray-950 flex flex-col md:relative md:z-auto md:bg-transparent md:animate-none md:!transform-none md:!opacity-100"
+          >
+            {/* Header: Native Top App Bar on Mobile, Standard Header on Desktop */}
+            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm relative z-10 shrink-0">
+              <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-3 md:py-3">
+                <button
+                  onClick={() => setShowBooking(false)}
+                  className="group flex items-center justify-center h-10 w-10 md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-1.5 rounded-full md:rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm font-semibold md:border md:border-gray-200 dark:md:border-gray-700"
+                >
+                  <ArrowLeft className="h-6 w-6 md:h-4 md:w-4 transition-transform group-hover:-translate-x-1" />
+                  <span className="hidden md:inline">{t('common.back')}</span>
+                </button>
+                <div className="hidden md:block h-5 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl md:text-base font-bold md:font-black text-gray-900 dark:text-white tracking-tight">{t('appointmentDashboard.bookNewAppointment')}</h1>
+                </div>
+              </div>
+            </div>
+            {/* Form Content */}
+            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
+              <AppointmentBooking refreshToken={bookingRefreshToken} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

@@ -488,6 +488,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       onCheckedChange={setLowBandwidthMode}
                     />
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:bg-red-50 dark:focus:bg-red-500/10 cursor-pointer font-medium">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{t('common.logout')}</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
