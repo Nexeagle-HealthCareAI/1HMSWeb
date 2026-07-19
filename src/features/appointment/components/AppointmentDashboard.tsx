@@ -1515,7 +1515,7 @@ export const AppointmentDashboard = () => {
                   )}
                 </Button>
               </DrawerTrigger>
-              <DrawerContent className="px-4 pb-8 pt-2">
+              <DrawerContent className="px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2" style={{ paddingBottom: 'max(7rem, calc(env(safe-area-inset-bottom) + 4rem))' }}>
                 <DrawerHeader className="px-0">
                   <DrawerTitle className="text-left text-brand-900 dark:text-white font-bold">{t('appointmentDashboard.filters', { defaultValue: 'Filters' })}</DrawerTitle>
                 </DrawerHeader>
@@ -1527,7 +1527,7 @@ export const AppointmentDashboard = () => {
                       <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl">
                         <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999]" position="popper">
                         <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
                         {doctorOptions.map((doctor) => (
                           <SelectItem key={doctor.value} value={doctor.value}>
@@ -1545,7 +1545,7 @@ export const AppointmentDashboard = () => {
                       <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl">
                         <SelectValue placeholder={t('appointmentDashboard.allDepartments', { defaultValue: 'All Departments' })} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999]" position="popper">
                         <SelectItem value="all">{t('appointmentDashboard.allDepartments', { defaultValue: 'All Departments' })}</SelectItem>
                         {departmentOptions.map((dept) => (
                           <SelectItem key={dept.value} value={dept.value}>
