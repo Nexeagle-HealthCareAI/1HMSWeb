@@ -94,6 +94,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HospitalSwitcher } from './HospitalSwitcher';
+import { PWAInstallBanner } from './PWAInstallBanner';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
 import { AlertBell } from '@/features/alerts/components/AlertBell';
 import { cn } from '@/lib/utils';
@@ -407,20 +408,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               )}
 
               {/* Alerts */}
-              <AlertBell />
+              <div className="hidden md:block">
+                <AlertBell />
+              </div>
 
-              {/* Manage Chain Button (Admin Only) */}
-              {isAdminRole && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/chain')}
-                  className="flex items-center gap-1.5 md:gap-2 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                >
-                  <GitBranch className="h-4 w-4 md:h-4 md:w-4" />
-                  <span className="hidden md:inline text-sm font-medium">Chain</span>
-                </Button>
-              )}
 
               {/* Theme Toggle */}
               <ThemeToggle
@@ -563,7 +554,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* --- MOBILE BOTTOM NAVIGATION & TILE GRID --- */}
       
-            {/* Fixed Bottom Bar */}
+      {/* Floating PWA Install Prompt for Mobile */}
+      <PWAInstallBanner />
+
+      {/* Fixed Bottom Bar */}
       <div className="flex lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
         <button 
           onClick={() => {
