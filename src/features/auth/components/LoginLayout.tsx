@@ -91,24 +91,48 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
     </div>
   );
 
-  return (
-    <div className="h-screen bg-gradient-subtle dark:bg-gray-950 flex flex-col lg:flex-row overflow-hidden relative transition-all duration-300">
+    return (
+    <div className="h-[100dvh] bg-slate-50 dark:bg-gray-950 flex flex-col lg:flex-row overflow-hidden relative transition-all duration-300">
       {/* Loading Overlay */}
       <LoadingOverlay isLoading={isLoading} message={loadingMessage || defaultLoadingMessage} />
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex-shrink-0">
-        <div className="flex items-center justify-center gap-2">
-          <img
-            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
-            alt="Company Logo"
-            className="h-6 w-6"
-            style={{ width: '24px', height: '24px' }}
-          />
-          {renderCompanyName(t('loginLayout.companyName'), 'font-bold text-base text-gray-900 dark:text-white')}
+
+      {/* --- MOBILE VIEW --- */}
+      <div className="flex lg:hidden flex-col h-full w-full relative">
+        {/* Mobile Hero (Top Half) */}
+        <div className="h-[45%] w-full bg-gradient-to-br from-brand-600 via-brand-500 to-blue-600 relative overflow-hidden flex flex-col items-center justify-center pt-8 pb-12">
+          {/* Ambient shapes */}
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-white/10 blur-[60px] pointer-events-none" />
+          <div className="absolute bottom-[-10%] right-[-20%] w-[70%] h-[70%] rounded-full bg-blue-400/20 blur-[60px] pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col items-center">
+            <img
+              src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
+              alt="Company Logo"
+              className="w-20 h-20 object-contain drop-shadow-xl mb-4"
+            />
+            <h1 className="text-3xl font-black text-white tracking-tight text-center">
+              {renderTitle(title)}
+            </h1>
+            <p className="text-brand-100 font-medium text-sm mt-2 max-w-[80%] text-center opacity-90">
+              {subtitle || t('loginLayout.tagline')}
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile Bottom Sheet (Bottom Half) */}
+        <div className="flex-1 bg-white dark:bg-slate-950 w-full -mt-8 rounded-t-[2.5rem] relative z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col">
+          {/* Drag handle pill */}
+          <div className="w-full flex justify-center pt-4 pb-2">
+            <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full" />
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-6 pb-8 pt-4 w-full max-w-md mx-auto">
+            {children}
+          </div>
         </div>
       </div>
 
-      {/* Desktop Promotional Banner (2/3) */}
+      {/* --- DESKTOP VIEW --- */}
       {showPromotionalBanner && (
         <div className="hidden lg:flex w-2/3 bg-gradient-primary flex-col justify-center p-6 overflow-y-auto">
           <div className="relative z-10 w-full max-w-2xl mx-auto my-auto py-8">
@@ -117,32 +141,28 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         </div>
       )}
 
-      {/* Login Form - Mobile: Full width, Desktop: 1/3 */}
-      <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-6 flex-1 overflow-y-auto">
-        <Card className="w-full max-w-md shadow-elegant">
+      {/* Login Form - Desktop: 1/3 */}
+      <div className="hidden lg:flex w-1/3 items-center justify-center p-6 flex-1 overflow-y-auto bg-slate-50 dark:bg-gray-950">
+        <Card className="w-full max-w-md shadow-elegant border-slate-200/60 dark:border-slate-800">
           <CardHeader className="text-center space-y-3 pb-4">
-            {/* Desktop Logo */}
-            <div className="hidden lg:flex flex-col items-center justify-center mb-3">
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl mb-2">
-                <img
-                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
-                  alt="Company Logo"
-                  className="h-12 w-12"
-                  style={{ width: '60px', height: '50px' }}
-                />
-              </div>
+            <div className="flex flex-col items-center justify-center mb-3">
+              <img
+                src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
+                alt="Company Logo"
+                className="h-14 w-auto object-contain mb-2 drop-shadow-md"
+              />
             </div>
-            <CardTitle className="text-xl lg:text-3xl font-bold">
+            <CardTitle className="text-2xl font-bold tracking-tight">
               {renderTitle(title)}
             </CardTitle>
             {subtitle && (
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-sm font-medium">
                 {subtitle}
               </p>
             )}
           </CardHeader>
 
-          <CardContent className="px-6 pb-6">
+          <CardContent className="px-8 pb-8">
             {children}
           </CardContent>
         </Card>

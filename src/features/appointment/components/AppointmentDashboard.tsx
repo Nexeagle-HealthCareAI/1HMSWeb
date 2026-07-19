@@ -40,6 +40,7 @@ import {
   ArrowRight,
   Pencil,
   MoreVertical,
+  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +52,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 import {
   Pagination,
   PaginationContent,
@@ -80,6 +88,7 @@ const format = (date: Date, formatStr: string) => {
   }
 };
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
+import { useCancelAppointment } from '../hooks/useCancelAppointment';
 import { useAuthStore, useAppStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -100,8 +109,10 @@ export const AppointmentDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { hospitalId } = useAuthStore();
+  const { isLowBandwidthMode } = useAppStore();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { mutateAsync: cancelAppointmentMutation, isPending: isCancellingMutation } = useCancelAppointment();
   // Hospital profile drives the print header (name/address/GSTIN) for OPD documents.
   const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1087,52 +1098,32 @@ export const AppointmentDashboard = () => {
   };
 
   const handleCancelConfirm = async () => {
-    if (!appointmentToCancel) return;
-
-    if (!hospitalId) return;
+    if (!appointmentToCancel || !hospitalId) return;
 
     setIsCancelling(true);
     try {
-      const response = await appointmentApi.cancelAppointment({
+      await cancelAppointmentMutation({
         appointmentId: appointmentToCancel.appointmentId,
         patientId: appointmentToCancel.patientId,
         hospitalId,
         reason: cancelReason.trim() || undefined,
       });
 
-      if (!response.success) {
-        toast({
-          title: 'Could not cancel appointment',
-          description: response.message,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Close dialog and reset state
+      // Close dialog and reset state (UI already optimistically updated)
       setCancelDialogOpen(false);
       setAppointmentToCancel(null);
       setCancelReason('');
 
       toast({
         title: 'Appointment cancelled',
-        description: response.message,
+        description: 'The appointment was successfully cancelled.',
       });
 
-      // Invalidate appointment details queries to refresh dashboard data
-      queryClient.invalidateQueries({
-        queryKey: ['appointmentDetails']
-      });
-
-      // Refresh appointment data
-      if (refetch) {
-        refetch();
-      }
     } catch (error: any) {
       console.error('Error cancelling appointment:', error);
       toast({
         title: 'Could not cancel appointment',
-        description: error?.response?.data?.message || error?.message,
+        description: error?.response?.data?.message || error?.message || 'Action saved offline and will sync when reconnected.',
         variant: 'destructive',
       });
     } finally {
@@ -1223,8 +1214,10 @@ export const AppointmentDashboard = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 pb-4 gap-4 overflow-auto relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-100/40 via-slate-50 to-slate-50 dark:from-brand-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
+    <div className="flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4">
+      {!isLowBandwidthMode && (
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-100/40 via-slate-50 to-slate-50 dark:from-brand-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
+      )}
 
       {/* Header Container */}
       <div className="flex-none bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl rounded-2xl shadow-xl shadow-brand-900/5 border border-white/60 dark:border-zinc-800/60 overflow-hidden relative z-10 w-full mb-2">
@@ -1242,24 +1235,23 @@ export const AppointmentDashboard = () => {
 
               <Button
                 onClick={handleBookingClick}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-lg shadow-black/10 rounded-full px-5 sm:px-6 h-9 sm:h-10 gap-2 ml-2 transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/20 backdrop-blur-sm"
+                className="hidden sm:flex bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-lg shadow-black/10 rounded-full px-5 sm:px-6 h-9 sm:h-10 gap-2 ml-2 transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/20 backdrop-blur-sm"
               >
                 <div className="bg-white/20 rounded-full p-1">
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                 </div>
-                <span className="hidden sm:inline font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
-                <span className="sm:hidden font-semibold">Book</span>
+                <span className="font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
               </Button>
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowQuickGuide(true)}
-                className="bg-white/5 hover:bg-white/10 text-brand-100 border border-white/10 rounded-full h-8 sm:h-10 px-3 sm:px-4 ml-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                className="hidden md:flex bg-white/5 hover:bg-white/10 text-brand-100 border border-white/10 rounded-full h-8 sm:h-10 px-3 sm:px-4 ml-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
               >
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline font-medium">{t('appointmentDashboard.quickGuide', 'Dashboard Help')}</span>
+                  <span className="font-medium">{t('appointmentDashboard.quickGuide', 'Dashboard Help')}</span>
                 </div>
               </Button>
             </div>
@@ -1304,7 +1296,7 @@ export const AppointmentDashboard = () => {
       {/* Main Content Area */}
       <div className="flex-1 w-full relative z-10 flex flex-col gap-6">
         {/* KPI Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+        <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
           {/* Total Appointments */}
           <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-brand-500/20 hover:-translate-y-1 transition-all duration-300 group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
@@ -1403,8 +1395,8 @@ export const AppointmentDashboard = () => {
         <div className="space-y-4">
 
 
-          {/* Compact Search Bar and Filters */}
-          <div className="mb-4 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-xl shadow-brand-900/5 relative z-10 w-full overflow-hidden">
+          {/* Desktop Search Bar and Filters */}
+          <div className="hidden md:block mb-4 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-xl shadow-brand-900/5 relative z-10 w-full overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-brand-50/30 to-transparent dark:from-brand-900/10 pointer-events-none" />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap relative z-10">
               {/* Search Input */}
@@ -1484,11 +1476,90 @@ export const AppointmentDashboard = () => {
             </div>
           </div>
 
+          {/* Mobile Filter Bar & Drawer */}
+          <div className="md:hidden mb-4 relative z-10 w-full flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-brand-500/70 dark:text-brand-400" />
+              <Input
+                placeholder={t('appointmentDashboard.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-11 bg-white/90 dark:bg-zinc-900/90 border-brand-100/50 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/30 rounded-xl shadow-sm font-medium w-full"
+              />
+            </div>
+            <Drawer>
+              <DrawerTrigger asChild>
+                <Button variant="outline" className="h-11 w-11 p-0 shrink-0 rounded-xl bg-white/90 dark:bg-zinc-900/90 border-brand-100/50 dark:border-zinc-800 shadow-sm relative">
+                  <Filter className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  {((selectedDoctor !== 'all') || (startDate !== '') || (endDate !== '')) && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-zinc-900"></span>
+                  )}
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="px-4 pb-8 pt-2">
+                <DrawerHeader className="px-0">
+                  <DrawerTitle className="text-left text-brand-900 dark:text-white font-bold">{t('appointmentDashboard.filters', { defaultValue: 'Filters' })}</DrawerTitle>
+                </DrawerHeader>
+                <div className="space-y-6 mt-2">
+                  {/* Doctor Filter Dropdown */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60">{t('appointmentDashboard.doctorLabel')}</label>
+                    <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                      <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl">
+                        <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
+                        {doctorOptions.map((doctor) => (
+                          <SelectItem key={doctor.value} value={doctor.value}>
+                            {doctor.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Date Range Filter */}
+                  {(activeTab === 'past' || activeTab === 'future') && (() => {
+                    const today = new Date();
+                    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+                    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                    const maxPastDate = yesterday.toISOString().split('T')[0];
+                    const minFutureDate = tomorrow.toISOString().split('T')[0];
+                    return (
+                      <div className="space-y-2">
+                         <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60">{t('appointmentDashboard.dateRange.label')}</label>
+                         <div className="flex gap-2">
+                            <Input
+                              type="date"
+                              value={startDate}
+                              onChange={(e) => handleStartDateChange(e.target.value)}
+                              className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl text-xs font-mono"
+                              max={activeTab === 'past' ? maxPastDate : undefined}
+                              min={activeTab === 'future' ? minFutureDate : undefined}
+                            />
+                            <Input
+                              type="date"
+                              value={endDate}
+                              onChange={(e) => handleEndDateChange(e.target.value)}
+                              className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl text-xs font-mono"
+                              min={startDate || (activeTab === 'future' ? minFutureDate : undefined)}
+                              max={activeTab === 'past' ? maxPastDate : undefined}
+                            />
+                         </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </DrawerContent>
+            </Drawer>
+          </div>
+
           {/* Status Navigation - Only show for Current tab */}
           {activeTab === 'current' && (
-            <div className="mb-4 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl p-2 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-md">
+            <div className="mb-4 hidden md:block bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl p-2 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-md">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-2">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap gap-2 pb-1 sm:pb-0">
                   {[
                     { key: 'all', label: t('appointmentDashboard.statusFilters.all'), color: 'bg-slate-100 text-slate-700 border-slate-200/50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700/50 hover:bg-slate-200' },
                     { key: 'VITALS_REQUIRED', label: t('appointmentDashboard.statusFilters.vitalsRequired'), color: 'bg-rose-100 text-rose-700 border-rose-200/50 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800/50 hover:bg-rose-200' },
@@ -1540,7 +1611,7 @@ export const AppointmentDashboard = () => {
                             finalStatusCode: a.finalStatusCode
                           })));
                         }}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all duration-300 ${selectedStatus === status.key
+                        className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all duration-300 ${selectedStatus === status.key
                           ? `${status.color.replace('hover:bg-', '')} shadow-[0_4px_12px_rgba(0,0,0,0.1)] ring-2 ring-offset-2 ring-offset-white/50 dark:ring-offset-zinc-900/50 ring-current scale-[1.02]`
                           : `${status.color} opacity-80 hover:opacity-100 hover:scale-105 hover:shadow-md`
                           }`}
@@ -1944,120 +2015,117 @@ export const AppointmentDashboard = () => {
                   </Table>
                 </div>
 
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-4">
+                {/* Mobile Card View (Android List Item Style) */}
+                <div className="md:hidden">
                   {filteredAppointments.length === 0 ? (
-                    <div className="text-center py-12 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-inner">
+                    <div className="text-center py-12 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-inner mx-4">
                       <CalendarDays className="h-10 w-10 text-brand-300 dark:text-brand-700 mx-auto mb-3 opacity-50" />
                       <p className="text-brand-900/70 dark:text-brand-200/70 text-sm font-bold tracking-wide">No appointments found</p>
                     </div>
                   ) : (
-                    currentAppointments.map((appointment) => (
-                      <div key={appointment.appointmentId} className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-white/50 dark:border-zinc-800/50 rounded-2xl shadow-lg shadow-brand-900/5 p-4 space-y-4 relative overflow-hidden group">
-                        {/* Shimmer Effect */}
-                        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 pointer-events-none opacity-50" />
-
-                        {/* Header: Token & Status */}
-                        <div className="flex justify-between items-start relative z-10">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 px-2.5 py-1 rounded-lg text-xs font-black shadow-sm border border-brand-200/50 dark:border-brand-800/50">
-                              #{appointment.token?.tokenNumber || 'NA'}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-slate-50/80 text-slate-600 border-slate-200 shadow-inner font-mono font-bold dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700">
-                              {format(new Date(appointment.startAt), 'HH:mm')}
-                            </Badge>
-                          </div>
-                          <div>
-                            <span className="scale-90 origin-right inline-block shadow-sm rounded-full">{getStatusBadge(appointment.finalStatusCode, appointment)}</span>
-                          </div>
-                        </div>
-
-                        {/* Patient Info */}
-                        <div className="flex items-start gap-3 relative z-10" onClick={() => handlePatientClick(appointment)}>
-                          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 p-2.5 rounded-xl shadow-inner border border-white dark:border-slate-700 mt-1">
-                            <User className="h-5 w-5 text-slate-500 dark:text-slate-400 drop-shadow-sm" />
-                          </div>
-                          <div>
-                            <div className="font-black text-slate-800 dark:text-slate-100 text-[15px] drop-shadow-sm">
-                              {appointment.patientFullName}
-                            </div>
-                            {appointment.referrerName && (
-                              <div className="text-[11px] text-brand-500 dark:text-brand-300 truncate leading-tight font-medium mt-0.5">
-                                <span className="font-semibold">Ref:</span>{' '}
-                                {appointment.referrerType === 'DOCTOR' ? `Dr. ${appointment.referrerName}` : appointment.referrerName}
-                              </div>
-                            )}
-                            <div className="text-xs text-slate-500 flex items-center gap-2.5 mt-1.5">
-                              <span className="font-mono text-[10px] font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-inner text-brand-600 dark:text-brand-400">{appointment.patientId}</span>
-                              <div className="flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded">
-                                <Phone className="h-3 w-3 text-brand-400" />
-                                {appointment.patientMobile}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Doctor Info */}
-                        <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200 bg-gradient-to-r from-cyan-50/50 to-brand-50/50 dark:from-cyan-900/20 dark:to-brand-900/20 p-2.5 rounded-xl border border-white/50 dark:border-zinc-800/50 shadow-sm relative z-10">
-                          <UserCheck className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
-                          <span className="font-bold tracking-wide">Dr. {appointment.doctorName || 'Not Assigned'}</span>
-                        </div>
-
-                        <div className="h-px bg-gradient-to-r from-transparent via-brand-100 dark:via-zinc-800 to-transparent my-3 opacity-50" />
-
-                        {/* Actions Grid */}
-                        <div className="grid grid-cols-2 gap-2.5 relative z-10">
-                          {activeTab !== 'past' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
-                              onClick={() => handleCancelClick(appointment)}
-                              className={`h-9 text-xs font-bold rounded-xl transition-all shadow-sm ${['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode) ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200' : 'border-rose-200 text-rose-700 bg-white hover:bg-rose-50 hover:border-rose-300'}`}
+                    <div className={`bg-white dark:bg-zinc-900/60 shadow-sm border-t border-b border-gray-100 dark:border-zinc-800/50 overflow-hidden divide-y divide-gray-100 dark:divide-zinc-800/50 ${!isLowBandwidthMode ? 'backdrop-blur-md' : ''}`}>
+                      {currentAppointments.map((appointment) => (
+                        <div key={appointment.appointmentId} className="p-3 active:bg-gray-50 dark:active:bg-zinc-800/80 transition-colors relative group">
+                          {/* Main Row */}
+                          <div className="flex gap-3 relative z-10">
+                            {/* Avatar */}
+                            <div 
+                              onClick={() => handlePatientClick(appointment)}
+                              className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-100 to-brand-200 dark:from-brand-900 dark:to-brand-800 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-lg shadow-sm shrink-0 mt-0.5 border border-white dark:border-zinc-700"
                             >
-                              <X className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Cancel
-                            </Button>
-                          )}
+                              {appointment.patientFullName.charAt(0).toUpperCase()}
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 min-w-0 flex flex-col">
+                              {/* Top Row: Name and Time */}
+                              <div className="flex justify-between items-start gap-2" onClick={() => handlePatientClick(appointment)}>
+                                <div className="font-bold text-slate-900 dark:text-slate-100 text-[15px] truncate leading-tight">
+                                  {appointment.patientFullName}
+                                </div>
+                                <span className="text-[11px] text-slate-500 font-semibold whitespace-nowrap shrink-0">{format(new Date(appointment.startAt), 'HH:mm')}</span>
+                              </div>
+                              
+                              {/* Middle Row: Token & Mobile */}
+                              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500" onClick={() => handlePatientClick(appointment)}>
+                                <span className="font-mono font-medium text-brand-600 dark:text-brand-400">#{appointment.token?.tokenNumber || 'NA'}</span>
+                                <span className="text-slate-300">•</span>
+                                <span className="truncate">{appointment.patientMobile}</span>
+                              </div>
 
-                          {activeTab === 'current' && (
-                            <Button variant="outline" size="sm" onClick={() => handlePrintToken(appointment)} className="h-9 text-xs font-bold rounded-xl border-orange-200 text-orange-700 bg-white hover:bg-orange-50 hover:border-orange-300 transition-all shadow-sm">
-                              <Tag className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Token
-                            </Button>
-                          )}
+                              {/* Status Badge */}
+                              <div className="mt-1.5 scale-[0.8] origin-left pointer-events-none" onClick={() => handlePatientClick(appointment)}>
+                                {getStatusBadge(appointment.finalStatusCode, appointment)}
+                              </div>
 
-                          {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
-                            <Button variant="outline" size="sm" onClick={() => handleVitalsClick(appointment)} className="h-9 text-xs font-bold rounded-xl border-fuchsia-200 text-fuchsia-700 bg-white hover:bg-fuchsia-50 hover:border-fuchsia-300 transition-all shadow-sm">
-                              <Heart className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Vitals
-                            </Button>
-                          )}
+                              {/* Actions Row */}
+                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50/50 dark:border-zinc-800/30">
+                                {/* Primary Action */}
+                                <div className="flex-1 mr-2">
+                                  {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
+                                    <Button size="sm" onClick={() => handleVitalsClick(appointment)} className="h-8 w-full text-xs font-bold rounded-lg bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-400 shadow-sm transition-all">
+                                      <Heart className="h-3 w-3 mr-1.5" /> Vitals
+                                    </Button>
+                                  )}
+                                  {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
+                                    <Button size="sm" onClick={() => handleConfirmPreAppointmentClick(appointment)} className="h-8 w-full text-xs font-bold rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 shadow-sm transition-all">
+                                      <CheckCircle2 className="h-3 w-3 mr-1.5" /> Confirm
+                                    </Button>
+                                  )}
+                                </div>
+                                
+                                {/* Secondary Actions */}
+                                <div className="flex gap-1.5 shrink-0">
+                                  {/* Bill Button */}
+                                  {appointment.finalStatusCode !== 'CANCELLED' && (
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
+                                      onClick={() => handleAddBillClick(appointment)}
+                                      className={`h-8 w-8 rounded-lg shadow-sm transition-all ${appointment.consultPaid ? 'border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'border-amber-200 text-amber-700 bg-white dark:bg-zinc-800 dark:border-zinc-700'}`}
+                                    >
+                                      {appointment.consultPaid ? <CheckCircle2 className="h-3.5 w-3.5" /> : <IndianRupee className="h-3.5 w-3.5" />}
+                                    </Button>
+                                  )}
 
-                          {appointment.finalStatusCode === 'PRE_APPOINTMENT' && (
-                            <Button variant="outline" size="sm" onClick={() => handleConfirmPreAppointmentClick(appointment)} className="h-9 text-xs font-bold rounded-xl border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm">
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Confirm
-                            </Button>
-                          )}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={appointment.finalStatusCode === 'CANCELLED'}
-                            title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
-                            onClick={() => handleAddBillClick(appointment)}
-                            className={`h-9 text-xs font-bold rounded-xl transition-all shadow-sm ${appointment.finalStatusCode === 'CANCELLED' ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200' : appointment.consultPaid ? 'border-emerald-200 text-emerald-700 bg-gradient-to-r from-emerald-50 to-teal-50 hover:border-emerald-300' : 'border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300'}`}
-                          >
-                            {appointment.consultPaid ? (
-                              <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> {t('appointmentDashboard.addBill.statusPaid')}</>
-                            ) : (
-                              <><IndianRupee className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Bill</>
-                            )}
-                          </Button>
-
-                          <Button variant="outline" size="sm" onClick={() => handlePrintPrescription(appointment)} className="h-9 text-xs font-bold rounded-xl border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-sm">
-                            <FileText className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Rx Print
-                          </Button>
+                                  {/* 3-Dot Overflow Menu */}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg shadow-sm bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300 transition-all">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl bg-white/95 backdrop-blur-xl dark:bg-zinc-900/95 dark:border-zinc-800">
+                                      {activeTab === 'current' && (
+                                        <DropdownMenuItem onClick={() => handlePrintToken(appointment)} className="py-2.5 font-medium cursor-pointer rounded-lg focus:bg-slate-50 dark:focus:bg-zinc-800">
+                                          <Tag className="h-4 w-4 mr-2 text-orange-500" /> Print Token
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem onClick={() => handlePrintPrescription(appointment)} className="py-2.5 font-medium cursor-pointer rounded-lg focus:bg-slate-50 dark:focus:bg-zinc-800">
+                                        <FileText className="h-4 w-4 mr-2 text-emerald-500" /> Print Rx
+                                      </DropdownMenuItem>
+                                      {activeTab !== 'past' && (
+                                        <>
+                                          <DropdownMenuSeparator className="dark:bg-zinc-800 my-1" />
+                                          <DropdownMenuItem 
+                                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                            onClick={() => handleCancelClick(appointment)}
+                                            className="py-2.5 font-medium text-rose-600 dark:text-rose-400 focus:text-rose-700 focus:bg-rose-50 dark:focus:bg-rose-900/20 cursor-pointer rounded-lg"
+                                          >
+                                            <X className="h-4 w-4 mr-2" /> Cancel Appointment
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -2639,6 +2707,16 @@ export const AppointmentDashboard = () => {
         open={showQuickGuide}
         onOpenChange={setShowQuickGuide}
       />
+
+      {/* Floating Action Button (Mobile Only) */}
+      <div className="md:hidden fixed bottom-[90px] right-4 z-50">
+        <Button
+          onClick={handleBookingClick}
+          className="h-14 w-14 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white shadow-xl shadow-brand-600/30 flex items-center justify-center active:scale-95 transition-all"
+        >
+          <Plus className="h-7 w-7" />
+        </Button>
+      </div>
     </div >
   );
 };

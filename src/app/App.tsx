@@ -11,6 +11,7 @@ import { Toaster as SonnerToaster } from 'sonner';
 import { initOffline, offlinePersister, PERSIST_BUSTER, PERSIST_MAX_AGE } from "@/offline";
 import { OfflineBanner } from "@/components/offline/OfflineBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { useAppStore } from "@/store/appStore";
 import '@/i18n'; // Initialize i18n
 
 const queryClient = new QueryClient({
@@ -26,8 +27,43 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  const { isLowBandwidthMode, setLowBandwidthMode } = useAppStore();
+
   // Boot the offline subsystem (connectivity heartbeat, sync engine, SW, persistent storage).
   useEffect(() => { initOffline(queryClient); }, []);
+
+  // Initialize and listen to low bandwidth mode from network API
+  useEffect(() => {
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (connection) {
+      const updateBandwidth = () => {
+        if (connection.saveData || ['slow-2g', '2g', '3g'].includes(connection.effectiveType)) {
+          setLowBandwidthMode(true);
+        } else {
+          setLowBandwidthMode(false);
+        }
+      };
+      
+      // Only auto-set on mount if not already persisted (or maybe we just always auto-detect unless manually overridden later, but for simplicity let's auto-detect on mount)
+      updateBandwidth();
+      
+      connection.addEventListener('change', updateBandwidth);
+      return () => connection.removeEventListener('change', updateBandwidth);
+    }
+  }, [setLowBandwidthMode]);
+
+  // Dynamically update QueryClient defaults based on bandwidth mode
+  useEffect(() => {
+    queryClient.setDefaultOptions({
+      queries: {
+        staleTime: isLowBandwidthMode ? 15 * 60 * 1000 : 5 * 60 * 1000, // 15 mins for low bandwidth, else 5 mins
+        gcTime: 24 * 60 * 60 * 1000, 
+        retry: 1,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: !isLowBandwidthMode, // disable refetch on reconnect if low bandwidth
+      },
+    });
+  }, [isLowBandwidthMode]);
 
   return (
     <PersistQueryClientProvider

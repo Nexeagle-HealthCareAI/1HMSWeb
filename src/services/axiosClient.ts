@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
 import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,6 +47,11 @@ axiosInstance.interceptors.request.use(
     const csrfToken = localStorage.getItem('csrf-token');
     if (csrfToken && config.headers) {
       config.headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    // Add Save-Data header if low bandwidth mode is active
+    if (useAppStore.getState().isLowBandwidthMode && config.headers) {
+      config.headers['Save-Data'] = 'on';
     }
     
     return config;

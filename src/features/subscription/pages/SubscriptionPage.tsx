@@ -140,14 +140,39 @@ export const SubscriptionPage = () => {
     const isRejected = status?.status === 'Rejected';
 
     return (
-        <div className="h-[calc(100vh-4rem)] w-full relative overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col">
+        <div className="min-h-full lg:h-[calc(100vh-4rem)] w-full relative overflow-hidden lg:bg-white dark:lg:bg-slate-900 lg:border border-gray-200 dark:border-gray-800 lg:rounded-2xl flex flex-col">
             {/* Ambient Background */}
             <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-brand-500/10 blur-[120px] pointer-events-none" />
             <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
 
-            <div className="relative z-10 w-full h-full flex flex-col lg:flex-row overflow-hidden">
+            {/* Mobile Tab Bar */}
+            <div className="lg:hidden flex p-1 mx-4 mt-4 mb-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-xl relative z-10 shadow-sm">
+                <button
+                    onClick={() => setActiveTab('current')}
+                    className={cn(
+                        "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                        activeTab === 'current' ? "bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400" : "text-slate-500 dark:text-slate-400"
+                    )}
+                >
+                    Current Plan
+                </button>
+                <button
+                    onClick={() => setActiveTab('plans')}
+                    className={cn(
+                        "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                        activeTab === 'plans' ? "bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400" : "text-slate-500 dark:text-slate-400"
+                    )}
+                >
+                    Upgrade Plans
+                </button>
+            </div>
+
+            <div className="relative z-10 w-full h-full flex flex-col lg:flex-row lg:overflow-hidden">
                 {/* Left Panel: Current Subscription & History */}
-                <div className="w-full lg:w-[360px] xl:w-[420px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-6 overflow-y-auto">
+                <div className={cn(
+                    "w-full lg:w-[360px] xl:w-[420px] shrink-0 lg:border-r border-slate-200 dark:border-slate-800 bg-transparent lg:bg-slate-50/50 dark:lg:bg-slate-900/50 p-4 lg:p-6 lg:overflow-y-auto",
+                    activeTab === 'current' ? 'block' : 'hidden lg:block'
+                )}>
                     <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                         <ShieldCheck className="w-5 h-5 text-brand-500" /> Current Plan
                     </h2>
@@ -287,7 +312,10 @@ export const SubscriptionPage = () => {
                 </div>
 
                 {/* Right Panel: Available Plans */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+                <div className={cn(
+                    "flex-1 lg:overflow-y-auto p-4 lg:p-6 md:p-8 relative",
+                    activeTab === 'plans' ? 'block' : 'hidden lg:block'
+                )}>
                     <div className="max-w-6xl mx-auto">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                             <div>
@@ -296,15 +324,16 @@ export const SubscriptionPage = () => {
                             </div>
                             
                             {/* Toggles */}
-                            <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto overflow-hidden sm:overflow-visible">
+                                {/* Billing Cycle Toggle */}
                                 {availableCycles.length > 1 && (
-                                    <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1 shadow-inner">
+                                    <div className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1 shadow-inner shrink-0 mx-auto sm:mx-0">
                                         {availableCycles.map(c => (
                                             <button
                                                 key={c}
                                                 onClick={() => setCycle(c)}
                                                 className={cn(
-                                                    'px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap',
+                                                    'px-5 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap',
                                                     cycle === c ? 'bg-brand-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
                                                 )}
                                             >
@@ -314,18 +343,21 @@ export const SubscriptionPage = () => {
                                     </div>
                                 )}
 
+                                {/* Doctor Size Chips */}
                                 {teamSizes.length > 1 && (
-                                    <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1 shadow-inner">
+                                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1 mx-auto sm:mx-0">
                                         {teamSizes.map(size => (
                                             <button
                                                 key={size}
                                                 onClick={() => setSelectedTeamSize(size)}
                                                 className={cn(
-                                                    'flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap',
-                                                    selectedTeamSize === size ? 'bg-brand-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                                                    'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap border',
+                                                    selectedTeamSize === size 
+                                                      ? 'bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/20' 
+                                                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-300 dark:hover:border-brand-700 hover:text-brand-600 dark:hover:text-brand-400'
                                                 )}
                                             >
-                                                <Stethoscope className="w-3.5 h-3.5" />
+                                                <Stethoscope className="w-4 h-4" />
                                                 {size} Doc{size > 1 ? 's' : ''}
                                             </button>
                                         ))}
