@@ -7,12 +7,14 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  Globe
+  Globe,
+  Users
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { PublicDirectoryConfig } from './PublicDirectoryConfig';
+import { UserManagement } from '@/features/user-management/components/UserManagement';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,9 +49,16 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       },
       {
         id: 'publicDirectory',
-        label: t('systemConfiguration.navigation.publicDirectory.label', { defaultValue: 'Public Directory' }),
-        description: t('systemConfiguration.navigation.publicDirectory.description', { defaultValue: 'Platform-wide doctor listing' }),
+        label: t('systemConfiguration.navigation.publicDirectory.label', { defaultValue: 'Online Listing' }),
+        description: t('systemConfiguration.navigation.publicDirectory.description', { defaultValue: 'Manage online visibility and doctor profiles' }),
         icon: Globe,
+      },
+      {
+        id: 'users',
+        label: t('systemConfiguration.navigation.users.label', { defaultValue: 'User Management' }),
+        description: t('systemConfiguration.navigation.users.description', { defaultValue: 'Manage hospital staff' }),
+        icon: Users,
+        mobileOnly: true, // Only show on mobile top-nav, hidden on desktop sidebar
       }
     ] as const,
     [t]
@@ -103,7 +112,9 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         </div>
 
         <div className="flex-1 py-4 px-3 space-y-2 overflow-y-auto">
-          {navigationItems.map((item) => (
+          {navigationItems.map((item) => {
+            if ('mobileOnly' in item && item.mobileOnly) return null;
+            return (
             <button
               key={item.id}
               type="button"
@@ -133,7 +144,8 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-brand-500"></div>
               )}
             </button>
-          ))}
+            );
+          })}
         </div>
       </aside>
 
@@ -141,17 +153,17 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       <main className="flex-1 overflow-x-hidden overflow-y-auto lg:p-8 bg-transparent max-lg:p-0">
         <div className="w-full h-full max-w-[1200px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <div className="lg:hidden sticky top-0 z-40 bg-gray-50/90 dark:bg-gray-950/90 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 shadow-sm dark:shadow-gray-900/50">
-              <TabsList className="flex w-full h-12 gap-1 rounded-[1.25rem] bg-gray-200/60 dark:bg-gray-800/60 p-1 shadow-inner border border-gray-200/50 dark:border-gray-700/50">
+            <div className="lg:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl pt-3 pb-3 -mx-4 px-4 sm:-mx-6 sm:px-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.5)] border-b border-gray-100 dark:border-gray-800">
+              <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto gap-2.5 bg-transparent p-0 border-0 shadow-none justify-start">
                 {navigationItems.map((item) => (
                   <TabsTrigger
                     key={item.id}
                     value={item.id}
-                    className="relative flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs sm:text-sm font-semibold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-brand-600 dark:data-[state=active]:text-brand-400 data-[state=active]:shadow-sm"
+                    className="relative flex-shrink-0 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold transition-all data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-brand-500/30 bg-gray-100/80 dark:bg-slate-800 text-gray-600 dark:text-gray-300 border border-transparent data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:hover:bg-slate-700"
                     data-testid={item.id === 'branding' ? 'hospital-info-tab' : undefined}
                   >
                     <item.icon className="h-4 w-4 shrink-0 transition-transform data-[state=active]:scale-110" />
-                    <span className="truncate">{item.label}</span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -168,6 +180,10 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
 
             <TabsContent value="publicDirectory">
               <PublicDirectoryConfig />
+            </TabsContent>
+
+            <TabsContent value="users">
+              <UserManagement />
             </TabsContent>
           </Tabs>
         </div>

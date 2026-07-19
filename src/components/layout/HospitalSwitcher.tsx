@@ -47,9 +47,9 @@ export const HospitalSwitcher: React.FC = () => {
   // Non-interactive (single hospital, non-admin): a plain name label next to the logo.
   if (!interactive) {
     return (
-      <div className="hidden md:flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 h-10 text-base font-bold text-gray-800 dark:text-gray-100">
-        <Building2 className="h-4 w-4 text-brand-600 shrink-0" />
-        <span className="max-w-[180px] truncate">{active.name}</span>
+      <div className="flex items-center gap-1.5 md:gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 md:px-3 h-9 md:h-10 text-sm md:text-base font-bold text-gray-800 dark:text-gray-100">
+        <Building2 className="h-4 w-4 md:h-4 md:w-4 text-brand-600 shrink-0" />
+        <span className="max-w-[80px] sm:max-w-[120px] md:max-w-[180px] truncate">{active.name}</span>
       </div>
     );
   }
@@ -59,12 +59,12 @@ export const HospitalSwitcher: React.FC = () => {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="hidden md:inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 h-10 text-base font-bold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+          className="inline-flex items-center gap-1.5 md:gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 md:px-3 h-9 md:h-10 text-sm md:text-base font-bold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
           title="Hospital"
         >
           <Building2 className="h-4 w-4 text-brand-600 shrink-0" />
-          <span className="max-w-[180px] truncate">{active.name}</span>
-          <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
+          <span className="max-w-[80px] sm:max-w-[120px] md:max-w-[180px] truncate">{active.name}</span>
+          <ChevronDown className="h-3 w-3 md:h-4 md:w-4 text-gray-400 shrink-0" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">

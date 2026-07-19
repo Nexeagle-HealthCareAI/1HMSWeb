@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import {
   Users,
   Search,
@@ -21,7 +22,8 @@ import {
   Shield,
   Key,
   KeyRound,
-  Clock
+  Clock,
+  MoreVertical
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { AllUsersResponse } from '../services/userManagementApi';
@@ -182,56 +184,63 @@ export const OnboardedUsers: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
-            <div className="flex-1">
-              <div className="relative flex flex-col">
-                <label className="block text-sm font-medium mb-1">{t('userManagement.onboardedUsers.searchLabel')}</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder={t('userManagement.onboardedUsers.searchPlaceholder')}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="w-full md:w-[200px] flex flex-col">
-              <label className="block text-sm font-medium mb-1">{t('userManagement.onboardedUsers.roleLabel')}</label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('userManagement.onboardedUsers.rolePlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('userManagement.onboardedUsers.allRoles')}</SelectItem>
-                  {uniqueRoles.map(role => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-full md:w-[200px] flex flex-col">
-              <label className="block text-sm font-medium mb-1">{t('userManagement.onboardedUsers.statusLabel')}</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('userManagement.onboardedUsers.statusPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('userManagement.onboardedUsers.status.all')}</SelectItem>
-                  <SelectItem value="active">{t('userManagement.onboardedUsers.status.active')}</SelectItem>
-                  <SelectItem value="inactive">{t('userManagement.onboardedUsers.status.inactive')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-4 mb-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder={t('userManagement.onboardedUsers.searchPlaceholder')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 rounded-xl h-12 shadow-sm"
+          />
+        </div>
+        
+        {/* Mobile Filter Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide">
+          <Badge 
+            variant={roleFilter === 'all' ? 'default' : 'outline'} 
+            className="cursor-pointer shrink-0 rounded-full px-4 py-1.5 text-sm"
+            onClick={() => setRoleFilter('all')}
+          >
+            {t('userManagement.onboardedUsers.allRoles')}
+          </Badge>
+          {uniqueRoles.map(role => (
+            <Badge 
+              key={role} 
+              variant={roleFilter === role ? 'default' : 'outline'} 
+              className="cursor-pointer shrink-0 rounded-full px-4 py-1.5 text-sm"
+              onClick={() => setRoleFilter(role)}
+            >
+              {role}
+            </Badge>
+          ))}
+          <div className="w-px h-6 bg-gray-200 dark:bg-gray-800 shrink-0 mx-1" />
+          <Badge 
+            variant={statusFilter === 'all' ? 'default' : 'outline'} 
+            className="cursor-pointer shrink-0 rounded-full px-4 py-1.5 text-sm"
+            onClick={() => setStatusFilter('all')}
+          >
+            {t('userManagement.onboardedUsers.status.all')}
+          </Badge>
+          <Badge 
+            variant={statusFilter === 'active' ? 'default' : 'outline'} 
+            className="cursor-pointer shrink-0 rounded-full px-4 py-1.5 text-sm"
+            onClick={() => setStatusFilter('active')}
+          >
+            {t('userManagement.onboardedUsers.status.active')}
+          </Badge>
+          <Badge 
+            variant={statusFilter === 'inactive' ? 'default' : 'outline'} 
+            className="cursor-pointer shrink-0 rounded-full px-4 py-1.5 text-sm"
+            onClick={() => setStatusFilter('inactive')}
+          >
+            {t('userManagement.onboardedUsers.status.inactive')}
+          </Badge>
+        </div>
+      </div>
 
       {/* Users Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-3 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredUsers.length === 0 ? (
           <div className="col-span-full">
             <Card>
@@ -392,102 +401,63 @@ export const OnboardedUsers: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setViewUser(user);
-                            setIsViewDialogOpen(true);
-                          }}
-                          className={cn(
-                            "h-8 w-8 p-0 rounded-lg transition-all duration-300",
-                            isUserActive(user)
-                              ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-900/20 shadow-sm"
-                              : "bg-transparent border-slate-300 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800"
-                          )}
-                          title={t('userManagement.onboardedUsers.actions.viewTooltip')}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditUser(user);
-                            setIsEditDialogOpen(true);
-                          }}
-                          className={cn(
-                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
-                            isUserActive(user)
-                              ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:hover:bg-blue-900/20"
-                              : "bg-transparent border-slate-300 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800"
-                          )}
-                          title="Edit user details"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setShareTarget({
-                              userId: user.userId,
-                              fullName: user.fullName,
-                              email: user.email,
-                              mobileNumber: user.mobileNumber,
-                            });
-                            setShowShareDialog(true);
-                          }}
-                          className={cn(
-                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
-                            isUserActive(user)
-                              ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 dark:hover:bg-amber-900/20'
-                              : 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800'
-                          )}
-                          title={isUserActive(user) ? t('userManagement.onboardedUsers.actions.shareLogin') : t('userManagement.onboardedUsers.actions.shareLoginInactive')}
-                          disabled={!isUserActive(user)}
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeactivateUser({
-                            userId: user.userId,
-                            fullName: user.fullName,
-                            email: user.email
-                          })}
-                          className={cn(
-                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
-                            isUserActive(user) && user.userId !== currentUserId && !user.isPrimary
-                              ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-900/20 hover:shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                              : 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800'
-                          )}
-                          title={
-                            user.isPrimary
-                              ? t('userManagement.onboardedUsers.actions.cannotDeactivatePrimary', 'Cannot deactivate primary user')
-                              : user.userId === currentUserId
-                                ? t('userManagement.onboardedUsers.actions.cannotDeactivateSelf')
-                                : isUserActive(user)
-                                  ? t('userManagement.onboardedUsers.actions.deactivateUser')
-                                  : t('userManagement.onboardedUsers.actions.alreadyInactive')
-                          }
-                          disabled={!isUserActive(user) || user.userId === currentUserId || user.isPrimary}
-                        >
-                          <UserX className="h-4 w-4" />
-                        </Button>
-                        {!isUserActive(user) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReactivateUser({ userId: user.userId })}
-                            disabled={reactivateUser.isPending}
-                            className="h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-900/20"
-                            title={t('userManagement.onboardedUsers.actions.reactivateUser', 'Reactivate user')}
-                          >
-                            <UserCheck className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => { setViewUser(user); setIsViewDialogOpen(true); }}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              <span>{t('userManagement.onboardedUsers.actions.viewTooltip')}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setEditUser(user); setIsEditDialogOpen(true); }}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Edit User</span>
+                            </DropdownMenuItem>
+                            {isUserActive(user) && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setShareTarget({
+                                    userId: user.userId,
+                                    fullName: user.fullName,
+                                    email: user.email,
+                                    mobileNumber: user.mobileNumber,
+                                  });
+                                  setShowShareDialog(true);
+                                }}
+                              >
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                <span>{t('userManagement.onboardedUsers.actions.shareLogin')}</span>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            {isUserActive(user) ? (
+                              <DropdownMenuItem 
+                                className="text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300"
+                                disabled={user.userId === currentUserId || user.isPrimary}
+                                onClick={() => handleDeactivateUser({
+                                  userId: user.userId,
+                                  fullName: user.fullName,
+                                  email: user.email
+                                })}
+                              >
+                                <UserX className="mr-2 h-4 w-4" />
+                                <span>{t('userManagement.onboardedUsers.actions.deactivateUser')}</span>
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem 
+                                className="text-emerald-600 dark:text-emerald-400 focus:text-emerald-700 dark:focus:text-emerald-300"
+                                disabled={reactivateUser.isPending}
+                                onClick={() => handleReactivateUser({ userId: user.userId })}
+                              >
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                <span>{t('userManagement.onboardedUsers.actions.reactivateUser', 'Reactivate user')}</span>
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>

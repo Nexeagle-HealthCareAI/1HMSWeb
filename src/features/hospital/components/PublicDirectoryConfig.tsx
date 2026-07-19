@@ -228,7 +228,7 @@ export const PublicDirectoryConfig: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Globe className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-            {translate('publicDirectory.title', 'Public Doctor Directory')}
+            {translate('publicDirectory.title', 'Online Listing')}
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             {translate(
