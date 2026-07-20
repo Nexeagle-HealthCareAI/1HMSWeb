@@ -246,6 +246,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'configuration', name: t('header.configuration') || 'Hospital Info', icon: Building2, path: '/configuration' },
     { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
+    { id: 'appointment-dashboard', name: t('header.appointments') || 'Appointments', icon: Calendar, path: '/appointment-dashboard' },
+    { id: 'patients', name: t('header.patients') || 'Patients', icon: Users, path: '/patients' },
+    { id: 'ipd-workspace', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
+    { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
@@ -256,8 +260,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (item.id === 'admin' || item.id === 'subscription') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
     }
-    if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
+    if (item.id === 'dashboard') {
       return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
+    }
+    if (item.id === 'appointment-dashboard') {
+      return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor') || userRoles.includes('Admin') || userRoles.includes('Nurse') || userRoles.includes('Receptionist');
+    }
+    if (item.id === 'patients') {
+      return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor') || userRoles.includes('Admin') || userRoles.includes('Nurse') || userRoles.includes('Receptionist');
+    }
+    if (item.id === 'ipd-workspace') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
     }
     if (item.id === 'configuration') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor');
