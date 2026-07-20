@@ -12,6 +12,7 @@ import { useDepartmentApi } from '@/hooks/useApi';
 import { SpecializationSelector } from '@/features/doctor/components/SpecializationSelector';
 import { PrimarySpecialityPicker } from '@/features/doctor/components/PrimarySpecialityPicker';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
+import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
   open: boolean;
@@ -44,19 +45,21 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
   const { toast } = useToast();
   const { getAllRoles, quickAddUser, updateUser, shareCredentials } = useUserManagementApi();
   const rolesQuery = getAllRoles();
+  const { isReadOnly: isSubscriptionReadOnly } = useSubscriptionReadOnly();
   // The roles table holds a system role plus a per-hospital copy of each role (same name),
-  // so the raw list repeats names. Show each role type once. Team members can only be onboarded
-  // as Doctor or AdminDoctor — other role types aren't assignable from this form.
+  // so the raw list repeats names. Show each role type once. While the subscription is
+  // expired/blocked, only Doctor/AdminDoctor can be onboarded — other role types are hidden
+  // until the subscription is renewed. Fully open otherwise.
   const roles = useMemo(() => {
     const seen = new Set<string>();
     return (rolesQuery.data?.allRoles ?? []).filter(r => {
       const key = r.roleName?.trim().toLowerCase();
       if (!key || seen.has(key)) return false;
-      if (!DOCTOR_ROLES.includes(key)) return false;
+      if (isSubscriptionReadOnly && !DOCTOR_ROLES.includes(key)) return false;
       seen.add(key);
       return true;
     });
-  }, [rolesQuery.data]);
+  }, [rolesQuery.data, isSubscriptionReadOnly]);
 
   const [form, setForm] = useState({ ...EMPTY });
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -322,6 +325,11 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
                       })
                     }
                   </div>
+                  {isSubscriptionReadOnly && (
+                    <p className="text-[11px] text-amber-600 mt-1.5">
+                      Your hospital's subscription is expired — only Doctor and AdminDoctor can be onboarded until it's renewed.
+                    </p>
+                  )}
                 </div>
               </div>
 
