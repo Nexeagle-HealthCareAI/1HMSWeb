@@ -36,6 +36,17 @@ const parseQualifications = (raw?: string | null): string[] =>
     .map((q) => q.trim())
     .filter(Boolean);
 
+// Local <input type="datetime-local"> uses "YYYY-MM-DDTHH:mm" with no timezone — treat it as the
+// admin's local time and convert to/from the UTC ISO string the API stores. Mirrors CMS's Doctor
+// Dekho marketing editor (DoctorsPage.tsx) so both editors of the same field behave identically.
+const toLocalInputValue = (iso?: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const fromLocalInputValue = (local: string): string | null => (local ? new Date(local).toISOString() : null);
+
 export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
   open,
   onOpenChange,
@@ -64,6 +75,9 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
   const [languages, setLanguages] = useState<string[]>([]);
   const [publicContactEmail, setPublicContactEmail] = useState('');
   const [publicContactPhone, setPublicContactPhone] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('');
+  const [discountStartAt, setDiscountStartAt] = useState('');
+  const [discountEndAt, setDiscountEndAt] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -83,6 +97,9 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
       setLanguages(doctor.languages || []);
       setPublicContactEmail(doctor.publicContactEmail || '');
       setPublicContactPhone(doctor.publicContactPhone || '');
+      setDiscountPercent(doctor.discountPercent != null ? String(doctor.discountPercent) : '');
+      setDiscountStartAt(toLocalInputValue(doctor.discountStartAt));
+      setDiscountEndAt(toLocalInputValue(doctor.discountEndAt));
     }
   }, [doctor, open]);
 
@@ -119,6 +136,18 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
       return;
     }
 
+    const discountPct = discountPercent.trim() === '' ? null : Number(discountPercent);
+    if (discountPct != null && (Number.isNaN(discountPct) || discountPct < 0 || discountPct > 100)) {
+      toast({ title: 'Invalid discount', description: 'Discount percent must be between 0 and 100.', variant: 'destructive' });
+      return;
+    }
+    const discountStart = fromLocalInputValue(discountStartAt);
+    const discountEnd = fromLocalInputValue(discountEndAt);
+    if (discountStart && discountEnd && new Date(discountEnd) < new Date(discountStart)) {
+      toast({ title: 'Invalid discount window', description: 'Discount end date cannot be before the start date.', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await publicDirectoryDoctorsApi.updateDoctorTile({
@@ -136,6 +165,10 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
         languages,
         publicContactEmail,
         publicContactPhone,
+        updateDiscount: true,
+        discountPercent: discountPct,
+        discountStartAt: discountStart,
+        discountEndAt: discountEnd,
       });
 
       if (!response.success) {
@@ -256,6 +289,49 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
                 onChange={(e) => setOpdConsultFee(e.target.value)}
                 placeholder="Synced with Configuration > Doctor Fees"
               />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <div>
+              <Label className="text-sm font-medium">OPD discount</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Applies only to online bookings made via Doctor Dekho. It does not change fees for
+                in-hospital appointments booked here in easyHMS.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tile-discount-percent">Discount %</Label>
+                <Input
+                  id="tile-discount-percent"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  placeholder="e.g. 20"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tile-discount-start">Starts</Label>
+                <Input
+                  id="tile-discount-start"
+                  type="datetime-local"
+                  value={discountStartAt}
+                  onChange={(e) => setDiscountStartAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tile-discount-end">Ends</Label>
+                <Input
+                  id="tile-discount-end"
+                  type="datetime-local"
+                  value={discountEndAt}
+                  onChange={(e) => setDiscountEndAt(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 

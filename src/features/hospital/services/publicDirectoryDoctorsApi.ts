@@ -47,6 +47,12 @@ export interface PublicDirectoryDoctorTile {
     opdConsultFee?: number | null;
     ipdVisitFee?: number | null;
     emergencyFee?: number | null;
+    // OPD discount — same fields CMS's Doctor Dekho marketing editor sets. Applies to online
+    // bookings from Doctor Dekho (NexEagleWebsite) only; has no effect on easyHMSWeb's own
+    // in-hospital appointment or billing flows.
+    discountPercent?: number | null;
+    discountStartAt?: string | null;
+    discountEndAt?: string | null;
 }
 
 export interface GetPublicDirectoryDoctorsResponse {
@@ -70,6 +76,13 @@ export interface UpdateDoctorTileRequest {
     languages?: string[];
     publicContactEmail?: string;
     publicContactPhone?: string;
+    // When true, discountPercent/discountStartAt/discountEndAt below are applied as a full
+    // replace (discountPercent omitted/undefined clears the discount). Omit entirely (or leave
+    // false) to leave the doctor's discount untouched.
+    updateDiscount?: boolean;
+    discountPercent?: number | null;
+    discountStartAt?: string | null;
+    discountEndAt?: string | null;
 }
 
 export interface UpdateDoctorTileResponse {
