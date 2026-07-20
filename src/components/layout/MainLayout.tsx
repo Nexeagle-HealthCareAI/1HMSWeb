@@ -294,7 +294,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   }, [location.pathname]);
 
   const handleNavigation = (item: NavigationItem) => {
-    if (hospitalAccessRestricted && item.id !== 'admin') {
+    // Hospital-registration lockdown only makes sense for the role that can actually resolve it
+    // (complete the hospital's registration on /admin) — Receptionist/Nurse/Doctor/etc. can never
+    // reach /admin (RouteGuard requires Admin/AdminDoctor there), so gating them here left no
+    // escape route: every nav item disabled, forced toward a page they're blocked from entering.
+    if (hospitalAccessRestricted && isAdminRole && item.id !== 'admin') {
       setCurrentPage('admin');
       navigate('/admin');
       setIsTileMenuOpen(false);
@@ -327,7 +331,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navigation.map((item) => {
               const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
-              const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
+              const isDisabled = hospitalAccessRestricted && isAdminRole && item.id !== 'admin';
               return (
                 <div key={item.id} className="relative group">
                   {/* Active accent on the rail edge */}
@@ -518,7 +522,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <div className="grid grid-cols-2 gap-4">
                     {navigation.filter(item => item.id !== 'billing').map((item, i) => {
                        const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
-                       const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
+                       const isDisabled = hospitalAccessRestricted && isAdminRole && item.id !== 'admin';
                        return (
                          <button
                            key={item.id}
