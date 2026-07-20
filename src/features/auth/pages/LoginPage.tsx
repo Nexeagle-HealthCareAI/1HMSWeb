@@ -50,23 +50,29 @@ const LoginPage = () => {
     if (userRole) {
       authStore.setUserRole(userRole);
     }
-    
+
     // Get the user role from the store if not provided as parameter
     const currentUserRole = userRole || authStore.getUserRole();
-    
+
     // Navigate to appropriate dashboard based on role
     const intendedPath = location.state?.from?.pathname;
+    console.log('[LOGIN-DEBUG] handleLogin: currentUserRole=', currentUserRole, 'intendedPath=', intendedPath, 'isAuthenticated=', authStore.isAuthenticated, 'allRoles=', authStore.userRoles);
     if (intendedPath && intendedPath !== '/') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to intendedPath=', intendedPath);
       navigate(intendedPath);
     } else if (currentUserRole === 'Admin' || currentUserRole === 'AdminDoctor') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /admin');
       navigate('/admin');
     } else if (currentUserRole === 'Receptionist' || currentUserRole === 'Nurse') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (Receptionist/Nurse branch)');
       navigate('/appointment-dashboard');
     } else if (currentUserRole === 'Doctor') {
       const isMobile = window.innerWidth < 1024;
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to', isMobile ? '/appointment-dashboard' : '/dashboard', '(Doctor branch)');
       navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
     } else {
       // Default fallback
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (default fallback branch) — currentUserRole was', JSON.stringify(currentUserRole));
       navigate('/appointment-dashboard');
     }
   };
