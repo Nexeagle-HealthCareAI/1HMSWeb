@@ -24,6 +24,7 @@ export interface QuickAddUserRequest {
   qualification?: string[];
   experienceYears?: number;
   medicalCouncil?: string;
+  registrationYear?: number;
   department?: string;
   specializations?: string[];
   primaryMedicalSpecialityId?: string;
@@ -48,6 +49,7 @@ export interface AdminUpdateUserRequest {
   qualification?: string[];
   experienceYears?: number;
   medicalCouncil?: string;
+  registrationYear?: number;
   department?: string;
   specializations?: string[];
   primaryMedicalSpecialityId?: string;

@@ -19,6 +19,7 @@ import { QualificationSelector } from '@/features/doctor/components/Qualificatio
 import { SpecializationSelector } from '@/features/doctor/components/SpecializationSelector';
 import { LanguagesSelector } from './LanguagesSelector';
 import { publicDirectoryDoctorsApi, type PublicDirectoryDoctorTile } from '../services/publicDirectoryDoctorsApi';
+import { doctorFeeService } from '../services/doctorFeeService';
 import { Loader2, Save } from 'lucide-react';
 
 interface EditDoctorTileDialogProps {
@@ -48,6 +49,13 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
 
   const [photoUrl, setPhotoUrl] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
+  const [medicalCouncil, setMedicalCouncil] = useState('');
+  const [registrationYear, setRegistrationYear] = useState('');
+  const [opdConsultFee, setOpdConsultFee] = useState('');
+  // Not shown/edited here — round-tripped back unchanged on save so this tile's OPD-only edit
+  // doesn't clobber them (the shared doctor-fees endpoint takes all three, non-nullable).
+  const [ipdVisitFee, setIpdVisitFee] = useState(0);
+  const [emergencyFee, setEmergencyFee] = useState(0);
   const [qualification, setQualification] = useState<string[]>([]);
   const [departmentId, setDepartmentId] = useState('');
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -62,6 +70,11 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
     if (doctor && open) {
       setPhotoUrl(doctor.photoUrl || '');
       setLicenseNumber(doctor.licenseNumber || '');
+      setMedicalCouncil(doctor.medicalCouncil || '');
+      setRegistrationYear(doctor.registrationYear ? String(doctor.registrationYear) : '');
+      setOpdConsultFee(doctor.opdConsultFee != null ? String(doctor.opdConsultFee) : '');
+      setIpdVisitFee(doctor.ipdVisitFee ?? 0);
+      setEmergencyFee(doctor.emergencyFee ?? 0);
       setQualification(parseQualifications(doctor.qualification));
       setDepartmentId(doctor.departmentId || '');
       setSpecializations(doctor.specializations || []);
@@ -95,6 +108,17 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
       return;
     }
 
+    if (!medicalCouncil.trim()) {
+      toast({ title: 'State medical council required', description: 'Enter the state medical council this doctor is registered with.', variant: 'destructive' });
+      return;
+    }
+    const regYear = Number(registrationYear);
+    const currentYear = new Date().getFullYear();
+    if (!registrationYear || !Number.isInteger(regYear) || regYear < 1950 || regYear > currentYear) {
+      toast({ title: 'Valid registration year required', description: `Enter a registration year between 1950 and ${currentYear}.`, variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await publicDirectoryDoctorsApi.updateDoctorTile({
@@ -102,6 +126,8 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
         hospitalId,
         hospitalDepartmentMappingId: doctor.hospitalDepartmentMappingId,
         licenseNumber: licenseNumber || undefined,
+        medicalCouncil: medicalCouncil.trim(),
+        registrationYear: regYear,
         qualification,
         experienceYears: experienceYears === '' ? undefined : Number(experienceYears),
         bio: bio || undefined,
@@ -112,17 +138,41 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
         publicContactPhone,
       });
 
-      if (response.success) {
-        toast({ title: t('publicDirectory.editDialog.saveSuccess', { defaultValue: 'Doctor profile updated' }) });
-        onSaved();
-        onOpenChange(false);
-      } else {
+      if (!response.success) {
         toast({
           title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }),
           description: response.message || (response.errors || []).join(', '),
           variant: 'destructive',
         });
+        return;
       }
+
+      // OPD fee lives in the shared dbo.DoctorFees table (same one Configuration > Doctor Fees
+      // edits) — a separate endpoint from the profile PUT above. IPD/Emergency round-trip
+      // unchanged since this tile only surfaces OPD.
+      if (opdConsultFee.trim()) {
+        try {
+          await doctorFeeService.upsert({
+            doctorId: doctor.doctorId,
+            opdConsultFee: Number(opdConsultFee) || 0,
+            ipdVisitFee,
+            emergencyFee,
+          }, hospitalId);
+        } catch (feeErr: any) {
+          toast({
+            title: 'Profile saved, but the fee update failed',
+            description: feeErr?.message ?? 'Try updating the OPD fee again from Configuration > Doctor Fees.',
+            variant: 'destructive',
+          });
+          onSaved();
+          onOpenChange(false);
+          return;
+        }
+      }
+
+      toast({ title: t('publicDirectory.editDialog.saveSuccess', { defaultValue: 'Doctor profile updated' }) });
+      onSaved();
+      onOpenChange(false);
     } catch (e: any) {
       toast({
         title: t('publicDirectory.editDialog.saveFailedTitle', { defaultValue: 'Could not save' }),
@@ -174,6 +224,37 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
                 min={0}
                 value={experienceYears}
                 onChange={(e) => setExperienceYears(e.target.value === '' ? '' : Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tile-medical-council">
+                State medical council <span className="text-red-500">*</span>
+              </Label>
+              <Input id="tile-medical-council" value={medicalCouncil} onChange={(e) => setMedicalCouncil(e.target.value)} placeholder="e.g. Karnataka Medical Council" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tile-registration-year">
+                Registration year <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="tile-registration-year"
+                type="number"
+                min={1950}
+                max={new Date().getFullYear()}
+                value={registrationYear}
+                onChange={(e) => setRegistrationYear(e.target.value)}
+                placeholder="e.g. 2012"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tile-opd-fee">OPD consultation fee (₹)</Label>
+              <Input
+                id="tile-opd-fee"
+                type="number"
+                min={0}
+                value={opdConsultFee}
+                onChange={(e) => setOpdConsultFee(e.target.value)}
+                placeholder="Synced with Configuration > Doctor Fees"
               />
             </div>
           </div>
