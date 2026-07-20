@@ -27,6 +27,7 @@ const DOCTOR_ROLES = ['doctor', 'admindoctor'];
 const EMPTY = {
   fullName: '', mobileNumber: '', email: '', password: '', confirm: '', roles: [] as string[],
   licenseNumber: '', qualification: '', experienceYears: '', department: '', consultFee: '', primaryMedicalSpecialityId: '',
+  medicalCouncil: '', registrationYear: '',
 };
 
 // Snapshot of the just-created member, used for the share-login screen.
@@ -80,6 +81,8 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
         department: initialData.department || '',
         consultFee: initialData.consultFee ? String(initialData.consultFee) : '',
         primaryMedicalSpecialityId: initialData.primaryMedicalSpecialityId || '',
+        medicalCouncil: initialData.medicalCouncil || '',
+        registrationYear: initialData.registrationYear ? String(initialData.registrationYear) : '',
       });
       if (initialData.specializations) {
         setSpecializations(initialData.specializations);
@@ -132,6 +135,15 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
         toast({ title: t('userManagement.quickAdd.licenseReqTitle'), description: t('userManagement.quickAdd.licenseReqDesc'), variant: 'destructive' });
         return;
       }
+      if (!form.medicalCouncil.trim()) {
+        toast({ title: 'State medical council required', description: 'Enter the state medical council this doctor is registered with.', variant: 'destructive' });
+        return;
+      }
+      const regYear = Number(form.registrationYear);
+      if (!form.registrationYear || !Number.isInteger(regYear) || regYear < 1950 || regYear > new Date().getFullYear()) {
+        toast({ title: 'Valid registration year required', description: `Enter a registration year between 1950 and ${new Date().getFullYear()}.`, variant: 'destructive' });
+        return;
+      }
       if (!form.department || !selectedDepartment) {
         toast({ title: t('userManagement.quickAdd.departmentReqTitle'), description: t('userManagement.quickAdd.departmentReqDesc'), variant: 'destructive' });
         return;
@@ -161,6 +173,8 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
           specializations: isDoctor && specializations.length ? specializations : undefined,
           primaryMedicalSpecialityId: isDoctor && form.primaryMedicalSpecialityId ? form.primaryMedicalSpecialityId : undefined,
           consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
+          medicalCouncil: isDoctor ? form.medicalCouncil.trim() : undefined,
+          registrationYear: isDoctor && form.registrationYear ? Number(form.registrationYear) : undefined,
         });
         if (res.success !== false) {
           onAdded?.();
@@ -181,6 +195,8 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
           specializations: isDoctor && specializations.length ? specializations : undefined,
           primaryMedicalSpecialityId: isDoctor && form.primaryMedicalSpecialityId ? form.primaryMedicalSpecialityId : undefined,
           consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
+          medicalCouncil: isDoctor ? form.medicalCouncil.trim() : undefined,
+          registrationYear: isDoctor && form.registrationYear ? Number(form.registrationYear) : undefined,
         });
         if (res.success !== false) {
           // Member created — refresh the list behind us and switch to the share-login screen.
@@ -340,6 +356,14 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
                     <div>
                       <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.license')} <span className="text-red-500">*</span></Label>
                       <Input value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.licensePlaceholder')} />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] font-semibold text-slate-600">State medical council <span className="text-red-500">*</span></Label>
+                      <Input value={form.medicalCouncil} onChange={e => set('medicalCouncil', e.target.value)} className="mt-1 rounded-lg" placeholder="e.g. Karnataka Medical Council" />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] font-semibold text-slate-600">Registration year <span className="text-red-500">*</span></Label>
+                      <Input type="number" min={1950} max={new Date().getFullYear()} value={form.registrationYear} onChange={e => set('registrationYear', e.target.value)} className="mt-1 rounded-lg font-mono" placeholder="e.g. 2012" />
                     </div>
                     <div>
                       <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.department')} <span className="text-red-500">*</span></Label>

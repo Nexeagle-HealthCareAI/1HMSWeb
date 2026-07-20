@@ -29,6 +29,8 @@ export interface PublicDirectoryDoctorTile {
     departmentName?: string | null;
     hospitalDepartmentMappingId?: string | null;
     licenseNumber?: string | null;
+    medicalCouncil?: string | null;
+    registrationYear?: number | null;
     qualification?: string | null;
     experienceYears?: number | null;
     bio?: string | null;
@@ -40,6 +42,11 @@ export interface PublicDirectoryDoctorTile {
     // Computed from non-hidden DoctorReviews.
     rating?: number | null;
     reviewCount: number;
+    // Same dbo.DoctorFees rows Configuration > Doctor Fees edits. IPD/Emergency are read-only
+    // here — round-tripped unchanged when saving the OPD fee from this tile so they aren't reset.
+    opdConsultFee?: number | null;
+    ipdVisitFee?: number | null;
+    emergencyFee?: number | null;
 }
 
 export interface GetPublicDirectoryDoctorsResponse {
@@ -53,6 +60,8 @@ export interface UpdateDoctorTileRequest {
     hospitalId: string;
     hospitalDepartmentMappingId: string;
     licenseNumber?: string;
+    medicalCouncil?: string;
+    registrationYear?: number;
     qualification?: string[];
     experienceYears?: number;
     bio?: string;
