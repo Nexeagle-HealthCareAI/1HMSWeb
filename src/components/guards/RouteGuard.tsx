@@ -26,9 +26,11 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({
   showLoading = true
 }) => {
   const { hasAccess, isLoading, redirectTo: autoRedirect } = useRouteGuard(requiredRoles, requiredPermissions);
+  console.log('[LOGIN-DEBUG] RouteGuard: path=', window.location.pathname, 'requiredRoles=', requiredRoles, 'hasAccess=', hasAccess, 'isLoading=', isLoading, 'autoRedirect=', autoRedirect);
 
   // Show loading spinner while checking authentication
   if (isLoading && showLoading) {
+    console.log('[LOGIN-DEBUG] RouteGuard: showing LoadingSpinner (isLoading=true)');
     return <LoadingSpinner />;
   }
 
@@ -41,6 +43,7 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({
 
     // Redirect to specified path or auto-determined path
     const targetPath = redirectTo || autoRedirect || '/';
+    console.log('[LOGIN-DEBUG] RouteGuard: ACCESS DENIED, redirecting to', targetPath);
     return <Navigate to={targetPath} replace />;
   }
 
