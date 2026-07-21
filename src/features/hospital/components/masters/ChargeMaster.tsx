@@ -717,51 +717,55 @@ export const ChargeMaster = () => {
                             animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
                             exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[500px] h-[100dvh] max-sm:h-[100dvh] bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[110] flex flex-col"
+                            className="fixed top-0 bottom-[68px] sm:inset-y-0 right-0 w-full md:w-[500px] h-[calc(100dvh-68px)] sm:h-screen bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[110] flex flex-col"
                         >
                             {/* Drawer Header */}
-                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50">
-                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => setIsDrawerOpen(false)}>
-                                    <ArrowLeft className="h-6 w-6 text-slate-600 dark:text-zinc-350" />
+                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-900/50 bg-slate-50/30 dark:bg-zinc-950/20">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-zinc-200" onClick={() => setIsDrawerOpen(false)}>
+                                    <ArrowLeft className="h-5 w-5" />
                                 </Button>
                                 <div>
-                                    <h2 className="text-base font-extrabold text-slate-800 dark:text-zinc-150">
-                                        {editingRecord?.id ? 'Edit Charge' : 'New Charge'}
+                                    <h2 className="text-sm font-black text-slate-800 dark:text-zinc-100 tracking-tight">
+                                        {editingRecord?.id ? 'Edit Charge Master' : 'New Charge Master'}
                                     </h2>
                                 </div>
                             </div>
 
                             {/* Drawer Content */}
-                            <div className="flex-1 overflow-y-auto hide-scrollbar p-6 max-sm:p-4 space-y-8 max-sm:space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800 pb-24">
+                            <div className="flex-1 overflow-y-auto hide-scrollbar p-5 space-y-6 bg-white dark:bg-slate-950">
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Basic Details
-                                    </h3>
+                                {/* Section: Basic Details */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-brand-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">Basic Details</span>
+                                    </div>
                                     <div className="space-y-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">Display Name <span className="text-red-500">*</span></Label>
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="name" className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Display Name <span className="text-red-500">*</span></Label>
                                             <Input
                                                 id="name"
-                                                className="transition-shadow focus-visible:ring-brand-500"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 placeholder="e.g. Complete Blood Count"
                                                 value={editingRecord?.displayName || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, displayName: e.target.value }))}
                                             />
                                         </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Classification
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Applies To</Label>
+                                {/* Section: Classification */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-purple-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">Classification</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Applies To</Label>
                                             <Select value={editingRecord?.appliesTo} onValueChange={v => setEditingRecord(p => ({ ...p!, appliesTo: v as any }))}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                     <SelectItem value="OPD">OPD</SelectItem>
                                                     <SelectItem value="IPD">IPD</SelectItem>
                                                     <SelectItem value="LAB">LAB</SelectItem>
@@ -771,12 +775,11 @@ export const ChargeMaster = () => {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label>Category</Label>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Category</Label>
                                             <Select value={editingRecord?.categoryCode} onValueChange={v => setEditingRecord(p => {
                                                 if (!p) return p;
                                                 const next = { ...p, categoryCode: v as any };
-                                                // For NEW items, keep the Charge Code in sync with the category while it's blank or still an auto code.
                                                 if (!p.id) {
                                                     const oldPrefix = CATEGORY_CODE_PREFIX[p.categoryCode as string];
                                                     const looksAuto = oldPrefix ? new RegExp(`^${oldPrefix}-\\d+$`, 'i').test(p.chargeCode ?? '') : false;
@@ -784,8 +787,8 @@ export const ChargeMaster = () => {
                                                 }
                                                 return next;
                                             })}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                     <SelectItem value="CONSULT">Consultation</SelectItem>
                                                     <SelectItem value="LAB">Laboratory</SelectItem>
                                                     <SelectItem value="RAD">Radiology</SelectItem>
@@ -797,60 +800,62 @@ export const ChargeMaster = () => {
                                             </Select>
                                         </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Pricing
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Default Rate (₹) <span className="text-red-500">*</span></Label>
+                                {/* Section: Pricing */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-emerald-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Pricing & Incentive</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Default Rate (₹) <span className="text-red-500">*</span></Label>
                                             <Input
                                                 type="number"
                                                 min="0"
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 value={editingRecord?.defaultRate || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, defaultRate: Number(e.target.value) }))}
                                             />
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label>Default Quantity <span className="text-red-500">*</span></Label>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Default Qty <span className="text-red-500">*</span></Label>
                                             <Input
                                                 type="number"
                                                 min="1"
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 value={editingRecord?.defaultQty || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, defaultQty: Number(e.target.value) }))}
                                             />
                                         </div>
-                                        <div className="grid gap-2 col-span-2">
-                                            <Label className="flex justify-between">
-                                                <span>Max Discount (%)</span>
-                                                <span className="text-xs text-muted-foreground font-normal">If blank, global policy applies</span>
-                                            </Label>
+                                        <div className="grid gap-1.5 col-span-2">
+                                            <div className="flex justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Max Discount (%)</Label>
+                                                <span className="text-[9.5px] text-slate-400 dark:text-zinc-500">If blank, global policy applies</span>
+                                            </div>
                                             <div className="relative">
                                                 <Input
                                                     type="number"
                                                     min="0" max="100"
-                                                    className="font-mono pr-8"
+                                                    className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono pr-8 focus-visible:ring-1 focus-visible:ring-brand-500"
                                                     value={editingRecord?.maxDiscountPercent === 0 ? '0' : editingRecord?.maxDiscountPercent || ''}
                                                     onChange={e => setEditingRecord(p => ({ ...p!, maxDiscountPercent: Number(e.target.value) }))}
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                                                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</span>
                                             </div>
                                         </div>
-                                        <div className="grid gap-2 col-span-2">
-                                            <Label className="flex justify-between">
-                                                <span>Incentive (₹)</span>
-                                                <span className="text-xs text-muted-foreground font-normal">Default per unit · editable at billing · blank/0 = none</span>
-                                            </Label>
+                                        <div className="grid gap-1.5 col-span-2">
+                                            <div className="flex justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Doctor Incentive (₹)</Label>
+                                                <span className="text-[9.5px] text-slate-400 dark:text-zinc-500">Editable at billing · 0 = none</span>
+                                            </div>
                                             <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
                                                 <Input
                                                     type="number"
                                                     min="0"
-                                                    className="font-mono pl-7"
+                                                    className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono pl-7 focus-visible:ring-1 focus-visible:ring-brand-500"
                                                     placeholder="0"
                                                     value={editingRecord?.incentiveAmount === 0 ? '0' : editingRecord?.incentiveAmount || ''}
                                                     onChange={e => setEditingRecord(p => ({ ...p!, incentiveAmount: Number(e.target.value) }))}
@@ -858,30 +863,30 @@ export const ChargeMaster = () => {
                                             </div>
                                         </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Tax &amp; Insurance
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>HSN/SAC Code</Label>
+                                {/* Section: Tax & Insurance */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-blue-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Tax &amp; Insurance</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">HSN/SAC Code</Label>
                                             <Input
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 placeholder="e.g. 9993"
                                                 value={editingRecord?.hsnSacCode || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, hsnSacCode: e.target.value }))}
                                             />
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label className="flex justify-between">
-                                                <span>GST Slab (%)</span>
-                                            </Label>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">GST Slab (%)</Label>
                                             <Input
                                                 type="number"
                                                 min="0" max="28"
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 disabled={!editingRecord?.isTaxable}
                                                 placeholder="0"
                                                 value={editingRecord?.gstSlabPercent ?? ''}
@@ -889,78 +894,85 @@ export const ChargeMaster = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer">Taxable</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Otherwise this item is GST-exempt</p>
-                                        </div>
-                                        <Switch
-                                            checked={!!editingRecord?.isTaxable}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isTaxable: v, gstSlabPercent: v ? p!.gstSlabPercent : undefined }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer">Rate is tax-inclusive</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Default Rate above already includes GST</p>
-                                        </div>
-                                        <Switch
-                                            checked={!!editingRecord?.taxInclusive}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, taxInclusive: v }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer">TPA/insurance payable</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Off = counted as non-payable in the IRDAI discharge split</p>
-                                        </div>
-                                        <Switch
-                                            checked={editingRecord?.isIRDAIPayable ?? true}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isIRDAIPayable: v }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                </section>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Settings
-                                    </h3>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer" htmlFor="isActiveSwitch">Active Status</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Charge available for billing</p>
+                                    {/* Switches */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">Taxable</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Applies GST rate configured above</p>
+                                            </div>
+                                            <Switch
+                                                checked={!!editingRecord?.isTaxable}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, isTaxable: v, gstSlabPercent: v ? p!.gstSlabPercent : undefined }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
                                         </div>
-                                        <Switch
-                                            id="isActiveSwitch"
-                                            checked={editingRecord?.isActive}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                </section>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-500" /> Notes
-                                    </h3>
-                                    <Textarea
-                                        placeholder="Internal notes or billing guidelines for this charge..."
-                                        className="resize-none h-24"
-                                        value={editingRecord?.notes || ''}
-                                        onChange={e => setEditingRecord(p => ({ ...p!, notes: e.target.value }))}
-                                    />
-                                </section>
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">Rate is tax-inclusive</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Rate already includes GST calculation</p>
+                                            </div>
+                                            <Switch
+                                                checked={!!editingRecord?.taxInclusive}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, taxInclusive: v }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">TPA/Insurance Payable</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Counted in IRDAI insurance claims split</p>
+                                            </div>
+                                            <Switch
+                                                checked={editingRecord?.isIRDAIPayable ?? true}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, isIRDAIPayable: v }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section: Settings & Notes */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-orange-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Settings</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer" htmlFor="isActiveSwitch">Active Status</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Charge available for billing selectors</p>
+                                            </div>
+                                            <Switch
+                                                id="isActiveSwitch"
+                                                checked={editingRecord?.isActive}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Notes / Guidelines</Label>
+                                            <Textarea
+                                                placeholder="Internal notes or billing guidelines for billing desk..."
+                                                className="rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-xs min-h-[80px] focus-visible:ring-1 focus-visible:ring-brand-500"
+                                                value={editingRecord?.notes || ''}
+                                                onChange={e => setEditingRecord(p => ({ ...p!, notes: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Drawer Footer */}
-                            <div className="p-4.5 pb-safe border-t border-gray-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+                            <div className="p-4 pb-10 sm:pb-4 border-t border-slate-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
                                 <Button 
                                     variant="outline" 
                                     onClick={() => setIsDrawerOpen(false)} 
-                                    className="flex-1 h-11 rounded-xl border-slate-250 text-slate-500 hover:bg-slate-50 font-bold"
+                                    className="flex-1 h-11 rounded-xl border-slate-200 text-slate-500 hover:bg-slate-50 font-bold"
                                 >
                                     Cancel
                                 </Button>
