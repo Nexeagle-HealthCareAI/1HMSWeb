@@ -1,21 +1,21 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Eraser, Pencil, Redo2, Trash2, Type, Undo2 } from 'lucide-react';
-import { DrawTool } from './types';
+import { Eraser, Pencil, Highlighter, Type, Undo2, Redo2, Trash2, Download, LayoutGrid, AlignLeft, Square } from 'lucide-react';
+import { DrawTool, TOOL_DEFAULTS } from './types';
+import './DrawingToolbar.css';
 
 const COLORS = [
-    { label: 'Black', value: '#1e293b' },
-    { label: 'Red', value: '#dc2626' },
-    { label: 'Blue', value: '#2563eb' },
-    { label: 'Green', value: '#16a34a' },
-];
-
-// Doubles as text-size presets when the Text tool is active — same three buttons, relabeled,
-// so the toolbar doesn't need a second, redundant size control.
-const WIDTHS = [
-    { label: 'Thin', textLabel: 'Small', value: 2 },
-    { label: 'Medium', textLabel: 'Medium', value: 5 },
-    { label: 'Thick', textLabel: 'Large', value: 10 },
+    { label: 'Ink Black', value: '#0f172a' },
+    { label: 'Charcoal', value: '#334155' },
+    { label: 'Blue Pen', value: '#1d4ed8' },
+    { label: 'Sky Blue', value: '#0ea5e9' },
+    { label: 'Medical Red', value: '#dc2626' },
+    { label: 'Rose', value: '#f43f5e' },
+    { label: 'Forest Green', value: '#16a34a' },
+    { label: 'Emerald', value: '#10b981' },
+    { label: 'Purple', value: '#7c3aed' },
+    { label: 'Orange', value: '#ea580c' },
+    { label: 'Amber', value: '#d97706' },
+    { label: 'Highlight Yellow', value: '#facc15' },
 ];
 
 interface DrawingToolbarProps {
@@ -30,83 +30,140 @@ interface DrawingToolbarProps {
     onUndo: () => void;
     onRedo: () => void;
     onClear: () => void;
+    onExport: () => void;
+    background: 'white' | 'grid' | 'lined';
+    onBackgroundChange: (bg: 'white' | 'grid' | 'lined') => void;
 }
+
+const TOOLS: { key: DrawTool; icon: React.ReactNode; label: string }[] = [
+    { key: 'pen',         icon: <Pencil size={18} />,      label: 'Pen' },
+    { key: 'marker',      icon: <Square size={18} />,      label: 'Marker' },
+    { key: 'highlighter', icon: <Highlighter size={18} />, label: 'Highlight' },
+    { key: 'eraser',      icon: <Eraser size={18} />,      label: 'Eraser' },
+    { key: 'text',        icon: <Type size={18} />,        label: 'Text' },
+];
 
 export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
     tool, onToolChange, color, onColorChange, strokeWidth, onStrokeWidthChange,
-    canUndo, canRedo, onUndo, onRedo, onClear,
+    canUndo, canRedo, onUndo, onRedo, onClear, onExport, background, onBackgroundChange,
 }) => {
+    const toolbarColor = tool === 'eraser' ? '#64748b' : color;
+    const dotSize = Math.min(Math.max(strokeWidth * 1.5, 6), 32);
+
     return (
-        <div className="flex flex-wrap items-center gap-3 px-1">
-            <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-1">
-                <Button
-                    type="button"
-                    variant={tool === 'pen' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 gap-1.5"
-                    onClick={() => onToolChange('pen')}
-                >
-                    <Pencil className="h-3.5 w-3.5" /> Pen
-                </Button>
-                <Button
-                    type="button"
-                    variant={tool === 'eraser' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 gap-1.5"
-                    onClick={() => onToolChange('eraser')}
-                >
-                    <Eraser className="h-3.5 w-3.5" /> Eraser
-                </Button>
-                <Button
-                    type="button"
-                    variant={tool === 'text' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 gap-1.5"
-                    onClick={() => onToolChange('text')}
-                >
-                    <Type className="h-3.5 w-3.5" /> Text
-                </Button>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-                {COLORS.map(c => (
+        <div className="rxpad-toolbar">
+            {/* Drawing tools */}
+            <div className="rxpad-toolbar-section">
+                <div className="rxpad-section-label">Tools</div>
+                {TOOLS.map(t => (
                     <button
-                        key={c.value}
+                        key={t.key}
+                        className={`rxpad-tool-btn ${tool === t.key ? 'active' : ''}`}
+                        onClick={() => {
+                            onToolChange(t.key);
+                            // Auto-switch to that tool's default width
+                            onStrokeWidthChange(TOOL_DEFAULTS[t.key].width);
+                        }}
+                        title={t.label}
                         type="button"
-                        title={c.label}
-                        onClick={() => onColorChange(c.value)}
-                        className={`h-7 w-7 rounded-full border-2 transition-transform ${color === c.value && tool !== 'eraser' ? 'scale-110 border-gray-900' : 'border-transparent'}`}
-                        style={{ backgroundColor: c.value }}
-                    />
-                ))}
-            </div>
-
-            <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-1">
-                {WIDTHS.map(w => (
-                    <Button
-                        key={w.value}
-                        type="button"
-                        variant={strokeWidth === w.value ? 'default' : 'ghost'}
-                        size="sm"
-                        className="h-8"
-                        onClick={() => onStrokeWidthChange(w.value)}
                     >
-                        {tool === 'text' ? w.textLabel : w.label}
-                    </Button>
+                        {t.icon}
+                        <span>{t.label}</span>
+                    </button>
                 ))}
             </div>
 
-            <div className="flex items-center gap-1 ml-auto">
-                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={onUndo} disabled={!canUndo}>
-                    <Undo2 className="h-3.5 w-3.5" /> Undo
-                </Button>
-                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={onRedo} disabled={!canRedo}>
-                    <Redo2 className="h-3.5 w-3.5" /> Redo
-                </Button>
-                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-red-600 hover:text-red-700" onClick={onClear} disabled={!canUndo}>
-                    <Trash2 className="h-3.5 w-3.5" /> Clear
-                </Button>
+            {/* Stroke thickness */}
+            <div className="rxpad-toolbar-section">
+                <div className="rxpad-section-label">Size</div>
+                <div className="rxpad-slider-wrap" style={{ color: toolbarColor }}>
+                    <div className="rxpad-stroke-preview">
+                        <div
+                            className="rxpad-stroke-dot"
+                            style={{ width: dotSize, height: dotSize, background: toolbarColor }}
+                        />
+                    </div>
+                    <input
+                        type="range"
+                        min={1}
+                        max={40}
+                        step={1}
+                        value={strokeWidth}
+                        onChange={e => onStrokeWidthChange(Number(e.target.value))}
+                        className="rxpad-slider"
+                        title={`Stroke width: ${strokeWidth}px`}
+                    />
+                </div>
+            </div>
+
+            {/* Color palette */}
+            <div className="rxpad-toolbar-section">
+                <div className="rxpad-section-label">Color</div>
+                <div className="rxpad-colors">
+                    {COLORS.map(c => (
+                        <button
+                            key={c.value}
+                            className={`rxpad-color-swatch ${color === c.value && tool !== 'eraser' ? 'active' : ''}`}
+                            style={{ backgroundColor: c.value }}
+                            onClick={() => {
+                                onColorChange(c.value);
+                                if (tool === 'eraser') onToolChange('pen');
+                            }}
+                            title={c.label}
+                            type="button"
+                        />
+                    ))}
+                    <input
+                        type="color"
+                        className="rxpad-color-picker"
+                        value={color}
+                        onChange={e => {
+                            onColorChange(e.target.value);
+                            if (tool === 'eraser') onToolChange('pen');
+                        }}
+                        title="Custom color"
+                    />
+                </div>
+            </div>
+
+            {/* Background */}
+            <div className="rxpad-toolbar-section">
+                <div className="rxpad-section-label">Paper</div>
+                <div className="rxpad-bg-btns">
+                    <button className={`rxpad-bg-btn ${background === 'white' ? 'active' : ''}`} onClick={() => onBackgroundChange('white')} title="Blank" type="button">
+                        <Square size={12} />
+                    </button>
+                    <button className={`rxpad-bg-btn ${background === 'grid' ? 'active' : ''}`} onClick={() => onBackgroundChange('grid')} title="Grid" type="button">
+                        <LayoutGrid size={12} />
+                    </button>
+                    <button className={`rxpad-bg-btn ${background === 'lined' ? 'active' : ''}`} onClick={() => onBackgroundChange('lined')} title="Lined" type="button">
+                        <AlignLeft size={12} />
+                    </button>
+                </div>
+            </div>
+
+            {/* History / Actions */}
+            <div className="rxpad-toolbar-section">
+                <div className="rxpad-section-label">History</div>
+                <button className="rxpad-tool-btn" onClick={onUndo} disabled={!canUndo} title="Undo (⌘Z)" type="button">
+                    <Undo2 size={18} />
+                    <span>Undo</span>
+                </button>
+                <button className="rxpad-tool-btn" onClick={onRedo} disabled={!canRedo} title="Redo (⌘⇧Z)" type="button">
+                    <Redo2 size={18} />
+                    <span>Redo</span>
+                </button>
+                <button className="rxpad-tool-btn" onClick={onClear} disabled={!canUndo} title="Clear all" type="button" style={{ color: !canUndo ? undefined : '#f87171' }}>
+                    <Trash2 size={18} />
+                    <span>Clear</span>
+                </button>
+                <button className="rxpad-tool-btn" onClick={onExport} title="Export PNG" type="button" style={{ color: '#34d399' }}>
+                    <Download size={18} />
+                    <span>Export</span>
+                </button>
             </div>
         </div>
     );
 };
+
+

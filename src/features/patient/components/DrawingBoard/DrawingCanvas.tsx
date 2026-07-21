@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { CANVAS_BACKGROUND, CANVAS_HEIGHT, CANVAS_WIDTH, DrawItem, DrawTool, Point, StrokeItem, TextItem, strokeWidthToFontSize } from './types';
+import { CANVAS_BACKGROUND, CANVAS_HEIGHT, CANVAS_WIDTH, DrawItem, DrawTool, Point, StrokeItem, TextItem, strokeWidthToFontSize, TOOL_DEFAULTS } from './types';
 
 export interface DrawingCanvasRef {
     undo: () => void;
@@ -7,6 +7,7 @@ export interface DrawingCanvasRef {
     clear: () => void;
     isEmpty: () => boolean;
     exportPng: () => string;
+    setBackground: (bg: 'white' | 'grid' | 'lined') => void;
 }
 
 interface DrawingCanvasProps {
@@ -27,41 +28,104 @@ interface PendingText {
     fontSize: number;
 }
 
-// Eraser strokes are just drawn in the canvas background color rather than using
-// destination-out compositing — the canvas is always a flat white sheet (mirrors a printed
-// page), so there's no transparency to reveal, and this keeps exported PNGs fully opaque.
+type CanvasBackground = 'white' | 'grid' | 'lined';
+
+// Eraser strokes are drawn in the background color rather than using destination-out compositing.
 const strokeColor = (stroke: StrokeItem) => (stroke.tool === 'eraser' ? CANVAS_BACKGROUND : stroke.color);
+
+const fillBackground = (ctx: CanvasRenderingContext2D, bg: CanvasBackground) => {
+    ctx.save();
+    ctx.fillStyle = CANVAS_BACKGROUND;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    if (bg === 'grid') {
+        ctx.strokeStyle = 'rgba(186, 212, 255, 0.55)';
+        ctx.lineWidth = 1;
+        const spacing = 28;
+        for (let x = 0; x <= CANVAS_WIDTH; x += spacing) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_HEIGHT); ctx.stroke();
+        }
+        for (let y = 0; y <= CANVAS_HEIGHT; y += spacing) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_WIDTH, y); ctx.stroke();
+        }
+    } else if (bg === 'lined') {
+        ctx.strokeStyle = 'rgba(180, 200, 240, 0.6)';
+        ctx.lineWidth = 1;
+        const lineSpacing = 40;
+        for (let y = lineSpacing; y <= CANVAS_HEIGHT; y += lineSpacing) {
+            ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(CANVAS_WIDTH - 20, y); ctx.stroke();
+        }
+        // Red margin line
+        ctx.strokeStyle = 'rgba(220, 100, 100, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(70, 0); ctx.lineTo(70, CANVAS_HEIGHT); ctx.stroke();
+    }
+    ctx.restore();
+};
+
+// Catmull-Rom → Bézier conversion for smooth natural ink feel
+const catmullRomToBezier = (points: Point[]): void => { /* used inline below */ };
 
 const drawSmoothStroke = (ctx: CanvasRenderingContext2D, stroke: StrokeItem) => {
     const { points } = stroke;
     if (points.length === 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = stroke.opacity;
     ctx.strokeStyle = strokeColor(stroke);
-    ctx.lineWidth = stroke.width;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.beginPath();
+
+    if (stroke.tool === 'highlighter') {
+        // Flat squared-off highlighter strokes
+        ctx.lineCap = 'square';
+    }
+
     if (points.length < 3) {
         const p0 = points[0];
         const p1 = points[points.length - 1];
+        const w = stroke.tool === 'eraser' ? stroke.width : (stroke.width * (1 + ((p0.pressure ?? 0.5) - 0.5) * 0.6));
+        ctx.lineWidth = Math.max(1, w);
+        ctx.beginPath();
         ctx.moveTo(p0.x, p0.y);
         ctx.lineTo(p1.x, p1.y);
         ctx.stroke();
+        ctx.restore();
         return;
     }
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length - 1; i++) {
-        const midX = (points[i].x + points[i + 1].x) / 2;
-        const midY = (points[i].y + points[i + 1].y) / 2;
-        ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+
+    // Catmull-Rom spline with pressure-based width variation
+    for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[Math.max(i - 1, 0)];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[Math.min(i + 2, points.length - 1)];
+
+        const pressure = p1.pressure ?? 0.5;
+        let w = stroke.width;
+        if (stroke.tool !== 'eraser' && stroke.tool !== 'highlighter') {
+            // Pressure variation: light touch = thinner stroke, heavy = thicker
+            w = stroke.width * (0.5 + pressure * 1.0);
+        }
+        ctx.lineWidth = Math.max(0.5, w);
+
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+        ctx.stroke();
     }
-    const last = points[points.length - 1];
-    ctx.lineTo(last.x, last.y);
-    ctx.stroke();
+
+    ctx.restore();
 };
 
 const drawTextItem = (ctx: CanvasRenderingContext2D, item: TextItem) => {
     ctx.fillStyle = item.color;
-    ctx.font = `${item.fontSize}px sans-serif`;
+    ctx.font = `${item.fontSize}px 'Georgia', serif`;
     ctx.textBaseline = 'top';
     ctx.fillText(item.text, item.x, item.y);
 };
@@ -78,6 +142,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
         const redoRef = useRef<DrawItem[]>([]);
         const currentStrokeRef = useRef<StrokeItem | null>(null);
         const isDrawingRef = useRef(false);
+        const bgRef = useRef<CanvasBackground>('white');
         const [textEditor, setTextEditor] = useState<PendingText | null>(null);
 
         const emitHistoryChange = () => {
@@ -88,38 +153,33 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
             });
         };
 
-        const fillBackground = (ctx: CanvasRenderingContext2D) => {
-            ctx.fillStyle = CANVAS_BACKGROUND;
-            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        };
-
         const redrawAll = () => {
             const ctx = canvasRef.current?.getContext('2d');
             if (!ctx) return;
-            fillBackground(ctx);
+            fillBackground(ctx, bgRef.current);
             itemsRef.current.forEach(item => drawItem(ctx, item));
         };
 
         useEffect(() => {
             const ctx = canvasRef.current?.getContext('2d');
-            if (ctx) fillBackground(ctx);
+            if (ctx) fillBackground(ctx, bgRef.current);
             emitHistoryChange();
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, []);
 
-        const getPos = (e: React.MouseEvent | React.TouchEvent): Point => {
+        const getPos = (e: React.PointerEvent): Point => {
             const canvas = canvasRef.current!;
             const rect = canvas.getBoundingClientRect();
-            const point = 'touches' in e ? e.touches[0] : e;
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-            return { x: (point.clientX - rect.left) * scaleX, y: (point.clientY - rect.top) * scaleY };
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY,
+                // PointerEvent.pressure: 0.5 for mouse, actual value for Apple Pencil/stylus
+                pressure: e.pressure > 0 ? e.pressure : 0.5,
+            };
         };
 
-        // Bakes the pending text label into the canvas (as one more history item, undoable like
-        // any stroke) and closes the editor. Safe to call more than once in a row — a second call
-        // after the editor already closed is a no-op, since the functional updater below always
-        // reads the latest state rather than a possibly-stale closure.
         const commitPendingText = () => {
             let pushed = false;
             setTextEditor(prev => {
@@ -138,20 +198,24 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
             }
         };
 
-        const start = (e: React.MouseEvent | React.TouchEvent) => {
+        const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
             e.preventDefault();
+            // Only accept primary pointer (finger, pen, left mouse)
+            if (e.button > 0 && e.pointerType === 'mouse') return;
+
+            // Capture pointer for smooth tracking even outside element bounds
+            (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
 
             if (tool === 'text') {
-                commitPendingText(); // finalize any label already being typed before starting a new one
+                commitPendingText();
                 const canvas = canvasRef.current!;
                 const rect = canvas.getBoundingClientRect();
-                const point = 'touches' in e ? e.touches[0] : e;
                 const canvasPos = getPos(e);
                 setTextEditor({
                     canvasX: canvasPos.x,
                     canvasY: canvasPos.y,
-                    screenLeft: point.clientX - rect.left,
-                    screenTop: point.clientY - rect.top,
+                    screenLeft: e.clientX - rect.left,
+                    screenTop: e.clientY - rect.top,
                     displayScale: rect.width / CANVAS_WIDTH,
                     value: '',
                     color,
@@ -161,11 +225,19 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
             }
 
             isDrawingRef.current = true;
-            currentStrokeRef.current = { kind: 'stroke', tool, color, width: strokeWidth, points: [getPos(e)] };
+            const defaults = TOOL_DEFAULTS[tool];
+            currentStrokeRef.current = {
+                kind: 'stroke',
+                tool,
+                color,
+                width: strokeWidth,
+                opacity: defaults.opacity,
+                points: [getPos(e)],
+            };
             redoRef.current = [];
         };
 
-        const move = (e: React.MouseEvent | React.TouchEvent) => {
+        const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
             if (!isDrawingRef.current || !currentStrokeRef.current) return;
             e.preventDefault();
             const ctx = canvasRef.current?.getContext('2d');
@@ -173,23 +245,35 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
             const points = currentStrokeRef.current.points;
             const prev = points[points.length - 1];
             points.push(pos);
+
+            // Incremental draw for live feedback (will be redrawn cleanly on stroke end)
             if (ctx) {
+                const pressure = pos.pressure ?? 0.5;
+                let w = currentStrokeRef.current.width;
+                if (currentStrokeRef.current.tool !== 'eraser' && currentStrokeRef.current.tool !== 'highlighter') {
+                    w = w * (0.5 + pressure * 1.0);
+                }
+                ctx.save();
+                ctx.globalAlpha = currentStrokeRef.current.opacity;
                 ctx.strokeStyle = strokeColor(currentStrokeRef.current);
-                ctx.lineWidth = currentStrokeRef.current.width;
-                ctx.lineCap = 'round';
+                ctx.lineWidth = Math.max(0.5, w);
+                ctx.lineCap = currentStrokeRef.current.tool === 'highlighter' ? 'square' : 'round';
                 ctx.lineJoin = 'round';
                 ctx.beginPath();
                 ctx.moveTo(prev.x, prev.y);
                 ctx.lineTo(pos.x, pos.y);
                 ctx.stroke();
+                ctx.restore();
             }
         };
 
-        const end = () => {
+        const onPointerUp = () => {
             if (!isDrawingRef.current || !currentStrokeRef.current) return;
             isDrawingRef.current = false;
             itemsRef.current.push(currentStrokeRef.current);
             currentStrokeRef.current = null;
+            // Redraw cleanly with smooth splines
+            redrawAll();
             emitHistoryChange();
         };
 
@@ -217,22 +301,26 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
             },
             isEmpty: () => itemsRef.current.length === 0,
             exportPng: () => canvasRef.current?.toDataURL('image/png') ?? '',
+            setBackground: (bg: CanvasBackground) => {
+                bgRef.current = bg;
+                redrawAll();
+            },
         }), []);
 
+        const cursorStyle = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : 'crosshair';
+
         return (
-            <div className="relative">
+            <div className="rxpad-canvas-wrapper">
                 <canvas
                     ref={canvasRef}
                     width={CANVAS_WIDTH}
                     height={CANVAS_HEIGHT}
-                    className={`w-full h-auto touch-none bg-white rounded-lg border border-gray-200 shadow-sm ${tool === 'text' ? 'cursor-text' : 'cursor-crosshair'}`}
-                    onMouseDown={start}
-                    onMouseMove={move}
-                    onMouseUp={end}
-                    onMouseLeave={end}
-                    onTouchStart={start}
-                    onTouchMove={move}
-                    onTouchEnd={end}
+                    className="rxpad-canvas"
+                    style={{ cursor: cursorStyle, touchAction: 'none' }}
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    onPointerCancel={onPointerUp}
                 />
                 {textEditor && (
                     <input
@@ -249,14 +337,15 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
                             }
                         }}
                         onBlur={commitPendingText}
-                        placeholder="Type a label…"
+                        placeholder="Type here…"
                         style={{
                             left: textEditor.screenLeft,
                             top: textEditor.screenTop,
                             fontSize: Math.max(11, textEditor.fontSize * textEditor.displayScale),
                             color: textEditor.color,
+                            fontFamily: 'Georgia, serif',
                         }}
-                        className="absolute z-10 min-w-[100px] px-1.5 py-0.5 border border-brand-400 rounded bg-white/95 shadow-md outline-none ring-2 ring-brand-200"
+                        className="rxpad-text-editor"
                     />
                 )}
             </div>
@@ -265,3 +354,4 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
 );
 
 DrawingCanvas.displayName = 'DrawingCanvas';
+

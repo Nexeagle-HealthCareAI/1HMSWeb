@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { FileImage, Plus, Eye, Upload, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Trash, XCircle, CheckCircle } from 'lucide-react';
+import { FileImage, Plus, Eye, Upload, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Trash, XCircle, CheckCircle, Camera } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
@@ -49,6 +49,7 @@ type AttachmentFile = {
 };
 
 const reportTypes = [
+  'Prescription',
   'X-ray report',
   'Lab test report',
   'MRI / CT report',
@@ -623,30 +624,33 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
         </div>
       )}
 
-      <DialogContent className="w-[95vw] sm:w-[1100px] max-w-[98vw] sm:max-w-6xl h-[85vh] sm:h-[80vh] max-h-[90vh] overflow-hidden">
-        <Tabs defaultValue="upload" className="w-full">
-          <div className="flex flex-col gap-3">
+      <DialogContent className="w-[95vw] sm:w-[900px] max-w-[98vw] max-h-[90dvh] p-0 flex flex-col overflow-hidden gap-0">
+        <Tabs defaultValue="upload" className="flex-1 min-h-0 flex flex-col">
+          <div className="shrink-0 px-4 pt-4 sm:px-6 sm:pt-5 pb-3 border-b border-gray-100 dark:border-gray-800 space-y-3">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-              <DialogHeader className="p-0 space-y-1">
-                <DialogTitle className="text-gray-900 dark:text-gray-100">Manage attachments</DialogTitle>
+              <DialogHeader className="p-0 space-y-1 text-left">
+                <DialogTitle className="text-gray-900 dark:text-gray-100">Manage documents</DialogTitle>
                 <DialogDescription className="text-gray-600 dark:text-gray-400">Upload reports and review existing ones.</DialogDescription>
                 <div className="text-xs text-gray-600 dark:text-gray-400">Patient: <span className="font-semibold text-gray-800 dark:text-gray-100">{displayPatientName}</span> • ID: <span className="font-mono">{displayPatientId}</span></div>
               </DialogHeader>
               <TabsList className="grid grid-cols-2 w-full md:w-auto bg-gray-50 dark:bg-gray-800 p-1 rounded-md self-start md:self-end">
-                <TabsTrigger value="upload" className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm">Upload report</TabsTrigger>
+                <TabsTrigger value="upload" className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm">Upload</TabsTrigger>
                 <TabsTrigger value="view" className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm">View uploaded</TabsTrigger>
               </TabsList>
             </div>
+          </div>
 
-            <TabsContent value="upload" className="pt-1 space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900 p-4 space-y-3 shadow-sm lg:col-span-1 min-h-[440px]">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            <TabsContent value="upload" className="mt-0 space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900 p-4 space-y-3 shadow-sm lg:col-span-1">
                   <div className="space-y-2">
-                    <Label className="text-xs text-gray-600 dark:text-gray-300">Report type</Label>
+                    <Label className="text-xs text-gray-600 dark:text-gray-300">Document type</Label>
+                    {/* text-base (16px) — anything smaller triggers iOS Safari's auto-zoom on focus. */}
                     <select
                       value={selectedType}
                       onChange={(e) => setSelectedType(e.target.value)}
-                      className="h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-md px-3 bg-white dark:bg-gray-950 focus:border-brand-400 focus:ring-1 focus:ring-brand-100 dark:focus:ring-brand-900 dark:text-gray-100"
+                      className="h-11 w-full text-base sm:text-sm border border-gray-300 dark:border-gray-700 rounded-md px-3 bg-white dark:bg-gray-950 focus:border-brand-400 focus:ring-1 focus:ring-brand-100 dark:focus:ring-brand-900 dark:text-gray-100"
                     >
                       {reportTypes.map(type => (
                         <option key={type} value={type}>{type}</option>
@@ -655,25 +659,44 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs text-gray-600 dark:text-gray-300">Upload file</Label>
-                    <label className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-500 rounded-md p-4 flex flex-col items-center gap-2 text-sm text-gray-600 dark:text-gray-200 cursor-pointer transition-colors bg-gray-50 dark:bg-gray-800">
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                      <Upload className="h-5 w-5 text-gray-500 dark:text-gray-300" />
-                      <span>Drop a file here or click to browse</span>
-                      {fileName && <span className="text-[11px] text-gray-700 dark:text-gray-200">Selected: {fileName}</span>}
-                    </label>
+                    <Label className="text-xs text-gray-600 dark:text-gray-300">File</Label>
+                    {/* Two explicit triggers rather than one drop zone: "Take Photo" uses capture=
+                        "environment" so mobile browsers open the camera directly instead of the
+                        gallery picker; "Choose File" is the plain picker (also what desktop browsers
+                        show for both, since they ignore `capture`). Stacked with Take Photo first
+                        and visually primary on mobile (that's the point of the camera option); an
+                        even 2-up grid from sm: up, where capture rarely applies anyway. */}
+                    <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
+                      <label className="flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-1.5 rounded-md py-3.5 sm:py-4 px-3 text-sm sm:text-xs font-semibold sm:font-medium cursor-pointer transition-colors text-center bg-brand-600 text-white hover:bg-brand-700 sm:bg-gray-50 sm:text-gray-600 sm:hover:border-brand-300 sm:border-2 sm:border-dashed sm:border-gray-300 sm:dark:border-gray-700 sm:dark:bg-gray-800 sm:dark:text-gray-200 sm:dark:hover:border-brand-500 min-h-[44px]">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <Camera className="h-5 w-5 shrink-0" />
+                        <span>Take Photo</span>
+                      </label>
+                      <label className="flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-1.5 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-500 rounded-md py-3.5 sm:py-4 px-3 text-sm sm:text-xs font-medium text-gray-600 dark:text-gray-200 cursor-pointer transition-colors bg-gray-50 dark:bg-gray-800 text-center min-h-[44px]">
+                        <input
+                          type="file"
+                          accept="application/pdf,image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <Upload className="h-5 w-5 shrink-0 text-gray-500 dark:text-gray-300" />
+                        <span>Choose File</span>
+                      </label>
+                    </div>
+                    {fileName && <div className="text-[11px] text-gray-700 dark:text-gray-200 truncate">Selected: {fileName}</div>}
                     {error && <div className="text-[11px] text-red-600 dark:text-red-400">{error}</div>}
                   </div>
 
                   <div className="flex justify-end">
-                    <Button onClick={handleAddAttachment} disabled={isSubscriptionReadOnly} className="h-9 text-sm">
+                    <Button onClick={handleAddAttachment} disabled={isSubscriptionReadOnly} className="h-11 text-sm w-full sm:w-auto">
                       <Upload className="h-4 w-4 mr-2" />
-                      Save attachment
+                      Save document
                     </Button>
                   </div>
                 </div>
@@ -681,7 +704,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
               </div>
             </TabsContent>
 
-            <TabsContent value="view" className="pt-1 space-y-3">
+            <TabsContent value="view" className="mt-0 space-y-3">
               {displayList.length === 0 && (
                 <div className="text-sm text-gray-600 dark:text-gray-400">No attachments yet. Upload a report to view it here.</div>
               )}
@@ -732,7 +755,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                       </div>
 
                       {previewLoading && (
-                        <div className="h-[50vh] w-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 rounded-md">
+                        <div className="h-[40dvh] sm:h-[50vh] w-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 rounded-md">
                           <span className="text-sm text-gray-500">Loading preview...</span>
                         </div>
                       )}
@@ -744,7 +767,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                             <img
                               src={previewUrl}
                               alt={currentName}
-                              className="w-full max-h-[50vh] object-contain bg-white"
+                              className="w-full max-h-[40dvh] sm:max-h-[50vh] object-contain bg-white"
                               onError={(e) => {
                                 // Fallback
                                 e.currentTarget.style.display = 'none';
@@ -754,7 +777,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                             <iframe
                               title={`Preview ${currentName}`}
                               src={previewUrl}
-                              className="w-full h-[50vh] bg-white"
+                              className="w-full h-[40dvh] sm:h-[50vh] bg-white"
                             />
                           )}
                         </div>
