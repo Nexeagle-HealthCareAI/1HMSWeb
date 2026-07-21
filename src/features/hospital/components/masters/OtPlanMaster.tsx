@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { otPlanApi, OTPlanItem, RoomCategory, IcuLevel } from '@/features/hospital/services/otPlanApi';
 import { departmentApi, Department } from '@/features/hospital/services/departmentApi';
