@@ -578,8 +578,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                           key={item.id}
                           type="button"
                           onClick={() => {
-                            handleNavigation(item);
                             setIsTileMenuOpen(false);
+                            setTimeout(() => {
+                              handleNavigation(item);
+                            }, 150);
                           }}
                           disabled={isDisabled}
                           className={cn(
@@ -623,8 +625,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <div className="flex lg:hidden fixed bottom-0 left-0 right-0 h-[68px] z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 pb-[max(4px,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/95 dark:bg-gray-900/95">
         <button 
           onClick={() => {
-            navigate('/appointment-dashboard');
             setIsTileMenuOpen(false);
+            setTimeout(() => {
+              navigate('/appointment-dashboard');
+            }, 100);
           }}
           className={cn(
             "flex flex-col items-center justify-center h-full w-14 transition-colors",
@@ -637,8 +641,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         <button 
           onClick={() => {
-            navigate('/ipd-workspace');
             setIsTileMenuOpen(false);
+            setTimeout(() => {
+              navigate('/ipd-workspace');
+            }, 100);
           }}
           className={cn(
             "flex flex-col items-center justify-center h-full w-14 transition-colors",
@@ -669,8 +675,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         <button 
           onClick={() => {
-            navigate('/billing');
             setIsTileMenuOpen(false);
+            setTimeout(() => {
+              navigate('/billing');
+            }, 100);
           }}
           className={cn(
             "flex flex-col items-center justify-center h-full w-14 transition-colors",
@@ -683,8 +691,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         <button 
           onClick={() => {
-            navigate('/settings');
             setIsTileMenuOpen(false);
+            setTimeout(() => {
+              navigate('/settings');
+            }, 100);
           }}
           className={cn(
             "flex flex-col items-center justify-center h-full w-14 transition-colors",
