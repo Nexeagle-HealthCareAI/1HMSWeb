@@ -68,6 +68,7 @@ import {
   Menu,
   Minimize2,
   MoreVertical,
+  PenLine,
   Plus,
   RefreshCw,
   Scan,
@@ -926,6 +927,15 @@ export const ClinicalDashboard: React.FC = () => {
     navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}`);
   };
 
+  // Deep-link straight into the full-screen InkRx handwriting pad on the patient workspace
+  // (?tab=inkrx auto-opens it) — one tap from the board to pen-on-letterhead.
+  const handleInkRxClick = (appointment: DoctorAppointmentDetail | PatientAppointment) => {
+    const encodedPatientId = encodeURIComponent(appointment.patientId);
+    const encodedAppointmentId = appointment.appointmentId ? encodeURIComponent(appointment.appointmentId) : '';
+    const appointmentParam = encodedAppointmentId ? `&appointmentId=${encodedAppointmentId}` : '';
+    navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}&tab=inkrx`);
+  };
+
   useLayoutEffect(() => {
     const updateHeaderHeight = () => {
       if (headerRef.current) {
@@ -1602,6 +1612,7 @@ export const ClinicalDashboard: React.FC = () => {
                               onPrintClick={openPrescriptionPreview}
                               primaryActionLabel={primaryActionLabel}
                               onPrimaryActionClick={onPrimaryActionClick}
+                              onInkRx={handleInkRxClick}
                             />
                           );
                         })
@@ -1733,6 +1744,15 @@ export const ClinicalDashboard: React.FC = () => {
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="py-4 align-middle text-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-2 text-brand-600 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-900/20 rounded-lg transition-colors mr-1"
+                                        onClick={() => handleInkRxClick(appointment)}
+                                        title="InkRx — handwritten prescription"
+                                      >
+                                        <PenLine className="h-4 w-4" />
+                                      </Button>
                                       <AdviseAdmissionSheet
                                         hospitalId={hospitalId || ''}
                                         doctorId={doctorId || ''}
@@ -1950,6 +1970,7 @@ export const ClinicalDashboard: React.FC = () => {
                               onRescheduleClick={handleRescheduleClick}
                               onCancelClick={handleCancelClick}
                               onPrintClick={openPrescriptionPreview}
+                              onInkRx={handleInkRxClick}
                             />
                           ))
                         ) : (
@@ -2196,6 +2217,7 @@ export const ClinicalDashboard: React.FC = () => {
                               onRescheduleClick={handleRescheduleClick}
                               onCancelClick={handleCancelClick}
                               onPrintClick={openPrescriptionPreview}
+                              onInkRx={handleInkRxClick}
                             />
                           ))
                         ) : (

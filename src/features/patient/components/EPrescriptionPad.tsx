@@ -63,7 +63,6 @@ import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
 // @ts-ignore
 import certificationTemplates from '../mockCertificationTemplates.json';
-import { prescriptionSettingsApi } from '@/features/doctor/services/prescriptionSettingsApi';
 
 
 interface EPrescriptionData {
@@ -1210,14 +1209,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
   useEffect(() => {
     const docId = getDoctorId();
-    if (!docId) return;
-    prescriptionSettingsApi.getPrescriptionSettings(docId)
-      .then((res: any) => {
-        const uri = res?.settings?.letterheadSettings?.URI || res?.data?.uri || res?.data?.URI || res?.Data?.URI;
+    // Same endpoint/params the prescription-settings page itself uses — the backend GET requires
+    // BOTH doctorId and hospitalId (400 otherwise), which the older prescriptionSettingsApi
+    // wrapper didn't send (and it hit a stale "prescription/…"-prefixed route on top).
+    const hospId = getHospitalId?.() || '';
+    if (!docId || !hospId) return;
+    prescriptionFieldConfigApi.getPrescriptionSettings(docId, hospId)
+      .then((res) => {
+        const uri = res?.data?.uri;
         if (uri) setInkRxTemplateUrl(uri);
       })
       .catch(() => {}); // silently fail if not configured
-  }, [getDoctorId]);
+  }, [getDoctorId, getHospitalId]);
 
   // Patient timeline (shown in an inline sheet). Lazily fetched the first time the sheet opens.
   const [timelineOpen, setTimelineOpen] = useState(false);

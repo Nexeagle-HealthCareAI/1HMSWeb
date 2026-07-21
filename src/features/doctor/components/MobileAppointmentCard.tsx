@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Upload, FileText, BedDouble, Calendar, X, MoreVertical, Stethoscope } from 'lucide-react';
+import { ExternalLink, Upload, FileText, BedDouble, Calendar, X, MoreVertical, Stethoscope, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
@@ -27,6 +27,8 @@ interface MobileAppointmentCardProps {
   onPrimaryActionClick?: (appointment: PatientAppointment) => void;
   primaryActionLabel?: string;
   primaryActionIcon?: React.ReactNode;
+  /** Opens the full-screen InkRx handwriting pad for this appointment. */
+  onInkRx?: (appointment: PatientAppointment) => void;
 }
 
 export const MobileAppointmentCard: React.FC<MobileAppointmentCardProps> = ({
@@ -44,6 +46,7 @@ export const MobileAppointmentCard: React.FC<MobileAppointmentCardProps> = ({
   onPrimaryActionClick,
   primaryActionLabel,
   primaryActionIcon,
+  onInkRx,
 }) => {
   const { t } = useTranslation();
 
@@ -127,6 +130,12 @@ export const MobileAppointmentCard: React.FC<MobileAppointmentCardProps> = ({
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{appointment.patientFullName} • <span className="text-brand-600 dark:text-brand-400">{appointment.patientId}</span></p>
             </DrawerHeader>
             <div className="p-4 pt-0 grid gap-3 overflow-y-auto max-h-[60vh]">
+              {onInkRx && (
+                <Button variant="outline" className="w-full justify-start h-14 rounded-2xl text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800/50 bg-brand-50/50 dark:bg-brand-900/20 font-semibold shadow-sm" onClick={() => onInkRx(appointment)}>
+                  <div className="bg-brand-100 dark:bg-brand-800/50 p-2 rounded-xl mr-3"><PenLine className="h-4 w-4 text-brand-600 dark:text-brand-400" /></div>
+                  InkRx — Handwritten Rx
+                </Button>
+              )}
               {showLabReport && (
                 <Button variant="outline" className="w-full justify-start h-14 rounded-2xl text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800/50 bg-brand-50/50 dark:bg-brand-900/20 font-semibold shadow-sm" onClick={() => onOpenLabAttachments(appointment)}>
                   <div className="bg-brand-100 dark:bg-brand-800/50 p-2 rounded-xl mr-3"><Upload className="h-4 w-4 text-brand-600 dark:text-brand-400" /></div>

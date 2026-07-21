@@ -114,33 +114,26 @@ export const DrawingGallerySection: React.FC<DrawingGallerySectionProps> = ({
                         <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.4 }}>
                             Write directly on your prescription letterhead with Apple Pencil or any stylus.
                             {!templateUrl && (
-                                <span style={{ color: '#f59e0b', fontWeight: 600 }}> No letterhead found — set it up in Settings first.</span>
+                                <span style={{ color: '#f59e0b', fontWeight: 600 }}> No letterhead set — you&apos;ll write on a blank A4 sheet.</span>
                             )}
                         </p>
                     </div>
 
-                    {/* CTA */}
+                    {/* CTA — always active: without a letterhead InkRx opens on a blank A4 sheet. */}
                     <button
                         onClick={() => setInkRxOpen(true)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: 8,
                             padding: '10px 18px', borderRadius: 10, border: 'none',
-                            background: templateUrl
-                                ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
-                                : 'rgba(255,255,255,0.06)',
-                            color: templateUrl ? 'white' : '#64748b',
+                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                            color: 'white',
                             fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                            boxShadow: templateUrl ? '0 4px 14px rgba(37,99,235,0.4)' : 'none',
+                            boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
                             transition: 'all 0.2s', flexShrink: 0,
-                            border: templateUrl ? 'none' : '1px solid rgba(255,255,255,0.08)',
                         }}
                         type="button"
                     >
-                        {templateUrl ? (
-                            <><Pencil size={14} /> Open InkRx</>
-                        ) : (
-                            <><FileImage size={14} /> No Letterhead</>
-                        )}
+                        <Pencil size={14} /> Open InkRx
                     </button>
                 </div>
 

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ArrowLeft, Eraser, Highlighter, Loader2, Pencil, Plus,
+    ArrowLeft, Eraser, GripHorizontal, Highlighter, Loader2, Pencil, Plus,
     RotateCcw, RotateCw, Save, Square, Trash2, Type, X, FileImage, Settings
 } from 'lucide-react';
-import { dataUrlToFile, DrawTool, TOOL_DEFAULTS } from './types';
+import { dataUrlToFile, DrawTool, TOOL_DEFAULTS, strokeWidthToFontSize } from './types';
 import { drawingApi } from '@/features/patient/services/drawingApi';
+import { labApi } from '@/features/patient/services/labApi';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import './InkRxPad.css';
@@ -128,6 +129,81 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
     const [textEditor, setTextEditor] = useState<PendingText | null>(null);
     const [label] = useState('InkRx Handwritten Prescription');
 
+    // ── Floating draggable toolbar ────────────────────────────────────────────
+    // null = default CSS anchor (bottom-right). Once the doctor drags it — e.g. off their
+    // writing hand's resting spot on an iPad — the position sticks (localStorage) across opens.
+    const FAB_POS_KEY = 'inkrx.fabPos.v1';
+    const fabWrapRef = useRef<HTMLDivElement>(null);
+    const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(() => {
+        try {
+            const raw = localStorage.getItem(FAB_POS_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') return parsed;
+        } catch { /* ignore */ }
+        return null;
+    });
+    const fabPosRef = useRef(fabPos);
+    const fabDragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; w: number; h: number; moved: boolean } | null>(null);
+
+    const clampFabPos = (x: number, y: number, w: number, h: number) => ({
+        x: Math.min(Math.max(x, 4), Math.max(4, window.innerWidth - w - 4)),
+        y: Math.min(Math.max(y, 4), Math.max(4, window.innerHeight - h - 4)),
+    });
+
+    const applyFabPos = (pos: { x: number; y: number } | null) => {
+        fabPosRef.current = pos;
+        setFabPos(pos);
+    };
+
+    const beginFabDrag = (e: React.PointerEvent) => {
+        const wrap = fabWrapRef.current;
+        if (!wrap) return;
+        const rect = wrap.getBoundingClientRect();
+        fabDragRef.current = { startX: e.clientX, startY: e.clientY, originX: rect.left, originY: rect.top, w: rect.width, h: rect.height, moved: false };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    };
+
+    const moveFabDrag = (e: React.PointerEvent) => {
+        const d = fabDragRef.current;
+        if (!d) return;
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        // Small threshold so a plain tap on the toggle stays a tap, not a 1px "drag".
+        if (!d.moved && Math.hypot(dx, dy) < 6) return;
+        d.moved = true;
+        applyFabPos(clampFabPos(d.originX + dx, d.originY + dy, d.w, d.h));
+    };
+
+    // isToggle: pointerup on the FAB button itself — an un-moved press means "toggle open".
+    const endFabDrag = (isToggle: boolean) => {
+        const d = fabDragRef.current;
+        fabDragRef.current = null;
+        if (!d) return;
+        if (d.moved) {
+            try { localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current)); } catch { /* ignore */ }
+        } else if (isToggle) {
+            setFabOpen(v => !v);
+        }
+    };
+
+    // Keep the palette on-screen when the viewport changes (rotation, keyboard) or when
+    // expanding near an edge would push it out of view.
+    useEffect(() => {
+        if (!open) return;
+        const reclamp = () => {
+            const pos = fabPosRef.current;
+            const wrap = fabWrapRef.current;
+            if (!pos || !wrap) return;
+            const rect = wrap.getBoundingClientRect();
+            applyFabPos(clampFabPos(pos.x, pos.y, rect.width, rect.height));
+        };
+        // Let the expand animation land before measuring.
+        const t = setTimeout(reclamp, 60);
+        window.addEventListener('resize', reclamp);
+        return () => { clearTimeout(t); window.removeEventListener('resize', reclamp); };
+    }, [open, fabOpen]);
+
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
     const emitHistory = useCallback(() => {
@@ -160,7 +236,12 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
     // Load template image when pad opens
     useEffect(() => {
         if (!open) return;
-        if (!templateUrl) return;
+        if (!templateUrl) {
+            // No letterhead — draw on a blank white A4 sheet; never carry over a previous
+            // doctor's letterhead bitmap.
+            bgImageRef.current = null;
+            return;
+        }
 
         setTemplateLoading(true);
         const img = new Image();
@@ -251,7 +332,7 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                 screenLeft: e.clientX - rect.left,
                 screenTop: e.clientY - rect.top,
                 displayScale: rect.width / CANVAS_W,
-                value: '', color, fontSize: 18,
+                value: '', color, fontSize: strokeWidthToFontSize(strokeWidth),
             });
             return;
         }
@@ -336,15 +417,51 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
         }
         setSaving(true);
         try {
-            const dataUrl = canvas.toDataURL('image/png');
-            const file = dataUrlToFile(dataUrl, `inkrx-${Date.now()}.png`);
-            const response = await drawingApi.uploadDrawing({
-                fileName: file.name,
-                label: label.trim() || undefined,
-                hospitalId, doctorId, patientId, appointmentId,
-            }, file);
-            if (!response?.success) throw new Error(response?.message || 'Could not save.');
-            toast({ title: 'InkRx saved', description: 'The handwritten prescription has been appended.' });
+            // Canvas already holds letterhead + ink composed (redrawAll paints the letterhead
+            // into the bitmap, not just behind it) — re-render once for a clean final state.
+            redrawAll();
+            const pngFile = dataUrlToFile(canvas.toDataURL('image/png'), `inkrx-${Date.now()}.png`);
+
+            // Compose an A4 PDF of the same bitmap. Dynamically imported so the pad itself stays
+            // light — jspdf only loads at the moment of the first save. JPEG (not PNG) inside the
+            // PDF: the page has no transparency and it keeps a letterhead-photo page ~10x smaller.
+            const { jsPDF } = await import('jspdf');
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 595.28, 841.89);
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const safeName = (patientName || patientId || 'patient').replace(/[^\w-]+/g, '_');
+            const pdfFile = new File([pdf.output('blob')], `InkRx-${safeName}-${dateStr}.pdf`, { type: 'application/pdf' });
+
+            // Two destinations, deliberately: the PNG keeps the existing behavior (appended as a
+            // page to the printed prescription + shown in the sketch gallery); the PDF goes into
+            // the appointment's documents (ReportType "Prescription"), which is what makes it
+            // retrievable/printable later — Documents modal, patient timeline, and the patient's
+            // own Doctor Dekho portal all read from there.
+            const [drawRes, attachRes] = await Promise.allSettled([
+                drawingApi.uploadDrawing({
+                    fileName: pngFile.name,
+                    label: label.trim() || undefined,
+                    hospitalId, doctorId, patientId, appointmentId,
+                }, pngFile),
+                labApi.uploadAttachment({
+                    fileName: pdfFile.name,
+                    reportType: 'Prescription',
+                    notes: 'InkRx handwritten prescription',
+                    hospitalId, doctorId, patientId, appointmentId,
+                }, pdfFile),
+            ]);
+
+            const drawOk = drawRes.status === 'fulfilled' && Boolean(drawRes.value?.success);
+            const attachOk = attachRes.status === 'fulfilled' && Boolean(attachRes.value?.success || attachRes.value?.message === 'Success');
+
+            if (!drawOk && !attachOk) throw new Error('Could not save.');
+            if (drawOk && attachOk) {
+                toast({ title: 'InkRx saved', description: 'Saved as a PDF in the appointment documents and appended to the printed prescription.' });
+            } else if (attachOk) {
+                toast({ title: 'Saved as PDF document', description: 'Appending to the printed prescription failed — the PDF is safe under Documents.' });
+            } else {
+                toast({ title: 'Appended to prescription', description: 'The PDF document copy failed to save — you can retry from the pad.', variant: 'destructive' });
+            }
             onSaved?.();
             onClose();
         } catch (e) {
@@ -409,36 +526,38 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                 </button>
             </div>
 
+            {/* No-letterhead hint — writing still works on a blank A4 sheet. */}
+            {!templateUrl && (
+                <div className="inkrx-blank-hint">
+                    <FileImage size={13} />
+                    <span>No letterhead set — writing on a blank A4 sheet.</span>
+                    {onGoToSettings && (
+                        <button onClick={onGoToSettings} type="button">
+                            <Settings size={12} /> Set letterhead
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Canvas scroll area */}
             <div className="inkrx-canvas-area">
-                {!templateUrl ? (
-                    /* No template uploaded */
-                    <div className="inkrx-no-template" style={{ maxWidth: 480 }}>
-                        <div className="inkrx-no-template-icon">
-                            <FileImage size={28} />
-                        </div>
-                        <h3>No Letterhead Configured</h3>
-                        <p>
-                            Upload your prescription letterhead in Settings to use InkRx. 
-                            The letterhead will appear as the background when you write.
-                        </p>
-                        {onGoToSettings && (
-                            <button className="inkrx-no-template-btn" onClick={onGoToSettings} type="button">
-                                <Settings size={16} /> Go to Prescription Settings
-                            </button>
-                        )}
-                    </div>
-                ) : (
+                {(
                     <div className="inkrx-paper-wrap" ref={paperWrapRef}>
                         <div className="inkrx-paper-shadow" />
 
-                        {/* Letterhead image (rendered via CSS — actual drawing uses canvas) */}
-                        <img
-                            className="inkrx-letterhead-bg"
-                            src={templateUrl}
-                            alt="Prescription Letterhead"
-                            draggable={false}
-                        />
+                        {/* Base layer drives the wrapper's height: the letterhead image when one is
+                            set, otherwise a blank white A4 block (the canvas itself is absolutely
+                            positioned over whichever is rendered). */}
+                        {templateUrl ? (
+                            <img
+                                className="inkrx-letterhead-bg"
+                                src={templateUrl}
+                                alt="Prescription Letterhead"
+                                draggable={false}
+                            />
+                        ) : (
+                            <div className="inkrx-letterhead-blank" />
+                        )}
 
                         {/* Drawing canvas absolutely overlaid */}
                         <canvas
@@ -492,11 +611,26 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                 )}
             </div>
 
-            {/* Floating Action Button */}
-            <div className="inkrx-fab-wrap">
+            {/* Floating Action Button — draggable anywhere on screen (grip when open, or
+                press-and-drag the toggle itself; a plain tap still toggles). */}
+            <div
+                className="inkrx-fab-wrap"
+                ref={fabWrapRef}
+                style={fabPos ? { left: fabPos.x, top: fabPos.y, right: 'auto', bottom: 'auto' } : undefined}
+            >
                 {/* Expanded toolbar */}
                 {fabOpen && (
                     <div className="inkrx-fab-toolbar">
+                        <div
+                            className="inkrx-fab-grip"
+                            title="Drag to move"
+                            onPointerDown={beginFabDrag}
+                            onPointerMove={moveFabDrag}
+                            onPointerUp={() => endFabDrag(false)}
+                            onPointerCancel={() => endFabDrag(false)}
+                        >
+                            <GripHorizontal size={16} />
+                        </div>
                         {/* Tools */}
                         {TOOLS.map(t => (
                             <button
@@ -575,11 +709,14 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                     </div>
                 )}
 
-                {/* FAB toggle button */}
+                {/* FAB toggle button — tap toggles, press-and-drag moves the whole palette. */}
                 <button
                     className={`inkrx-fab-toggle ${fabOpen ? 'open' : ''}`}
-                    onClick={() => setFabOpen(v => !v)}
-                    title={fabOpen ? 'Close tools' : 'Open tools'}
+                    onPointerDown={beginFabDrag}
+                    onPointerMove={moveFabDrag}
+                    onPointerUp={() => endFabDrag(true)}
+                    onPointerCancel={() => endFabDrag(false)}
+                    title={fabOpen ? 'Close tools (drag to move)' : 'Open tools (drag to move)'}
                     type="button"
                 >
                     {fabOpen ? <X size={22} /> : <Plus size={22} />}
