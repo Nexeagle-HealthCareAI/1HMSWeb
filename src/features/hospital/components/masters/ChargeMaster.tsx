@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Filter, Plus, Download, MoreVertical,
+    Search, Filter, Plus, Download, MoreVertical, Database,
     Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw,
     Stethoscope, FlaskConical, Activity, Syringe, Pill, LayoutGrid
 } from 'lucide-react';
@@ -642,16 +642,9 @@ export const ChargeMaster = () => {
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : payerRates.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-5 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-950/10 text-center gap-2 mt-1">
-                                    <div className="p-2 rounded-full bg-slate-100 dark:bg-zinc-850 text-slate-400 dark:text-zinc-500">
-                                        <Database className="h-4.5 w-4.5" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-xs font-bold text-slate-750 dark:text-zinc-300">No Custom Overrides</p>
-                                        <p className="text-[10px] font-medium text-slate-400 dark:text-zinc-500 leading-normal max-w-[280px]">
-                                            All payers default to the standard rate card values.
-                                        </p>
-                                    </div>
+                                <div className="flex items-center justify-center gap-2 py-4.5 text-slate-400 dark:text-zinc-550 border border-dashed border-slate-200/60 dark:border-zinc-800/80 rounded-xl bg-slate-50/20 dark:bg-zinc-950/5">
+                                    <Database className="h-4 w-4" />
+                                    <span className="text-[11px] font-bold tracking-tight">No payer overrides — defaulting to standard rates</span>
                                 </div>
                             ) : payerRates.map(r => (
                                 <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
@@ -680,16 +673,9 @@ export const ChargeMaster = () => {
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : roomMultipliers.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-5 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-950/10 text-center gap-2 mt-1">
-                                    <div className="p-2 rounded-full bg-slate-100 dark:bg-zinc-850 text-slate-400 dark:text-zinc-500">
-                                        <Activity className="h-4.5 w-4.5" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-xs font-bold text-slate-750 dark:text-zinc-300">No Room Multipliers</p>
-                                        <p className="text-[10px] font-medium text-slate-400 dark:text-zinc-500 leading-normal max-w-[280px]">
-                                            Every room type bills at 100% of the default rate.
-                                        </p>
-                                    </div>
+                                <div className="flex items-center justify-center gap-2 py-4.5 text-slate-400 dark:text-zinc-550 border border-dashed border-slate-200/60 dark:border-zinc-800/80 rounded-xl bg-slate-50/20 dark:bg-zinc-950/5">
+                                    <Activity className="h-4 w-4" />
+                                    <span className="text-[11px] font-bold tracking-tight">No room multipliers — standard rates active</span>
                                 </div>
                             ) : roomMultipliers.map(r => (
                                 <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
@@ -703,13 +689,21 @@ export const ChargeMaster = () => {
 
                 {/* Floating Action Button (FAB) for Mobile ( sitting above bottom navigation bar ) */}
                 <div className="fixed bottom-24 right-5 z-40 sm:hidden">
-                    <button
+                    <motion.button
                         type="button"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.9 }}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 18 }}
                         onClick={() => handleOpenDrawer(null)}
-                        className="w-14 h-14 bg-gradient-to-r from-brand-600 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-brand-500/35 active:scale-90 transition-transform"
+                        className="relative w-14 h-14 bg-gradient-to-tr from-brand-600 via-indigo-650 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(79,70,229,0.35)] border border-white/20 overflow-hidden active:scale-90 transition-transform duration-100"
                     >
-                        <Plus className="h-6 w-6" strokeWidth={2.5} />
-                    </button>
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                        <Plus className="h-6.5 w-6.5 relative z-10" strokeWidth={3} />
+                        {/* Glow halo behind button */}
+                        <div className="absolute inset-0 -z-10 bg-indigo-500/10 blur-md rounded-full" />
+                    </motion.button>
                 </div>
             </div>
 
