@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useAppStore } from '@/store/appStore';
 import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
 import { toast } from '@/hooks/use-toast';
+import { mockAxiosAdapter } from './mockAdapter';
 
 // API Configuration
 const API_TIMEOUT = 30000; // 30 seconds
@@ -41,6 +42,11 @@ axiosInstance.interceptors.request.use(
 
       headers.set('Authorization', `Bearer ${token}`);
       config.headers = headers;
+
+      // If in mock bypass mode, use mock adapter
+      if (token === 'mock-jwt-token-bypass') {
+        config.adapter = mockAxiosAdapter as any;
+      }
     }
     
     // Add CSRF token if available
