@@ -556,123 +556,135 @@ export const ChargeMaster = () => {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 whileTap={{ scale: 0.98 }}
                                 key={`mob-${charge.id}`}
-                                className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-100/50 dark:border-gray-800/50 rounded-2xl p-4 shadow-sm flex flex-col gap-3 relative border-l-4 ${catStyle.color}`}
+                                className={`bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-gray-150/40 dark:border-zinc-800/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-3 relative border-l-4 ${catStyle.color} transition-all hover:shadow-md`}
                             >
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-start gap-3 pr-4">
-                                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${catStyle.bg}`}>
-                                            <Icon className="h-4 w-4" />
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-start gap-3.5 pr-2">
+                                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${catStyle.bg} flex items-center justify-center`}>
+                                            <Icon className="h-4.5 w-4.5" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <h3 className="font-bold text-gray-900 dark:text-white text-base leading-tight">
+                                            <h3 className="font-extrabold text-slate-850 dark:text-zinc-150 text-sm leading-snug">
                                                 {charge.displayName}
                                             </h3>
-                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{charge.categoryCode}</span>
-                                                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                                                <span className="text-xs text-gray-400 font-medium">{charge.appliesTo}</span>
+                                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                <span className="text-[10px] font-extrabold text-slate-400 dark:text-zinc-550 uppercase tracking-widest">{charge.categoryCode}</span>
+                                                <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-zinc-800"></span>
+                                                <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500">{charge.appliesTo}</span>
                                                 {charge.maxDiscountPercent > 0 && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 font-mono font-bold">
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-955/40 text-amber-600 dark:text-amber-400 font-mono font-black border border-amber-250/10">
                                                         Disc {charge.maxDiscountPercent}%
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-end shrink-0 pt-1">
-                                        <span className="font-mono font-bold text-lg text-gray-900 dark:text-white">
-                                            ₹{charge.defaultRate.toLocaleString('en-IN')}
+                                    <div className="flex flex-col items-end shrink-0 pt-0.5">
+                                        <span className="font-mono font-black text-sm text-slate-800 dark:text-zinc-150">
+                                            ₹{charge.defaultRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="border-t border-gray-100 dark:border-gray-800/60 pt-3 flex items-center justify-between">
+                                <div className="border-t border-slate-100 dark:border-zinc-800/80 pt-3 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Switch
                                             checked={charge.isActive}
                                             onCheckedChange={() => handleToggleActive(charge.id)}
                                             className="data-[state=checked]:bg-green-500 scale-75 origin-left"
                                         />
-                                        <span className={`text-xs font-medium ${charge.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                                        <span className={`text-[10px] font-extrabold uppercase tracking-wider ${charge.isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-400'}`}>
                                             {charge.isActive ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-brand-600 bg-gray-50 dark:bg-slate-800/50 rounded-full" onClick={() => handleOpenDrawer(charge)}>
+                                    <div className="flex items-center gap-1.5">
+                                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 text-slate-500 hover:text-brand-600 bg-slate-50/50 dark:bg-zinc-850/50 rounded-xl" onClick={() => handleOpenDrawer(charge)}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" onClick={() => handleDeleteCharge(charge.id)}>
+                                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-rose-950/20 rounded-xl" onClick={() => handleDeleteCharge(charge.id)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>
                                 </div>
                             </motion.div>
-                        )})}
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* RATE CARDS: payer-type override + room-class multiplier */}
                 <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Payer Rate Overrides</h3>
-                        <div className="grid grid-cols-[1fr_90px_110px_auto] gap-2 mb-3">
+                    <div className="border border-gray-200 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm p-4.5">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Payer Rate Overrides</h3>
+                        <div className="flex flex-col sm:grid sm:grid-cols-[1fr_95px_110px_auto] gap-2.5 mb-4">
                             <Select value={newPayerRate.chargeId} onValueChange={v => setNewPayerRate(p => ({ ...p, chargeId: v }))}>
-                                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Charge item" /></SelectTrigger>
-                                <SelectContent>
+                                <SelectTrigger className="h-10 text-xs rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"><SelectValue placeholder="Charge item" /></SelectTrigger>
+                                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                     {charges.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <Select value={newPayerRate.payerType} onValueChange={v => setNewPayerRate(p => ({ ...p, payerType: v as PayerType }))}>
-                                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>
+                                <SelectTrigger className="h-10 text-xs rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                     <SelectItem value="CASH">CASH</SelectItem>
                                     <SelectItem value="TPA">TPA</SelectItem>
                                     <SelectItem value="SCHEME">SCHEME</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Input type="number" min="0" className="h-9 text-xs font-mono" placeholder="Rate ₹" value={newPayerRate.overrideRate} onChange={e => setNewPayerRate(p => ({ ...p, overrideRate: e.target.value }))} />
-                            <Button size="sm" className="h-9" disabled={rateCardSaving} onClick={handleAddPayerRate}>Save</Button>
+                            <Input type="number" min="0" className="h-10 text-xs font-mono rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800" placeholder="Rate ₹" value={newPayerRate.overrideRate} onChange={e => setNewPayerRate(p => ({ ...p, overrideRate: e.target.value }))} />
+                            <Button size="sm" className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold shadow-sm active:scale-95 transition-all" disabled={rateCardSaving} onClick={handleAddPayerRate}>Save</Button>
                         </div>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto hide-scrollbar">
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : payerRates.length === 0 ? (
-                                <p className="text-xs text-gray-400">No payer overrides configured — all payers bill at Default Rate.</p>
+                                <p className="text-xs text-slate-400 dark:text-zinc-500">No payer overrides configured — all payers bill at Default Rate.</p>
                             ) : payerRates.map(r => (
-                                <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-gray-50 dark:bg-slate-800/50">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{r.chargeDisplayName ?? r.chargeCode}</span>
-                                    <span className="text-gray-500">{r.payerType} · ₹{r.overrideRate.toLocaleString('en-IN')}</span>
+                                <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
+                                    <span className="font-semibold text-slate-700 dark:text-zinc-350">{r.chargeDisplayName ?? r.chargeCode}</span>
+                                    <span className="font-mono font-bold text-slate-500 dark:text-zinc-450">{r.payerType} · ₹{r.overrideRate.toLocaleString('en-IN')}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Room-Class Rate Multipliers</h3>
-                        <div className="grid grid-cols-[1fr_110px_auto] gap-2 mb-3">
+                    <div className="border border-gray-200 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm p-4.5">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Room-Class Rate Multipliers</h3>
+                        <div className="flex flex-col sm:grid sm:grid-cols-[1fr_110px_auto] gap-2.5 mb-4">
                             <Select value={newRoomMultiplier.roomType} onValueChange={v => setNewRoomMultiplier(p => ({ ...p, roomType: v }))}>
-                                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>
+                                <SelectTrigger className="h-10 text-xs rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                     {['GENERAL', 'ICU', 'NICU', 'PICU', 'HDU', 'CCU', 'ICCU', 'PRIVATE', 'SEMI_PRIVATE', 'OTHER'].map(w => (
                                         <SelectItem key={w} value={w}>{w.replace('_', ' ')}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Input type="number" min="0" className="h-9 text-xs font-mono" placeholder="% (100 = no change)" value={newRoomMultiplier.multiplierPercent} onChange={e => setNewRoomMultiplier(p => ({ ...p, multiplierPercent: e.target.value }))} />
-                            <Button size="sm" className="h-9" disabled={rateCardSaving} onClick={handleAddRoomMultiplier}>Save</Button>
+                            <Input type="number" min="0" className="h-10 text-xs font-mono rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800" placeholder="% (100 = default)" value={newRoomMultiplier.multiplierPercent} onChange={e => setNewRoomMultiplier(p => ({ ...p, multiplierPercent: e.target.value }))} />
+                            <Button size="sm" className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold shadow-sm active:scale-95 transition-all" disabled={rateCardSaving} onClick={handleAddRoomMultiplier}>Save</Button>
                         </div>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto hide-scrollbar">
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : roomMultipliers.length === 0 ? (
-                                <p className="text-xs text-gray-400">No room multipliers configured — every room type bills at 100% of Default Rate.</p>
+                                <p className="text-xs text-slate-400 dark:text-zinc-500">No room multipliers configured — every room type bills at 100% of Default Rate.</p>
                             ) : roomMultipliers.map(r => (
-                                <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-gray-50 dark:bg-slate-800/50">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{r.roomType.replace('_', ' ')}</span>
-                                    <span className="text-gray-500">{r.multiplierPercent}%</span>
+                                <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
+                                    <span className="font-semibold text-slate-700 dark:text-zinc-350">{r.roomType.replace('_', ' ')}</span>
+                                    <span className="font-mono font-bold text-slate-500 dark:text-zinc-450">{r.multiplierPercent}%</span>
                                 </div>
                             ))}
                         </div>
                     </div>
+                </div>
+
+                {/* Floating Action Button (FAB) for Mobile ( sitting above bottom navigation bar ) */}
+                <div className="fixed bottom-24 right-5 z-40 sm:hidden">
+                    <button
+                        type="button"
+                        onClick={() => handleOpenDrawer(null)}
+                        className="w-14 h-14 bg-gradient-to-r from-brand-600 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-brand-500/35 active:scale-90 transition-transform"
+                    >
+                        <Plus className="h-6 w-6" strokeWidth={2.5} />
+                    </button>
                 </div>
             </div>
 

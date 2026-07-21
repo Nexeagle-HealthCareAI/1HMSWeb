@@ -168,7 +168,7 @@ export const AdminConfigModule = () => {
 
             {/* Main Content */}
             <main className={cn(
-                "flex-1 overflow-x-hidden overflow-y-auto bg-transparent relative flex flex-col min-h-0",
+                "flex-1 overflow-x-hidden overflow-y-auto hide-scrollbar bg-transparent relative flex flex-col min-h-0",
                 showMobileList ? "max-lg:hidden" : "max-lg:flex"
             )}>
                 {/* Mobile Back Header */}
