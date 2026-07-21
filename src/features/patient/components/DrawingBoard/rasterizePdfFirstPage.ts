@@ -1,7 +1,8 @@
 // Renders the FIRST page of a PDF (given by URL) to a PNG data URL, so a PDF letterhead can be
-// shown as a bitmap background behind the InkDischarge canvas — the discharge letterhead is a PDF
-// (unlike the OPD prescription letterhead, which is already an image). pdf-lib can compose PDFs
-// but can't rasterize them, so pdfjs-dist does the render.
+// shown as a bitmap background behind an ink pad's canvas — BOTH the OPD prescription letterhead
+// (see InkRxPad.tsx, usePrescriptionDesigner.ts) and the discharge letterhead (InkDischargePad.tsx,
+// useDischargeDesigner.ts) are uploaded/stored as PDFs, not images. pdf-lib can compose PDFs but
+// can't rasterize them, so pdfjs-dist does the render.
 //
 // The worker is wired via Vite's `?url` import (the pdfjs worker is an ESM module in v4); this is
 // the supported way to give the main thread a same-origin worker URL under a bundler.

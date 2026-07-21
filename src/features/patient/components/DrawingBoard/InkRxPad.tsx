@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ArrowLeft, Eraser, GripHorizontal, Highlighter, Loader2, Pencil, Plus,
-    RotateCcw, RotateCw, Save, Square, Trash2, Type, X, FileImage, Settings
+    ArrowLeft, Eraser, GripHorizontal, Highlighter, Loader2, Maximize2, Minimize2, Pencil,
+    RotateCcw, RotateCw, Save, Square, Trash2, Type, FileImage, Settings
 } from 'lucide-react';
 import { dataUrlToFile, DrawTool, TOOL_DEFAULTS, strokeWidthToFontSize } from './types';
 import { drawingApi } from '@/features/patient/services/drawingApi';
 import { labApi } from '@/features/patient/services/labApi';
+import { rasterizePdfFirstPage } from './rasterizePdfFirstPage';
+import { useFullscreen } from './useFullscreen';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import './InkRxPad.css';
@@ -117,22 +119,28 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
     const currentStrokeRef = useRef<StrokeItem | null>(null);
     const isDrawingRef = useRef(false);
     const paperWrapRef = useRef<HTMLDivElement>(null);
+    const shellRef = useRef<HTMLDivElement>(null);
 
     const [tool, setTool] = useState<DrawTool>('pen');
     const [color, setColor] = useState('#0f172a');
     const [strokeWidth, setStrokeWidth] = useState(TOOL_DEFAULTS['pen'].width);
-    const [fabOpen, setFabOpen] = useState(false);
+    // Which of the 3 floating buttons currently has its flyout open — null = all closed.
+    const [activeFlyout, setActiveFlyout] = useState<'pen' | 'text' | 'tools' | null>(null);
     const [templateLoading, setTemplateLoading] = useState(false);
+    // Set once the letterhead (rasterized PDF, or a plain image) has actually loaded — drives the
+    // blank-A4 fallback: no letterhead ⇒ never blocks, just plain white A4.
+    const [bgReady, setBgReady] = useState(false);
     const [saving, setSaving] = useState(false);
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [textEditor, setTextEditor] = useState<PendingText | null>(null);
     const [label] = useState('InkRx Handwritten Prescription');
 
-    // ── Floating draggable toolbar ────────────────────────────────────────────
+    // ── Floating draggable toolbar — 3 buttons (Pen, Text, Eraser+history), each with its own
+    // flyout, dragged as one group via the grip handle. ────────────────────────────────────────
     // null = default CSS anchor (bottom-right). Once the doctor drags it — e.g. off their
     // writing hand's resting spot on an iPad — the position sticks (localStorage) across opens.
-    const FAB_POS_KEY = 'inkrx.fabPos.v1';
+    const FAB_POS_KEY = 'inkrx.fabPos.v2';
     const fabWrapRef = useRef<HTMLDivElement>(null);
     const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(() => {
         try {
@@ -156,6 +164,8 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
         setFabPos(pos);
     };
 
+    // The grip's only job is dragging — no tap/click behavior to disambiguate, unlike the old
+    // single toggle button.
     const beginFabDrag = (e: React.PointerEvent) => {
         const wrap = fabWrapRef.current;
         if (!wrap) return;
@@ -169,26 +179,20 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
         if (!d) return;
         const dx = e.clientX - d.startX;
         const dy = e.clientY - d.startY;
-        // Small threshold so a plain tap on the toggle stays a tap, not a 1px "drag".
         if (!d.moved && Math.hypot(dx, dy) < 6) return;
         d.moved = true;
         applyFabPos(clampFabPos(d.originX + dx, d.originY + dy, d.w, d.h));
     };
 
-    // isToggle: pointerup on the FAB button itself — an un-moved press means "toggle open".
-    const endFabDrag = (isToggle: boolean) => {
+    const endFabDrag = () => {
         const d = fabDragRef.current;
         fabDragRef.current = null;
-        if (!d) return;
-        if (d.moved) {
-            try { localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current)); } catch { /* ignore */ }
-        } else if (isToggle) {
-            setFabOpen(v => !v);
-        }
+        if (!d || !d.moved) return;
+        try { localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current)); } catch { /* ignore */ }
     };
 
-    // Keep the palette on-screen when the viewport changes (rotation, keyboard) or when
-    // expanding near an edge would push it out of view.
+    // Keep the palette on-screen when the viewport changes (rotation, keyboard) or when a flyout
+    // opening near an edge would push it out of view.
     useEffect(() => {
         if (!open) return;
         const reclamp = () => {
@@ -198,11 +202,20 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
             const rect = wrap.getBoundingClientRect();
             applyFabPos(clampFabPos(pos.x, pos.y, rect.width, rect.height));
         };
-        // Let the expand animation land before measuring.
         const t = setTimeout(reclamp, 60);
         window.addEventListener('resize', reclamp);
         return () => { clearTimeout(t); window.removeEventListener('resize', reclamp); };
-    }, [open, fabOpen]);
+    }, [open, activeFlyout]);
+
+    // True OS fullscreen — hides the browser's own chrome (address/search bar) so the letterhead
+    // fills the physical screen, not just the page viewport. Must be user-gesture-triggered (the
+    // status bar button), never auto-requested on open (browsers reject that).
+    const { isFullscreen, isSupported: fullscreenSupported, toggle: toggleFullscreen, exit: exitFullscreen } = useFullscreen(shellRef);
+
+    // Leave fullscreen behind when the pad closes so it never lingers on the parent screen.
+    useEffect(() => {
+        if (!open) void exitFullscreen();
+    }, [open, exitFullscreen]);
 
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -233,31 +246,54 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
         });
     }, []);
 
-    // Load template image when pad opens
+    // Load + rasterize the letterhead when the pad opens. The prescription letterhead is stored as
+    // a PDF (usePrescriptionDesigner.ts uses pdf-lib to build/analyze it) — a PDF can't be loaded
+    // into an <img>, so it's rasterized to a bitmap first (same approach as InkDischargePad).
     useEffect(() => {
         if (!open) return;
+        let cancelled = false;
+
         if (!templateUrl) {
             // No letterhead — draw on a blank white A4 sheet; never carry over a previous
             // doctor's letterhead bitmap.
             bgImageRef.current = null;
+            setBgReady(false);
             return;
         }
 
         setTemplateLoading(true);
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-            bgImageRef.current = img;
-            setTemplateLoading(false);
-            redrawAll();
+
+        const useImage = (src: string) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                if (cancelled) return;
+                bgImageRef.current = img;
+                setBgReady(true);
+                setTemplateLoading(false);
+                redrawAll();
+            };
+            img.onerror = () => {
+                if (cancelled) return;
+                bgImageRef.current = null;
+                setBgReady(false);
+                setTemplateLoading(false);
+                toast({ title: 'Could not load letterhead', description: 'Drawing on blank canvas instead.', variant: 'destructive' });
+                redrawAll();
+            };
+            img.src = src;
         };
-        img.onerror = () => {
-            bgImageRef.current = null;
-            setTemplateLoading(false);
-            toast({ title: 'Could not load letterhead', description: 'Drawing on blank canvas instead.', variant: 'destructive' });
-            redrawAll();
-        };
-        img.src = templateUrl;
+
+        const isPdf = /\.pdf(\?|$)/i.test(templateUrl);
+        if (isPdf) {
+            rasterizePdfFirstPage(templateUrl)
+                .then(({ dataUrl }) => { if (!cancelled) useImage(dataUrl); })
+                .catch(() => { if (!cancelled) useImage(templateUrl); });
+        } else {
+            useImage(templateUrl);
+        }
+
+        return () => { cancelled = true; };
     }, [open, templateUrl]);
 
     // Initialize blank canvas on open
@@ -272,23 +308,28 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
         emitHistory();
     }, [open]);
 
-    // Keyboard shortcuts
+    // Keyboard shortcuts — also suppresses the browser's own Find (Ctrl/Cmd+F) while the pad is
+    // open, on the (mostly desktop-browser) platforms that actually let page JS pre-empt it; on
+    // an external keyboard hooked to iPad this is honestly best-effort — true fullscreen
+    // (below) is what actually removes Safari's own search/address bar.
     useEffect(() => {
         if (!open) return;
         const handler = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+                e.preventDefault(); e.stopPropagation();
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault(); undo();
             } else if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
                 e.preventDefault(); redo();
-            } else if (e.key === 'Escape' && !fabOpen) {
+            } else if (e.key === 'Escape' && activeFlyout) {
+                setActiveFlyout(null);
+            } else if (e.key === 'Escape' && !activeFlyout) {
                 onClose();
-            } else if (e.key === 'Escape' && fabOpen) {
-                setFabOpen(false);
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [open, fabOpen]);
+    }, [open, activeFlyout]);
 
     const getPos = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
         const canvas = canvasRef.current!;
@@ -476,23 +517,36 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
         setStrokeWidth(TOOL_DEFAULTS[t].width);
     };
 
+    const PEN_VARIANTS: { key: 'pen' | 'marker' | 'highlighter'; icon: React.ReactNode; label: string }[] = [
+        { key: 'pen', icon: <Pencil size={15} />, label: 'Pen' },
+        { key: 'marker', icon: <Square size={15} />, label: 'Marker' },
+        { key: 'highlighter', icon: <Highlighter size={15} />, label: 'Highlighter' },
+    ];
+
+    // Each floating button both selects its tool AND toggles its own flyout — tapping it again
+    // (or a different button) closes/switches the flyout; the tool selection itself always sticks.
+    const handlePenButtonClick = () => {
+        if (!['pen', 'marker', 'highlighter'].includes(tool)) selectTool('pen');
+        setActiveFlyout(prev => prev === 'pen' ? null : 'pen');
+    };
+    const handleTextButtonClick = () => {
+        selectTool('text');
+        setActiveFlyout(prev => prev === 'text' ? null : 'text');
+    };
+    const handleToolsButtonClick = () => {
+        if (tool !== 'eraser') selectTool('eraser');
+        setActiveFlyout(prev => prev === 'tools' ? null : 'tools');
+    };
+
     const cursorStyle = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : 'crosshair';
 
     if (!open) return null;
-
-    const TOOLS: { key: DrawTool; icon: React.ReactNode; label: string }[] = [
-        { key: 'pen',         icon: <Pencil size={16} />,      label: 'Pen' },
-        { key: 'marker',      icon: <Square size={16} />,      label: 'Marker' },
-        { key: 'highlighter', icon: <Highlighter size={16} />, label: 'Hi-lite' },
-        { key: 'eraser',      icon: <Eraser size={16} />,      label: 'Eraser' },
-        { key: 'text',        icon: <Type size={16} />,        label: 'Text' },
-    ];
 
     const dotSize = Math.min(Math.max(strokeWidth * 1.6, 6), 28);
     const toolbarColor = tool === 'eraser' ? '#64748b' : color;
 
     return (
-        <div className="inkrx-shell">
+        <div className="inkrx-shell" ref={shellRef}>
             {/* Thin status bar */}
             <div className="inkrx-statusbar">
                 <button className="inkrx-statusbar-back" onClick={onClose} type="button">
@@ -514,6 +568,17 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                 )}
 
                 <div className="inkrx-date-badge">{today}</div>
+
+                {fullscreenSupported && (
+                    <button
+                        className="inkrx-statusbar-fullscreen"
+                        onClick={toggleFullscreen}
+                        title={isFullscreen ? 'Exit full screen' : 'Full screen — hide browser chrome'}
+                        type="button"
+                    >
+                        {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                    </button>
+                )}
 
                 <button
                     className="inkrx-statusbar-save"
@@ -545,13 +610,14 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                     <div className="inkrx-paper-wrap" ref={paperWrapRef}>
                         <div className="inkrx-paper-shadow" />
 
-                        {/* Base layer drives the wrapper's height: the letterhead image when one is
+                        {/* Base layer drives the wrapper's height: the rasterized letterhead when
                             set, otherwise a blank white A4 block (the canvas itself is absolutely
-                            positioned over whichever is rendered). */}
-                        {templateUrl ? (
+                            positioned over whichever is rendered). Uses the rasterized bitmap
+                            (bgImageRef.src), not the raw templateUrl — that's the original PDF. */}
+                        {templateUrl && bgReady && bgImageRef.current ? (
                             <img
                                 className="inkrx-letterhead-bg"
-                                src={templateUrl}
+                                src={bgImageRef.current.src}
                                 alt="Prescription Letterhead"
                                 draggable={false}
                             />
@@ -611,116 +677,169 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                 )}
             </div>
 
-            {/* Floating Action Button — draggable anywhere on screen (grip when open, or
-                press-and-drag the toggle itself; a plain tap still toggles). */}
+            {/* Floating toolbar — 3 separate buttons (Pen, Text, Eraser+history), each opening its
+                own compact flyout; dragged as one group via the grip handle. */}
             <div
                 className="inkrx-fab-wrap"
                 ref={fabWrapRef}
                 style={fabPos ? { left: fabPos.x, top: fabPos.y, right: 'auto', bottom: 'auto' } : undefined}
             >
-                {/* Expanded toolbar */}
-                {fabOpen && (
-                    <div className="inkrx-fab-toolbar">
-                        <div
-                            className="inkrx-fab-grip"
-                            title="Drag to move"
-                            onPointerDown={beginFabDrag}
-                            onPointerMove={moveFabDrag}
-                            onPointerUp={() => endFabDrag(false)}
-                            onPointerCancel={() => endFabDrag(false)}
-                        >
-                            <GripHorizontal size={16} />
-                        </div>
-                        {/* Tools */}
-                        {TOOLS.map(t => (
-                            <button
-                                key={t.key}
-                                className={`inkrx-fab-tool ${tool === t.key ? 'active' : ''}`}
-                                onClick={() => selectTool(t.key)}
-                                title={t.label}
-                                type="button"
-                            >
-                                {t.icon}
-                                <span>{t.label}</span>
-                            </button>
-                        ))}
-
-                        <div className="inkrx-fab-divider" />
-
-                        {/* Size slider */}
-                        <div className="inkrx-fab-size-wrap" style={{ color: toolbarColor }}>
-                            <div className="inkrx-fab-size-dot-wrap">
-                                <div className="inkrx-fab-size-dot" style={{ width: dotSize, height: dotSize, background: toolbarColor }} />
-                            </div>
-                            <input
-                                type="range" min={1} max={40} step={1}
-                                value={strokeWidth}
-                                onChange={e => setStrokeWidth(Number(e.target.value))}
-                                className="inkrx-fab-size-slider"
-                                title={`${strokeWidth}px`}
-                            />
-                        </div>
-
-                        <div className="inkrx-fab-divider" />
-
-                        {/* Colors */}
-                        <div className="inkrx-fab-colors">
-                            {INK_COLORS.map(c => (
-                                <button
-                                    key={c.value}
-                                    className={`inkrx-fab-swatch ${color === c.value && tool !== 'eraser' ? 'active' : ''}`}
-                                    style={{ backgroundColor: c.value }}
-                                    onClick={() => { setColor(c.value); if (tool === 'eraser') selectTool('pen'); }}
-                                    title={c.label}
-                                    type="button"
-                                />
-                            ))}
-                            <input
-                                type="color"
-                                className="inkrx-fab-custom-color"
-                                value={color}
-                                onChange={e => { setColor(e.target.value); if (tool === 'eraser') selectTool('pen'); }}
-                                title="Custom color"
-                            />
-                        </div>
-
-                        <div className="inkrx-fab-divider" />
-
-                        {/* History + Clear */}
-                        <button className="inkrx-fab-tool" onClick={undo} disabled={!canUndo} title="Undo (⌘Z)" type="button">
-                            <RotateCcw size={16} />
-                            <span>Undo</span>
-                        </button>
-                        <button className="inkrx-fab-tool" onClick={redo} disabled={!canRedo} title="Redo (⌘⇧Z)" type="button">
-                            <RotateCw size={16} />
-                            <span>Redo</span>
-                        </button>
-                        <button
-                            className="inkrx-fab-tool"
-                            onClick={clear}
-                            disabled={!canUndo}
-                            title="Clear all strokes"
-                            type="button"
-                            style={{ color: canUndo ? '#f87171' : undefined }}
-                        >
-                            <Trash2 size={16} />
-                            <span>Clear</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* FAB toggle button — tap toggles, press-and-drag moves the whole palette. */}
-                <button
-                    className={`inkrx-fab-toggle ${fabOpen ? 'open' : ''}`}
+                <div
+                    className="inkrx-fab-grip"
+                    title="Drag to move"
                     onPointerDown={beginFabDrag}
                     onPointerMove={moveFabDrag}
-                    onPointerUp={() => endFabDrag(true)}
-                    onPointerCancel={() => endFabDrag(false)}
-                    title={fabOpen ? 'Close tools (drag to move)' : 'Open tools (drag to move)'}
-                    type="button"
+                    onPointerUp={endFabDrag}
+                    onPointerCancel={endFabDrag}
                 >
-                    {fabOpen ? <X size={22} /> : <Plus size={22} />}
-                </button>
+                    <GripHorizontal size={14} />
+                </div>
+
+                {/* 1 — Pen (+ marker/highlighter variants, color, size) */}
+                <div className="inkrx-fab-btn-group">
+                    {activeFlyout === 'pen' && (
+                        <div className="inkrx-fab-flyout">
+                            <div className="inkrx-fab-flyout-row">
+                                {PEN_VARIANTS.map(v => (
+                                    <button
+                                        key={v.key}
+                                        className={`inkrx-fab-variant ${tool === v.key ? 'active' : ''}`}
+                                        onClick={() => selectTool(v.key)}
+                                        title={v.label}
+                                        type="button"
+                                    >
+                                        {v.icon}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="inkrx-fab-size-wrap" style={{ color: toolbarColor }}>
+                                <div className="inkrx-fab-size-dot-wrap">
+                                    <div className="inkrx-fab-size-dot" style={{ width: dotSize, height: dotSize, background: toolbarColor }} />
+                                </div>
+                                <input
+                                    type="range" min={1} max={40} step={1}
+                                    value={strokeWidth}
+                                    onChange={e => setStrokeWidth(Number(e.target.value))}
+                                    className="inkrx-fab-size-slider"
+                                    title={`${strokeWidth}px`}
+                                />
+                            </div>
+                            <div className="inkrx-fab-colors">
+                                {INK_COLORS.map(c => (
+                                    <button
+                                        key={c.value}
+                                        className={`inkrx-fab-swatch ${color === c.value ? 'active' : ''}`}
+                                        style={{ backgroundColor: c.value }}
+                                        onClick={() => setColor(c.value)}
+                                        title={c.label}
+                                        type="button"
+                                    />
+                                ))}
+                                <input
+                                    type="color"
+                                    className="inkrx-fab-custom-color"
+                                    value={color}
+                                    onChange={e => setColor(e.target.value)}
+                                    title="Custom color"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        className={`inkrx-fab-btn ${['pen', 'marker', 'highlighter'].includes(tool) ? 'active' : ''}`}
+                        onClick={handlePenButtonClick}
+                        title="Pen — color & size"
+                        type="button"
+                    >
+                        <Pencil size={20} />
+                    </button>
+                </div>
+
+                {/* 2 — Text */}
+                <div className="inkrx-fab-btn-group">
+                    {activeFlyout === 'text' && (
+                        <div className="inkrx-fab-flyout">
+                            <div className="inkrx-fab-size-wrap" style={{ color: toolbarColor }}>
+                                <div className="inkrx-fab-size-dot-wrap">
+                                    <div className="inkrx-fab-size-dot" style={{ width: dotSize, height: dotSize, background: toolbarColor }} />
+                                </div>
+                                <input
+                                    type="range" min={1} max={40} step={1}
+                                    value={strokeWidth}
+                                    onChange={e => setStrokeWidth(Number(e.target.value))}
+                                    className="inkrx-fab-size-slider"
+                                    title={`${strokeWidth}px`}
+                                />
+                            </div>
+                            <div className="inkrx-fab-colors">
+                                {INK_COLORS.map(c => (
+                                    <button
+                                        key={c.value}
+                                        className={`inkrx-fab-swatch ${color === c.value ? 'active' : ''}`}
+                                        style={{ backgroundColor: c.value }}
+                                        onClick={() => setColor(c.value)}
+                                        title={c.label}
+                                        type="button"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        className={`inkrx-fab-btn ${tool === 'text' ? 'active' : ''}`}
+                        onClick={handleTextButtonClick}
+                        title="Text"
+                        type="button"
+                    >
+                        <Type size={20} />
+                    </button>
+                </div>
+
+                {/* 3 — Eraser + Undo/Redo/Clear */}
+                <div className="inkrx-fab-btn-group">
+                    {activeFlyout === 'tools' && (
+                        <div className="inkrx-fab-flyout">
+                            <div className="inkrx-fab-size-wrap" style={{ color: '#64748b' }}>
+                                <div className="inkrx-fab-size-dot-wrap">
+                                    <div className="inkrx-fab-size-dot" style={{ width: dotSize, height: dotSize, background: '#64748b' }} />
+                                </div>
+                                <input
+                                    type="range" min={1} max={40} step={1}
+                                    value={strokeWidth}
+                                    onChange={e => setStrokeWidth(Number(e.target.value))}
+                                    className="inkrx-fab-size-slider"
+                                    title={`${strokeWidth}px`}
+                                />
+                            </div>
+                            <div className="inkrx-fab-flyout-row">
+                                <button onClick={undo} disabled={!canUndo} title="Undo (⌘Z)" type="button" className="inkrx-fab-variant">
+                                    <RotateCcw size={16} />
+                                </button>
+                                <button onClick={redo} disabled={!canRedo} title="Redo (⌘⇧Z)" type="button" className="inkrx-fab-variant">
+                                    <RotateCw size={16} />
+                                </button>
+                                <button
+                                    onClick={clear}
+                                    disabled={!canUndo}
+                                    title="Clear all strokes"
+                                    type="button"
+                                    className="inkrx-fab-variant"
+                                    style={{ color: canUndo ? '#f87171' : undefined }}
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        className={`inkrx-fab-btn ${tool === 'eraser' ? 'active' : ''}`}
+                        onClick={handleToolsButtonClick}
+                        title="Eraser · Undo · Redo · Clear"
+                        type="button"
+                    >
+                        <Eraser size={20} />
+                    </button>
+                </div>
             </div>
         </div>
     );

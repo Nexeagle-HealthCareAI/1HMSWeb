@@ -7,12 +7,27 @@
 .inkrx-shell {
     position: fixed;
     inset: 0;
+    /* Belt-and-braces alongside inset:0 — some engines size the true-fullscreen (:fullscreen)
+       element from width/height rather than inset, and dvw/dvh track the real device screen
+       through Safari's collapsing toolbars instead of the layout viewport. */
+    width: 100dvw;
+    height: 100dvh;
     z-index: 9999;
     background: #0a0f1e;
     display: flex;
     flex-direction: column;
     animation: inkrx-open 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     overflow: hidden;
+}
+
+/* When true OS fullscreen is active (Fullscreen API), the UA stylesheet already stretches this
+   element to the physical screen — this just guarantees the same dark canvas-area background
+   shows through instead of any default fullscreen backdrop. */
+.inkrx-shell:fullscreen,
+.inkrx-shell:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: #0a0f1e;
 }
 
 @keyframes inkrx-open {
@@ -131,6 +146,25 @@
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.inkrx-statusbar-fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.inkrx-statusbar-fullscreen:hover {
+    background: rgba(255,255,255,0.1);
+    color: #f1f5f9;
 }
 
 /* ---- Canvas scroll area ---- */
@@ -291,7 +325,8 @@
     border-color: rgba(59, 130, 246, 0.6);
 }
 
-/* ---- Floating Action Button (FAB) ---- */
+/* ---- Floating toolbar: 3 separate buttons (Pen, Text, Eraser+history), each with its own
+   flyout, dragged as one group via the grip handle. ---- */
 .inkrx-fab-wrap {
     position: fixed;
     bottom: 28px;
@@ -299,120 +334,125 @@
     z-index: 10000;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-}
-
-/* FAB pill — expands from a dot to a full toolbar */
-.inkrx-fab-toolbar {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 4px;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 12px 8px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
-    /* Draggable anywhere → it may land near an edge; cap height and scroll internally
-       instead of tools falling off-screen. */
-    max-height: calc(100dvh - 110px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    transform-origin: bottom right;
-    animation: fab-expand 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    gap: 10px;
 }
 
-/* Drag handle at the top of the open palette */
+/* Small drag handle above the 3 buttons — its only job is dragging the group. */
 .inkrx-fab-grip {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    padding: 0 0 4px;
-    color: #475569;
+    width: 36px;
+    height: 18px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #64748b;
     cursor: grab;
     touch-action: none;
     flex-shrink: 0;
 }
-.inkrx-fab-grip:hover { color: #94a3b8; }
-.inkrx-fab-grip:active { cursor: grabbing; color: #cbd5e1; }
+.inkrx-fab-grip:hover { color: #cbd5e1; background: rgba(30,41,59,0.9); }
+.inkrx-fab-grip:active { cursor: grabbing; }
 
-@keyframes fab-expand {
-    from { opacity: 0; transform: scale(0.7) translateY(20px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+/* One button + its flyout, positioned relative so the flyout can pop out without affecting the
+   other two buttons' layout. */
+.inkrx-fab-btn-group {
+    position: relative;
 }
 
-.inkrx-fab-toolbar.collapsed {
-    animation: fab-collapse 0.2s ease-in forwards;
+.inkrx-fab-btn {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    border: none;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    transition: all 0.2s;
+}
+.inkrx-fab-btn:hover { color: #e2e8f0; }
+.inkrx-fab-btn.active {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 8px 24px rgba(37,99,235,0.5);
 }
 
-@keyframes fab-collapse {
-    from { opacity: 1; transform: scale(1); }
-    to   { opacity: 0; transform: scale(0.8) translateY(10px); }
-}
-
-/* Individual tool button inside FAB */
-.inkrx-fab-tool {
+/* The per-button popover — opens to the left of its button (the cluster sits bottom-right). */
+.inkrx-fab-flyout {
+    position: absolute;
+    right: 66px;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    gap: 10px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 12px 10px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+    max-height: calc(100dvh - 110px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    transform-origin: bottom right;
+    animation: fab-expand 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes fab-expand {
+    from { opacity: 0; transform: scale(0.8) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Row of small variant/action icons inside a flyout (pen/marker/hi-lite, or undo/redo/clear) */
+.inkrx-fab-flyout-row {
+    display: flex;
+    gap: 4px;
+}
+.inkrx-fab-variant {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     border: none;
     background: transparent;
     color: #64748b;
-    font-size: 9px;
-    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
-    padding: 6px 4px 4px;
-    position: relative;
     flex-shrink: 0;
 }
-.inkrx-fab-tool:hover { background: rgba(255,255,255,0.08); color: #cbd5e1; }
-.inkrx-fab-tool.active {
+.inkrx-fab-variant:hover { background: rgba(255,255,255,0.08); color: #cbd5e1; }
+.inkrx-fab-variant.active {
     background: rgba(59, 130, 246, 0.2);
     color: #60a5fa;
     box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
 }
-.inkrx-fab-tool.active::before {
-    content: '';
-    position: absolute;
-    left: 3px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 18px;
-    background: #3b82f6;
-    border-radius: 2px;
-}
-.inkrx-fab-tool:disabled { opacity: 0.3; cursor: not-allowed; }
+.inkrx-fab-variant:disabled { opacity: 0.3; cursor: not-allowed; }
 
-.inkrx-fab-divider {
-    width: 32px;
-    height: 1px;
-    background: rgba(255,255,255,0.07);
-    margin: 4px 0;
-    flex-shrink: 0;
-}
-
-/* Color row in FAB */
+/* Color row in a flyout */
 .inkrx-fab-colors {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
-    gap: 5px;
-    padding: 4px 0;
+    gap: 6px;
+    max-width: 90px;
+    padding: 2px 0;
 }
 .inkrx-fab-swatch {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     border: 2px solid transparent;
     cursor: pointer;
@@ -426,8 +466,8 @@
     box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
 }
 .inkrx-fab-custom-color {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     border: 2px dashed #475569;
     cursor: pointer;
@@ -440,17 +480,17 @@
 .inkrx-fab-custom-color::-webkit-color-swatch-wrapper { padding: 0; }
 .inkrx-fab-custom-color::-webkit-color-swatch { border: none; border-radius: 50%; }
 
-/* Size preview in FAB */
+/* Size slider in a flyout */
 .inkrx-fab-size-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 4px 0;
+    padding: 2px 0;
 }
 .inkrx-fab-size-dot-wrap {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -466,7 +506,7 @@
     writing-mode: vertical-lr;
     direction: rtl;
     width: 4px;
-    height: 72px;
+    height: 64px;
     background: rgba(255,255,255,0.1);
     border-radius: 4px;
     outline: none;
@@ -481,27 +521,6 @@
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(59,130,246,0.5);
 }
-
-/* The main FAB toggle button */
-.inkrx-fab-toggle {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
-    border: none;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.5);
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    flex-shrink: 0;
-    /* Press-and-drag moves the palette — the browser must not hijack it as a scroll. */
-    touch-action: none;
-}
-.inkrx-fab-toggle:hover { transform: scale(1.08); box-shadow: 0 10px 28px rgba(37,99,235,0.6); }
-.inkrx-fab-toggle.open { transform: rotate(45deg) scale(1.05); background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: 0 8px 24px rgba(220,38,38,0.5); }
 
 /* ---- Loading spinner ---- */
 .inkrx-loading {
@@ -538,10 +557,9 @@
     .inkrx-patient-badge { display: none; }
     .inkrx-canvas-area { padding: 8px; }
     .inkrx-paper-wrap { width: min(calc(100vw - 16px), calc((100dvh - 60px) * 0.70703)); }
-    .inkrx-fab-wrap { bottom: 20px; right: 16px; }
-    .inkrx-fab-toggle { width: 52px; height: 52px; border-radius: 16px; }
-    .inkrx-fab-toolbar { border-radius: 16px; padding: 10px 6px; }
-    .inkrx-fab-tool { width: 44px; height: 44px; }
+    .inkrx-fab-wrap { bottom: 20px; right: 16px; gap: 8px; }
+    .inkrx-fab-btn { width: 48px; height: 48px; border-radius: 14px; }
+    .inkrx-fab-flyout { right: 58px; border-radius: 16px; padding: 10px 8px; }
 }
 
 /* ---- Text editor overlay on canvas ---- */
