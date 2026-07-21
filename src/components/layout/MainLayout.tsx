@@ -291,6 +291,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (navItem) {
       setCurrentPage(navItem.id);
     }
+    // Auto-close floating menu on any page/route transition
+    setIsTileMenuOpen(false);
   }, [location.pathname]);
 
   const handleNavigation = (item: NavigationItem) => {
