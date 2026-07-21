@@ -769,12 +769,12 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 onClose={() => setInkDischargeOpen(false)}
                 templateUrl={inkDischargeTemplateUrl}
                 admissionId={admission.admissionId}
-                patientId={admission.patientId}
+                patientId={admission.patientId || ''}
                 hospitalId={hospitalId}
                 doctorId={admission.primaryDoctorId || ''}
-                patientName={admission.patientName}
-                patientAge={admission.age}
-                onSaved={() => toast({ title: 'Success', description: 'Discharge drawing saved successfully.' })}
+                patientName={admission.patientName || undefined}
+                patientAge={admission.patientAge != null ? String(admission.patientAge) : undefined}
+                onSaved={() => toast({ title: 'Discharge note saved', description: 'Filed as a PDF in the admission documents.' })}
             />
 
             {isSigned && (

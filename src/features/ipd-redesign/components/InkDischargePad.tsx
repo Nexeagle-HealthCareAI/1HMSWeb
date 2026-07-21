@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ArrowLeft, Eraser, Highlighter, Loader2, Pencil, Plus,
+    ArrowLeft, Eraser, GripHorizontal, Highlighter, Loader2, Pencil, Plus,
     RotateCcw, RotateCw, Save, Square, Trash2, Type, X, FileImage, Settings
 } from 'lucide-react';
-import { dataUrlToFile, DrawTool, TOOL_DEFAULTS } from '@/features/patient/components/DrawingBoard/types';
-import { drawingApi } from '@/features/patient/services/drawingApi';
+import { dataUrlToFile, DrawTool, TOOL_DEFAULTS, strokeWidthToFontSize } from '@/features/patient/components/DrawingBoard/types';
+import { admissionDocumentApi } from '@/features/ipd-redesign/services/admissionDocumentApi';
+import { rasterizePdfFirstPage } from '@/features/ipd-redesign/utils/rasterizePdfFirstPage';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
-import './InkDischargePad.css';
+import '@/features/patient/components/DrawingBoard/InkRxPad.css';
 
 // A4 canvas dimensions at 96dpi
 const CANVAS_W = 794;
@@ -38,7 +39,9 @@ interface PendingText {
 interface InkDischargePadProps {
     open: boolean;
     onClose: () => void;
-    templateUrl?: string | null;  // The doctor's uploaded letterhead (from PrescriptionSetting.URI)
+    // The doctor's uploaded discharge letterhead (DischargeSettings.uri) — a PDF, rasterized to an
+    // image for the writing background. May also be a plain image; both are handled.
+    templateUrl?: string | null;
     admissionId: string;
     patientId: string;
     hospitalId: string;
@@ -122,11 +125,60 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
     const [strokeWidth, setStrokeWidth] = useState(TOOL_DEFAULTS['pen'].width);
     const [fabOpen, setFabOpen] = useState(false);
     const [templateLoading, setTemplateLoading] = useState(false);
+    // Set once the letterhead PDF has been rasterized (or an image template loaded). Drives the
+    // blank-A4 fallback: no letterhead ⇒ never blocks, just plain white A4.
+    const [bgReady, setBgReady] = useState(false);
     const [saving, setSaving] = useState(false);
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [textEditor, setTextEditor] = useState<PendingText | null>(null);
-    const [label] = useState('InkDischarge Handwritten Note');
+
+    // ── Floating draggable toolbar (mirrors InkRxPad) ─────────────────────────
+    const FAB_POS_KEY = 'inkdischarge.fabPos.v1';
+    const fabWrapRef = useRef<HTMLDivElement>(null);
+    const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(() => {
+        try {
+            const raw = localStorage.getItem(FAB_POS_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') return parsed;
+        } catch { /* ignore */ }
+        return null;
+    });
+    const fabPosRef = useRef(fabPos);
+    const fabDragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; w: number; h: number; moved: boolean } | null>(null);
+
+    const clampFabPos = (x: number, y: number, w: number, h: number) => ({
+        x: Math.min(Math.max(x, 4), Math.max(4, window.innerWidth - w - 4)),
+        y: Math.min(Math.max(y, 4), Math.max(4, window.innerHeight - h - 4)),
+    });
+    const applyFabPos = (pos: { x: number; y: number } | null) => { fabPosRef.current = pos; setFabPos(pos); };
+    const beginFabDrag = (e: React.PointerEvent) => {
+        const wrap = fabWrapRef.current;
+        if (!wrap) return;
+        const rect = wrap.getBoundingClientRect();
+        fabDragRef.current = { startX: e.clientX, startY: e.clientY, originX: rect.left, originY: rect.top, w: rect.width, h: rect.height, moved: false };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    };
+    const moveFabDrag = (e: React.PointerEvent) => {
+        const d = fabDragRef.current;
+        if (!d) return;
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        if (!d.moved && Math.hypot(dx, dy) < 6) return;
+        d.moved = true;
+        applyFabPos(clampFabPos(d.originX + dx, d.originY + dy, d.w, d.h));
+    };
+    const endFabDrag = (isToggle: boolean) => {
+        const d = fabDragRef.current;
+        fabDragRef.current = null;
+        if (!d) return;
+        if (d.moved) {
+            try { localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current)); } catch { /* ignore */ }
+        } else if (isToggle) {
+            setFabOpen(v => !v);
+        }
+    };
 
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -140,43 +192,66 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
         const ctx = canvas?.getContext('2d');
         if (!ctx || !canvas) return;
 
-        // Clear to white
         ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-        // Draw letterhead background if available
         if (bgImageRef.current) {
             ctx.drawImage(bgImageRef.current, 0, 0, CANVAS_W, CANVAS_H);
         }
 
-        // Redraw all items
         itemsRef.current.forEach(item => {
             if (item.kind === 'stroke') drawSmoothStroke(ctx, item.stroke);
             else drawTextItem(ctx, item.item);
         });
     }, []);
 
-    // Load template image when pad opens
+    // Load + rasterize the letterhead when the pad opens.
     useEffect(() => {
         if (!open) return;
-        if (!templateUrl) return;
+        let cancelled = false;
+
+        if (!templateUrl) {
+            bgImageRef.current = null;
+            setBgReady(false);
+            return;
+        }
 
         setTemplateLoading(true);
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-            bgImageRef.current = img;
-            setTemplateLoading(false);
-            redrawAll();
+
+        const useImage = (src: string) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                if (cancelled) return;
+                bgImageRef.current = img;
+                setBgReady(true);
+                setTemplateLoading(false);
+                redrawAll();
+            };
+            img.onerror = () => {
+                if (cancelled) return;
+                bgImageRef.current = null;
+                setBgReady(false);
+                setTemplateLoading(false);
+                toast({ title: 'Could not load letterhead', description: 'Writing on a blank sheet instead.', variant: 'destructive' });
+                redrawAll();
+            };
+            img.src = src;
         };
-        img.onerror = () => {
-            bgImageRef.current = null;
-            setTemplateLoading(false);
-            toast({ title: 'Could not load letterhead', description: 'Drawing on blank canvas instead.', variant: 'destructive' });
-            redrawAll();
-        };
-        img.src = templateUrl;
+
+        // The discharge letterhead is a PDF — rasterize page 1. Fall back to treating the URL as a
+        // plain image if it isn't a PDF (defensive; some hospitals may have image templates).
+        const isPdf = /\.pdf(\?|$)/i.test(templateUrl);
+        if (isPdf) {
+            rasterizePdfFirstPage(templateUrl)
+                .then(({ dataUrl }) => { if (!cancelled) useImage(dataUrl); })
+                .catch(() => { if (!cancelled) useImage(templateUrl); });
+        } else {
+            useImage(templateUrl);
+        }
+
+        return () => { cancelled = true; };
     }, [open, templateUrl]);
 
     // Initialize blank canvas on open
@@ -207,6 +282,21 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
+    }, [open, fabOpen]);
+
+    // Keep the palette on-screen through rotation/resize/expand.
+    useEffect(() => {
+        if (!open) return;
+        const reclamp = () => {
+            const pos = fabPosRef.current;
+            const wrap = fabWrapRef.current;
+            if (!pos || !wrap) return;
+            const rect = wrap.getBoundingClientRect();
+            applyFabPos(clampFabPos(pos.x, pos.y, rect.width, rect.height));
+        };
+        const t = setTimeout(reclamp, 60);
+        window.addEventListener('resize', reclamp);
+        return () => { clearTimeout(t); window.removeEventListener('resize', reclamp); };
     }, [open, fabOpen]);
 
     const getPos = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -251,7 +341,7 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
                 screenLeft: e.clientX - rect.left,
                 screenTop: e.clientY - rect.top,
                 displayScale: rect.width / CANVAS_W,
-                value: '', color, fontSize: 18,
+                value: '', color, fontSize: strokeWidthToFontSize(strokeWidth),
             });
             return;
         }
@@ -328,23 +418,28 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
     }, [redrawAll, emitHistory]);
 
     const handleSave = async () => {
-        if (isSubscriptionReadOnly) { blockAction('InkRx save'); return; }
+        if (isSubscriptionReadOnly) { blockAction('InkDischarge save'); return; }
         const canvas = canvasRef.current;
         if (!canvas || itemsRef.current.length === 0) {
-            toast({ title: 'Nothing to save', description: 'Write something on the prescription first.', variant: 'destructive' });
+            toast({ title: 'Nothing to save', description: 'Write something on the discharge letter first.', variant: 'destructive' });
             return;
         }
         setSaving(true);
         try {
-            const dataUrl = canvas.toDataURL('image/png');
-            const file = dataUrlToFile(dataUrl, `inkrx-${Date.now()}.png`);
-            const response = await drawingApi.uploadDrawing({
-                fileName: file.name,
-                label: label.trim() || undefined,
-                hospitalId, doctorId, patientId, appointmentId: admissionId, // Map admissionId to appointmentId for API compatibility
-            }, file);
-            if (!response?.success) throw new Error(response?.message || 'Could not save.');
-            toast({ title: 'InkDischarge saved', description: 'The handwritten note has been appended.' });
+            // Canvas holds letterhead + ink composed (redrawAll paints the letterhead into the
+            // bitmap). Compose an A4 PDF (jspdf, dynamically imported) and file it into the
+            // admission's Documents, where it's retrievable/printable per-admission.
+            redrawAll();
+            const { jsPDF } = await import('jspdf');
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 595.28, 841.89);
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const safeName = (patientName || patientId || 'patient').replace(/[^\w-]+/g, '_');
+            const pdfFile = new File([pdf.output('blob')], `Discharge-Note-${safeName}-${dateStr}.pdf`, { type: 'application/pdf' });
+
+            const res = await admissionDocumentApi.upload(admissionId, pdfFile, hospitalId);
+            if (!res?.success) throw new Error(res?.message || 'Could not save.');
+            toast({ title: 'Discharge note saved', description: 'Saved as a PDF in the admission documents.' });
             onSaved?.();
             onClose();
         } catch (e) {
@@ -376,6 +471,19 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
 
     return (
         <div className="inkrx-shell">
+            {/* No-letterhead hint — writing still works on a blank A4 sheet. */}
+            {!templateUrl && (
+                <div className="inkrx-blank-hint">
+                    <FileImage size={13} />
+                    <span>No discharge letterhead set — writing on a blank A4 sheet.</span>
+                    {onGoToSettings && (
+                        <button onClick={onGoToSettings} type="button">
+                            <Settings size={12} /> Set letterhead
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Thin status bar */}
             <div className="inkrx-statusbar">
                 <button className="inkrx-statusbar-back" onClick={onClose} type="button">
@@ -390,7 +498,7 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
                         <div className="inkrx-patient-info">
                             <div className="inkrx-patient-name">{patientName}</div>
                             <div className="inkrx-patient-sub">
-                                {patientAge ? `Age ${patientAge}` : 'Patient'} &middot; InkDischarge
+                                {patientAge ? `Age ${patientAge}` : 'Patient'} &middot; Discharge
                             </div>
                         </div>
                     </div>
@@ -411,93 +519,91 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
 
             {/* Canvas scroll area */}
             <div className="inkrx-canvas-area">
-                {!templateUrl ? (
-                    /* No template uploaded */
-                    <div className="inkrx-no-template" style={{ maxWidth: 480 }}>
-                        <div className="inkrx-no-template-icon">
-                            <FileImage size={28} />
-                        </div>
-                        <h3>No Letterhead Configured</h3>
-                        <p>
-                            Upload your discharge letterhead in IPD Settings to use InkDischarge. 
-                            The letterhead will appear as the background when you write.
-                        </p>
-                        {onGoToSettings && (
-                            <button className="inkrx-no-template-btn" onClick={onGoToSettings} type="button">
-                                <Settings size={16} /> Go to Discharge Settings
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="inkrx-paper-wrap" ref={paperWrapRef}>
-                        <div className="inkrx-paper-shadow" />
+                <div className="inkrx-paper-wrap" ref={paperWrapRef}>
+                    <div className="inkrx-paper-shadow" />
 
-                        {/* Letterhead image (rendered via CSS — actual drawing uses canvas) */}
+                    {/* Base layer drives the wrapper's height: the rasterized letterhead when set,
+                        otherwise a blank white A4 block (the canvas is absolutely overlaid). */}
+                    {templateUrl && bgReady && bgImageRef.current ? (
                         <img
                             className="inkrx-letterhead-bg"
-                            src={templateUrl}
-                            alt="Prescription Letterhead"
+                            src={bgImageRef.current.src}
+                            alt="Discharge Letterhead"
                             draggable={false}
                         />
+                    ) : (
+                        <div className="inkrx-letterhead-blank" />
+                    )}
 
-                        {/* Drawing canvas absolutely overlaid */}
-                        <canvas
-                            ref={canvasRef}
-                            width={CANVAS_W}
-                            height={CANVAS_H}
-                            className="inkrx-draw-canvas"
-                            style={{
-                                cursor: cursorStyle,
-                                touchAction: 'none',
-                                opacity: 0.99, /* isolate stacking context */
-                                mixBlendMode: tool === 'highlighter' ? 'multiply' : 'normal',
+                    {/* Drawing canvas absolutely overlaid */}
+                    <canvas
+                        ref={canvasRef}
+                        width={CANVAS_W}
+                        height={CANVAS_H}
+                        className="inkrx-draw-canvas"
+                        style={{
+                            cursor: cursorStyle,
+                            touchAction: 'none',
+                            opacity: 0.99,
+                            mixBlendMode: tool === 'highlighter' ? 'multiply' : 'normal',
+                        }}
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                        onPointerCancel={onPointerUp}
+                    />
+
+                    {/* Text editor overlay */}
+                    {textEditor && (
+                        <input
+                            autoFocus
+                            value={textEditor.value}
+                            onChange={e => setTextEditor(prev => prev ? { ...prev, value: e.target.value } : prev)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
+                                if (e.key === 'Escape') { e.preventDefault(); setTextEditor(null); }
                             }}
-                            onPointerDown={onPointerDown}
-                            onPointerMove={onPointerMove}
-                            onPointerUp={onPointerUp}
-                            onPointerCancel={onPointerUp}
+                            onBlur={commitPendingText}
+                            placeholder="Type here…"
+                            className="inkrx-text-editor"
+                            style={{
+                                left: textEditor.screenLeft,
+                                top: textEditor.screenTop,
+                                fontSize: Math.max(12, textEditor.fontSize * textEditor.displayScale),
+                                color: textEditor.color,
+                                fontFamily: 'Georgia, serif',
+                            }}
                         />
+                    )}
 
-                        {/* Text editor overlay */}
-                        {textEditor && (
-                            <input
-                                autoFocus
-                                value={textEditor.value}
-                                onChange={e => setTextEditor(prev => prev ? { ...prev, value: e.target.value } : prev)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
-                                    if (e.key === 'Escape') { e.preventDefault(); setTextEditor(null); }
-                                }}
-                                onBlur={commitPendingText}
-                                placeholder="Type here…"
-                                className="inkrx-text-editor"
-                                style={{
-                                    left: textEditor.screenLeft,
-                                    top: textEditor.screenTop,
-                                    fontSize: Math.max(12, textEditor.fontSize * textEditor.displayScale),
-                                    color: textEditor.color,
-                                    fontFamily: 'Georgia, serif',
-                                }}
-                            />
-                        )}
-
-                        {/* Loading overlay */}
-                        {templateLoading && (
-                            <div className="inkrx-loading">
-                                <div className="inkrx-spinner" />
-                                <p>Loading letterhead…</p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                    {/* Loading overlay */}
+                    {templateLoading && (
+                        <div className="inkrx-loading">
+                            <div className="inkrx-spinner" />
+                            <p>Loading letterhead…</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Floating Action Button */}
-            <div className="inkrx-fab-wrap">
-                {/* Expanded toolbar */}
+            {/* Floating draggable toolbar */}
+            <div
+                className="inkrx-fab-wrap"
+                ref={fabWrapRef}
+                style={fabPos ? { left: fabPos.x, top: fabPos.y, right: 'auto', bottom: 'auto' } : undefined}
+            >
                 {fabOpen && (
                     <div className="inkrx-fab-toolbar">
-                        {/* Tools */}
+                        <div
+                            className="inkrx-fab-grip"
+                            title="Drag to move"
+                            onPointerDown={beginFabDrag}
+                            onPointerMove={moveFabDrag}
+                            onPointerUp={() => endFabDrag(false)}
+                            onPointerCancel={() => endFabDrag(false)}
+                        >
+                            <GripHorizontal size={16} />
+                        </div>
                         {TOOLS.map(t => (
                             <button
                                 key={t.key}
@@ -513,7 +619,6 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
 
                         <div className="inkrx-fab-divider" />
 
-                        {/* Size slider */}
                         <div className="inkrx-fab-size-wrap" style={{ color: toolbarColor }}>
                             <div className="inkrx-fab-size-dot-wrap">
                                 <div className="inkrx-fab-size-dot" style={{ width: dotSize, height: dotSize, background: toolbarColor }} />
@@ -529,7 +634,6 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
 
                         <div className="inkrx-fab-divider" />
 
-                        {/* Colors */}
                         <div className="inkrx-fab-colors">
                             {INK_COLORS.map(c => (
                                 <button
@@ -552,7 +656,6 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
 
                         <div className="inkrx-fab-divider" />
 
-                        {/* History + Clear */}
                         <button className="inkrx-fab-tool" onClick={undo} disabled={!canUndo} title="Undo (⌘Z)" type="button">
                             <RotateCcw size={16} />
                             <span>Undo</span>
@@ -575,11 +678,13 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
                     </div>
                 )}
 
-                {/* FAB toggle button */}
                 <button
                     className={`inkrx-fab-toggle ${fabOpen ? 'open' : ''}`}
-                    onClick={() => setFabOpen(v => !v)}
-                    title={fabOpen ? 'Close tools' : 'Open tools'}
+                    onPointerDown={beginFabDrag}
+                    onPointerMove={moveFabDrag}
+                    onPointerUp={() => endFabDrag(true)}
+                    onPointerCancel={() => endFabDrag(false)}
+                    title={fabOpen ? 'Close tools (drag to move)' : 'Open tools (drag to move)'}
                     type="button"
                 >
                     {fabOpen ? <X size={22} /> : <Plus size={22} />}
