@@ -231,10 +231,14 @@ export const BillingPolicyConfig = () => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="space-y-6 max-w-2xl mx-auto px-4 pb-12 sm:px-0"
+            className="space-y-6 max-w-2xl mx-auto px-4 pb-16 sm:px-0 relative"
         >
+            {/* Background decorative glows */}
+            <div className="absolute top-[-50px] left-1/4 w-80 h-80 bg-brand-500/10 dark:bg-brand-500/15 rounded-full blur-[100px] pointer-events-none -z-10" />
+            <div className="absolute top-[180px] right-1/4 w-80 h-80 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none -z-10" />
+
             {/* Header Area */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100/70 dark:border-zinc-800/80 pb-4">
                 <div>
                     <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 dark:text-zinc-50">
                         Billing Policy Setup
@@ -251,7 +255,7 @@ export const BillingPolicyConfig = () => {
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: [1, 1.4, 2], opacity: [0.8, 0.4, 0] }}
                                 transition={{ duration: 1, ease: "easeOut" }}
-                                className="absolute inset-0 bg-green-400 rounded-xl z-0"
+                                className="absolute inset-0 bg-green-400 rounded-2xl z-0"
                             />
                         )}
                     </AnimatePresence>
@@ -259,16 +263,16 @@ export const BillingPolicyConfig = () => {
                         onClick={handleSave}
                         disabled={isSaving || showSuccess}
                         className={cn(
-                            "relative z-10 w-full sm:w-auto h-11 px-6 rounded-xl font-bold transition-all duration-300 shadow-md active:scale-98 border-none text-white",
+                            "relative z-10 w-full sm:w-auto h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-wider transition-all duration-300 shadow-lg active:scale-[0.97] border-none text-white",
                             showSuccess
                                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/30'
-                                : 'bg-brand-600 hover:bg-brand-700 shadow-brand-500/20'
+                                : 'bg-gradient-to-r from-brand-600 via-indigo-600 to-violet-600 shadow-brand-500/25 hover:shadow-brand-500/40 hover:brightness-105'
                         )}
                     >
                         {isSaving ? (
                             <span className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Saving...
+                                Saving Policy...
                             </span>
                         ) : showSuccess ? (
                             <motion.span
@@ -276,12 +280,12 @@ export const BillingPolicyConfig = () => {
                                 animate={{ scale: 1, opacity: 1 }}
                                 className="flex items-center gap-2"
                             >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Saved!
+                                <CheckCircle2 className="h-4.5 w-4.5" />
+                                Settings Saved!
                             </motion.span>
                         ) : (
                             <span className="flex items-center gap-2">
-                                <Save className="h-4 w-4" />
+                                <Save className="h-4.5 w-4.5" />
                                 Save Changes
                             </span>
                         )}
@@ -292,10 +296,10 @@ export const BillingPolicyConfig = () => {
             {/* Auto-Billing Rules Cards */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-brand-50 dark:bg-brand-950/40 rounded-lg">
+                    <div className="p-1.5 bg-brand-50 dark:bg-brand-950/40 rounded-xl">
                         <Settings2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                     </div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400">
                         Auto-Billing Rules
                     </span>
                 </div>
@@ -306,13 +310,23 @@ export const BillingPolicyConfig = () => {
                         return (
                             <div
                                 key={rule.key}
-                                className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-850/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300"
+                                className={cn(
+                                    "flex items-center justify-between p-5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border rounded-2xl shadow-sm transition-all duration-300 relative overflow-hidden group",
+                                    isAuto 
+                                        ? "border-brand-500/30 dark:border-brand-500/30 bg-gradient-to-br from-white to-brand-50/10 dark:from-zinc-900 dark:to-brand-950/5 shadow-md shadow-brand-500/5"
+                                        : "border-slate-200/60 dark:border-zinc-805/80"
+                                )}
                             >
-                                <div className="flex-1 pr-4">
-                                    <h4 className="font-bold text-sm text-slate-800 dark:text-zinc-200">
+                                <div className="flex-1 pr-5">
+                                    <h4 className="font-extrabold text-sm text-slate-800 dark:text-zinc-100 flex items-center gap-2">
                                         {rule.label}
+                                        {isAuto && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-200/30">
+                                                Active
+                                            </span>
+                                        )}
                                     </h4>
-                                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">
                                         {rule.desc}
                                     </p>
                                 </div>
@@ -320,14 +334,14 @@ export const BillingPolicyConfig = () => {
                                     type="button"
                                     onClick={() => handleChange(rule.key, isAuto ? 'OFF' : rule.onValue)}
                                     className={cn(
-                                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:ring-offset-2",
-                                        isAuto ? "bg-brand-600" : "bg-slate-200 dark:bg-zinc-800"
+                                        "relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-brand-500/10",
+                                        isAuto ? "bg-gradient-to-r from-brand-600 to-indigo-600 shadow-md shadow-brand-500/20" : "bg-slate-200 dark:bg-zinc-800"
                                     )}
                                 >
                                     <span
                                         className={cn(
-                                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                                            isAuto ? "translate-x-5" : "translate-x-0"
+                                            "pointer-events-none inline-block h-5.5 w-5.5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out",
+                                            isAuto ? "translate-x-5.5" : "translate-x-0"
                                         )}
                                     />
                                 </button>
@@ -340,30 +354,32 @@ export const BillingPolicyConfig = () => {
             {/* Document Sequencing */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg">
+                    <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl">
                         <Hash className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400">
                         Document Numbering
                     </span>
                 </div>
 
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-850/80 rounded-2xl p-4.5 shadow-sm space-y-4">
+                <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-slate-200/60 dark:border-zinc-805/80 rounded-2xl p-5 shadow-sm space-y-4">
                     {/* Live Preview Cards */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-slate-50 dark:bg-zinc-950/40 p-3.5 rounded-xl border border-slate-200/40 dark:border-zinc-800/40 text-center">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50/50 dark:bg-zinc-950/20 p-4 rounded-xl border border-slate-200/40 dark:border-zinc-800/40 text-center relative overflow-hidden group">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                                 Invoice series
                             </span>
-                            <div className="text-xs sm:text-sm font-mono font-bold text-slate-700 dark:text-zinc-300 mt-1 break-all">
+                            <div className="text-xs sm:text-sm font-mono font-extrabold text-slate-800 dark:text-zinc-200 mt-2 break-all flex items-center gap-1.5 justify-center">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                                 {previewFor(sequenceConfigs.INV)}
                             </div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-zinc-950/40 p-3.5 rounded-xl border border-slate-200/40 dark:border-zinc-800/40 text-center">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                        <div className="bg-slate-50/50 dark:bg-zinc-950/20 p-4 rounded-xl border border-slate-200/40 dark:border-zinc-800/40 text-center relative overflow-hidden group">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                                 Receipt series
                             </span>
-                            <div className="text-xs sm:text-sm font-mono font-bold text-slate-700 dark:text-zinc-300 mt-1 break-all">
+                            <div className="text-xs sm:text-sm font-mono font-extrabold text-slate-800 dark:text-zinc-200 mt-2 break-all flex items-center gap-1.5 justify-center">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                                 {previewFor(sequenceConfigs.RCPT)}
                             </div>
                         </div>
@@ -373,13 +389,13 @@ export const BillingPolicyConfig = () => {
                     <button
                         type="button"
                         onClick={() => setShowSeqAdvanced(!showSeqAdvanced)}
-                        className="w-full flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-zinc-950/20 hover:bg-slate-50 dark:hover:bg-zinc-950/50 border border-slate-200/60 dark:border-zinc-800/60 rounded-xl transition-all duration-200 text-left active:scale-[0.99]"
+                        className="w-full flex items-center justify-between p-4 bg-slate-50/40 dark:bg-zinc-950/20 hover:bg-slate-50 dark:hover:bg-zinc-950/50 border border-slate-200/50 dark:border-zinc-800/60 rounded-2xl transition-all duration-300 text-left active:scale-[0.99] group/btn"
                     >
-                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-500 group-hover/btn:animate-spin" />
                             Customize numbering sequence
                         </span>
-                        <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", showSeqAdvanced && "rotate-180")} />
+                        <ChevronDown className={cn("h-4 w-4 text-slate-450 transition-transform duration-300", showSeqAdvanced && "rotate-180")} />
                     </button>
 
                     {/* Advanced Customization form */}
@@ -389,17 +405,18 @@ export const BillingPolicyConfig = () => {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
                                 className="overflow-hidden space-y-4 pt-1"
                             >
                                 {/* Mobile Segment Control */}
-                                <div className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl flex items-center gap-1">
+                                <div className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl flex items-center gap-1">
                                     <button
                                         type="button"
                                         onClick={() => setSelectedSequence('INV')}
                                         className={cn(
-                                            "flex-1 h-9 rounded-lg text-xs font-bold transition-all duration-200 active:scale-[0.98]",
+                                            "flex-1 h-10 rounded-xl text-xs font-extrabold transition-all duration-300 active:scale-[0.98]",
                                             selectedSequence === 'INV'
-                                                ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm"
+                                                ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm border border-slate-200/30"
                                                 : "text-slate-500 hover:text-slate-700"
                                         )}
                                     >
@@ -409,9 +426,9 @@ export const BillingPolicyConfig = () => {
                                         type="button"
                                         onClick={() => setSelectedSequence('RCPT')}
                                         className={cn(
-                                            "flex-1 h-9 rounded-lg text-xs font-bold transition-all duration-200 active:scale-[0.98]",
+                                            "flex-1 h-10 rounded-xl text-xs font-extrabold transition-all duration-300 active:scale-[0.98]",
                                             selectedSequence === 'RCPT'
-                                                ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm"
+                                                ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm border border-slate-200/30"
                                                 : "text-slate-500 hover:text-slate-700"
                                         )}
                                     >
@@ -419,8 +436,8 @@ export const BillingPolicyConfig = () => {
                                     </button>
                                 </div>
 
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <div className="flex items-center justify-between mt-2">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                         Configure {selectedSequence === 'INV' ? 'Invoice' : 'Receipt'} Series
                                     </span>
                                     <button
@@ -428,7 +445,7 @@ export const BillingPolicyConfig = () => {
                                         onClick={resetSequence}
                                         className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
                                     >
-                                        <RefreshCw className="h-3 w-3" />
+                                        <RefreshCw className="h-3.5 w-3.5" />
                                         Reset default
                                     </button>
                                 </div>
@@ -439,7 +456,7 @@ export const BillingPolicyConfig = () => {
                                         <Input
                                             value={sequenceConfigs[selectedSequence].prefix}
                                             onChange={(e) => handleSequenceChange('prefix', e.target.value)}
-                                            className="font-mono h-11 rounded-xl"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850"
                                             placeholder="e.g. INV"
                                         />
                                     </div>
@@ -448,7 +465,7 @@ export const BillingPolicyConfig = () => {
                                         <Input
                                             value={sequenceConfigs[selectedSequence].separator}
                                             onChange={(e) => handleSequenceChange('separator', e.target.value)}
-                                            className="font-mono h-11 rounded-xl"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850"
                                             placeholder="e.g. -"
                                         />
                                     </div>
@@ -458,10 +475,10 @@ export const BillingPolicyConfig = () => {
                                             value={sequenceConfigs[selectedSequence].yearFormat}
                                             onValueChange={(val) => handleSequenceChange('yearFormat', val)}
                                         >
-                                            <SelectTrigger className="font-mono h-11 rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+                                            <SelectTrigger className="font-mono h-11.5 rounded-2xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-850">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl">
+                                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-2xl">
                                                 <SelectItem value="YYYY">YYYY (e.g. 2026)</SelectItem>
                                                 <SelectItem value="YY">YY (e.g. 26)</SelectItem>
                                                 <SelectItem value="YYYYMM">YYYYMM (202602)</SelectItem>
@@ -477,7 +494,7 @@ export const BillingPolicyConfig = () => {
                                             max="10"
                                             value={sequenceConfigs[selectedSequence].padLength}
                                             onChange={(e) => handleSequenceChange('padLength', e.target.value)}
-                                            className="font-mono h-11 rounded-xl"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850"
                                         />
                                     </div>
                                     <div className="space-y-1.5 sm:col-span-2">
@@ -487,17 +504,17 @@ export const BillingPolicyConfig = () => {
                                             min="1"
                                             value={sequenceConfigs[selectedSequence].currentValue}
                                             onChange={(e) => handleSequenceChange('currentValue', e.target.value)}
-                                            className="font-mono h-11 rounded-xl max-w-xs"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850 max-w-xs"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Advanced Live Preview card */}
-                                <div className="p-3.5 bg-emerald-50/40 dark:bg-emerald-950/10 border border-dashed border-emerald-250 dark:border-emerald-900/40 rounded-xl flex items-center justify-between">
-                                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-450">
+                                <div className="p-4 bg-emerald-500/5 dark:bg-emerald-950/10 border border-dashed border-emerald-500/20 dark:border-emerald-900/30 rounded-2xl flex items-center justify-between">
+                                    <div className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-450">
                                         Active Series Format
                                     </div>
-                                    <div className="text-sm font-mono font-bold text-emerald-800 dark:text-emerald-450">
+                                    <div className="text-sm font-mono font-black text-emerald-800 dark:text-emerald-450">
                                         {sequenceConfigs[selectedSequence].prefix}
                                         {sequenceConfigs[selectedSequence].separator}
                                         {sequenceConfigs[selectedSequence].yearFormat === 'YYYY' ? new Date().getFullYear() : sequenceConfigs[selectedSequence].yearFormat === 'YY' ? new Date().getFullYear().toString().slice(-2) : sequenceConfigs[selectedSequence].yearFormat === 'YYYYMM' ? `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}` : ''}
