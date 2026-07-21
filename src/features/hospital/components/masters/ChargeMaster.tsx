@@ -363,13 +363,13 @@ export const ChargeMaster = () => {
                         />
                     </div>
                     
-                    {/* RESPONSIVE DROPDOWNS */}
-                    <div className="flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto">
+                    {/* DESKTOP DROPDOWNS */}
+                    <div className="hidden sm:flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
                         <Select value={filterAppliesTo} onValueChange={setFilterAppliesTo}>
-                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[120px] bg-white dark:bg-slate-900 shadow-sm h-11 sm:h-10 rounded-xl sm:rounded-md border-slate-200 dark:border-zinc-800">
+                            <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900 shadow-sm h-10 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectValue placeholder="Module" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
+                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectItem value="ALL">All Modules</SelectItem>
                                 <SelectItem value="OPD">OPD</SelectItem>
                                 <SelectItem value="IPD">IPD</SelectItem>
@@ -379,10 +379,10 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                         <Select value={filterCategory} onValueChange={setFilterCategory}>
-                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[130px] bg-white dark:bg-slate-900 shadow-sm h-11 sm:h-10 rounded-xl sm:rounded-md border-slate-200 dark:border-zinc-800">
+                            <SelectTrigger className="w-[130px] bg-white dark:bg-slate-900 shadow-sm h-10 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
+                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectItem value="ALL">All Categories</SelectItem>
                                 <SelectItem value="CONSULT">Consultation</SelectItem>
                                 <SelectItem value="LAB">Laboratory</SelectItem>
@@ -393,15 +393,33 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                         <Select value={filterActive} onValueChange={setFilterActive}>
-                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[110px] bg-white dark:bg-slate-900 shadow-sm h-11 sm:h-10 rounded-xl sm:rounded-md border-slate-200 dark:border-zinc-800">
+                            <SelectTrigger className="w-[110px] bg-white dark:bg-slate-900 shadow-sm h-10 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
+                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectItem value="ALL">All Status</SelectItem>
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="INACTIVE">Inactive</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    {/* MOBILE HORIZONTAL CHIPS */}
+                    <div className="sm:hidden flex gap-2 overflow-x-auto hide-scrollbar pb-1 px-1 -mx-1 snap-x">
+                        {['ALL', 'CONSULT', 'LAB', 'RAD', 'PROCEDURE', 'SERVICE', 'CONSUMABLE'].map(cat => (
+                            <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setFilterCategory(cat)}
+                                className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-extrabold tracking-wide capitalize snap-center transition-all ${
+                                    filterCategory === cat 
+                                    ? 'bg-brand-600 text-white shadow-md' 
+                                    : 'bg-white dark:bg-zinc-900 text-slate-605 dark:text-zinc-300 shadow-sm border border-slate-200 dark:border-zinc-800'
+                                }`}
+                            >
+                                {cat === 'ALL' ? 'All' : cat.toLowerCase()}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -417,7 +435,7 @@ export const ChargeMaster = () => {
 
 
             {/* TABLE */}
-            <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
+            <div className="flex-1 overflow-auto p-4 pb-36 hide-scrollbar relative">
                 <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none">
                     <table className="w-full text-sm text-left max-lg:hidden">
                         <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
