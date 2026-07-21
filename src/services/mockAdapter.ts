@@ -174,6 +174,23 @@ export const mockAxiosAdapter = async (config: AxiosRequestConfig) => {
       ]
     };
   }
+  // 13. Billing Policy
+  else if (url.includes('billing/policy')) {
+    mockData = {
+      success: true,
+      data: {
+        labPathTrigger: 'OFF',
+        labRadTrigger: 'OFF',
+        pharmacyIpdTrigger: 'OFF',
+        opdConsultTrigger: 'AUTO',
+        ipdBedChargeMode: 'DAILY_AUTO',
+        numberSeries: {
+          INV: { prefix: 'INV', yearFormat: 'YYYY', separator: '-', currentValue: '142', padLength: '6', isActive: true },
+          RCPT: { prefix: 'RCPT', yearFormat: 'YYYY', separator: '-', currentValue: '98', padLength: '6', isActive: true }
+        }
+      }
+    };
+  }
   
   return {
     data: mockData,
