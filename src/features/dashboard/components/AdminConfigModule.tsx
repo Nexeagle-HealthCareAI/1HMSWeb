@@ -128,7 +128,7 @@ export const AdminConfigModule = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 py-4 px-3 max-lg:px-0 max-lg:py-0 space-y-2 max-lg:space-y-0 overflow-y-auto hide-scrollbar">
+                <div className="flex-1 py-4 px-3 max-lg:px-0 max-lg:pt-0 max-lg:pb-24 space-y-2 max-lg:space-y-0 overflow-y-auto hide-scrollbar">
                     {navigationItems.map((item) => (
                         <button
                             key={item.id}
