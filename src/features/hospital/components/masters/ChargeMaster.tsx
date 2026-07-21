@@ -717,7 +717,7 @@ export const ChargeMaster = () => {
                             animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
                             exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[110] flex flex-col"
+                            className="fixed inset-y-0 right-0 w-full md:w-[500px] h-[100dvh] max-sm:h-[100dvh] bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[110] flex flex-col"
                         >
                             {/* Drawer Header */}
                             <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50">
@@ -732,7 +732,7 @@ export const ChargeMaster = () => {
                             </div>
 
                             {/* Drawer Content */}
-                            <div className="flex-1 overflow-y-auto p-6 max-sm:p-4 space-y-8 max-sm:space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800 pb-24">
+                            <div className="flex-1 overflow-y-auto hide-scrollbar p-6 max-sm:p-4 space-y-8 max-sm:space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800 pb-24">
 
                                 <section className="space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
