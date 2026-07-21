@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Filter, Plus, Download, MoreVertical, Database,
+    Search, Filter, Plus, Download, MoreVertical, Database, ArrowLeft,
     Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw,
     Stethoscope, FlaskConical, Activity, Syringe, Pill, LayoutGrid
 } from 'lucide-react';
@@ -720,15 +720,15 @@ export const ChargeMaster = () => {
                             className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[110] flex flex-col"
                         >
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50">
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => setIsDrawerOpen(false)}>
+                                    <ArrowLeft className="h-6 w-6 text-slate-600 dark:text-zinc-350" />
+                                </Button>
                                 <div>
-                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                                    <h2 className="text-base font-extrabold text-slate-800 dark:text-zinc-150">
                                         {editingRecord?.id ? 'Edit Charge' : 'New Charge'}
                                     </h2>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsDrawerOpen(false)}>
-                                    <X className="h-5 w-5" />
-                                </Button>
                             </div>
 
                             {/* Drawer Content */}
@@ -953,40 +953,35 @@ export const ChargeMaster = () => {
                                         onChange={e => setEditingRecord(p => ({ ...p!, notes: e.target.value }))}
                                     />
                                 </section>
-
                             </div>
 
                             {/* Drawer Footer */}
-                            <div className="p-4 max-lg:pb-24 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                                <Button variant="ghost" onClick={() => setIsDrawerOpen(false)} className="text-gray-500">Cancel</Button>
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                    <Button
-                                        variant="outline"
-                                        disabled={isSaving}
-                                        onClick={() => handleSaveDrawer(true)}
-                                        className="flex-1 sm:flex-none border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/30"
-                                    >
-                                        Save & Add Next
-                                    </Button>
-                                    <motion.button
-                                        disabled={isSaving || isSuccess}
-                                        onClick={() => handleSaveDrawer(false)}
-                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-w-[100px] h-10 ${isSuccess
-                                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                            : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
-                                            }`}
-                                        animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        {isSaving ? (
-                                            "Saving..."
-                                        ) : isSuccess ? (
-                                            <><CheckCircle2 className="h-4 w-4" /> Saved!</>
-                                        ) : (
-                                            "Save"
-                                        )}
-                                    </motion.button>
-                                </div>
+                            <div className="p-4.5 pb-safe border-t border-gray-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setIsDrawerOpen(false)} 
+                                    className="flex-1 h-11 rounded-xl border-slate-250 text-slate-500 hover:bg-slate-50 font-bold"
+                                >
+                                    Cancel
+                                </Button>
+                                <motion.button
+                                    disabled={isSaving || isSuccess}
+                                    onClick={() => handleSaveDrawer(false)}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-w-[120px] h-11 transition-all ${isSuccess
+                                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 active:scale-[0.98]'
+                                        }`}
+                                    animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    {isSaving ? (
+                                        "Saving..."
+                                    ) : isSuccess ? (
+                                        <><CheckCircle2 className="h-4 w-4" /> Saved!</>
+                                    ) : (
+                                        "Save"
+                                    )}
+                                </motion.button>
                             </div>
                         </motion.div>
                     </>
