@@ -617,7 +617,7 @@ export const ChargeMaster = () => {
                 </div>
 
                 {/* RATE CARDS: payer-type override + room-class multiplier */}
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="mt-6 hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="border border-gray-200 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm p-4.5">
                         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Payer Rate Overrides</h3>
                         <div className="flex flex-col sm:grid sm:grid-cols-[1fr_95px_110px_auto] gap-2.5 mb-4">
