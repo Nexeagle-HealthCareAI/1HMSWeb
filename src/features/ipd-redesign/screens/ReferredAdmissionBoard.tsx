@@ -289,76 +289,79 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input placeholder="Search current page…" className="pl-9 h-11 sm:h-9 bg-white/80 backdrop-blur-sm rounded-xl border-slate-200/60" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
-
-                <div className="bg-slate-100/70 dark:bg-zinc-900/60 p-1 rounded-2xl flex items-center gap-1.5 w-full overflow-x-auto hide-scrollbar shrink-0 border border-slate-200/40 dark:border-zinc-800/40">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-zinc-500 bg-white dark:bg-zinc-950 px-2.5 py-1.5 rounded-xl border border-slate-200/30 dark:border-zinc-850/30 shadow-sm shrink-0">
+                <div className="flex items-center gap-2 w-full shrink-0">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-450 dark:text-zinc-500 bg-white dark:bg-zinc-950 px-2.5 py-2 rounded-xl border border-slate-200/50 dark:border-zinc-850/50 shadow-sm shrink-0 min-w-[62px] text-center">
                         Status
                     </span>
-                    <button
-                        type="button"
-                        onClick={() => changeStatusFilter('ALL')}
-                        className={cn(
-                            'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border border-transparent',
-                            statusFilter === 'ALL'
-                                ? 'bg-brand-600 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
-                                : 'bg-transparent text-slate-650 dark:text-zinc-450 hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
-                        )}
-                    >
-                        All
-                    </button>
-                    {ALL_STATUSES.map(s => (
+                    <div className="bg-slate-100/70 dark:bg-zinc-900/60 p-1 rounded-2xl flex items-center gap-1.5 flex-1 overflow-x-auto hide-scrollbar border border-slate-200/40 dark:border-zinc-800/40">
                         <button
-                            key={s}
                             type="button"
-                            onClick={() => changeStatusFilter(s)}
+                            onClick={() => changeStatusFilter('ALL')}
                             className={cn(
-                                'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border',
-                                statusFilter === s
-                                    ? s === 'PENDING' ? 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900 shadow-sm' :
-                                      s === 'CONVERTED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900 shadow-sm' :
-                                      s === 'FOLLOW_UP' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 shadow-sm' :
-                                      'bg-slate-200 text-slate-700 border-slate-350 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 shadow-sm'
-                                    : 'bg-transparent text-slate-500 dark:text-zinc-400 border-transparent hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
+                                'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border border-transparent',
+                                statusFilter === 'ALL'
+                                    ? 'bg-brand-600 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
+                                    : 'bg-transparent text-slate-650 dark:text-zinc-450 hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
                             )}
                         >
-                            {STATUS_LABEL[s]}
+                            All
                         </button>
-                    ))}
+                        {ALL_STATUSES.map(s => (
+                            <button
+                                key={s}
+                                type="button"
+                                onClick={() => changeStatusFilter(s)}
+                                className={cn(
+                                    'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border',
+                                    statusFilter === s
+                                        ? s === 'PENDING' ? 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900 shadow-sm' :
+                                          s === 'CONVERTED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900 shadow-sm' :
+                                          s === 'FOLLOW_UP' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 shadow-sm' :
+                                          'bg-slate-200 text-slate-700 border-slate-350 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 shadow-sm'
+                                        : 'bg-transparent text-slate-500 dark:text-zinc-400 border-transparent hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
+                                )}
+                            >
+                                {STATUS_LABEL[s]}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="bg-slate-100/70 dark:bg-zinc-900/60 p-1 rounded-2xl flex items-center gap-1.5 w-full overflow-x-auto hide-scrollbar shrink-0 border border-slate-200/40 dark:border-zinc-800/40">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-zinc-500 bg-white dark:bg-zinc-950 px-2.5 py-1.5 rounded-xl border border-slate-200/30 dark:border-zinc-850/30 shadow-sm shrink-0">
+                <div className="flex items-center gap-2 w-full shrink-0">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-450 dark:text-zinc-500 bg-white dark:bg-zinc-950 px-2.5 py-2 rounded-xl border border-slate-200/50 dark:border-zinc-850/50 shadow-sm shrink-0 min-w-[62px] text-center">
                         Case
                     </span>
-                    <button
-                        type="button"
-                        onClick={() => changeCaseTypeFilter('ALL')}
-                        className={cn(
-                            'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border border-transparent',
-                            caseTypeFilter === 'ALL'
-                                ? 'bg-brand-600 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
-                                : 'bg-transparent text-slate-650 dark:text-zinc-450 hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
-                        )}
-                    >
-                        All
-                    </button>
-                    {ALL_CASE_TYPES.map(c => (
+                    <div className="bg-slate-100/70 dark:bg-zinc-900/60 p-1 rounded-2xl flex items-center gap-1.5 flex-1 overflow-x-auto hide-scrollbar border border-slate-200/40 dark:border-zinc-800/40">
                         <button
-                            key={c}
                             type="button"
-                            onClick={() => changeCaseTypeFilter(c)}
+                            onClick={() => changeCaseTypeFilter('ALL')}
                             className={cn(
-                                'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border',
-                                caseTypeFilter === c
-                                    ? c === 'EMERGENCY' ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900 shadow-sm' :
-                                      c === 'URGENT' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 shadow-sm' :
-                                      'bg-slate-200 text-slate-700 border-slate-350 dark:bg-slate-850 dark:text-slate-300 dark:border-slate-750 shadow-sm'
-                                    : 'bg-transparent text-slate-500 dark:text-zinc-400 border-transparent hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
+                                'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border border-transparent',
+                                caseTypeFilter === 'ALL'
+                                    ? 'bg-brand-600 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
+                                    : 'bg-transparent text-slate-650 dark:text-zinc-450 hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
                             )}
                         >
-                            {CASE_LABEL[c]}
+                            All
                         </button>
-                    ))}
+                        {ALL_CASE_TYPES.map(c => (
+                            <button
+                                key={c}
+                                type="button"
+                                onClick={() => changeCaseTypeFilter(c)}
+                                className={cn(
+                                    'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border',
+                                    caseTypeFilter === c
+                                        ? c === 'EMERGENCY' ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900 shadow-sm' :
+                                          c === 'URGENT' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 shadow-sm' :
+                                          'bg-slate-200 text-slate-700 border-slate-350 dark:bg-slate-850 dark:text-slate-300 dark:border-slate-750 shadow-sm'
+                                        : 'bg-transparent text-slate-500 dark:text-zinc-400 border-transparent hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
+                                )}
+                            >
+                                {CASE_LABEL[c]}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
