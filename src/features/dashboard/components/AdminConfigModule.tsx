@@ -96,7 +96,7 @@ export const AdminConfigModule = () => {
                 className={cn(
                     "bg-gray-50/50 dark:bg-slate-900/50 lg:border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative",
                     isSidebarCollapsed ? "lg:w-16" : "lg:w-64",
-                    !showMobileList ? "max-lg:hidden" : "max-lg:w-full max-lg:flex-1"
+                    !showMobileList ? "max-lg:hidden" : "max-lg:w-full max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-hidden"
                 )}
             >
                 {/* Toggle Button (Desktop Only) */}
