@@ -6,7 +6,6 @@
 // The worker is wired via Vite's `?url` import (the pdfjs worker is an ESM module in v4); this is
 // the supported way to give the main thread a same-origin worker URL under a bundler.
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-expect-error — Vite resolves `?url` to a string at build time; no type decl for the suffix.
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
