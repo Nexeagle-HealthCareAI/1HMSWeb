@@ -126,7 +126,7 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [textEditor, setTextEditor] = useState<PendingText | null>(null);
-    const [label] = useState('InkRx Handwritten Prescription');
+    const [label] = useState('InkDischarge Handwritten Note');
 
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -341,10 +341,10 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
             const response = await drawingApi.uploadDrawing({
                 fileName: file.name,
                 label: label.trim() || undefined,
-                hospitalId, doctorId, patientId, admissionId,
+                hospitalId, doctorId, patientId, appointmentId: admissionId, // Map admissionId to appointmentId for API compatibility
             }, file);
             if (!response?.success) throw new Error(response?.message || 'Could not save.');
-            toast({ title: 'InkRx saved', description: 'The handwritten prescription has been appended.' });
+            toast({ title: 'InkDischarge saved', description: 'The handwritten note has been appended.' });
             onSaved?.();
             onClose();
         } catch (e) {
@@ -390,7 +390,7 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
                         <div className="inkrx-patient-info">
                             <div className="inkrx-patient-name">{patientName}</div>
                             <div className="inkrx-patient-sub">
-                                {patientAge ? `Age ${patientAge}` : 'Patient'} &middot; InkRx
+                                {patientAge ? `Age ${patientAge}` : 'Patient'} &middot; InkDischarge
                             </div>
                         </div>
                     </div>
@@ -405,7 +405,7 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
                     type="button"
                 >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    {saving ? 'Saving…' : 'Save Prescription'}
+                    {saving ? 'Saving…' : 'Save Discharge Note'}
                 </button>
             </div>
 
@@ -419,12 +419,12 @@ export const InkDischargePad: React.FC<InkDischargePadProps> = ({
                         </div>
                         <h3>No Letterhead Configured</h3>
                         <p>
-                            Upload your prescription letterhead in Settings to use InkRx. 
+                            Upload your discharge letterhead in IPD Settings to use InkDischarge. 
                             The letterhead will appear as the background when you write.
                         </p>
                         {onGoToSettings && (
                             <button className="inkrx-no-template-btn" onClick={onGoToSettings} type="button">
-                                <Settings size={16} /> Go to Prescription Settings
+                                <Settings size={16} /> Go to Discharge Settings
                             </button>
                         )}
                     </div>
