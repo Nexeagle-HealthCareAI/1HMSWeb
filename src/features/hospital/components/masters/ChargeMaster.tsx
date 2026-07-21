@@ -638,11 +638,21 @@ export const ChargeMaster = () => {
                             <Input type="number" min="0" className="h-10 text-xs font-mono rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800" placeholder="Rate ₹" value={newPayerRate.overrideRate} onChange={e => setNewPayerRate(p => ({ ...p, overrideRate: e.target.value }))} />
                             <Button size="sm" className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold shadow-sm active:scale-95 transition-all" disabled={rateCardSaving} onClick={handleAddPayerRate}>Save</Button>
                         </div>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto hide-scrollbar">
+                        <div className="space-y-1.5 max-h-60 overflow-y-auto hide-scrollbar">
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : payerRates.length === 0 ? (
-                                <p className="text-xs text-slate-400 dark:text-zinc-500">No payer overrides configured — all payers bill at Default Rate.</p>
+                                <div className="flex flex-col items-center justify-center p-5 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-950/10 text-center gap-2 mt-1">
+                                    <div className="p-2 rounded-full bg-slate-100 dark:bg-zinc-850 text-slate-400 dark:text-zinc-500">
+                                        <Database className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <p className="text-xs font-bold text-slate-750 dark:text-zinc-300">No Custom Overrides</p>
+                                        <p className="text-[10px] font-medium text-slate-400 dark:text-zinc-500 leading-normal max-w-[280px]">
+                                            All payers default to the standard rate card values.
+                                        </p>
+                                    </div>
+                                </div>
                             ) : payerRates.map(r => (
                                 <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
                                     <span className="font-semibold text-slate-700 dark:text-zinc-350">{r.chargeDisplayName ?? r.chargeCode}</span>
@@ -666,11 +676,21 @@ export const ChargeMaster = () => {
                             <Input type="number" min="0" className="h-10 text-xs font-mono rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800" placeholder="% (100 = default)" value={newRoomMultiplier.multiplierPercent} onChange={e => setNewRoomMultiplier(p => ({ ...p, multiplierPercent: e.target.value }))} />
                             <Button size="sm" className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold shadow-sm active:scale-95 transition-all" disabled={rateCardSaving} onClick={handleAddRoomMultiplier}>Save</Button>
                         </div>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto hide-scrollbar">
+                        <div className="space-y-1.5 max-h-60 overflow-y-auto hide-scrollbar">
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : roomMultipliers.length === 0 ? (
-                                <p className="text-xs text-slate-400 dark:text-zinc-500">No room multipliers configured — every room type bills at 100% of Default Rate.</p>
+                                <div className="flex flex-col items-center justify-center p-5 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-950/10 text-center gap-2 mt-1">
+                                    <div className="p-2 rounded-full bg-slate-100 dark:bg-zinc-850 text-slate-400 dark:text-zinc-500">
+                                        <Activity className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <p className="text-xs font-bold text-slate-750 dark:text-zinc-300">No Room Multipliers</p>
+                                        <p className="text-[10px] font-medium text-slate-400 dark:text-zinc-500 leading-normal max-w-[280px]">
+                                            Every room type bills at 100% of the default rate.
+                                        </p>
+                                    </div>
+                                </div>
                             ) : roomMultipliers.map(r => (
                                 <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
                                     <span className="font-semibold text-slate-700 dark:text-zinc-350">{r.roomType.replace('_', ' ')}</span>
