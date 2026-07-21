@@ -997,14 +997,6 @@ export const ChargeMaster = () => {
                     </>
                 )}
             </AnimatePresence>
-
-            {/* MOBILE FAB */}
-            <button 
-                className="sm:hidden fixed bottom-[90px] right-6 h-14 w-14 bg-brand-600 text-white rounded-2xl shadow-xl flex items-center justify-center z-40 hover:bg-brand-700 active:scale-95 transition-all shadow-brand-500/30"
-                onClick={() => handleOpenDrawer(null)}
-            >
-                <Plus className="h-6 w-6" />
-            </button>
         </div>
     );
 };
