@@ -362,13 +362,13 @@ export const ChargeMaster = () => {
                         />
                     </div>
                     
-                    {/* DESKTOP DROPDOWNS */}
-                    <div className="hidden sm:flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                    {/* RESPONSIVE DROPDOWNS */}
+                    <div className="flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto">
                         <Select value={filterAppliesTo} onValueChange={setFilterAppliesTo}>
-                            <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900 shadow-sm h-10">
+                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[120px] bg-white dark:bg-slate-900 shadow-sm h-11 sm:h-10 rounded-xl sm:rounded-md border-slate-200 dark:border-zinc-800">
                                 <SelectValue placeholder="Module" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                                 <SelectItem value="ALL">All Modules</SelectItem>
                                 <SelectItem value="OPD">OPD</SelectItem>
                                 <SelectItem value="IPD">IPD</SelectItem>
@@ -378,10 +378,10 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                         <Select value={filterCategory} onValueChange={setFilterCategory}>
-                            <SelectTrigger className="w-[130px] bg-white dark:bg-slate-900 shadow-sm h-10">
+                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[130px] bg-white dark:bg-slate-900 shadow-sm h-11 sm:h-10 rounded-xl sm:rounded-md border-slate-200 dark:border-zinc-800">
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                                 <SelectItem value="ALL">All Categories</SelectItem>
                                 <SelectItem value="CONSULT">Consultation</SelectItem>
                                 <SelectItem value="LAB">Laboratory</SelectItem>
@@ -392,32 +392,15 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                         <Select value={filterActive} onValueChange={setFilterActive}>
-                            <SelectTrigger className="w-[110px] bg-white dark:bg-slate-900 shadow-sm h-10">
+                            <SelectTrigger className="flex-1 sm:flex-none sm:w-[110px] bg-white dark:bg-slate-900 shadow-sm h-11 sm:h-10 rounded-xl sm:rounded-md border-slate-200 dark:border-zinc-800">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                                 <SelectItem value="ALL">All Status</SelectItem>
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="INACTIVE">Inactive</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
-
-                    {/* MOBILE HORIZONTAL CHIPS */}
-                    <div className="sm:hidden flex gap-2 overflow-x-auto hide-scrollbar pb-1 px-1 -mx-1 snap-x">
-                        {['ALL', 'CONSULT', 'LAB', 'RAD', 'PROCEDURE', 'SERVICE', 'CONSUMABLE'].map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => setFilterCategory(cat)}
-                                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide capitalize snap-center transition-all ${
-                                    filterCategory === cat 
-                                    ? 'bg-brand-600 text-white shadow-md' 
-                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-gray-700'
-                                }`}
-                            >
-                                {cat === 'ALL' ? 'All' : cat.toLowerCase()}
-                            </button>
-                        ))}
                     </div>
                 </div>
 
@@ -556,15 +539,18 @@ export const ChargeMaster = () => {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 whileTap={{ scale: 0.98 }}
                                 key={`mob-${charge.id}`}
-                                className={`bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-gray-150/40 dark:border-zinc-800/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-3 relative border-l-4 ${catStyle.color} transition-all hover:shadow-md`}
+                                className="bg-white/95 dark:bg-zinc-900/95 border border-slate-200/60 dark:border-zinc-800/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3.5 relative overflow-hidden active:scale-[0.99] transition-all hover:shadow-md"
                             >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="flex items-start gap-3.5 pr-2">
-                                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${catStyle.bg} flex items-center justify-center`}>
-                                            <Icon className="h-4.5 w-4.5" />
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 pr-2">
+                                        <div className={cn(
+                                            "w-11 h-11 rounded-xl shrink-0 flex items-center justify-center font-bold shadow-sm",
+                                            catStyle.bg
+                                        )}>
+                                            <Icon className="h-5 w-5" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <h3 className="font-extrabold text-slate-850 dark:text-zinc-150 text-sm leading-snug">
+                                            <h3 className="font-extrabold text-slate-800 dark:text-zinc-150 text-sm leading-snug">
                                                 {charge.displayName}
                                             </h3>
                                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
