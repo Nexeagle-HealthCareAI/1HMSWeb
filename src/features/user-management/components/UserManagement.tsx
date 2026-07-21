@@ -6,18 +6,21 @@ import { QuickAddUserForm } from './QuickAddUserForm';
 import { useAuthStore } from '@/store/authStore';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
 import { UsageLimitBadge } from '@/features/subscription/components/UsageLimitBadge';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 /**
  * Team-member management. Onboarding is a direct "quick add" (no invitation links).
  */
 export const UserManagement: React.FC = () => {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const isMobile = useIsMobile();
   const hospitalId = useAuthStore(state => state.hospitalId) || '';
   const { getUsage } = useSubscriptionApi();
   const { data: usage, isLoading: isUsageLoading } = getUsage(hospitalId);
 
   return (
-    <div className="w-full">
+    <div className={cn("bg-transparent w-full", isMobile ? "h-auto p-1 pt-2 pb-24" : "h-[calc(100vh-4rem)] overflow-auto p-4 lg:p-6 rounded-2xl border border-gray-150 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900")}>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">

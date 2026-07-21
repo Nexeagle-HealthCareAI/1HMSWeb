@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Users,
   Sparkles,
@@ -74,6 +75,7 @@ type ViewMode = 'list' | 'analysis';
 
 export const PatientsPage: React.FC = () => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
 
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -723,87 +725,117 @@ export const PatientsPage: React.FC = () => {
 
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className={cn("flex bg-slate-50 dark:bg-zinc-950 w-full overflow-x-hidden", isMobile ? "flex-col min-h-screen pb-12" : "h-[calc(100vh-4rem)] overflow-hidden rounded-2xl border border-gray-150 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900")}>
       {/* Sidebar */}
-      <aside
-        className={cn(
-          "bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative",
-          isSidebarCollapsed ? "w-16" : "w-64"
-        )}
-      >
-        {/* Toggle Button */}
-        <div className="absolute -right-3 top-6 z-30">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-6 w-6 rounded-full shadow-md border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800"
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          >
-            {isSidebarCollapsed ? (
-              <ChevronRight className="h-3 w-3" />
-            ) : (
-              <ChevronLeft className="h-3 w-3" />
-            )}
-          </Button>
-        </div>
-
-        {/* Sidebar Header */}
-        <div className={cn(
-          "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
-          isSidebarCollapsed ? "justify-center px-0" : "px-6"
-        )}>
-          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
-            <LayoutDashboard className="h-6 w-6" />
-            {!isSidebarCollapsed && (
-              <span className="font-bold text-lg tracking-tight">Workspace</span>
-            )}
+      {!isMobile && (
+        <aside
+          className={cn(
+            "bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative shrink-0",
+            isSidebarCollapsed ? "w-16" : "w-64"
+          )}
+        >
+          {/* Toggle Button */}
+          <div className="absolute -right-3 top-6 z-30">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6 rounded-full shadow-md border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            >
+              {isSidebarCollapsed ? (
+                <ChevronRight className="h-3 w-3" />
+              ) : (
+                <ChevronLeft className="h-3 w-3" />
+              )}
+            </Button>
           </div>
-        </div>
 
-        {/* Nav Items */}
-        <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  // Reset to list view when switching tabs manually
-                  if (item.id === 'patient360') {
-                    setViewMode('list');
-                    setSelectedPatientId(null);
-                  }
-                }}
-                className={cn(
-                  "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
-                  isActive
-                    ? "bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200",
-                  isSidebarCollapsed ? "justify-center" : "gap-3"
-                )}
-                title={isSidebarCollapsed ? item.label : undefined}
-              >
-                <item.icon className={cn(
-                  "h-5 w-5 flex-shrink-0 transition-colors",
-                  isActive ? "text-brand-600 dark:text-brand-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
-                )} />
+          {/* Sidebar Header */}
+          <div className={cn(
+            "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
+            isSidebarCollapsed ? "justify-center px-0" : "px-6"
+          )}>
+            <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
+              <LayoutDashboard className="h-6 w-6" />
+              {!isSidebarCollapsed && (
+                <span className="font-bold text-lg tracking-tight">Workspace</span>
+              )}
+            </div>
+          </div>
 
-                {!isSidebarCollapsed && (
-                  <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
-                )}
+          {/* Nav Items */}
+          <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    // Reset to list view when switching tabs manually
+                    if (item.id === 'patient360') {
+                      setViewMode('list');
+                      setSelectedPatientId(null);
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
+                    isActive
+                      ? "bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200",
+                    isSidebarCollapsed ? "justify-center" : "gap-3"
+                  )}
+                  title={isSidebarCollapsed ? item.label : undefined}
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5 flex-shrink-0 transition-colors",
+                    isActive ? "text-brand-600 dark:text-brand-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                  )} />
 
-                {isActive && !isSidebarCollapsed && (
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-brand-500"></div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </aside>
+                  {!isSidebarCollapsed && (
+                    <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                  )}
+
+                  {isActive && !isSidebarCollapsed && (
+                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-brand-500"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-2 sm:p-4 lg:p-6">
+      <main className={cn("flex-1 overflow-x-hidden overflow-y-auto relative w-full h-full bg-slate-50/20 dark:bg-zinc-950/20 p-2 sm:p-4 lg:p-6", isMobile && "flex flex-col gap-3 pb-24")}>
+        {isMobile && (
+          <div className="w-full shrink-0 pb-3 pt-1 border-b border-gray-150 dark:border-zinc-800">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 px-0.5">
+              Select Workspace View
+            </label>
+            <Select value={activeTab} onValueChange={(val) => {
+              setActiveTab(val as Tab);
+              if (val === 'patient360') {
+                setViewMode('list');
+                setSelectedPatientId(null);
+              }
+            }}>
+              <SelectTrigger className="w-full bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 h-10 rounded-xl shadow-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-xl">
+                {navItems.map((item) => (
+                  <SelectItem key={item.id} value={item.id} className="font-semibold text-xs py-2.5">
+                    <div className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4 text-brand-650 dark:text-brand-400" />
+                      <span>{item.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <SubscriptionReadOnlyOverlay featureLabel="Managing patients">
         {activeTab === 'referrers' && (
           <ReferrersPanel />

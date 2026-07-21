@@ -427,6 +427,9 @@ export const appointmentApi = {
     endDate: string;
     hospitalId: string;
   }): Promise<AppointmentDetailsResponse> => {
+    if (params.hospitalId === 'PREVIEW-HOSPITAL') {
+      return Promise.resolve({ items: [] });
+    }
     const url = `/appointments/patient-appointment-details?status=${params.status}&startDate=${params.startDate}&endDate=${params.endDate}&hospitalId=${params.hospitalId}`;
     return apiClient.get(url);
   },
@@ -434,6 +437,9 @@ export const appointmentApi = {
   // Most recent appointment for a patient, across all doctors/dates — used to surface
   // "what we captured at booking" (referrer, reason, payment mode) on the patient profile.
   getLatestAppointmentForPatient: (hospitalId: string, patientId: string): Promise<AppointmentDetail | null> => {
+    if (hospitalId === 'PREVIEW-HOSPITAL') {
+      return Promise.resolve(null);
+    }
     const url = `/appointments/patient-appointment-details?status=All&hospitalId=${hospitalId}&patientId=${encodeURIComponent(patientId)}`;
     return apiClient.get<AppointmentDetailsResponse>(url).then(res => {
       const items = res.items ?? [];

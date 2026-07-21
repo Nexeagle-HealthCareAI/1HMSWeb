@@ -503,67 +503,110 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Page Content */}
         <main className={cn(
           "flex-1 relative overflow-x-hidden overflow-y-auto transition-all duration-300 bg-gray-50 dark:bg-gray-950",
-          (location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard')) ? "p-0" : "p-6"
+          location.pathname.startsWith('/dashboard') ? "p-0" : "p-6"
         )}>
           {children}
           
-          {/* Tile Grid Overlay (now positioned over content, preserving Top Bar) */}
+          {/* Floating Navigation Card Menu (Sitting above the bottom navigation bar) */}
           <AnimatePresence>
             {isTileMenuOpen && (
-              <motion.div
-                initial={{ y: '100%', opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: '100%', opacity: 0 }}
-                transition={{ type: 'spring', damping: 28, stiffness: 250, mass: 0.8 }}
-                className="absolute inset-0 z-20 bg-gray-50 dark:bg-gray-950 flex flex-col lg:hidden"
-              >
-                {/* Scrollable Grid */}
-                <div className="flex-1 overflow-y-auto px-5 py-6 pb-24 content-start">
-                  <div className="grid grid-cols-2 gap-4">
-                    {navigation.filter(item => item.id !== 'billing').map((item, i) => {
-                       const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
-                       const isDisabled = hospitalAccessRestricted && isAdminRole && item.id !== 'admin';
-                       return (
-                         <button
-                           key={item.id}
-                           type="button"
-                           onClick={() => {
-                             handleNavigation(item);
-                             setIsTileMenuOpen(false);
-                           }}
-                           disabled={isDisabled}
-                           className={cn(
-                             "w-full flex flex-col items-center justify-center p-6 rounded-[2rem] gap-3 transition-all relative overflow-hidden aspect-square",
-                             isActive 
-                               ? "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-xl shadow-brand-500/30"
-                               : "bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:scale-105 active:scale-95",
-                             isDisabled && "opacity-50 cursor-not-allowed grayscale hover:scale-100 active:scale-100"
-                           )}
-                         >
-                           {/* Subtle background glow for active tile */}
-                           {isActive && (
-                             <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full translate-y-4 translate-x-4"></div>
-                           )}
-                           
-                           <div className={cn(
-                             "p-3 rounded-2xl relative z-10",
-                             isActive ? "bg-white/20 text-white" : "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400"
-                           )}>
-                             <item.icon className="h-8 w-8" strokeWidth={2} />
-                           </div>
-                           
-                           <span className={cn(
-                             "font-semibold text-sm text-center leading-tight relative z-10",
-                             isActive ? "text-white" : "text-gray-700 dark:text-gray-300"
-                           )}>
-                             {item.name}
-                           </span>
-                         </button>
-                       );
+              <>
+                {/* Backdrop overlay */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsTileMenuOpen(false)}
+                  className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm lg:hidden"
+                />
+
+                {/* Floating Card */}
+                <motion.div
+                  initial={{ y: '20px', opacity: 0, scale: 0.97 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: '20px', opacity: 0, scale: 0.97 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                  className="fixed bottom-[80px] left-4 right-4 z-[55] bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800/80 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col p-4 max-h-[70vh] overflow-y-auto lg:hidden"
+                >
+                  {/* Card Header */}
+                  <div className="px-1 pb-3 mb-3 border-b border-gray-150 dark:border-zinc-800 flex items-center justify-between shrink-0">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-50 flex items-center gap-1.5">
+                        <LayoutGrid className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                        Clinical Modules
+                      </h3>
+                      <p className="text-[10px] text-gray-500 dark:text-zinc-400">
+                        Tap a module to open, tap outside to close.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3-Column Compact Grid */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {navigation.filter(item => item.id !== 'billing').map((item) => {
+                      const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
+                      const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
+                      
+                      const getModuleColorDetails = (id: string, active: boolean) => {
+                        if (active) return { bg: "bg-white/20 text-white" };
+                        switch (id) {
+                          case 'admin':
+                            return { bg: "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:border-amber-400" };
+                          case 'configuration':
+                            return { bg: "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400" };
+                          case 'subscription':
+                            return { bg: "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400" };
+                          case 'dashboard':
+                            return { bg: "bg-cyan-50 dark:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400" };
+                          case 'inventory':
+                            return { bg: "bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400" };
+                          case 'ot-board':
+                            return { bg: "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400" };
+                          case 'icu-board':
+                            return { bg: "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400" };
+                          default:
+                            return { bg: "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" };
+                        }
+                      };
+
+                      const colors = getModuleColorDetails(item.id, isActive);
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            handleNavigation(item);
+                            setIsTileMenuOpen(false);
+                          }}
+                          disabled={isDisabled}
+                          className={cn(
+                            "w-full flex flex-col items-center justify-center p-3 rounded-2xl gap-2 transition-all relative overflow-hidden active:scale-95",
+                            isActive 
+                              ? "bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-md shadow-brand-500/20"
+                              : "bg-gray-50 dark:bg-zinc-900 text-gray-800 dark:text-gray-100 border border-gray-150/40 dark:border-zinc-800/80 hover:bg-white dark:hover:bg-zinc-800/60 shadow-sm",
+                            isDisabled && "opacity-40 cursor-not-allowed grayscale active:scale-100"
+                          )}
+                        >
+                          <div className={cn(
+                            "p-2 rounded-xl relative z-10",
+                            colors.bg
+                          )}>
+                            <item.icon className="h-5 w-5" strokeWidth={2.2} />
+                          </div>
+                          
+                          <span className={cn(
+                            "font-bold text-[10px] text-center leading-tight relative z-10 line-clamp-1",
+                            isActive ? "text-white" : "text-gray-700 dark:text-gray-300"
+                          )}>
+                            {item.name}
+                          </span>
+                        </button>
+                      );
                     })}
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
         </main>
@@ -575,14 +618,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <PWAInstallBanner />
 
       {/* Fixed Bottom Bar */}
-      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
+      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 h-[68px] z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 pb-[max(4px,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/95 dark:bg-gray-900/95">
         <button 
           onClick={() => {
             navigate('/appointment-dashboard');
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            "flex flex-col items-center justify-center h-full w-14 transition-colors",
             location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >
@@ -596,7 +639,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            "flex flex-col items-center justify-center h-full w-14 transition-colors",
             location.pathname.includes('/ipd-workspace') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >
@@ -606,16 +649,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         <button 
           onClick={() => setIsTileMenuOpen(!isTileMenuOpen)}
-          className="flex flex-col items-center justify-center relative -top-4 mx-1"
+          className="flex flex-col items-center justify-center h-full w-14 transition-colors"
         >
           <div className={cn(
-            "rounded-full p-3.5 shadow-xl ring-4 ring-gray-50 dark:ring-gray-950 transition-transform active:scale-95",
-            isTileMenuOpen ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 shadow-gray-500/30" : "bg-brand-600 text-white shadow-brand-500/30"
+            "rounded-full p-2.5 transition-transform active:scale-95 mb-1 shadow-sm",
+            isTileMenuOpen ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900" : "bg-brand-600 text-white"
           )}>
-            {isTileMenuOpen ? <X className="h-5 w-5" strokeWidth={2.5} /> : <LayoutGrid className="h-5 w-5" strokeWidth={2.5} />}
+            {isTileMenuOpen ? <X className="h-4.5 w-4.5" strokeWidth={2.5} /> : <LayoutGrid className="h-4.5 w-4.5" strokeWidth={2.5} />}
           </div>
           <span className={cn(
-            "text-[9px] font-bold tracking-wide mt-1 absolute -bottom-4",
+            "text-[9px] font-bold tracking-wide",
             isTileMenuOpen ? "text-gray-800 dark:text-gray-200" : "text-brand-600 dark:text-brand-400"
           )}>
             {isTileMenuOpen ? 'Close' : 'Menu'}
@@ -628,7 +671,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            "flex flex-col items-center justify-center h-full w-14 transition-colors",
             location.pathname.includes('/billing') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >
@@ -642,7 +685,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setIsTileMenuOpen(false);
           }}
           className={cn(
-            "flex flex-col items-center justify-center p-1.5 w-14 transition-colors",
+            "flex flex-col items-center justify-center h-full w-14 transition-colors",
             location.pathname.includes('/settings') ? "text-brand-600 dark:text-brand-400" : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200"
           )}
         >

@@ -89,9 +89,9 @@ const synthesizeUnknownName = (sex: string, ageYears: string, ageUnit: 'Y' | 'M'
     return `Unknown ${label}${ageSuffix}`;
 };
 
-const SELECT_CLS = 'h-10 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white outline-none transition focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400';
+const SELECT_CLS = 'h-11 sm:h-10 w-full text-sm border border-slate-200 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700';
 // h-11 (44px) on mobile for comfortable touch targets, h-10 on sm+ to keep the desktop density.
-const INPUT_CLS = 'h-11 sm:h-10 rounded-lg';
+const INPUT_CLS = 'h-11 sm:h-10 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 focus-visible:ring-brand-500/25 focus-visible:ring-2 focus-visible:border-brand-500 transition-all bg-white dark:bg-zinc-900';
 
 interface FormState {
     fullName: string; sex: string; ageYears: string; ageUnit: 'Y' | 'M' | 'D'; dateOfBirth: string;
@@ -152,30 +152,27 @@ interface Props {
     referralId?: string;
 }
 
-const CHIP_TONES: Record<string, string> = {
-    indigo: 'bg-brand-100 text-brand-600',
-    sky: 'bg-sky-100 text-sky-600',
-    violet: 'bg-violet-100 text-violet-600',
-    emerald: 'bg-emerald-100 text-emerald-600',
-    amber: 'bg-amber-100 text-amber-600',
-    slate: 'bg-slate-100 text-slate-600',
-    rose: 'bg-rose-100 text-rose-600',
+const CHIP_TONES = {
+    indigo: 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10',
+    sky: 'bg-sky-50 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400 border-sky-100 dark:border-sky-900/10',
+    violet: 'bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-900/10',
+    emerald: 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/10',
+    amber: 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/10',
+    slate: 'bg-slate-50 dark:bg-zinc-800/30 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700/20',
+    rose: 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/10',
 };
 
 const SectionCard: React.FC<{
     icon: React.ReactNode; title: string; subtitle?: string; tone?: keyof typeof CHIP_TONES;
     right?: React.ReactNode; children: React.ReactNode;
-    // Cards whose content renders an absolutely-positioned overlay (e.g. a search
-    // results dropdown) need this — the default overflow-hidden (for rounded corners)
-    // would otherwise clip the overlay wherever it extends past the card's own bounds.
     allowOverflow?: boolean;
 }> = ({ icon, title, subtitle, tone = 'indigo', right, children, allowOverflow }) => (
-    <section className={cn('rounded-2xl border border-slate-200 bg-white shadow-sm', !allowOverflow && 'overflow-hidden')}>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-            <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', CHIP_TONES[tone])}>{icon}</div>
+    <section className={cn('rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow duration-300', !allowOverflow && 'overflow-hidden')}>
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-100/50 dark:border-zinc-800/50 bg-slate-50/30 dark:bg-zinc-900/30">
+            <div className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border shadow-inner', CHIP_TONES[tone])}>{icon}</div>
             <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-900 leading-tight">{title}</p>
-                {subtitle && <p className="text-[11px] text-slate-400 truncate">{subtitle}</p>}
+                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">{title}</p>
+                {subtitle && <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">{subtitle}</p>}
             </div>
             {right}
         </div>
@@ -188,12 +185,12 @@ const OptionalPill = () => (
 );
 
 const Field: React.FC<{ label: string; required?: boolean; className?: string; children: React.ReactNode }> = ({ label, required, className, children }) => (
-    <div className={cn(className, required && 'border-l-2 border-rose-300 pl-2 -ml-2.5')}>
-        <div className="flex items-center gap-1.5">
-            <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
-            {required && <span className="text-[8px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded px-1 py-0.5 leading-none">Required</span>}
+    <div className={className}>
+        <div className="flex items-center gap-1">
+            <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{label}</Label>
+            {required && <span className="text-rose-500 font-bold text-sm leading-none">*</span>}
         </div>
-        <div className="mt-1">{children}</div>
+        <div className="mt-1.5">{children}</div>
     </div>
 );
 
@@ -616,14 +613,14 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
             <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0 overflow-hidden bg-slate-50">
                 {/* Premium gradient header */}
-                <SheetHeader className="px-5 sm:px-6 pt-5 pb-4 shrink-0 bg-gradient-to-br from-brand-600 to-violet-600 text-white">
+                <SheetHeader className="px-5 sm:px-6 pt-5 pb-4 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
                     <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center backdrop-blur-sm">
-                            <UserPlus className="h-5 w-5 text-white" />
+                        <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900/30 flex items-center justify-center shadow-inner">
+                            <UserPlus className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                         </div>
                         <div>
-                            <SheetTitle className="text-base font-bold text-white">Admit Patient</SheetTitle>
-                            <SheetDescription className="text-xs text-brand-100">The patient ID and admission number are created for you.</SheetDescription>
+                            <SheetTitle className="text-base font-extrabold text-slate-900 dark:text-zinc-50">Admit Patient</SheetTitle>
+                            <SheetDescription className="text-xs text-slate-500 dark:text-zinc-400">The patient ID and admission number are created for you.</SheetDescription>
                         </div>
                     </div>
                 </SheetHeader>
@@ -661,31 +658,30 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             </div>
                         )}
                         <div className="mt-5 flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print confirmation</Button>
-                            <Button variant="outline" size="sm" className="h-9" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
+                            <Button variant="outline" size="sm" className="h-9 rounded-full" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print confirmation</Button>
+                            <Button variant="outline" size="sm" className="h-9 rounded-full" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
                         </div>
                         <div className="mt-5 flex items-center gap-3">
-                            <Button variant="outline" className="h-10" onClick={reset}><RotateCcw className="h-4 w-4 mr-1.5" /> Admit another</Button>
-                            <Button className="h-10 bg-brand-600 hover:bg-brand-700" onClick={finishToWorkspace}>Done <ArrowRight className="h-4 w-4 ml-1.5" /></Button>
+                            <Button variant="outline" className="h-10 rounded-full" onClick={reset}><RotateCcw className="h-4 w-4 mr-1.5" /> Admit another</Button>
+                            <Button className="h-10 bg-brand-600 hover:bg-brand-700 rounded-full px-5" onClick={finishToWorkspace}>Done <ArrowRight className="h-4 w-4 ml-1.5" /></Button>
                         </div>
                     </div>
                 ) : (
                     <>
-                        {/* Restore-draft banner — local-only autosave, never auto-restores silently
-                            (a stale draft could belong to a different patient than intended now). */}
+                        {/* Restore-draft banner */}
                         {pendingDraft && (
-                            <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2.5 flex items-center justify-between gap-3">
-                                <p className="text-xs text-brand-800">
-                                    <span className="font-semibold">Unsaved admission draft found</span> from {new Date(pendingDraft.savedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.
+                            <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-2xl border border-brand-100 dark:border-brand-900/25 bg-brand-50/50 dark:bg-brand-950/20 px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
+                                <p className="text-xs font-semibold text-brand-800 dark:text-brand-300">
+                                    Unsaved draft found from {new Date(pendingDraft.savedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.
                                 </p>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={clearDraft}>Discard</Button>
-                                    <Button size="sm" className="h-7 text-[11px] bg-brand-600 hover:bg-brand-700" onClick={restoreDraft}>Restore</Button>
+                                    <Button size="sm" variant="ghost" className="h-8 rounded-full text-xs font-bold text-brand-700 dark:text-brand-400 hover:bg-brand-100/50 dark:hover:bg-brand-900/30" onClick={clearDraft}>Discard</Button>
+                                    <Button size="sm" className="h-8 rounded-full text-xs font-bold bg-brand-600 hover:bg-brand-700" onClick={restoreDraft}>Restore</Button>
                                 </div>
                             </div>
                         )}
                         {/* Step indicator */}
-                        <div className="px-5 sm:px-6 pt-4 pb-1 shrink-0">
+                        <div className="px-5 sm:px-6 pt-4 pb-2 shrink-0 border-b border-zinc-100/50 dark:border-zinc-800/50">
                             <div className="flex items-center gap-2">
                                 {WIZARD_STEPS.map((s, i) => {
                                     const stepIndex = WIZARD_STEPS.findIndex(x => x.key === step);
@@ -694,19 +690,15 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     const canJump = i <= stepIndex || (i === stepIndex + 1 && canSubmit);
                                     return (
                                         <React.Fragment key={s.key}>
-                                            {i > 0 && <div className={cn('h-0.5 flex-1 rounded-full', isVisited || isCurrent ? 'bg-brand-400' : 'bg-slate-200')} />}
+                                            {i > 0 && <div className={cn('h-1 flex-1 rounded-full', isVisited || isCurrent ? 'bg-brand-400' : 'bg-slate-200 dark:bg-zinc-800')} />}
                                             <button type="button" disabled={!canJump} onClick={() => canJump && setStep(s.key)}
-                                                className={cn('flex flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 transition-all shrink-0',
-                                                    isCurrent ? 'bg-brand-600 text-white shadow' : isVisited ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-400',
-                                                    canJump && !isCurrent && 'cursor-pointer hover:bg-brand-100')}>
+                                                className={cn('flex flex-col items-center gap-0.5 rounded-full p-1.5 transition-all shrink-0',
+                                                    isCurrent ? 'text-brand-600' : isVisited ? 'text-emerald-600 dark:text-emerald-450' : 'text-slate-400 dark:text-zinc-500',
+                                                    canJump && !isCurrent && 'cursor-pointer hover:bg-brand-50 dark:hover:bg-zinc-900/50')}>
                                                 <span className="flex items-center gap-1.5 text-[11px] font-bold">
-                                                    <span className={cn('h-4 w-4 rounded-full flex items-center justify-center text-[10px]',
-                                                        isCurrent ? 'bg-white/20' : isVisited ? 'bg-brand-200' : 'bg-slate-200')}>{i + 1}</span>
+                                                    <span className={cn('h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-inner',
+                                                        isCurrent ? 'bg-brand-600 text-white shadow-brand-500/25 ring-4 ring-brand-100 dark:ring-brand-900/30' : isVisited ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 border border-emerald-100 dark:border-emerald-900/10' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 border border-transparent')}>{isVisited ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : i + 1}</span>
                                                     <span className="hidden sm:inline">{s.label}</span>
-                                                </span>
-                                                <span className={cn('hidden sm:inline text-[8px] font-bold uppercase tracking-wider',
-                                                    isCurrent ? 'text-white/70' : s.required ? 'text-rose-500' : 'text-slate-400')}>
-                                                    {s.required ? 'Required' : 'Optional'}
                                                 </span>
                                             </button>
                                         </React.Fragment>
@@ -864,11 +856,11 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 {namePreview && <p className="text-[11px] text-slate-400 mt-1">Will admit as: <span className="font-semibold text-slate-600">{namePreview}</span></p>}
                                             </Field>
                                             <Field label="Sex" required={isEmergencyQuickAdmit}>
-                                                <div className="flex bg-slate-100 p-1 h-10 rounded-lg border border-slate-200 w-full">
+                                                <div className="flex bg-slate-100 dark:bg-zinc-950 p-1 h-10 rounded-full border border-slate-200/60 dark:border-zinc-800/80 w-full">
                                                     {SEX_OPTIONS.map(o => (
                                                         <button key={o.value} type="button" onClick={() => set('sex', o.value)}
-                                                            className={cn('flex-1 text-[11px] font-bold rounded-md transition-all duration-200',
-                                                                form.sex === o.value ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white')}>
+                                                            className={cn('flex-1 text-[11px] font-extrabold rounded-full transition-all duration-200',
+                                                                form.sex === o.value ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200')}>
                                                             {o.label}
                                                         </button>
                                                     ))}
@@ -881,16 +873,16 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 </select>
                                             </Field>
                                             <Field label="Age" required={isEmergencyQuickAdmit}>
-                                                <div className="flex items-center h-10 rounded-lg border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-brand-500/25 focus-within:border-brand-400 transition">
+                                                <div className="flex items-center h-10 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand-500/25 focus-within:border-brand-400 transition">
                                                     <Input type="number" min={0} max={form.ageUnit === 'Y' ? 130 : form.ageUnit === 'M' ? 11 : 30}
                                                         value={form.ageYears} onChange={e => set('ageYears', e.target.value)}
-                                                        className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-lg font-mono"
+                                                        className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-lg font-mono bg-transparent"
                                                         placeholder={form.ageUnit === 'Y' ? 'e.g. 42' : 'approximate'} />
-                                                    <div className="flex bg-slate-100 p-0.5 h-full shrink-0 border-l border-slate-200 rounded-r-lg">
+                                                    <div className="flex bg-slate-105 dark:bg-zinc-950 p-0.5 h-full shrink-0 border-l border-slate-200 dark:border-zinc-800 rounded-r-lg">
                                                         {AGE_UNITS.map(u => (
                                                             <button key={u.value} type="button" onClick={() => set('ageUnit', u.value)}
-                                                                className={cn('px-2.5 text-[11px] font-bold rounded-md transition-all duration-200',
-                                                                    form.ageUnit === u.value ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white')}>
+                                                                className={cn('px-3 text-[10px] font-extrabold rounded-md transition-all duration-200',
+                                                                    form.ageUnit === u.value ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200')}>
                                                                 {u.label}
                                                             </button>
                                                         ))}
@@ -1062,7 +1054,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 </div>
                                             </Field>
                                             <Field label="Reason for admission" className="sm:col-span-2">
-                                                <Textarea value={form.admissionReason} onChange={e => set('admissionReason', e.target.value)} rows={2} className="text-sm rounded-lg" placeholder="Chief complaint / notes" />
+                                                <Textarea value={form.admissionReason} onChange={e => set('admissionReason', e.target.value)} rows={2} className="text-sm rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3" placeholder="Chief complaint / notes" />
                                             </Field>
                                             <Field label="Referred by">
                                                 <select value={form.referralSource} onChange={e => { set('referralSource', e.target.value as FormState['referralSource']); clearReferrerSelection(); }} className={SELECT_CLS}>
@@ -1124,7 +1116,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         <div className="relative">
                                             <BedDouble className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                             <select value={form.bedId} onChange={e => set('bedId', e.target.value)}
-                                                className="h-12 w-full text-sm font-semibold border-2 border-slate-200 rounded-xl pl-10 pr-4 bg-white outline-none transition focus:ring-4 focus:ring-brand-500/15 focus:border-brand-400 hover:border-slate-300 appearance-none">
+                                                className="h-12 w-full text-sm font-semibold border border-slate-200 dark:border-zinc-800 rounded-xl pl-10 pr-4 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-350 dark:hover:border-zinc-700 appearance-none">
                                                 <option value="">— Assign later —</option>
                                                 {Object.entries(bedsByWard).map(([ward, beds]) => (
                                                     <optgroup key={ward} label={ward}>
@@ -1158,14 +1150,14 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
                                     {/* ── Payment ─────────────────────────────────────── */}
                                     <SectionCard icon={<Wallet className="h-4 w-4" />} title="Payment" subtitle="Billing branch & deposit" tone="rose">
-                                        <Label className="text-[11px] font-semibold text-slate-600">Payer type</Label>
-                                        <div className="grid grid-cols-3 gap-2 mt-1.5 mb-4">
+                                        <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Payer type</Label>
+                                        <div className="flex bg-slate-100 dark:bg-zinc-950 p-1 h-10 rounded-full border border-slate-200/60 dark:border-zinc-800/80 w-full mb-4 mt-1.5">
                                             {PAYER_TYPES.map(p => {
                                                 const active = form.payerType === p.value;
                                                 return (
                                                     <button key={p.value} type="button" onClick={() => set('payerType', p.value)}
-                                                        className={cn('rounded-xl border-2 py-2.5 px-1 text-xs font-bold transition-all',
-                                                            active ? 'border-rose-400 bg-rose-50 text-rose-700 ring-2 ring-rose-200' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300')}>
+                                                        className={cn('flex-1 text-[11px] font-extrabold rounded-full transition-all duration-200',
+                                                            active ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200')}>
                                                         {p.label}
                                                     </button>
                                                 );
@@ -1184,13 +1176,13 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                         <p className="text-[11px] font-semibold text-slate-700">Collect this deposit now?</p>
                                                         <p className="text-[10px] text-slate-400">Records it as a real advance payment against this admission.</p>
                                                     </div>
-                                                    <div className="inline-flex p-0.5 bg-slate-100 rounded-lg shrink-0">
+                                                    <div className="inline-flex p-1 bg-slate-100 dark:bg-zinc-950 rounded-full shrink-0 border border-slate-200/60 dark:border-zinc-800/80">
                                                         <button type="button" onClick={() => set('collectAdvanceNow', false)}
-                                                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', !form.collectAdvanceNow ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
+                                                            className={cn('h-8 px-4 rounded-full text-xs font-bold transition-all duration-200', !form.collectAdvanceNow ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200')}>
                                                             Later
                                                         </button>
                                                         <button type="button" onClick={() => set('collectAdvanceNow', true)}
-                                                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all', form.collectAdvanceNow ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500')}>
+                                                            className={cn('h-8 px-4 rounded-full text-xs font-bold transition-all duration-200', form.collectAdvanceNow ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-750 dark:hover:text-zinc-200')}>
                                                             Now
                                                         </button>
                                                     </div>
@@ -1264,51 +1256,51 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         </div>
 
                         {/* Footer */}
-                        <div className="shrink-0 px-4 sm:px-6 pt-3 pb-4 bg-white border-t border-slate-200">
+                        <div className="shrink-0 px-4 sm:px-6 pt-3 pb-4 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800">
                             {/* Helper hint — its own row so it never fights the action buttons for width */}
                             {((step === 'personal' && !canSubmit) || (!!selectedPatientId && step !== 'admissionType')) && (
-                                <div className="mb-2">
+                                <div className="mb-2.5">
                                     {step === 'personal' && !canSubmit && (
-                                        <p className="text-[11px] text-slate-400 truncate">
+                                        <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">
                                             {isEmergencyQuickAdmit ? 'Sex and approximate age are required to continue.' : 'Name and mobile are required to continue.'}
                                         </p>
                                     )}
-                                    {!!selectedPatientId && <p className="text-[11px] text-slate-400 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
+                                    {!!selectedPatientId && <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
                                 </div>
                             )}
                             <div className="flex items-center gap-2 sm:gap-3">
-                                <Button variant="outline" className="h-11 sm:h-10 px-3 sm:px-4 shrink-0" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
+                                <Button variant="outline" className="h-11 sm:h-10 px-4 rounded-full border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
                                     {step === 'admissionType' ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
                                 </Button>
                                 {/* Desktop: push actions to the right; mobile: buttons flex-fill instead. */}
                                 <div className="hidden sm:block sm:flex-1" />
                                 {step === 'admissionType' && (
-                                    <Button onClick={() => setStep('personal')} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                    <Button onClick={() => setStep('personal')} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
                                         Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                     </Button>
                                 )}
                                 {step === 'personal' && (
                                     <>
-                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-3 sm:px-4 min-w-0">
+                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-full border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0">
                                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
                                         </Button>
-                                        <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 sm:px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                        <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
                                             Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                         </Button>
                                     </>
                                 )}
                                 {step === 'clinical' && (
                                     <>
-                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-3 sm:px-4 min-w-0">
+                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-full border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0">
                                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
                                         </Button>
-                                        <Button onClick={() => setStep('advanceBed')} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 sm:px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                        <Button onClick={() => setStep('advanceBed')} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
                                             Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                         </Button>
                                     </>
                                 )}
                                 {step === 'advanceBed' && (
-                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 sm:px-6 bg-brand-600 hover:bg-brand-700 font-semibold shadow-sm">
+                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
                                         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
                                         {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
                                     </Button>

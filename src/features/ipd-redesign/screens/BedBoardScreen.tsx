@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { BedDouble, ArrowLeft, LogOut, ArrowLeftRight, Loader2, X, Check } from 'lucide-react';
+import { BedDouble, ArrowLeft, LogOut, ArrowLeftRight, Loader2, X, Check, Hotel, LayoutGrid, UserPlus, Stethoscope, Plus } from 'lucide-react';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { useAppStore } from '@/store/appStore';
 
@@ -110,25 +110,27 @@ const AnimatedBedTile: React.FC<{ bed: BedBoardItem; occupied: boolean; flashing
 
 const CensusTile: React.FC<{ label: string; value: number; tone: 'rose' | 'emerald' | 'slate' }> = ({ label, value, tone }) => {
     const tones: Record<string, string> = {
-        rose: 'border-rose-100 bg-rose-50 text-rose-700',
-        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-        slate: 'border-slate-200 bg-slate-50 text-slate-700',
+        rose: 'border-rose-100 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-455',
+        emerald: 'border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-455',
+        slate: 'border-zinc-200/60 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/40 text-slate-600 dark:text-zinc-400',
     };
     return (
-        <div className={cn('rounded-xl border px-3 py-2 shadow-sm', tones[tone])}>
-            <p className="text-[10px] font-bold uppercase tracking-wider truncate opacity-80">{label}</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">{value}</p>
+        <div className={cn('rounded-[1.25rem] border p-3.5 sm:p-4.5 flex flex-col justify-between min-h-[82px]', tones[tone])}>
+            <p className="text-xl sm:text-2xl font-black leading-none">{value}</p>
+            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-2.5 leading-tight">{label}</p>
         </div>
     );
 };
-
 type ActionMode = 'menu' | 'transfer' | 'discharge' | null;
 
 interface Props {
     onBack: () => void;
+    onOpenDashboard?: () => void;
+    onOpenReferredAdmissions?: () => void;
+    onOpenConsultantLedger?: () => void;
 }
 
-export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
+export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpenReferredAdmissions, onOpenConsultantLedger }) => {
     const { toast } = useToast();
     const [items, setItems] = useState<BedBoardItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -228,21 +230,73 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
 
     return (
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-10">
-            <div className="flex items-center gap-2 sm:gap-3">
-                <Button variant="outline" size="sm" className="h-9 px-2.5 sm:px-3 shrink-0" onClick={onBack}>
-                    <ArrowLeft className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Dashboard</span>
-                </Button>
-                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm shrink-0">
-                    <BedDouble className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-lg sm:text-xl font-black text-slate-900">Bed Board</h1>
-                        <span className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-600 uppercase tracking-wider shrink-0">
-                            <LiveDot /> Live
-                        </span>
+            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
+            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
+            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
+                {/* Decorative flare */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col gap-5">
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                                <LayoutGrid className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-xl font-bold tracking-tight">Live Bed Board</h1>
+                                    <span className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-300 uppercase tracking-wider bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                                        <LiveDot /> Live
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-brand-100 mt-0.5">Manage bed occupancy, transfers & discharges</p>
+                            </div>
+                        </div>
+                        {/* Dashboard back button on the right for desktop */}
+                        <button 
+                            onClick={onBack}
+                            className="hidden sm:flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 active:scale-[0.98] transition-all shadow-sm"
+                        >
+                            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back to Dashboard
+                        </button>
                     </div>
-                    <p className="text-xs text-slate-500 hidden sm:block">Every bed, live · transfer, release &amp; discharge.</p>
+
+                    {/* Navigation Tab Capsule */}
+                    <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
+                        {/* Tab 1: Active Census */}
+                        <button 
+                            onClick={onOpenDashboard || onBack}
+                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
+                        >
+                            <Hotel className="h-5 w-5 mb-1 opacity-80" />
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Active<br/>Census</span>
+                        </button>
+
+                        {/* Tab 2: Bed Board (Selected) */}
+                        <div className="bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm rounded-xl py-2 flex flex-col items-center justify-center text-center cursor-default">
+                            <LayoutGrid className="h-5 w-5 mb-1" />
+                            <span className="text-[9px] font-bold tracking-wide leading-tight">Bed<br/>Board</span>
+                        </div>
+
+                        {/* Tab 3: Referrals */}
+                        <button 
+                            onClick={onOpenReferredAdmissions || onBack}
+                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
+                        >
+                            <UserPlus className="h-5 w-5 mb-1 opacity-80" />
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Referred<br/>Admissions</span>
+                        </button>
+
+                        {/* Tab 4: Ledger */}
+                        <button 
+                            onClick={onOpenConsultantLedger || onBack}
+                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
+                        >
+                            <Stethoscope className="h-5 w-5 mb-1 opacity-80" />
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Consultant<br/>Ledger</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -254,7 +308,7 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                     <CensusTile label="Total beds" value={census.total} tone="slate" />
                 </div>
                 <select value={wardFilter} onChange={e => setWardFilter(e.target.value)}
-                    className="h-11 sm:h-10 text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl px-3 bg-white shadow-sm w-full sm:w-auto shrink-0">
+                    className="h-11 sm:h-10 text-sm font-semibold text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-850 rounded-xl px-3 bg-white dark:bg-zinc-900 shadow-sm w-full sm:w-auto shrink-0 outline-none hover:border-slate-300 dark:hover:border-zinc-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
                     <option value="ALL">All wards</option>
                     {wards.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
@@ -284,10 +338,10 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                     {Object.entries(grouped).map(([ward, beds]) => {
                         const occ = beds.filter(b => !!b.admissionId).length;
                         return (
-                            <motion.div key={ward} layout className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+                            <motion.div key={ward} layout className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex items-center justify-between gap-2 mb-3">
-                                    <p className="font-bold text-slate-900 text-sm sm:text-base truncate">{ward}</p>
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 shrink-0">{occ}/{beds.length} occupied</Badge>
+                                    <p className="font-bold text-slate-900 dark:text-zinc-100 text-sm sm:text-base truncate">{ward}</p>
+                                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 dark:bg-zinc-950 text-slate-600 dark:text-zinc-400 border border-slate-205 dark:border-zinc-800 shrink-0">{occ}/{beds.length} occupied</Badge>
                                 </div>
                                 <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                                     <AnimatePresence initial={false}>
@@ -321,34 +375,34 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                             </DialogHeader>
 
                             {actionMode === 'menu' && (
-                                <div className="space-y-2">
-                                    <Button variant="outline" className="w-full justify-start h-11" onClick={() => setActionMode('transfer')}>
+                                <div className="space-y-2 pt-2">
+                                    <Button variant="outline" className="w-full justify-start h-11 rounded-full px-5 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-305 font-bold" onClick={() => setActionMode('transfer')}>
                                         <ArrowLeftRight className="h-4 w-4 mr-2" /> Transfer to another bed
                                     </Button>
-                                    <Button variant="outline" className="w-full justify-start h-11" disabled={busy}
+                                    <Button variant="outline" className="w-full justify-start h-11 rounded-full px-5 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-305 font-bold" disabled={busy}
                                         onClick={() => runAction(() => bedBoardApi.releaseBed(selected.admissionId!), 'Bed released.')}>
                                         <X className="h-4 w-4 mr-2" /> Release bed (keep admission)
                                     </Button>
-                                    <Button className="w-full justify-start h-11 bg-amber-600 hover:bg-amber-700" onClick={() => setActionMode('discharge')}>
+                                    <Button className="w-full justify-start h-11 rounded-full px-5 bg-amber-600 hover:bg-amber-700 text-white font-bold" onClick={() => setActionMode('discharge')}>
                                         <LogOut className="h-4 w-4 mr-2" /> Discharge patient
                                     </Button>
                                 </div>
                             )}
 
                             {actionMode === 'transfer' && (
-                                <div className="space-y-3">
+                                <div className="space-y-4 pt-2">
                                     <div>
-                                        <Label className="text-xs font-semibold text-slate-700">New bed</Label>
-                                        <select value={newBedId} onChange={e => setNewBedId(e.target.value)} className="h-10 mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white">
+                                        <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">New bed</Label>
+                                        <select value={newBedId} onChange={e => setNewBedId(e.target.value)} className="h-11 mt-1.5 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700">
                                             <option value="">Select a bed…</option>
                                             {freeBeds.map(b => (
                                                 <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <Button variant="ghost" onClick={() => setActionMode('menu')}>Back</Button>
-                                        <Button disabled={!newBedId || busy} className="bg-brand-600 hover:bg-brand-700"
+                                    <div className="flex justify-between gap-3 pt-2">
+                                        <Button variant="outline" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold" onClick={() => setActionMode('menu')}>Back</Button>
+                                        <Button disabled={!newBedId || busy} className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold"
                                             onClick={() => runAction(() => bedBoardApi.transferBed(selected.admissionId!, newBedId), 'Bed transferred.')}>
                                             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowLeftRight className="h-4 w-4 mr-2" />} Transfer
                                         </Button>
@@ -357,17 +411,17 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack }) => {
                             )}
 
                             {actionMode === 'discharge' && (
-                                <div className="space-y-3">
-                                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
+                                <div className="space-y-4 pt-2">
+                                    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 text-xs text-amber-800 font-semibold leading-relaxed">
                                         This closes the admission to DISCHARGED and releases bed {selected.bedCode}.
                                     </div>
                                     <div>
-                                        <Label className="text-xs font-semibold text-slate-700">Discharge notes</Label>
-                                        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                                        <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Discharge notes</Label>
+                                        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3" placeholder="Optional notes" />
                                     </div>
-                                    <div className="flex justify-between">
-                                        <Button variant="ghost" onClick={() => setActionMode('menu')}>Back</Button>
-                                        <Button disabled={busy} className="bg-amber-600 hover:bg-amber-700"
+                                    <div className="flex justify-between gap-3 pt-2">
+                                        <Button variant="outline" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold" onClick={() => setActionMode('menu')}>Back</Button>
+                                        <Button disabled={busy} className="bg-amber-600 hover:bg-amber-700 h-10 rounded-full px-5 text-white font-bold"
                                             onClick={() => runAction(() => bedBoardApi.dischargeAdmission(selected.admissionId!, notes || undefined), 'Patient discharged.')}>
                                             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
                                         </Button>
