@@ -8,6 +8,13 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { BedDouble, ArrowLeft, LogOut, ArrowLeftRight, Loader2, X, Check, Hotel, LayoutGrid, UserPlus, Stethoscope, Plus } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { useAppStore } from '@/store/appStore';
 
@@ -307,11 +314,17 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
                     <CensusTile label="Available" value={census.available} tone="emerald" />
                     <CensusTile label="Total beds" value={census.total} tone="slate" />
                 </div>
-                <select value={wardFilter} onChange={e => setWardFilter(e.target.value)}
-                    className="h-11 sm:h-10 text-sm font-semibold text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-850 rounded-xl px-3 bg-white dark:bg-zinc-900 shadow-sm w-full sm:w-auto shrink-0 outline-none hover:border-slate-300 dark:hover:border-zinc-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
-                    <option value="ALL">All wards</option>
-                    {wards.map(w => <option key={w} value={w}>{w}</option>)}
-                </select>
+                <Select value={wardFilter} onValueChange={setWardFilter}>
+                    <SelectTrigger className="h-11 sm:h-10 text-sm font-semibold text-slate-700 dark:text-zinc-350 border border-slate-200 dark:border-zinc-850 rounded-xl px-3 bg-white dark:bg-zinc-900 shadow-sm w-full sm:w-[180px] shrink-0 outline-none hover:border-slate-300 dark:hover:border-zinc-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all [&>span]:line-clamp-1">
+                        <SelectValue placeholder="All wards" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                        <SelectItem value="ALL" className="font-semibold text-xs py-2.5">All wards</SelectItem>
+                        {wards.map(w => (
+                            <SelectItem key={w} value={w} className="font-semibold text-xs py-2.5">{w}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             {/* Legend */}
