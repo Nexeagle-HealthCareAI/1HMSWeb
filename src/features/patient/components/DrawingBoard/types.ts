@@ -1,15 +1,18 @@
 export interface Point {
     x: number;
     y: number;
+    /** Normalized pressure from PointerEvent (0–1). Defaults to 0.5 for mouse/touch. */
+    pressure?: number;
 }
 
-export type DrawTool = 'pen' | 'eraser' | 'text';
+export type DrawTool = 'pen' | 'marker' | 'highlighter' | 'eraser' | 'text';
 
 export interface StrokeItem {
     kind: 'stroke';
-    tool: 'pen' | 'eraser';
+    tool: DrawTool;
     color: string;
     width: number;
+    opacity: number;  // 0–1; highlighter uses ~0.35, others 1.0
     points: Point[];
 }
 
@@ -32,12 +35,21 @@ export const CANVAS_WIDTH = 794;
 export const CANVAS_HEIGHT = 1123;
 export const CANVAS_BACKGROUND = '#FFFFFF';
 
-// Reuses the pen's Thin/Medium/Thick stroke-width presets as text-size presets when the Text
-// tool is active, so the toolbar doesn't need a second, redundant size control.
+// Default settings per tool
+export const TOOL_DEFAULTS: Record<DrawTool, { width: number; opacity: number }> = {
+    pen: { width: 3, opacity: 1.0 },
+    marker: { width: 8, opacity: 1.0 },
+    highlighter: { width: 22, opacity: 0.35 },
+    eraser: { width: 20, opacity: 1.0 },
+    text: { width: 5, opacity: 1.0 },
+};
+
+// Reuses the pen's stroke-width presets as text-size presets when the Text tool is active
 export const strokeWidthToFontSize = (width: number): number => {
-    if (width <= 2) return 16;
-    if (width <= 5) return 22;
-    return 30;
+    if (width <= 2) return 14;
+    if (width <= 5) return 20;
+    if (width <= 10) return 28;
+    return 36;
 };
 
 export const dataUrlToFile = (dataUrl: string, fileName: string): File => {
@@ -51,3 +63,4 @@ export const dataUrlToFile = (dataUrl: string, fileName: string): File => {
     }
     return new File([bytes], fileName, { type: mime });
 };
+

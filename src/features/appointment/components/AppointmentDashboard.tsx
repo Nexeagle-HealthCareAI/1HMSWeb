@@ -1739,9 +1739,8 @@ export const AppointmentDashboard = () => {
                             : t('appointmentDashboard.table.currentStatus'),
                           'status'
                         )}
-                        {renderSortableHeader(t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' }), 'labReports')}
                         {renderSortableHeader(t('appointmentDashboard.table.case', { defaultValue: 'Case' }), 'case')}
-                        {activeTab !== 'past' && renderSortableHeader(t('appointmentDashboard.table.actions'), 'actions')}
+                        {renderSortableHeader(t('appointmentDashboard.table.actions'), 'actions')}
                         {renderSortableHeader(t('appointmentDashboard.table.printPrescription'), 'printPrescription')}
                         {activeTab === 'past' && renderSortableHeader(t('appointmentDashboard.table.isCompleted'), 'isCompleted')}
                       </TableRow>
@@ -1749,7 +1748,7 @@ export const AppointmentDashboard = () => {
                     <TableBody>
                       {filteredAppointments.length === 0 ? (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={activeTab === 'past' ? 9 : activeTab === 'current' ? 10 : 9} className="text-center py-12">
+                          <TableCell colSpan={activeTab === 'future' ? 8 : 9} className="text-center py-12">
                             <div className="flex flex-col items-center gap-3">
                               <div className="w-12 h-12 bg-brand-50 dark:bg-brand-900/30 rounded-full flex items-center justify-center shadow-inner">
                                 <CalendarDays className="h-6 w-6 text-brand-400 dark:text-brand-500" />
@@ -1884,19 +1883,6 @@ export const AppointmentDashboard = () => {
                               <span className="scale-[0.85] origin-left inline-block">{getStatusBadge(appointment.finalStatusCode, appointment)}</span>
                             </TableCell>
 
-                            {/* Lab reports — available for every appointment, regardless of status. */}
-                            <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenLabAttachments(appointment)}
-                                className="h-8 w-8 p-0 text-brand-600 hover:bg-gradient-to-br hover:from-brand-500 hover:to-brand-500 hover:text-white dark:hover:from-brand-600 dark:hover:text-white rounded-full transition-all shadow-sm hover:shadow-brand-500/30"
-                                title={t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
-                              >
-                                <Upload className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-
                             {/* Case */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div className="flex flex-col items-start gap-0.5">
@@ -1913,9 +1899,8 @@ export const AppointmentDashboard = () => {
 
 
 
-                            {/* Actions - Only show for current and future tabs */}
-                            {activeTab !== 'past' && (
-                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                            {/* Actions — always shown, even for past appointments (document upload should stay available for historical visits too). */}
+                            <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                 <div className="flex items-center gap-1.5">
                                   {/* Bill stays outside the dropdown — the one action front desk needs at a glance. */}
                                   <Button
@@ -1954,6 +1939,14 @@ export const AppointmentDashboard = () => {
                                       align="end"
                                       className="w-52 rounded-xl border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-900/10 dark:shadow-black/40 p-1.5 backdrop-blur-sm"
                                     >
+                                      <DropdownMenuItem
+                                        onClick={() => handleOpenLabAttachments(appointment)}
+                                        className="rounded-lg gap-2.5 py-2 px-2.5 text-xs font-bold text-brand-600 dark:text-brand-400 focus:text-brand-700 focus:bg-brand-50 dark:focus:bg-brand-900/20 cursor-pointer transition-colors"
+                                      >
+                                        <Upload className="h-3.5 w-3.5 opacity-80" />
+                                        {t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Upload document' })}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator className="my-1 bg-slate-100 dark:bg-slate-800" />
                                       {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                                         <DropdownMenuItem
                                           disabled={isSubscriptionReadOnly}
@@ -2003,7 +1996,6 @@ export const AppointmentDashboard = () => {
                                   </DropdownMenu>
                                 </div>
                               </TableCell>
-                            )}
 
                             {/* Print Prescription */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
@@ -2139,6 +2131,10 @@ export const AppointmentDashboard = () => {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl bg-white/95 backdrop-blur-xl dark:bg-zinc-900/95 dark:border-zinc-800">
+                                      <DropdownMenuItem onClick={() => handleOpenLabAttachments(appointment)} className="py-2.5 font-medium cursor-pointer rounded-lg focus:bg-slate-50 dark:focus:bg-zinc-800">
+                                        <Upload className="h-4 w-4 mr-2 text-brand-500" /> Upload Document
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator className="dark:bg-zinc-800 my-1" />
                                       {activeTab === 'current' && (
                                         <DropdownMenuItem onClick={() => handlePrintToken(appointment)} className="py-2.5 font-medium cursor-pointer rounded-lg focus:bg-slate-50 dark:focus:bg-zinc-800">
                                           <Tag className="h-4 w-4 mr-2 text-orange-500" /> Print Token
@@ -2708,17 +2704,6 @@ export const AppointmentDashboard = () => {
           </>
         )}
       </AnimatePresence>
-      <AttachmentsSection
-        open={labAttachmentModal.open}
-        onOpenChange={(open) => setLabAttachmentModal((prev) => ({ ...prev, open }))}
-        trigger={null}
-        attachments={labAttachments[labAttachmentModal.patientId || ''] || []}
-        onChange={handleLabAttachmentsChange}
-        patientId={labAttachmentModal.patientId}
-        patientName={labAttachmentModal.patientName}
-        appointmentId={labAttachmentModal.appointmentId}
-        doctorId={labAttachmentModal.doctorId}
-      />
 
       <PatientProfileModal
         isOpen={showPatientProfileModal}

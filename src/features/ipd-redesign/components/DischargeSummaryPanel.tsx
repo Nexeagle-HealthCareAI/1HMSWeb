@@ -32,6 +32,8 @@ import { DischargePreviewModal } from '@/components/shared/discharge-preview/com
 import { buildBlankA4TemplateFile, type DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
 import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
+import { InkDischargePad } from './InkDischargePad';
+import { PenTool } from 'lucide-react';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -94,6 +96,17 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewOptions, setPreviewOptions] = useState<DischargeTemplateBoundOptions | null>(null);
+
+    const [inkDischargeOpen, setInkDischargeOpen] = useState(false);
+    const [inkDischargeTemplateUrl, setInkDischargeTemplateUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (layoutDoctorId && hospitalId) {
+            dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId)
+                .then(res => setInkDischargeTemplateUrl(res?.uri || null))
+                .catch(() => {});
+        }
+    }, [layoutDoctorId, hospitalId]);
 
     // Custom field values aren't backed by a DischargeSummary column yet (Phase 1/UI-only pass —
     // real persistence lands with the rest of the backend). Kept per-admission in localStorage
@@ -694,6 +707,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={openLetterheadPreview}>
                         <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
                     </Button>
+                    <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white shadow-md border-0" onClick={() => setInkDischargeOpen(true)}>
+                        <PenTool className="h-3.5 w-3.5 mr-1.5" /> InkDischarge
+                    </Button>
                     {isSigned && (
                         <>
                             <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
@@ -746,6 +762,19 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 onOpenChange={setPreviewOpen}
                 options={previewOptions}
                 fileName={`discharge-summary-${admission.admissionNo}.pdf`}
+            />
+
+            <InkDischargePad
+                open={inkDischargeOpen}
+                onClose={() => setInkDischargeOpen(false)}
+                templateUrl={inkDischargeTemplateUrl}
+                admissionId={admission.admissionId}
+                patientId={admission.patientId || ''}
+                hospitalId={hospitalId}
+                doctorId={admission.primaryDoctorId || ''}
+                patientName={admission.patientName || undefined}
+                patientAge={admission.patientAge != null ? String(admission.patientAge) : undefined}
+                onSaved={() => toast({ title: 'Discharge note saved', description: 'Filed as a PDF in the admission documents.' })}
             />
 
             {isSigned && (

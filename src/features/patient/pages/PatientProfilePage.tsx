@@ -19,7 +19,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Cloud,
-  ClipboardList
+  ClipboardList,
+  PenLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,6 +42,8 @@ import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } fro
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
 import { PatientProfileModal } from '../components/PatientProfileModal';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { InkRxPad } from '@/features/patient/components/DrawingBoard/InkRxPad';
+import { prescriptionFieldConfigApi } from '@/features/doctor/services/prescriptionFieldConfigApi';
 
 interface PatientData {
   id: string;
@@ -85,8 +88,14 @@ export const PatientProfilePage: React.FC = () => {
   const patientId = routePatientId || queryPatientId;
 
   const [patient, setPatient] = useState<PatientData | null>(null);
-  const [activeTab, setActiveTab] = useState('prescriptions');
+  // ?tab=inkrx deep-links straight into the handwriting pad (used by DocBoard's InkRx button).
+  const initialTab = searchParams.get('tab') === 'inkrx' ? 'inkrx' : 'prescriptions';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  // InkRx — full-screen handwritten prescription on the doctor's letterhead.
+  const [inkRxOpen, setInkRxOpen] = useState(initialTab === 'inkrx');
+  const [inkRxTemplateUrl, setInkRxTemplateUrl] = useState<string | null>(null);
 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showPostSubmitDialog, setShowPostSubmitDialog] = useState(false);
@@ -199,11 +208,26 @@ export const PatientProfilePage: React.FC = () => {
     [timelineEvents]
   );
 
+  // Letterhead for InkRx — same settings call the prescription-settings page uses (requires
+  // BOTH doctorId and hospitalId; see EPrescriptionPad's identical fetch).
+  useEffect(() => {
+    if (!doctorId || !hospitalId) return;
+    prescriptionFieldConfigApi.getPrescriptionSettings(doctorId, hospitalId)
+      .then((res) => {
+        const uri = res?.data?.uri;
+        if (uri) setInkRxTemplateUrl(uri);
+      })
+      .catch(() => { /* blank A4 fallback inside the pad */ });
+  }, [doctorId, hospitalId]);
+
   // Overview removed; Timeline, Lab Tests and Prescription Fields live inside the prescription pad
-  // (as sheets). The pad is the only view.
+  // (as sheets). The typed pad and the handwritten InkRx pad are the two views.
   const navigationItems = [
     { id: 'prescriptions', label: 'ePrescription Pad', icon: ClipboardList },
+    { id: 'inkrx', label: 'InkRx — Handwritten', icon: PenLine },
   ];
+
+  const inkRxAppointmentId = appointmentId || activeAppointmentId || '';
 
   const activeTabMeta = navigationItems.find((item) => item.id === activeTab) || navigationItems[0];
 
@@ -383,7 +407,11 @@ export const PatientProfilePage: React.FC = () => {
                       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }
                   `}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    // Selecting InkRx goes straight into the full-screen pad — no extra click.
+                    if (item.id === 'inkrx') setInkRxOpen(true);
+                  }}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   <IconComponent className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
@@ -479,11 +507,30 @@ export const PatientProfilePage: React.FC = () => {
 
                     {/* Right Section: Contextual Actions / Active Tab Indicator */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      {/* Mobile/tablet tab switcher — the sidebar nav is hidden below lg */}
+                      <div className="flex lg:hidden items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 self-start">
+                        {navigationItems.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveTab(item.id);
+                              if (item.id === 'inkrx') setInkRxOpen(true);
+                            }}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors ${activeTab === item.id
+                              ? 'bg-white dark:bg-gray-900 text-primary shadow-sm'
+                              : 'text-gray-500 dark:text-gray-400'}`}
+                          >
+                            <item.icon className="h-3.5 w-3.5" />
+                            {item.id === 'inkrx' ? 'InkRx' : 'Rx Pad'}
+                          </button>
+                        ))}
+                      </div>
                       <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
                         {activeTabMeta && (
                           <>
-                            <activeTabMeta.icon className="h-5 w-5 text-primary shrink-0" />
-                            <span className="hidden sm:inline">{activeTabMeta.label}</span>
+                            <activeTabMeta.icon className="h-5 w-5 text-primary shrink-0 hidden lg:block" />
+                            <span className="hidden lg:inline">{activeTabMeta.label}</span>
                             {activeTab === 'prescriptions' && (
                               <div className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 px-3 py-1.5 rounded-full shadow-md sm:ml-2">
                                 <Cloud className="h-3.5 w-3.5 text-white" />
@@ -535,8 +582,54 @@ export const PatientProfilePage: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* InkRx Tab — launch panel; the pad itself is full-screen (fixed inset-0) */}
+            {activeTab === 'inkrx' && (
+              <div className="flex flex-col items-center justify-center text-center gap-4 py-16 px-6">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                  <PenLine className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">InkRx — Handwritten Prescription</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md">
+                    Write directly on your letterhead with Apple Pencil or any stylus, full screen —
+                    saved as a PDF in the appointment&apos;s documents.
+                  </p>
+                </div>
+                <Button
+                  size="lg"
+                  className="gap-2 shadow-md"
+                  disabled={!inkRxAppointmentId}
+                  onClick={() => setInkRxOpen(true)}
+                >
+                  <PenLine className="h-4 w-4" /> Start Writing
+                </Button>
+                {!inkRxAppointmentId && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 max-w-sm">
+                    No active appointment found for this patient — open InkRx from the Doctor Board
+                    appointment row so the prescription is filed against the right visit.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
+
+        <InkRxPad
+          open={inkRxOpen && Boolean(inkRxAppointmentId)}
+          onClose={() => setInkRxOpen(false)}
+          templateUrl={inkRxTemplateUrl}
+          appointmentId={inkRxAppointmentId}
+          patientId={patientId || ''}
+          hospitalId={hospitalId || ''}
+          doctorId={doctorId || ''}
+          patientName={patient?.name}
+          patientAge={patient ? String(patient.age) : undefined}
+          onGoToSettings={() => {
+            setInkRxOpen(false);
+            navigate('/dashboard?tab=settings&subtab=layout');
+          }}
+        />
 
 
 

@@ -1,0 +1,427 @@
+/* ============================================================
+   Premium Rx Drawing Pad — Toolbar & Shell Styles
+   Desktop/iPad: vertical sidebar  |  Mobile: floating bottom bar
+   ============================================================ */
+
+/* ---- Shell (full-screen overlay) ---- */
+.rxpad-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    background: #0f172a;
+    animation: rxpad-open 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rxpad-open {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---- Header bar ---- */
+.rxpad-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.rxpad-header-title {
+    flex: 1;
+    min-width: 0;
+}
+.rxpad-header-title h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rxpad-header-title p {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 400;
+}
+
+.rxpad-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.rxpad-label-input {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-size: 13px;
+    padding: 7px 12px;
+    outline: none;
+    min-width: 180px;
+    transition: all 0.2s;
+}
+.rxpad-label-input::placeholder { color: #475569; }
+.rxpad-label-input:focus {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.rxpad-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.rxpad-btn-ghost {
+    background: rgba(255,255,255,0.07);
+    color: #94a3b8;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.rxpad-btn-ghost:hover {
+    background: rgba(255,255,255,0.12);
+    color: #f1f5f9;
+}
+.rxpad-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+.rxpad-btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+}
+.rxpad-btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+.rxpad-btn-danger {
+    background: rgba(220, 38, 38, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+}
+.rxpad-btn-danger:hover { background: rgba(220, 38, 38, 0.2); }
+
+/* ---- Main layout ---- */
+.rxpad-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ---- Sidebar Toolbar (Desktop / iPad landscape) ---- */
+.rxpad-toolbar {
+    width: 68px;
+    background: rgba(15, 23, 42, 0.98);
+    border-right: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 2px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.rxpad-toolbar::-webkit-scrollbar { display: none; }
+
+.rxpad-toolbar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.rxpad-toolbar-section:last-child { border-bottom: none; }
+
+.rxpad-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #334155;
+    margin-bottom: 4px;
+}
+
+/* Tool buttons */
+.rxpad-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 8px 4px 4px;
+    position: relative;
+}
+.rxpad-tool-btn span {
+    font-size: 9.5px;
+    font-weight: 600;
+    line-height: 1;
+    color: inherit;
+}
+.rxpad-tool-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #cbd5e1;
+}
+.rxpad-tool-btn.active {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.3);
+}
+
+/* Active tool indicator dot */
+.rxpad-tool-btn.active::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: #3b82f6;
+    border-radius: 2px;
+}
+
+/* Color swatches */
+.rxpad-colors {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 0;
+}
+
+.rxpad-color-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.rxpad-color-swatch:hover { transform: scale(1.15); }
+.rxpad-color-swatch.active {
+    border-color: white;
+    transform: scale(1.2);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.2), 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.rxpad-color-picker {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px dashed #475569;
+    cursor: pointer;
+    background: transparent;
+    padding: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    overflow: hidden;
+}
+.rxpad-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+.rxpad-color-picker::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+/* Stroke thickness slider */
+.rxpad-slider-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    width: 100%;
+}
+
+.rxpad-stroke-preview {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.rxpad-stroke-dot {
+    border-radius: 50%;
+    background: currentColor;
+    transition: all 0.15s;
+}
+
+.rxpad-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 4px;
+    height: 80px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+}
+.rxpad-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.5);
+    transition: all 0.15s;
+}
+.rxpad-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* Background toggle */
+.rxpad-bg-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    padding: 0 6px;
+}
+.rxpad-bg-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.rxpad-bg-btn:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+.rxpad-bg-btn.active { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+
+/* ---- Canvas area ---- */
+.rxpad-canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: auto;
+    background: #1e293b;
+    padding: 24px;
+}
+
+.rxpad-canvas-wrapper {
+    position: relative;
+    display: inline-block;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05);
+    border-radius: 4px;
+}
+
+.rxpad-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    max-width: 680px;
+}
+
+.rxpad-text-editor {
+    position: absolute;
+    z-index: 10;
+    min-width: 120px;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.97);
+    border: 2px solid #3b82f6;
+    border-radius: 6px;
+    outline: none;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+/* ============================================================
+   MOBILE — floating bottom toolbar
+   ============================================================ */
+@media (max-width: 768px) {
+    .rxpad-body { flex-direction: column; }
+
+    .rxpad-toolbar {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        border-right: none;
+        border-top: 1px solid rgba(255,255,255,0.07);
+        padding: 10px 12px;
+        gap: 0;
+        overflow-x: auto;
+        order: 2;
+    }
+
+    .rxpad-toolbar-section {
+        flex-direction: row;
+        gap: 4px;
+        padding: 0 10px 0 0;
+        border-bottom: none;
+        border-right: 1px solid rgba(255,255,255,0.06);
+        height: 100%;
+        align-items: center;
+    }
+    .rxpad-toolbar-section:last-child { border-right: none; }
+
+    .rxpad-section-label { display: none; }
+
+    .rxpad-tool-btn {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+    }
+    .rxpad-tool-btn.active::before { display: none; }
+
+    .rxpad-colors { flex-direction: row; }
+
+    .rxpad-slider {
+        writing-mode: horizontal-tb;
+        direction: ltr;
+        width: 70px;
+        height: 4px;
+    }
+
+    .rxpad-slider-wrap { flex-direction: row; padding: 0; }
+
+    .rxpad-bg-btns { flex-direction: row; padding: 0; }
+    .rxpad-bg-btn { width: 44px; height: 36px; font-size: 9px; }
+
+    .rxpad-canvas-area {
+        flex: 1;
+        order: 1;
+        padding: 12px;
+    }
+}
+
+/* iPad portrait */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .rxpad-toolbar { width: 62px; }
+    .rxpad-tool-btn { width: 48px; height: 48px; }
+}
