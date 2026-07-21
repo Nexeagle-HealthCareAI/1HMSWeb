@@ -642,9 +642,9 @@ export const ChargeMaster = () => {
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : payerRates.length === 0 ? (
-                                <div className="flex items-center justify-center gap-2 py-4.5 text-slate-400 dark:text-zinc-550 border border-dashed border-slate-200/60 dark:border-zinc-800/80 rounded-xl bg-slate-50/20 dark:bg-zinc-950/5">
+                                <div className="flex items-center justify-center gap-1.5 py-3 text-slate-400 dark:text-zinc-550">
                                     <Database className="h-4 w-4" />
-                                    <span className="text-[11px] font-bold tracking-tight">No payer overrides — defaulting to standard rates</span>
+                                    <span className="text-[11px] font-bold">No payer overrides — defaulting to standard rates</span>
                                 </div>
                             ) : payerRates.map(r => (
                                 <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
@@ -673,9 +673,9 @@ export const ChargeMaster = () => {
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : roomMultipliers.length === 0 ? (
-                                <div className="flex items-center justify-center gap-2 py-4.5 text-slate-400 dark:text-zinc-550 border border-dashed border-slate-200/60 dark:border-zinc-800/80 rounded-xl bg-slate-50/20 dark:bg-zinc-950/5">
+                                <div className="flex items-center justify-center gap-1.5 py-3 text-slate-400 dark:text-zinc-550">
                                     <Activity className="h-4 w-4" />
-                                    <span className="text-[11px] font-bold tracking-tight">No room multipliers — standard rates active</span>
+                                    <span className="text-[11px] font-bold">No room multipliers — standard rates active</span>
                                 </div>
                             ) : roomMultipliers.map(r => (
                                 <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
@@ -688,19 +688,20 @@ export const ChargeMaster = () => {
                 </div>
 
                 {/* Floating Action Button (FAB) for Mobile ( sitting above bottom navigation bar ) */}
-                <div className="fixed bottom-24 right-5 z-40 sm:hidden">
+                <div className="fixed bottom-24 right-4 z-40 sm:hidden">
                     <motion.button
                         type="button"
                         whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.9 }}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                        whileTap={{ scale: 0.95 }}
+                        initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
                         onClick={() => handleOpenDrawer(null)}
-                        className="relative w-14 h-14 bg-gradient-to-tr from-brand-600 via-indigo-650 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(79,70,229,0.35)] border border-white/20 overflow-hidden active:scale-90 transition-transform duration-100"
+                        className="relative h-12 px-5 bg-gradient-to-r from-brand-600 via-indigo-600 to-indigo-650 text-white rounded-full flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(79,70,229,0.35)] border border-white/20 active:scale-95 transition-all"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
-                        <Plus className="h-6.5 w-6.5 relative z-10" strokeWidth={3} />
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                        <Plus className="h-5 w-5 relative z-10" strokeWidth={3} />
+                        <span className="text-[11.5px] font-black tracking-tight relative z-10 whitespace-nowrap">Add Charge Master</span>
                         {/* Glow halo behind button */}
                         <div className="absolute inset-0 -z-10 bg-indigo-500/10 blur-md rounded-full" />
                     </motion.button>
