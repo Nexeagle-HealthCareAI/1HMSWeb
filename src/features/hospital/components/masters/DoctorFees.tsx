@@ -234,7 +234,7 @@ export const DoctorFees: React.FC = () => {
                 <div className="lg:hidden flex flex-col gap-3.5 pb-24">
                     {filtered.map(r => (
                         <Card key={r.doctorId} className={cn(
-                            "border border-slate-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4.5 flex flex-col gap-3 shadow-sm",
+                            "border border-slate-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 flex flex-col gap-3.5 shadow-sm",
                             r.dirty && "ring-1 ring-amber-500/20 bg-amber-50/[0.02]"
                         )}>
                             <div className="flex items-center justify-between">
