@@ -383,7 +383,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 </button>
 
                 <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                    <SheetContent side="bottom" className="lg:hidden max-h-[80vh] overflow-y-auto p-0 rounded-t-[2rem] border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                    <SheetContent side="bottom" className="lg:hidden max-h-[80vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0 rounded-t-[2rem] border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950">
                         <SheetHeader className="px-5 pt-5 pb-3 border-b border-slate-100 dark:border-zinc-800/80 sticky top-0 bg-white dark:bg-zinc-950 z-10">
                             <SheetTitle className="text-base font-bold text-slate-900 dark:text-zinc-100">Jump to section</SheetTitle>
                         </SheetHeader>
@@ -567,7 +567,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         </div>
                     )}
                     {activeSection === 'overview' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto lg:max-w-none lg:mx-0 w-full">
                             <div className="lg:col-span-2">
                                 <DeteriorationAlertBanner admissionId={current.admissionId} />
                             </div>
@@ -602,12 +602,18 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-2 sm:flex-wrap">
                                         <div className="min-w-0 sm:flex-1 sm:min-w-[220px]">
                                             <Label className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">{bedActionMode === 'assign' ? 'Bed to assign' : 'New bed'}</Label>
-                                            <select value={pickedBedId} onChange={e => setPickedBedId(e.target.value)} className="h-11 sm:h-9 mt-1 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-2.5 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700">
-                                                <option value="">Select a bed…</option>
-                                                {freeBeds.map(b => (
-                                                    <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
-                                                ))}
-                                            </select>
+                                            <Select value={pickedBedId} onValueChange={setPickedBedId}>
+                                                <SelectTrigger className="h-11 sm:h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                                    <SelectValue placeholder="Select a bed…" />
+                                                </SelectTrigger>
+                                                <SelectContent className="max-h-[250px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                    {freeBeds.map(b => (
+                                                        <SelectItem key={b.bedId} value={b.bedId} className="rounded-xl focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
+                                                            {(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none" onClick={() => setBedActionMode(null)}>Cancel</Button>
@@ -670,14 +676,18 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-2 sm:flex-wrap">
                                         <div className="min-w-0 sm:flex-1 sm:min-w-[220px]">
                                             <Label className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">Admitting doctor</Label>
-                                            <select value={pickedDoctorId} onChange={e => setPickedDoctorId(e.target.value)} className="h-11 sm:h-9 mt-1 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-2.5 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700">
-                                                <option value="">Select a doctor…</option>
-                                                {doctors.map(d => (
-                                                    <option key={d.doctorId} value={d.doctorId}>
-                                                        {d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <Select value={pickedDoctorId} onValueChange={setPickedDoctorId}>
+                                                <SelectTrigger className="h-11 sm:h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                                    <SelectValue placeholder="Select a doctor…" />
+                                                </SelectTrigger>
+                                                <SelectContent className="max-h-[250px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                    {doctors.map(d => (
+                                                        <SelectItem key={d.doctorId} value={d.doctorId} className="rounded-xl focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
+                                                            {d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none" onClick={() => setDoctorActionMode(null)}>Cancel</Button>
