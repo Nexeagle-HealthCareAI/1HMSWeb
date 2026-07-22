@@ -93,6 +93,16 @@ export const BillingPolicyConfig = () => {
         setConfig(prev => ({ ...prev, [key]: value }));
     };
 
+    const isGlobalAutoActive = config.opdConsultTrigger !== 'OFF' || config.ipdBedChargeMode !== 'OFF';
+
+    const handleGlobalToggle = (checked: boolean) => {
+        setConfig(prev => ({
+            ...prev,
+            opdConsultTrigger: checked ? 'AUTO' : 'OFF',
+            ipdBedChargeMode: checked ? 'DAILY_AUTO' : 'OFF'
+        }));
+    };
+
     const handleSequenceChange = (key: keyof typeof sequenceConfigs['INV'], value: string) => {
         setSequenceConfigs(prev => ({
             ...prev,
@@ -303,6 +313,31 @@ export const BillingPolicyConfig = () => {
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400">
                         Auto-Billing Rules
                     </span>
+                </div>
+
+                {/* Master Global Toggle Card */}
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-brand-500/10 via-brand-500/5 to-transparent dark:from-brand-950/20 dark:to-transparent border border-brand-200/50 dark:border-brand-900/40 rounded-2xl shadow-sm transition-all duration-300">
+                    <div className="flex-1 pr-5">
+                        <h4 className="font-extrabold text-sm text-slate-850 dark:text-zinc-150 flex items-center gap-2">
+                            Global Auto-Billing
+                            {isGlobalAutoActive ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/30">
+                                    Enabled
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-350 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700">
+                                    Disabled
+                                </span>
+                            )}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                            Turn auto-billing on or off globally for all modules.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={isGlobalAutoActive}
+                        onCheckedChange={handleGlobalToggle}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3.5">
