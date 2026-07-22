@@ -3,6 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, Table2, LineChart as LineChartIcon } from 'lucide-react';
@@ -135,77 +142,81 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             )}
 
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     <DialogHeader>
-                        <DialogTitle>Record vital reading</DialogTitle>
-                        <DialogDescription>Fill in whichever values were taken — at least one is required.</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Record vital reading</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Fill in whichever values were taken — at least one is required.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Temperature</Label>
-                            <Input type="number" step="0.1" value={form.temperature ?? ''} onChange={e => setField({ temperature: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Temperature</Label>
+                            <Input type="number" step="0.1" value={form.temperature ?? ''} onChange={e => setField({ temperature: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Unit</Label>
-                            <select value={form.temperatureUnit ?? 'F'} onChange={e => setField({ temperatureUnit: e.target.value })}
-                                className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                <option value="F">°F</option>
-                                <option value="C">°C</option>
-                            </select>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Unit</Label>
+                            <Select value={form.temperatureUnit ?? 'F'} onValueChange={v => setField({ temperatureUnit: v })}>
+                                <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                    <SelectItem value="F" className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">°F</SelectItem>
+                                    <SelectItem value="C" className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">°C</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Pulse</Label>
-                            <Input type="number" value={form.pulse ?? ''} onChange={e => setField({ pulse: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Pulse</Label>
+                            <Input type="number" value={form.pulse ?? ''} onChange={e => setField({ pulse: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Systolic BP</Label>
-                            <Input type="number" value={form.systolicBP ?? ''} onChange={e => setField({ systolicBP: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Systolic BP</Label>
+                            <Input type="number" value={form.systolicBP ?? ''} onChange={e => setField({ systolicBP: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Diastolic BP</Label>
-                            <Input type="number" value={form.diastolicBP ?? ''} onChange={e => setField({ diastolicBP: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Diastolic BP</Label>
+                            <Input type="number" value={form.diastolicBP ?? ''} onChange={e => setField({ diastolicBP: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Resp. rate</Label>
-                            <Input type="number" value={form.respiratoryRate ?? ''} onChange={e => setField({ respiratoryRate: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Resp. rate</Label>
+                            <Input type="number" value={form.respiratoryRate ?? ''} onChange={e => setField({ respiratoryRate: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">SpO2 %</Label>
-                            <Input type="number" step="0.1" value={form.spO2 ?? ''} onChange={e => setField({ spO2: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">SpO2 %</Label>
+                            <Input type="number" step="0.1" value={form.spO2 ?? ''} onChange={e => setField({ spO2: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Pain (0-10)</Label>
-                            <Input type="number" min={0} max={10} value={form.painScore ?? ''} onChange={e => setField({ painScore: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Pain (0-10)</Label>
+                            <Input type="number" min={0} max={10} value={form.painScore ?? ''} onChange={e => setField({ painScore: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Weight (kg)</Label>
-                            <Input type="number" step="0.1" value={form.weightKg ?? ''} onChange={e => setField({ weightKg: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Weight (kg)</Label>
+                            <Input type="number" step="0.1" value={form.weightKg ?? ''} onChange={e => setField({ weightKg: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Height (cm)</Label>
-                            <Input type="number" step="0.1" value={form.heightCm ?? ''} onChange={e => setField({ heightCm: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Height (cm)</Label>
+                            <Input type="number" step="0.1" value={form.heightCm ?? ''} onChange={e => setField({ heightCm: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">GCS Eye (1-4)</Label>
-                            <Input type="number" min={1} max={4} value={form.gcsEye ?? ''} onChange={e => setField({ gcsEye: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Eye (1-4)</Label>
+                            <Input type="number" min={1} max={4} value={form.gcsEye ?? ''} onChange={e => setField({ gcsEye: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">GCS Verbal (1-5)</Label>
-                            <Input type="number" min={1} max={5} value={form.gcsVerbal ?? ''} onChange={e => setField({ gcsVerbal: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Verbal (1-5)</Label>
+                            <Input type="number" min={1} max={5} value={form.gcsVerbal ?? ''} onChange={e => setField({ gcsVerbal: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">GCS Motor (1-6)</Label>
-                            <Input type="number" min={1} max={6} value={form.gcsMotor ?? ''} onChange={e => setField({ gcsMotor: num(e.target.value) })} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Motor (1-6)</Label>
+                            <Input type="number" min={1} max={6} value={form.gcsMotor ?? ''} onChange={e => setField({ gcsMotor: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                     </div>
-                    <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Notes</Label>
-                        <Input value={form.notes ?? ''} onChange={e => setField({ notes: e.target.value || undefined })} className="h-9 mt-1" placeholder="Optional" />
+                    <div className="mt-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Notes</Label>
+                        <Input value={form.notes ?? ''} onChange={e => setField({ notes: e.target.value || undefined })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Optional notes..." />
                     </div>
-                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!hasAnyValue || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
-                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setNewOpen(false)}>Cancel</Button>
+                        <Button disabled={!hasAnyValue || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white">
+                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save Reading
                         </Button>
                     </div>
                 </DialogContent>
