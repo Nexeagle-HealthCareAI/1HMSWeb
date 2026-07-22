@@ -1057,10 +1057,11 @@ export const ClinicalDashboard: React.FC = () => {
                       tabIndex={locked ? -1 : 0}
                       title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
                       className={cn(
-                        "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white",
-                        isActive && "bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm hover:bg-white",
-                        locked && "opacity-40 cursor-not-allowed",
-                        "px-1 select-none whitespace-normal flex-1"
+                        "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 px-1 select-none whitespace-normal flex-1",
+                        isActive
+                          ? "bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm"
+                          : "text-brand-100 hover:bg-white/10 hover:text-white",
+                        locked && "opacity-40 cursor-not-allowed"
                       )}
                     >
                       <Icon className="h-5 w-5 mb-1 shrink-0" />
