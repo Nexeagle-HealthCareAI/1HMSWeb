@@ -787,11 +787,11 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                             />
                                         )}
 
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-11 sm:h-9 flex-1 sm:flex-none" onClick={() => setReferrerActionMode(null)}>Cancel</Button>
+                                        <div className="flex items-center justify-end gap-2 mt-2">
+                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none" onClick={() => setReferrerActionMode(null)}>Cancel</Button>
                                             <Button size="sm"
                                                 disabled={(pickedReferralSource !== 'SELF' && !pickedReferrerId) || referrerBusy}
-                                                className="h-11 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700"
+                                                className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none"
                                                 onClick={() => runReferrerAction(() => admissionApi.changeReferrer(current.admissionId, {
                                                     referralSource: pickedReferralSource,
                                                     referrerId: pickedReferralSource === 'SELF' ? null : pickedReferrerId,
