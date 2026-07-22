@@ -505,7 +505,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Page Content */}
         <main className={cn(
           "flex-1 relative overflow-x-hidden overflow-y-auto hide-scrollbar transition-all duration-300 bg-gray-50 dark:bg-gray-950",
-          location.pathname.startsWith('/dashboard') ? "p-0" : "p-6"
+          "p-6"
         )}>
           {children}
           
