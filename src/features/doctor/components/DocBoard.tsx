@@ -1836,25 +1836,55 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
                     </div>
                     {totalPages > 1 && (
-                      <div className="flex justify-center mt-4 pb-2">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                            {renderPaginationItems()}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
+                      <>
+                        {/* Desktop Pagination */}
+                        <div className="hidden sm:flex justify-center mt-4 pb-2">
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                              {renderPaginationItems()}
+                              <PaginationItem>
+                                <PaginationNext
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </div>
+
+                        {/* Mobile Pagination */}
+                        <div className="flex sm:hidden items-center justify-between w-full gap-2 mt-4 pb-2 px-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="flex-1 h-9 gap-1 text-xs"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            {t('common.previous', 'Previous')}
+                          </Button>
+                          <div className="flex-none px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-700 dark:text-zinc-200">
+                            {currentPage} / {totalPages}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            className="flex-1 h-9 gap-1 text-xs"
+                          >
+                            {t('common.next', 'Next')}
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
                     )}
 
                     {/* Past - Mobile Responsive */}
@@ -2119,25 +2149,55 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
 
                       {totalPages > 1 && (
-                        <div className="flex justify-center mt-4">
-                          <Pagination>
-                            <PaginationContent>
-                              <PaginationItem>
-                                <PaginationPrevious
-                                  onClick={() => handlePageChange(currentPage - 1)}
-                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                                />
-                              </PaginationItem>
-                              {renderPaginationItems()}
-                              <PaginationItem>
-                                <PaginationNext
-                                  onClick={() => handlePageChange(currentPage + 1)}
-                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                                />
-                              </PaginationItem>
-                            </PaginationContent>
-                          </Pagination>
-                        </div>
+                        <>
+                          {/* Desktop Pagination */}
+                          <div className="hidden sm:flex justify-center mt-4">
+                            <Pagination>
+                              <PaginationContent>
+                                <PaginationItem>
+                                  <PaginationPrevious
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                                {renderPaginationItems()}
+                                <PaginationItem>
+                                  <PaginationNext
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                              </PaginationContent>
+                            </Pagination>
+                          </div>
+
+                          {/* Mobile Pagination */}
+                          <div className="flex sm:hidden items-center justify-between w-full gap-2 mt-4 px-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                              disabled={currentPage === 1}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              {t('common.previous', 'Previous')}
+                            </Button>
+                            <div className="flex-none px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-700 dark:text-zinc-200">
+                              {currentPage} / {totalPages}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                              disabled={currentPage === totalPages}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              {t('common.next', 'Next')}
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
                       )}
                     </div>
                   </TabsContent>
@@ -2398,26 +2458,56 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
 
                       {totalPages > 1 && (
-                        <div className="flex justify-center mt-4">
-                          {/* Use same Pagination as above */}
-                          <Pagination>
-                            <PaginationContent>
-                              <PaginationItem>
-                                <PaginationPrevious
-                                  onClick={() => handlePageChange(currentPage - 1)}
-                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                                />
-                              </PaginationItem>
-                              {renderPaginationItems()}
-                              <PaginationItem>
-                                <PaginationNext
-                                  onClick={() => handlePageChange(currentPage + 1)}
-                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                                />
-                              </PaginationItem>
-                            </PaginationContent>
-                          </Pagination>
-                        </div>
+                        <>
+                          {/* Desktop Pagination */}
+                          <div className="hidden sm:flex justify-center mt-4">
+                            {/* Use same Pagination as above */}
+                            <Pagination>
+                              <PaginationContent>
+                                <PaginationItem>
+                                  <PaginationPrevious
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                                {renderPaginationItems()}
+                                <PaginationItem>
+                                  <PaginationNext
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                              </PaginationContent>
+                            </Pagination>
+                          </div>
+
+                          {/* Mobile Pagination */}
+                          <div className="flex sm:hidden items-center justify-between w-full gap-2 mt-4 px-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                              disabled={currentPage === 1}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              {t('common.previous', 'Previous')}
+                            </Button>
+                            <div className="flex-none px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-700 dark:text-zinc-200">
+                              {currentPage} / {totalPages}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                              disabled={currentPage === totalPages}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              {t('common.next', 'Next')}
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
                       )}
                     </div>
                   </TabsContent>
