@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
     AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, Check, Pencil,
+    User, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -657,9 +658,14 @@ export const BillingPage: React.FC = () => {
             <div className="grid grid-cols-12 lg:grid-cols-[repeat(24,minmax(0,1fr))] gap-4 flex-1 overflow-hidden">
 
                 {/* Left: patient search + visits */}
-                <Card className="col-span-12 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
-                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
-                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient &amp; Visits</CardTitle>
+                <Card className="col-span-12 lg:col-span-3 hover:shadow-md transition-all duration-300 border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+                    <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-md bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center text-brand-600 dark:text-brand-400">
+                                <User className="h-3 w-3" />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">Patient &amp; Visits</span>
+                        </div>
                     </CardHeader>
                     <CardContent className="p-3 flex-1 flex flex-col min-h-0 gap-3">
                         <div className="relative">
@@ -722,7 +728,7 @@ export const BillingPage: React.FC = () => {
                                                     onClick={() => setSelectedEncounterId(enc.encounterId)}
                                                     className={cn(
                                                         'w-full px-3 py-2 rounded-xl border text-xs text-left transition-all',
-                                                        active ? 'border-transparent bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-md shadow-brand-500/30' : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-sm',
+                                                        active ? 'border-transparent bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 dark:bg-zinc-800 dark:border-zinc-700' : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-sm dark:bg-zinc-800 dark:border-zinc-700',
                                                         enc.isCancelled && 'opacity-60'
                                                     )}
                                                 >
@@ -756,10 +762,15 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Middle: ledger */}
-                <Card className="col-span-12 lg:col-[span_16/span_16] border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
-                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <Card className="col-span-12 lg:col-[span_16/span_16] hover:shadow-md transition-all duration-300 border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+                    <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center justify-between sm:justify-start gap-2">
-                            <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider shrink-0">Ledger</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-md bg-cyan-500/10 dark:bg-cyan-500/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+                                    <FileText className="h-3 w-3" />
+                                </div>
+                                <span className="text-xs font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">Billing Ledger</span>
+                            </div>
                             {eventsData?.currentInvoice ? (
                                 <div className="flex items-center gap-2 min-w-0 sm:hidden">
                                     <span className="text-sm font-bold text-slate-700 tabular-nums whitespace-nowrap shrink-0" title={eventsData.currentInvoice.invoiceNo ?? undefined}>{eventsData.currentInvoice.invoiceNo ?? '—'}</span>
@@ -1038,12 +1049,14 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Right: actions */}
-                <Card className="col-span-12 lg:col-span-5 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
-                    <CardHeader className="pb-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-brand-50/50">
-                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                            <span className="h-6 w-6 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center shadow-sm shadow-brand-500/30"><IndianRupee className="h-3.5 w-3.5" /></span>
-                            Actions
-                        </CardTitle>
+                <Card className="col-span-12 lg:col-span-5 hover:shadow-md transition-all duration-300 border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+                    <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-md bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                <IndianRupee className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Invoice Actions</span>
+                        </div>
                     </CardHeader>
                     <CardContent className="p-4 flex-1 overflow-auto space-y-3">
                         {/* Totals summary */}
