@@ -290,54 +290,54 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     );
 
     return (
-        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
-            {/* Premium Header Card */}
-            <div className="relative rounded-[1.75rem] bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/80 shadow-sm p-4 sm:p-5 overflow-hidden">
+        <div className="space-y-4 sm:space-y-5">
+            {/* Premium Header Card (Indigo/Purple Solid Gradient Theme matching Platform Dashboards) */}
+            <div className="relative rounded-[2rem] bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 overflow-hidden text-white shadow-lg border-0">
                 {/* Subtle top-right decorative gradient (optional touch of premium) */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-400/5 dark:bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative">
-                    <Button variant="outline" size="sm" className="h-9 px-4 rounded-full border-zinc-200 dark:border-zinc-800 text-zinc-750 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 mb-3.5" onClick={onBack}>
+                    <Button variant="outline" size="sm" className="h-9 px-4 rounded-full border-white/20 bg-white/10 hover:bg-white/20 text-white font-semibold mb-3.5 shadow-sm transition-all duration-300 hover:scale-105" onClick={onBack}>
                         <ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard
                     </Button>
 
                     <div className="flex items-start gap-3 sm:gap-4">
                         {/* Avatar */}
-                        <div className="h-11 w-11 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-sm font-black shrink-0 shadow-md shadow-brand-500/10 border border-brand-400/20">
+                        <div className="h-11 w-11 rounded-full bg-white/15 text-white flex items-center justify-center text-sm font-black shrink-0 shadow-md border border-white/20">
                             {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                         </div>
 
                         <div className="flex-1 min-w-0">
                             {/* Name & Badges */}
                             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-                                <h1 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-zinc-50 capitalize tracking-tight truncate max-w-[60vw] sm:max-w-md mr-1">
+                                <h1 className="text-base sm:text-xl font-extrabold text-white capitalize tracking-tight truncate max-w-[60vw] sm:max-w-md mr-1">
                                     {current.patientName || current.patientId}
                                 </h1>
                                 {current.patientAge != null && (
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-300 px-2 py-0 rounded-full border-slate-200 dark:border-zinc-800">
+                                    <Badge variant="outline" className="text-[10px] font-bold bg-white/10 text-white px-2 py-0.5 rounded-full border-0 hover:bg-white/20">
                                         Age: {current.patientAge} {current.patientAge === 1 ? 'year' : 'years'}
                                     </Badge>
                                 )}
                                 {current.patientSex && (
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-300 px-2 py-0 rounded-full border-slate-200 dark:border-zinc-800">
+                                    <Badge variant="outline" className="text-[10px] font-bold bg-white/10 text-white px-2 py-0.5 rounded-full border-0 hover:bg-white/20">
                                         Sex: {SEX_LABEL[current.patientSex] ?? current.patientSex}
                                     </Badge>
                                 )}
-                                <Badge variant="outline" className={cn('text-[10px] font-bold px-2.5 py-0 rounded-full shadow-sm', isActive ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-455 border-emerald-250 dark:border-emerald-900/30 shadow-emerald-500/5' : 'bg-slate-50 dark:bg-zinc-950 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-800')}>
+                                <Badge variant="outline" className={cn('text-[10px] font-bold px-2.5 py-0.5 rounded-full border-0 shadow-sm', isActive ? 'bg-emerald-500/25 text-emerald-100' : 'bg-white/10 text-white')}>
                                     Status: {current.statusCode.replace(/_/g, ' ')}
                                 </Badge>
                                 {(current.otPlanProcedureNameSnapshot || current.packageCode) && (
-                                    <Badge variant="outline" className="text-[10px] font-bold px-2.5 py-0 rounded-full shadow-sm bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-900/30">
+                                    <Badge variant="outline" className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border-0 shadow-sm bg-violet-500/25 text-violet-100">
                                         Plan: {current.otPlanProcedureNameSnapshot || current.packageCode}
                                     </Badge>
                                 )}
                                 {current.packageTypeNameSnapshot && (
-                                    <Badge variant="outline" className="text-[10px] font-bold px-2.5 py-0 rounded-full shadow-sm bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/30">
+                                    <Badge variant="outline" className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border-0 shadow-sm bg-amber-500/25 text-amber-100">
                                         Package Type: {current.packageTypeNameSnapshot}
                                     </Badge>
                                 )}
                                 {current.referralName && (
-                                    <Badge variant="outline" className="text-[10px] font-bold px-2.5 py-0 rounded-full shadow-sm bg-sky-50 dark:bg-sky-950/20 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-900/30">
+                                    <Badge variant="outline" className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border-0 shadow-sm bg-sky-500/25 text-sky-100">
                                         Referred by: {current.referralName}
                                     </Badge>
                                 )}
@@ -347,13 +347,13 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 (DetailRow), wrapped in a responsive grid so it never needs a
                                 separate mobile/desktop layout. Far shorter than the old stacked
                                 label-above-value blocks this replaced. */}
-                            <div className="mt-3.5 pt-3.5 border-t border-slate-100 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-y-3.5 gap-x-5">
-                                <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong />
-                                <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong />
-                                <DetailRow icon={Stethoscope} label="Doctor" value={current.primaryDoctorName ?? '—'} />
-                                <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} />
-                                {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} />}
-                                {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} />}
+                            <div className="mt-3.5 pt-3.5 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-y-3.5 gap-x-5">
+                                <DetailRow icon={Fingerprint} label="Patient ID" value={current.patientId} strong variant="white" />
+                                <DetailRow icon={Hash} label="Admission No" value={current.admissionNo} strong variant="white" />
+                                <DetailRow icon={Stethoscope} label="Doctor" value={current.primaryDoctorName ?? '—'} variant="white" />
+                                <DetailRow icon={Wallet} label="Payer" value={`${current.payerType}${current.payerName ? ` (${current.payerName})` : ''}`} variant="white" />
+                                {current.admittedAt && <DetailRow icon={Clock3} label="Admitted" value={formatIstDateTime(current.admittedAt)} variant="white" />}
+                                {(current as any).dischargedAt && <DetailRow icon={LogOut} label="Discharged" value={formatIstDateTime((current as any).dischargedAt)} variant="white" />}
                             </div>
                         </div>
                     </div>
@@ -369,7 +369,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 <button
                     type="button"
                     onClick={() => setMobileNavOpen(true)}
-                    className="lg:hidden w-full flex items-center justify-between gap-3 h-14 px-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/80 shadow-sm sticky top-0 z-10"
+                    className="lg:hidden w-full flex items-center justify-between gap-3 h-12 px-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 shadow-sm sticky top-0 z-10 active:scale-[0.98] transition-all"
                 >
                     <span className="flex items-center gap-2.5 min-w-0">
                         <currentSectionMeta.icon className="h-4 w-4 text-slate-900 dark:text-zinc-300 shrink-0" />
@@ -378,12 +378,12 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         </span>
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 dark:text-zinc-500 shrink-0">
-                        Sections <ChevronsUpDown className="h-3.5 w-3.5" />
+                        Sections <ChevronsUpDown className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
                     </span>
                 </button>
 
                 <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                    <SheetContent side="bottom" className="lg:hidden max-h-[80vh] overflow-y-auto p-0 rounded-t-[2rem] border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                    <SheetContent side="bottom" className="lg:hidden max-h-[80vh] overflow-y-auto p-0 rounded-t-[2rem] border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950">
                         <SheetHeader className="px-5 pt-5 pb-3 border-b border-slate-100 dark:border-zinc-800/80 sticky top-0 bg-white dark:bg-zinc-950 z-10">
                             <SheetTitle className="text-base font-bold text-slate-900 dark:text-zinc-100">Jump to section</SheetTitle>
                         </SheetHeader>
@@ -444,7 +444,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     </SheetContent>
                 </Sheet>
 
-                <aside className="hidden lg:flex lg:w-60 shrink-0 lg:rounded-2xl bg-white dark:bg-zinc-900 lg:border border-zinc-200/60 dark:border-zinc-800/80 shadow-sm p-2.5 flex-col sticky top-6 z-10 space-y-0.5">
+                <aside className="hidden lg:flex lg:w-60 shrink-0 lg:rounded-3xl bg-white dark:bg-zinc-900 lg:border border-zinc-200/60 dark:border-zinc-800/80 shadow-sm p-3 flex-col sticky top-6 z-10 space-y-0.5">
                     <button type="button" onClick={() => setActiveSection('overview')} className={navItemClass(activeSection === 'overview')}>
                         <BedDouble className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 shrink-0" /> <span className="whitespace-nowrap">Overview</span>
                     </button>
@@ -519,6 +519,53 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                 </aside>
 
                 <SubscriptionReadOnlyOverlay featureLabel="Managing this patient" className="flex-1 min-w-0 space-y-5">
+                    {activeSection === 'cpoe' && (
+                        <div className="lg:hidden flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 dark:bg-zinc-900/80 border border-slate-200/40 dark:border-zinc-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full mb-3">
+                            {CPOE_TABS.map(({ key, label, icon: Icon }) => {
+                                const isCurrent = activeCpoeTab === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setActiveCpoeTab(key)}
+                                        className={cn(
+                                            'h-9 px-4 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-2 shrink-0 outline-none',
+                                            isCurrent
+                                                ? 'bg-white dark:bg-zinc-800 text-brand-600 dark:text-brand-400 shadow-sm'
+                                                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30'
+                                        )}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                                        <span>{label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {activeSection === 'nursing' && (
+                        <div className="lg:hidden flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 dark:bg-zinc-900/80 border border-slate-200/40 dark:border-zinc-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full mb-3">
+                            {NURSING_TABS.map(({ key, label, icon: Icon }) => {
+                                const isCurrent = activeNursingTab === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setActiveNursingTab(key)}
+                                        className={cn(
+                                            'h-9 px-4 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-2 shrink-0 outline-none',
+                                            isCurrent
+                                                ? 'bg-white dark:bg-zinc-800 text-brand-600 dark:text-brand-400 shadow-sm'
+                                                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30'
+                                        )}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                                        <span>{label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                     {activeSection === 'overview' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div className="lg:col-span-2">
@@ -586,8 +633,8 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
                             </div>
 
-                            <div className="rounded-[1.5rem] border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
-                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-555 dark:text-zinc-400 mb-2">Admission details</h2>
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-shadow">
+                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">Admission details</h2>
                                 <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                                     <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Admitted</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{formatIstDateTime(current.admittedAt)}</dd></div>
                                     <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Type</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{current.admissionType ?? '—'}</dd></div>
@@ -598,9 +645,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
                             </div>
 
-                            <div className="rounded-[1.5rem] border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-shadow">
                                 <div className="flex items-center justify-between gap-2 mb-2">
-                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-555 dark:text-zinc-400">Doctor</h2>
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">Doctor</h2>
                                     <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] shrink-0 font-bold" onClick={toggleDoctorHistory}>
                                         {doctorHistoryOpen ? 'Hide history' : 'History'}
                                     </Button>
@@ -669,9 +716,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
                             </div>
 
-                            <div className="rounded-[1.5rem] border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-shadow">
                                 <div className="flex items-center justify-between gap-2 mb-2">
-                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-555 dark:text-zinc-400">Referrer</h2>
+                                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">Referrer</h2>
                                     <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] shrink-0 font-bold" onClick={toggleReferrerHistory}>
                                         {referrerHistoryOpen ? 'Hide history' : 'History'}
                                     </Button>
@@ -937,11 +984,16 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
 // Mobile-only compact metadata row (see "Details" above) — icon + label on the left, value
 // right-aligned and truncating, one line per field instead of the label-above-value blocks the
 // desktop layout uses (which take roughly 2x the vertical space per field).
-const DetailRow: React.FC<{ icon: React.ElementType; label: string; value: string; strong?: boolean }> = ({ icon: Icon, label, value, strong }) => (
+const DetailRow: React.FC<{ icon: React.ElementType; label: string; value: string; strong?: boolean; variant?: 'default' | 'white' }> = ({ icon: Icon, label, value, strong, variant = 'default' }) => (
     <div className="flex items-center gap-2 py-1.5 text-xs sm:text-sm min-w-0">
-        <Icon className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-        <span className="text-slate-400 shrink-0">{label}</span>
-        <span className={cn('flex-1 min-w-0 text-left truncate', strong ? 'font-bold text-slate-800' : 'font-semibold text-slate-700')} title={value}>
+        <Icon className={cn('h-3.5 w-3.5 shrink-0', variant === 'white' ? 'text-brand-200' : 'text-slate-400')} />
+        <span className={cn('shrink-0', variant === 'white' ? 'text-brand-100/90' : 'text-slate-400')}>{label}</span>
+        <span className={cn('flex-1 min-w-0 text-left truncate', 
+            strong ? 'font-bold' : 'font-semibold',
+            variant === 'white' 
+              ? 'text-white font-bold' 
+              : strong ? 'text-slate-800 dark:text-zinc-150' : 'text-slate-700 dark:text-zinc-300'
+        )} title={value}>
             {value}
         </span>
     </div>
