@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Save, Receipt, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash, Loader2, AlertCircle, RefreshCw, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { cn } from '@/lib/utils';
 
@@ -330,21 +331,10 @@ export const BillingPolicyConfig = () => {
                                         {rule.desc}
                                     </p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleChange(rule.key, isAuto ? 'OFF' : rule.onValue)}
-                                    className={cn(
-                                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-brand-500/10",
-                                        isAuto ? "bg-gradient-to-r from-brand-600 to-indigo-600 shadow-md shadow-brand-500/20" : "bg-slate-200 dark:bg-zinc-800"
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out",
-                                            isAuto ? "translate-x-5" : "translate-x-0"
-                                        )}
-                                    />
-                                </button>
+                                <Switch
+                                    checked={isAuto}
+                                    onCheckedChange={(checked) => handleChange(rule.key, checked ? rule.onValue : 'OFF')}
+                                />
                             </div>
                         );
                     })}
