@@ -1835,25 +1835,27 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-center mt-4 pb-2">
-                      <Pagination>
-                        <PaginationContent>
-                          <PaginationItem>
-                            <PaginationPrevious
-                              onClick={() => handlePageChange(currentPage - 1)}
-                              className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                            />
-                          </PaginationItem>
-                          {renderPaginationItems()}
-                          <PaginationItem>
-                            <PaginationNext
-                              onClick={() => handlePageChange(currentPage + 1)}
-                              className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                            />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex justify-center mt-4 pb-2">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                            {renderPaginationItems()}
+                            <PaginationItem>
+                              <PaginationNext
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
+                    )}
 
                     {/* Past - Mobile Responsive */}
                   </TabsContent>
@@ -2116,25 +2118,27 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex justify-center mt-4">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                            {renderPaginationItems()}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
+                      {totalPages > 1 && (
+                        <div className="flex justify-center mt-4">
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                              {renderPaginationItems()}
+                              <PaginationItem>
+                                <PaginationNext
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
 
@@ -2393,26 +2397,28 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex justify-center mt-4">
-                        {/* Use same Pagination as above */}
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                            {renderPaginationItems()}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
+                      {totalPages > 1 && (
+                        <div className="flex justify-center mt-4">
+                          {/* Use same Pagination as above */}
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                              {renderPaginationItems()}
+                              <PaginationItem>
+                                <PaginationNext
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
                 </div>
