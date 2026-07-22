@@ -76,6 +76,7 @@ import {
   Settings,
   ShieldCheck,
   Signal,
+  Stethoscope,
   Sparkles,
   Star,
   SunMedium,
@@ -998,81 +999,77 @@ export const ClinicalDashboard: React.FC = () => {
         className="flex flex-col flex-1 w-full"
         style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1 }}
       >
-        {/* Header - Matches AdminDashboard */}
-        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-brand-50/60 to-brand-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-brand-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+        {/* Header Card (Unified Theme & Layout matching IPD, Appointment, and Billing Dashboards) */}
+        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 py-4 shrink-0">
+          <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
+            {/* Decorative flare */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-            {/* Left: Title and Profile Stats */}
-            <div className="flex flex-col gap-1 min-w-0">
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                  {t('docBoard.header.title')}
-                </h1>
-
-                {clampedProfileCompletion < 100 && (
-                  <div className="flex items-center gap-2 text-[11px] sm:text-xs">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/profile?tab=professional')}
-                      className="flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-white/50 dark:bg-slate-800/50 border border-brand-100 dark:border-slate-700 hover:bg-brand-50 transition-colors"
-                      title={t('docBoard.header.viewProfessionalProfile')}
-                    >
-                      <span className="font-semibold text-brand-700 dark:text-brand-300">
-                        {clampedProfileCompletion}%
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400">Complete</span>
-                    </button>
-                    {/* Progress bar removed to match cleaner admin look, or could be kept if compact */}
+            <div className="relative z-10 flex flex-col gap-5">
+              {/* Header Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                    <Stethoscope className="h-5 w-5 text-white" />
                   </div>
-                )}
-
-                {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
-                  <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm">
-                    <UserCheck className="h-3 w-3 mr-1" />
-                    {t('docBoard.header.verified')}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Navigation Tabs */}
-            <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
-              {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
-                const isActive = activeNavButton === key;
-                const locked = requiresProfile && doctorProfileRestricted;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      if (!locked) setActiveNavButton(key);
-                    }}
-                    disabled={locked}
-                    aria-disabled={locked}
-                    aria-pressed={isActive}
-                    tabIndex={locked ? -1 : 0}
-                    title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
-                    className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
-                      ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white border-transparent shadow-xl shadow-brand-500/30'
-                      : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
-                      } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
-                  >
-                    <div className="flex items-center gap-1.5 text-[12px] font-semibold">
-                      <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-brand-500 dark:text-brand-400'}`} />
-                      </span>
-                      <span className="hidden sm:inline">{label}</span>
-                      <span className="sm:hidden">{shortLabel}</span>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-xl font-bold tracking-tight text-white leading-tight">
+                        {t('docBoard.header.title')}
+                      </h1>
+                      {clampedProfileCompletion < 100 && (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/profile?tab=professional')}
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+                          title={t('docBoard.header.viewProfessionalProfile')}
+                        >
+                          <span>{clampedProfileCompletion}% Complete</span>
+                        </button>
+                      )}
+                      {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
+                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] font-bold shadow-sm">
+                          <UserCheck className="h-2.5 w-2.5 mr-1" />
+                          {t('docBoard.header.verified')}
+                        </Badge>
+                      )}
                     </div>
-                    <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
-                      {description}
-                    </span>
-                    <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
-                      {description}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+                    <p className="text-[11px] text-brand-100 mt-0.5 leading-tight">Practice oversight, calendar and clinical records.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Tab Capsule */}
+              <nav className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
+                {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
+                  const isActive = activeNavButton === key;
+                  const locked = requiresProfile && doctorProfileRestricted;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        if (!locked) setActiveNavButton(key);
+                      }}
+                      disabled={locked}
+                      aria-disabled={locked}
+                      aria-pressed={isActive}
+                      tabIndex={locked ? -1 : 0}
+                      title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
+                      className={cn(
+                        "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white",
+                        isActive && "bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm hover:bg-white",
+                        locked && "opacity-40 cursor-not-allowed",
+                        "px-1 select-none whitespace-normal flex-1"
+                      )}
+                    >
+                      <Icon className="h-5 w-5 mb-1 shrink-0" />
+                      <span className="text-[9px] font-bold tracking-wide leading-tight hidden sm:inline">{label}</span>
+                      <span className="text-[9px] font-bold tracking-wide leading-tight sm:hidden">{shortLabel}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
         </div>
 
