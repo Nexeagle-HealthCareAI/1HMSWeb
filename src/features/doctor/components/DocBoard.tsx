@@ -1001,7 +1001,7 @@ export const ClinicalDashboard: React.FC = () => {
         style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1 }}
       >
         {/* Header Card (Unified Theme & Layout matching IPD, Appointment, and Billing Dashboards) */}
-        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 py-4 shrink-0">
+        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 pt-4 pb-2 shrink-0">
           <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
             {/* Decorative flare */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
@@ -1074,9 +1074,8 @@ export const ClinicalDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content - Mobile Responsive */}
         {activeNavButton === 'appointments' && (
-          <SubscriptionReadOnlyOverlay featureLabel="Managing appointments" className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <SubscriptionReadOnlyOverlay featureLabel="Managing appointments" className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             {/* Loading - Mobile Responsive */}
             {isDataLoading && (
               <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-8 text-center shadow-lg">
@@ -1416,7 +1415,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'all' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('all')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'all'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'all'
                               ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg'
                               : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                               }`}
@@ -1431,7 +1430,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'VITALS_REQUIRED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('VITALS_REQUIRED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'VITALS_REQUIRED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'VITALS_REQUIRED'
                               ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg'
                               : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:hover:bg-red-900/20'
                               }`}
@@ -1446,7 +1445,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'READY' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('READY')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'READY'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'READY'
                               ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
                               : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:hover:bg-green-900/20'
                               }`}
@@ -1461,7 +1460,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'UNDER_CONSULT' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('UNDER_CONSULT')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'UNDER_CONSULT'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'UNDER_CONSULT'
                               ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg'
                               : 'bg-brand-50 text-brand-700 border-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/20'
                               }`}
@@ -1476,7 +1475,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'LAB_REQUIRED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('LAB_REQUIRED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'LAB_REQUIRED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'LAB_REQUIRED'
                               ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
                               : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/20'
                               }`}
@@ -1491,7 +1490,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'AWAITING_RECONSULT' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('AWAITING_RECONSULT')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'AWAITING_RECONSULT'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'AWAITING_RECONSULT'
                               ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg'
                               : 'bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/20'
                               }`}
@@ -1506,7 +1505,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'COMPLETED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('COMPLETED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'COMPLETED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'COMPLETED'
                               ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg'
                               : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/20'
                               }`}
@@ -1521,7 +1520,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('CANCELLED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'CANCELLED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'CANCELLED'
                               ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg'
                               : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20'
                               }`}
@@ -2423,7 +2422,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Doctor Calendar - embedded in DocBoard */}
         {activeNavButton === 'calendar' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             <Suspense fallback={<div className="p-6 text-center">{t('docBoard.calendar.loading')}</div>}>
               <DoctorCalendar />
             </Suspense>
@@ -2432,7 +2431,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Analytics Page */}
         {activeNavButton === 'analytics' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             <Suspense fallback={<div className="p-6 text-center">{t('common.loading')}</div>}>
               <DoctorAnalyticsPage />
             </Suspense>
@@ -2441,7 +2440,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Prescription Settings */}
         {activeNavButton === 'settings' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             <div className="p-2 sm:p-4">
               <Tabs
                 value={settingsTab}
