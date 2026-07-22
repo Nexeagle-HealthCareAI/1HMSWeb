@@ -8,7 +8,8 @@ import {
   ChevronRight,
   LayoutDashboard,
   Globe,
-  Users
+  Users,
+  Building2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,20 +154,41 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       <main className="flex-1 overflow-x-hidden overflow-y-auto lg:p-8 bg-transparent max-lg:p-0">
         <div className="w-full h-full max-w-[1200px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <div className="lg:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl pt-3 pb-3 -mx-4 px-4 sm:-mx-6 sm:px-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.5)] border-b border-gray-100 dark:border-gray-800">
-              <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto gap-2.5 bg-transparent p-0 border-0 shadow-none justify-start">
-                {navigationItems.map((item) => (
-                  <TabsTrigger
-                    key={item.id}
-                    value={item.id}
-                    className="relative flex-shrink-0 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold transition-all data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-brand-500/30 bg-gray-100/80 dark:bg-slate-800 text-gray-600 dark:text-gray-300 border border-transparent data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:hover:bg-slate-700"
-                    data-testid={item.id === 'branding' ? 'hospital-info-tab' : undefined}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0 transition-transform data-[state=active]:scale-110" />
-                    <span className="whitespace-nowrap">{item.label}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+            {/* Header Card (Unified Theme & Layout matching IPD & Appointment Dashboards) */}
+            <div className="lg:hidden bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden shrink-0 mb-4">
+                {/* Decorative flare */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col gap-5">
+                    {/* Header Row */}
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                            <Building2 className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight">Hospital Info</h1>
+                            <p className="text-[11px] text-brand-100 mt-0.5">Manage your hospital configuration and public directory.</p>
+                        </div>
+                    </div>
+
+                    {/* Navigation Tab Capsule */}
+                    <TabsList className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full border-0 shadow-none">
+                        {navigationItems.map((item) => (
+                            <TabsTrigger
+                                key={item.id}
+                                value={item.id}
+                                className={cn(
+                                    "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white",
+                                    "px-1 select-none whitespace-normal flex-1"
+                                )}
+                                data-testid={item.id === 'branding' ? 'hospital-info-tab' : undefined}
+                            >
+                                <item.icon className="h-5 w-5 mb-1 shrink-0" />
+                                <span className="text-[9px] font-bold tracking-wide leading-tight">{item.label}</span>
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </div>
             </div>
 
 
