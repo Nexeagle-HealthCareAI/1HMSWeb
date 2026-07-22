@@ -142,7 +142,7 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             )}
 
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                <DialogContent className="w-[calc(100%-2rem)] max-w-lg max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
+                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Record vital reading</DialogTitle>
                         <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Fill in whichever values were taken — at least one is required.</DialogDescription>
