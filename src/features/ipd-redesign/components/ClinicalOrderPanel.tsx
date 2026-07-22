@@ -5,6 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, X, Plus, Trash2, RefreshCw } from 'lucide-react';
@@ -209,33 +216,39 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
 
             {/* New order dialog */}
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     <DialogHeader>
-                        <DialogTitle>New {itemLabel.toLowerCase()} order</DialogTitle>
-                        <DialogDescription>Chargeable lines are billed to this admission immediately.</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-550">New {itemLabel.toLowerCase()} order</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Chargeable lines are billed to this admission immediately.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         {lines.map((line, i) => (
-                            <div key={i} className="rounded-lg border border-slate-200 p-3 space-y-2 relative">
+                            <div key={i} className="rounded-2xl border border-slate-200/65 dark:border-zinc-800/80 p-4 space-y-3 relative bg-slate-50/10 dark:bg-zinc-900/10 shadow-sm">
                                 {lines.length > 1 && (
-                                    <button type="button" onClick={() => removeLine(i)} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500">
+                                    <button type="button" onClick={() => removeLine(i)} className="absolute top-3 right-3 p-1.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 rounded-full hover:bg-rose-100 transition-all active:scale-95">
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </button>
                                 )}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Billed item (optional — links billing)</Label>
-                                        <select value={line.chargeId ?? ''} onChange={e => pickItem(i, e.target.value)}
-                                            className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="">— Free text (no billing link) —</option>
-                                            {pickerItems.map(p => (
-                                                <option key={p.chargeId} value={p.chargeId}>{p.displayName} · ₹{p.defaultRate.toLocaleString('en-IN')}</option>
-                                            ))}
-                                        </select>
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Billed item (optional — links billing)</Label>
+                                        <Select value={line.chargeId ?? 'free-text'} onValueChange={val => pickItem(i, val === 'free-text' ? '' : val)}>
+                                            <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-[250px] overflow-y-auto rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                <SelectItem value="free-text" className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">— Free text (no billing link) —</SelectItem>
+                                                {pickerItems.map(p => (
+                                                    <SelectItem key={p.chargeId} value={p.chargeId} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
+                                                        {p.displayName} · ₹{p.defaultRate.toLocaleString('en-IN')}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">{itemLabel} *</Label>
-                                        <Input value={line.itemName} onChange={e => setLine(i, { itemName: e.target.value })} className="h-9 mt-1" placeholder={`e.g. ${itemLabel}`} />
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{itemLabel} *</Label>
+                                        <Input value={line.itemName} onChange={e => setLine(i, { itemName: e.target.value })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder={`e.g. ${itemLabel}`} />
                                     </div>
                                 </div>
 
@@ -252,30 +265,36 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                 })()}
 
                                 {showMedicationFields && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div>
-                                            <Label className="text-[11px] font-semibold text-slate-600">Dose</Label>
-                                            <Input value={line.dose ?? ''} onChange={e => setLine(i, { dose: e.target.value })} className="h-9 mt-1" placeholder="500 mg" />
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Dose</Label>
+                                            <Input value={line.dose ?? ''} onChange={e => setLine(i, { dose: e.target.value })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="500 mg" />
                                         </div>
                                         <div>
-                                            <Label className="text-[11px] font-semibold text-slate-600">Route</Label>
-                                            <Input value={line.route ?? ''} onChange={e => setLine(i, { route: e.target.value })} className="h-9 mt-1" placeholder="PO / IV" />
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Route</Label>
+                                            <Input value={line.route ?? ''} onChange={e => setLine(i, { route: e.target.value })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="PO / IV" />
                                         </div>
                                         <div>
-                                            <Label className="text-[11px] font-semibold text-slate-600">Frequency</Label>
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Frequency</Label>
                                             {orderType === 'MEDICATION' ? (
-                                                <select value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })}
-                                                    className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                                    <option value="">— Select —</option>
-                                                    {MEDICATION_FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
-                                                </select>
+                                                <Select value={line.frequency ?? 'select-freq'} onValueChange={val => setLine(i, { frequency: val === 'select-freq' ? '' : val })}>
+                                                    <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="max-h-[250px] overflow-y-auto rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                        <SelectItem value="select-freq" className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">— Select —</SelectItem>
+                                                        {MEDICATION_FREQUENCIES.map(f => (
+                                                            <SelectItem key={f} value={f} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">{f}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             ) : (
-                                                <Input value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })} className="h-9 mt-1" placeholder="BD / TDS" />
+                                                <Input value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="BD / TDS" />
                                             )}
                                         </div>
                                         <div>
-                                            <Label className="text-[11px] font-semibold text-slate-600">Duration (days)</Label>
-                                            <Input type="number" min={0} value={line.durationDays ?? ''} onChange={e => setLine(i, { durationDays: e.target.value ? parseInt(e.target.value, 10) : undefined })} className="h-9 mt-1" />
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Duration (days)</Label>
+                                            <Input type="number" min={0} value={line.durationDays ?? ''} onChange={e => setLine(i, { durationDays: e.target.value ? parseInt(e.target.value, 10) : undefined })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" />
                                         </div>
                                         <label className="col-span-2 sm:col-span-4 flex items-center gap-2 text-xs font-semibold text-slate-600 mt-1">
                                             <input type="checkbox" checked={!!line.isHighAlert} onChange={e => setLine(i, { isHighAlert: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
@@ -285,41 +304,47 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                 )}
 
                                 {(showUrgency || showScheduledAt) && (
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-3">
                                         {showUrgency && (
                                             <div>
-                                                <Label className="text-[11px] font-semibold text-slate-600">Urgency</Label>
-                                                <select value={line.urgency ?? 'ROUTINE'} onChange={e => setLine(i, { urgency: e.target.value as OrderUrgency })}
-                                                    className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                                    {URGENCIES.map(u => <option key={u} value={u}>{u}</option>)}
-                                                </select>
+                                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Urgency</Label>
+                                                <Select value={line.urgency ?? 'ROUTINE'} onValueChange={val => setLine(i, { urgency: val as OrderUrgency })}>
+                                                    <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                        {URGENCIES.map(u => (
+                                                            <SelectItem key={u} value={u} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">{u}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                         )}
                                         {showScheduledAt && (
                                             <div>
-                                                <Label className="text-[11px] font-semibold text-slate-600">Scheduled for</Label>
-                                                <Input type="datetime-local" value={line.scheduledAt ?? ''} onChange={e => setLine(i, { scheduledAt: e.target.value || undefined })} className="h-9 mt-1" />
+                                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Scheduled for</Label>
+                                                <Input type="datetime-local" value={line.scheduledAt ?? ''} onChange={e => setLine(i, { scheduledAt: e.target.value || undefined })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" />
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Instructions</Label>
-                                    <Input value={line.instructions ?? ''} onChange={e => setLine(i, { instructions: e.target.value })} className="h-9 mt-1" placeholder="Optional" />
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Instructions</Label>
+                                    <Input value={line.instructions ?? ''} onChange={e => setLine(i, { instructions: e.target.value })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Optional clinical instructions..." />
                                 </div>
                             </div>
                         ))}
-                        <Button variant="outline" size="sm" onClick={addLine} className="h-9"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add another {itemLabel.toLowerCase()}</Button>
+                        <Button variant="outline" size="sm" onClick={addLine} className="h-10 rounded-xl border-dashed border-slate-300 hover:bg-slate-50 transition-all active:scale-95"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add another {itemLabel.toLowerCase()}</Button>
 
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Order notes</Label>
-                            <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Order notes</Label>
+                            <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Optional order level notes..." />
                         </div>
 
-                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                            <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                            <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                            <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setNewOpen(false)}>Cancel</Button>
+                            <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white">
                                 {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Place order
                             </Button>
                         </div>
@@ -329,20 +354,20 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
 
             {/* Discontinue confirm */}
             <Dialog open={!!discontinuing} onOpenChange={(o) => { if (!o) setDiscontinuing(null); }}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     {discontinuing && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Discontinue {discontinuing.itemName}?</DialogTitle>
-                                <DialogDescription>Any charge already posted for this line will be voided.</DialogDescription>
+                                <DialogTitle className="text-base font-extrabold text-slate-900 dark:text-zinc-50">Discontinue {discontinuing.itemName}?</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Any charge already posted for this line will be voided.</DialogDescription>
                             </DialogHeader>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Reason</Label>
-                                <Textarea rows={2} value={discontinueReason} onChange={e => setDiscontinueReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                            <div className="mt-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Reason</Label>
+                                <Textarea rows={2} value={discontinueReason} onChange={e => setDiscontinueReason(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Discontinue reason..." />
                             </div>
-                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                                <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setDiscontinuing(null)}>Cancel</Button>
-                                <Button disabled={discontinueBusy || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-rose-600 hover:bg-rose-700" onClick={confirmDiscontinue}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setDiscontinuing(null)}>Cancel</Button>
+                                <Button disabled={discontinueBusy || isSubscriptionReadOnly} className="h-11 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 active:scale-[0.98] transition-all text-white" onClick={confirmDiscontinue}>
                                     {discontinueBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Discontinue
                                 </Button>
                             </div>

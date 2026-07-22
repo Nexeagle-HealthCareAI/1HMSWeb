@@ -194,17 +194,17 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
 
             {/* Administer dialog */}
             <Dialog open={!!acting} onOpenChange={(o) => { if (!o) setActing(null); }}>
-                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     {acting && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>{acting.line.itemName}</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">{acting.line.itemName}</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
                                     {acting.slot ? `Scheduled ${formatIstTime(acting.slot.scheduledForUtc)} IST` : 'Ad-hoc / PRN dose, now'}
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-xs">
+                            <div className="rounded-2xl border border-slate-250 dark:border-zinc-800 bg-slate-50/50 p-4 space-y-1 text-xs">
                                 <p><span className="font-bold text-slate-500">Patient</span> — {patientName || '—'}</p>
                                 <p><span className="font-bold text-slate-500">Drug</span> — {acting.line.itemName}{acting.line.saltName ? ` (${acting.line.saltName})` : ''}</p>
                                 <p><span className="font-bold text-slate-500">Dose</span> — {acting.line.dose || '—'}</p>
@@ -219,50 +219,50 @@ export const MarPanel: React.FC<Props> = ({ admissionId, isActive, patientName }
                             <div className="grid grid-cols-2 gap-2">
                                 {ACTIONS.map(a => (
                                     <button key={a.key} type="button" onClick={() => setActionStatus(a.key)}
-                                        className={cn('min-h-10 sm:min-h-9 px-2 py-1.5 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center text-center leading-tight',
-                                            actionStatus === a.key ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                                        className={cn('min-h-10 sm:min-h-9 px-2 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center text-center leading-tight active:scale-[0.98]',
+                                            actionStatus === a.key ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
                                         {a.label}
                                     </button>
                                 ))}
                             </div>
 
                             {actionStatus === 'ADMINISTERED' ? (
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Dose given</Label>
-                                        <Input value={administeredDose} onChange={e => setAdministeredDose(e.target.value)} className="h-9 mt-1" />
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Dose given</Label>
+                                        <Input value={administeredDose} onChange={e => setAdministeredDose(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" />
                                     </div>
                                     <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">Route</Label>
-                                        <Input value={administeredRoute} onChange={e => setAdministeredRoute(e.target.value)} className="h-9 mt-1" />
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Route</Label>
+                                        <Input value={administeredRoute} onChange={e => setAdministeredRoute(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" />
                                     </div>
                                     <div className="col-span-2">
-                                        <Label className="text-[11px] font-semibold text-slate-600">Site (optional)</Label>
-                                        <Input value={administrationSite} onChange={e => setAdministrationSite(e.target.value)} className="h-9 mt-1" placeholder="e.g. Left forearm" />
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Site (optional)</Label>
+                                        <Input value={administrationSite} onChange={e => setAdministrationSite(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="e.g. Left forearm" />
                                     </div>
                                 </div>
                             ) : (
                                 <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Reason *</Label>
-                                    <Textarea rows={2} value={reason} onChange={e => setReason(e.target.value)} className="text-sm mt-1" placeholder="Required" />
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Reason *</Label>
+                                    <Textarea rows={2} value={reason} onChange={e => setReason(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Required reason..." />
                                 </div>
                             )}
 
                             {needsWitness && (
                                 <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Witness name * (high-alert medication)</Label>
-                                    <Input value={witnessName} onChange={e => setWitnessName(e.target.value)} className="h-9 mt-1" placeholder="Second nurse verifying this dose" />
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Witness name * (high-alert medication)</Label>
+                                    <Input value={witnessName} onChange={e => setWitnessName(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Second nurse verifying this dose" />
                                 </div>
                             )}
 
                             <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Notes</Label>
-                                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Notes</Label>
+                                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Optional notes..." />
                             </div>
 
-                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
-                                <Button variant="outline" className="h-11 sm:h-10" onClick={() => setActing(null)}>Cancel</Button>
-                                <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setActing(null)}>Cancel</Button>
+                                <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white">
                                     {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Record
                                 </Button>
                             </div>
