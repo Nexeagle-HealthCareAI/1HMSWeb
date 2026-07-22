@@ -531,9 +531,12 @@ export const PublicDirectoryConfig: React.FC = () => {
       />
 
       <AlertDialog open={pendingToggle !== null} onOpenChange={(open) => !open && !confirming && setPendingToggle(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <AlertDialogContent className="rounded-[28px] max-w-[340px] sm:max-w-[400px] p-6 border-0 bg-white dark:bg-zinc-900 shadow-2xl ring-1 ring-black/5 gap-0">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-brand-50 dark:bg-brand-950/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
+            <Globe className="h-6 w-6" />
+          </div>
+          <AlertDialogHeader className="space-y-0 gap-0">
+            <AlertDialogTitle className="text-center text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 leading-snug">
               {pendingToggle?.kind === 'hospital'
                 ? pendingToggle.next
                   ? translate('publicDirectory.confirm.hospitalOnTitle', 'List this hospital publicly?')
@@ -545,7 +548,7 @@ export const PublicDirectoryConfig: React.FC = () => {
                       pendingToggle?.kind === 'doctor' ? pendingToggle.doctorName : ''
                     )}
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-center text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed">
               {pendingToggle?.kind === 'hospital'
                 ? pendingToggle.next
                   ? translate(
@@ -567,11 +570,11 @@ export const PublicDirectoryConfig: React.FC = () => {
                     )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-row justify-end gap-2 mt-4 space-x-2 space-y-0">
-            <AlertDialogCancel disabled={confirming} className="flex-1 sm:flex-none mt-0 rounded-xl h-10 text-xs font-semibold">
+          <AlertDialogFooter className="flex flex-row items-center justify-end gap-2 mt-6 pt-3 space-x-2 space-y-0 border-t border-slate-100 dark:border-zinc-800/80">
+            <AlertDialogCancel disabled={confirming} className="border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-wider rounded-xl px-4 py-2 mt-0 h-9 transition-colors">
               {translate('common.cancel', 'Cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmToggle} disabled={confirming} className="flex-1 sm:flex-none rounded-xl h-10 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white gap-1.5">
+            <AlertDialogAction onClick={handleConfirmToggle} disabled={confirming} className="bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/20 text-brand-600 dark:text-brand-400 hover:text-brand-700 font-bold text-xs uppercase tracking-wider rounded-xl px-4 py-2 h-9 transition-all border-none shadow-none gap-1.5">
               {confirming && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {translate('publicDirectory.confirm.action', 'Yes, continue')}
             </AlertDialogAction>
