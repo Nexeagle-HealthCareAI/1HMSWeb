@@ -334,14 +334,14 @@ export const BillingPolicyConfig = () => {
                                     type="button"
                                     onClick={() => handleChange(rule.key, isAuto ? 'OFF' : rule.onValue)}
                                     className={cn(
-                                        "relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-brand-500/10",
+                                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-brand-500/10",
                                         isAuto ? "bg-gradient-to-r from-brand-600 to-indigo-600 shadow-md shadow-brand-500/20" : "bg-slate-200 dark:bg-zinc-800"
                                     )}
                                 >
                                     <span
                                         className={cn(
-                                            "pointer-events-none inline-block h-5.5 w-5.5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out",
-                                            isAuto ? "translate-x-5.5" : "translate-x-0"
+                                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out",
+                                            isAuto ? "translate-x-5" : "translate-x-0"
                                         )}
                                     />
                                 </button>

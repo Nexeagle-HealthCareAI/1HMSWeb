@@ -567,11 +567,11 @@ export const PublicDirectoryConfig: React.FC = () => {
                     )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={confirming}>
+          <AlertDialogFooter className="flex flex-row justify-end gap-2 mt-4 space-x-2 space-y-0">
+            <AlertDialogCancel disabled={confirming} className="flex-1 sm:flex-none mt-0 rounded-xl h-10 text-xs font-semibold">
               {translate('common.cancel', 'Cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmToggle} disabled={confirming} className="gap-2">
+            <AlertDialogAction onClick={handleConfirmToggle} disabled={confirming} className="flex-1 sm:flex-none rounded-xl h-10 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white gap-1.5">
               {confirming && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {translate('publicDirectory.confirm.action', 'Yes, continue')}
             </AlertDialogAction>
