@@ -5,6 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -517,26 +524,32 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             </section>
 
             <Dialog open={!!confirmArrivalTarget} onOpenChange={o => { if (!o) setConfirmArrivalTarget(null); }}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     {confirmArrivalTarget && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Confirm arrival — {confirmArrivalTarget.patientName || confirmArrivalTarget.patientId}?</DialogTitle>
-                                <DialogDescription>Moves this pre-registration to a completed admission. Optionally assign a bed now.</DialogDescription>
+                                <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Confirm arrival — {confirmArrivalTarget.patientName || confirmArrivalTarget.patientId}?</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Moves this pre-registration to a completed admission. Optionally assign a bed now.</DialogDescription>
                             </DialogHeader>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Bed (optional)</Label>
-                                <select value={arrivalBedId} onChange={e => setArrivalBedId(e.target.value)}
-                                    className="h-10 mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white">
-                                    <option value="">— Assign later —</option>
-                                    {arrivalBeds.map(b => (
-                                        <option key={b.bedId} value={b.bedId}>{b.wardName ? `${b.wardName} · ` : ''}{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
-                                    ))}
-                                </select>
+                            <div className="mt-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Bed (optional)</Label>
+                                <Select value={arrivalBedId} onValueChange={setArrivalBedId}>
+                                    <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                        <SelectValue placeholder="— Assign later —" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[250px] overflow-y-auto rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                        <SelectItem value="assign-later" className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">— Assign later —</SelectItem>
+                                        {arrivalBeds.map(b => (
+                                            <SelectItem key={b.bedId} value={b.bedId} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
+                                                {b.wardName ? `${b.wardName} · ` : ''}{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setConfirmArrivalTarget(null)}>Cancel</Button>
-                                <Button disabled={confirmingArrival} className="bg-brand-600 hover:bg-brand-700" onClick={submitConfirmArrival}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setConfirmArrivalTarget(null)}>Cancel</Button>
+                                <Button disabled={confirmingArrival} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white" onClick={submitConfirmArrival}>
                                     {confirmingArrival ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm arrival
                                 </Button>
                             </div>
@@ -546,19 +559,19 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             </Dialog>
 
             <Dialog open={!!cancelAdmissionTarget} onOpenChange={o => { if (!o) setCancelAdmissionTarget(null); }}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     {cancelAdmissionTarget && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Cancel Admission?</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-550">Cancel Admission?</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
                                     Are you sure you want to cancel the admission for <strong className="text-slate-800">{cancelAdmissionTarget.patientName || cancelAdmissionTarget.patientId}</strong>?
                                     This will release any assigned bed and mark the admission as cancelled. This action cannot be undone.
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="ghost" onClick={() => setCancelAdmissionTarget(null)}>No, keep it</Button>
-                                <Button disabled={cancellingAdmission} className="bg-rose-600 hover:bg-rose-700" onClick={submitCancelAdmission}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setCancelAdmissionTarget(null)}>No, keep it</Button>
+                                <Button disabled={cancellingAdmission} className="h-11 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 active:scale-[0.98] transition-all text-white" onClick={submitCancelAdmission}>
                                     {cancellingAdmission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Yes, cancel admission
                                 </Button>
                             </div>

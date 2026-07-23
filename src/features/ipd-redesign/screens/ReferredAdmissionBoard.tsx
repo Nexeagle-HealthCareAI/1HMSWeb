@@ -453,22 +453,22 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                                                 <p className="text-xs text-slate-400">No comments yet.</p>
                                             ) : (
                                                 <ul className="space-y-2">
-                                                    {comments.map(c => (
-                                                        <li key={c.commentId} className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">
-                                                            <p className="text-sm text-slate-800 whitespace-pre-wrap">{c.commentText}</p>
-                                                            <p className="text-[11px] text-slate-400 mt-1">{c.createdBy ?? '—'} · {formatIstDateTime(c.createdAt)}</p>
-                                                        </li>
-                                                    ))}
-                                                </ul>
+                                                     {comments.map(c => (
+                                                         <li key={c.commentId} className="rounded-xl bg-slate-50/50 dark:bg-zinc-950 border border-slate-200/60 dark:border-zinc-850/60 px-3.5 py-2">
+                                                             <p className="text-sm text-slate-805 dark:text-zinc-200 whitespace-pre-wrap">{c.commentText}</p>
+                                                             <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{c.createdBy ?? '—'} · {formatIstDateTime(c.createdAt)}</p>
+                                                         </li>
+                                                     ))}
+                                                 </ul>
                                             )}
                                             <div className="flex flex-col sm:flex-row gap-2">
                                                 <Textarea
                                                     value={commentDrafts[r.referralId] ?? ''}
                                                     onChange={e => setCommentDrafts(prev => ({ ...prev, [r.referralId]: e.target.value }))}
                                                     placeholder="Add a comment…"
-                                                    className="resize-none h-16 text-sm flex-1"
+                                                    className="resize-none h-16 text-sm flex-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3"
                                                 />
-                                                <Button size="sm" className="h-10 sm:h-9 sm:self-end bg-brand-600 hover:bg-brand-700"
+                                                <Button size="sm" className="h-10 sm:h-9 sm:self-end rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white"
                                                     disabled={!commentDrafts[r.referralId]?.trim() || addingComment.has(r.referralId)}
                                                     onClick={() => submitComment(r.referralId)}>
                                                     {addingComment.has(r.referralId) ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
@@ -504,57 +504,57 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
 
             {/* Mark Not Admitted */}
             <Dialog open={!!notAdmittedTarget} onOpenChange={(open) => !open && setNotAdmittedTarget(null)}>
-                <DialogContent>
+                <DialogContent className="rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     <DialogHeader>
-                        <DialogTitle>Mark as not admitted</DialogTitle>
-                        <DialogDescription>{notAdmittedTarget?.patientName ?? notAdmittedTarget?.patientId}</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Mark as not admitted</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">{notAdmittedTarget?.patientName ?? notAdmittedTarget?.patientId}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-2">
-                        <Label>Reason <span className="text-red-500">*</span></Label>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Reason <span className="text-red-500">*</span></Label>
                         <Textarea
                             placeholder="e.g. Patient declined surgery, opted for another hospital…"
                             value={notAdmittedReason}
                             onChange={e => setNotAdmittedReason(e.target.value)}
-                            className="resize-none h-24"
+                            className="resize-none h-24 text-sm rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3"
                         />
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setNotAdmittedTarget(null)} disabled={busy}>Cancel</Button>
-                        <Button className="h-11 sm:h-10" onClick={handleMarkNotAdmitted} disabled={busy || !notAdmittedReason.trim()}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setNotAdmittedTarget(null)} disabled={busy}>Cancel</Button>
+                        <Button className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white" onClick={handleMarkNotAdmitted} disabled={busy || !notAdmittedReason.trim()}>
                             {busy && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />} Confirm
                         </Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 
             {/* Follow Up */}
             <Dialog open={!!followUpTarget} onOpenChange={(open) => !open && setFollowUpTarget(null)}>
-                <DialogContent>
+                <DialogContent className="rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     <DialogHeader>
-                        <DialogTitle>Schedule a follow-up</DialogTitle>
-                        <DialogDescription>{followUpTarget?.patientName ?? followUpTarget?.patientId}</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Schedule a follow-up</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">{followUpTarget?.patientName ?? followUpTarget?.patientId}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3">
                         <div className="grid gap-2">
-                            <Label>Follow-up date <span className="text-red-500">*</span></Label>
-                            <Input type="date" className="h-11 sm:h-10" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Follow-up date <span className="text-red-500">*</span></Label>
+                            <Input type="date" className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all bg-white dark:bg-zinc-900 px-3 text-sm" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Notes</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Notes</Label>
                             <Textarea
                                 placeholder="e.g. Will come after discussing with family, expected in 2 days…"
                                 value={followUpNotes}
                                 onChange={e => setFollowUpNotes(e.target.value)}
-                                className="resize-none h-20"
+                                className="resize-none h-20 text-sm rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3"
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setFollowUpTarget(null)} disabled={busy}>Cancel</Button>
-                        <Button className="h-11 sm:h-10" onClick={handleScheduleFollowUp} disabled={busy || !followUpDate}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setFollowUpTarget(null)} disabled={busy}>Cancel</Button>
+                        <Button className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white" onClick={handleScheduleFollowUp} disabled={busy || !followUpDate}>
                             {busy && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />} Schedule
                         </Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

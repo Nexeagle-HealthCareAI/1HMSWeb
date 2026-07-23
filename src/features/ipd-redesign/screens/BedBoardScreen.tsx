@@ -376,27 +376,27 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
             )}
 
             <Dialog open={!!selected} onOpenChange={(o) => { if (!o) closeDialog(); }}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     {selected && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>{selected.patientName || 'Patient'} · {selected.bedCode}</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">{selected.patientName || 'Patient'} · {selected.bedCode}</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
                                     {selected.admissionNo} · {selected.admissionType ?? ''} · {selected.payerType ?? 'CASH'}
                                     {selected.admissionToken && ` · Token: ${selected.admissionToken}`}
                                 </DialogDescription>
                             </DialogHeader>
 
                             {actionMode === 'menu' && (
-                                <div className="space-y-2 pt-2">
-                                    <Button variant="outline" className="w-full justify-start h-11 rounded-full px-5 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-305 font-bold" onClick={() => setActionMode('transfer')}>
+                                <div className="space-y-2.5 pt-2">
+                                    <Button variant="outline" className="w-full justify-start h-11 rounded-xl px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-305 font-bold active:scale-[0.98] transition-all" onClick={() => setActionMode('transfer')}>
                                         <ArrowLeftRight className="h-4 w-4 mr-2" /> Transfer to another bed
                                     </Button>
-                                    <Button variant="outline" className="w-full justify-start h-11 rounded-full px-5 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-305 font-bold" disabled={busy}
+                                    <Button variant="outline" className="w-full justify-start h-11 rounded-xl px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-350 font-bold active:scale-[0.98] transition-all" disabled={busy}
                                         onClick={() => runAction(() => bedBoardApi.releaseBed(selected.admissionId!), 'Bed released.')}>
                                         <X className="h-4 w-4 mr-2" /> Release bed (keep admission)
                                     </Button>
-                                    <Button className="w-full justify-start h-11 rounded-full px-5 bg-amber-600 hover:bg-amber-700 text-white font-bold" onClick={() => setActionMode('discharge')}>
+                                    <Button className="w-full justify-start h-11 rounded-xl px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold active:scale-[0.98] transition-all" onClick={() => setActionMode('discharge')}>
                                         <LogOut className="h-4 w-4 mr-2" /> Discharge patient
                                     </Button>
                                 </div>
@@ -405,17 +405,23 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
                             {actionMode === 'transfer' && (
                                 <div className="space-y-4 pt-2">
                                     <div>
-                                        <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">New bed</Label>
-                                        <select value={newBedId} onChange={e => setNewBedId(e.target.value)} className="h-11 mt-1.5 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700">
-                                            <option value="">Select a bed…</option>
-                                            {freeBeds.map(b => (
-                                                <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
-                                            ))}
-                                        </select>
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">New bed</Label>
+                                        <Select value={newBedId} onValueChange={setNewBedId}>
+                                            <SelectTrigger className="h-10 mt-1.5 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                                <SelectValue placeholder="Select a bed…" />
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-[250px] overflow-y-auto rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                {freeBeds.map(b => (
+                                                    <SelectItem key={b.bedId} value={b.bedId} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
+                                                        {(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <div className="flex justify-between gap-3 pt-2">
-                                        <Button variant="outline" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold" onClick={() => setActionMode('menu')}>Back</Button>
-                                        <Button disabled={!newBedId || busy} className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold"
+                                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setActionMode('menu')}>Back</Button>
+                                        <Button disabled={!newBedId || busy} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 text-white active:scale-[0.98] transition-all"
                                             onClick={() => runAction(() => bedBoardApi.transferBed(selected.admissionId!, newBedId), 'Bed transferred.')}>
                                             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowLeftRight className="h-4 w-4 mr-2" />} Transfer
                                         </Button>
@@ -425,16 +431,16 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
 
                             {actionMode === 'discharge' && (
                                 <div className="space-y-4 pt-2">
-                                    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 text-xs text-amber-800 font-semibold leading-relaxed">
+                                    <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 text-xs text-amber-800 font-semibold leading-relaxed">
                                         This closes the admission to DISCHARGED and releases bed {selected.bedCode}.
                                     </div>
                                     <div>
-                                        <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Discharge notes</Label>
-                                        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3" placeholder="Optional notes" />
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Discharge notes</Label>
+                                        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="text-sm mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3 resize-none w-full" placeholder="Optional discharge notes..." />
                                     </div>
-                                    <div className="flex justify-between gap-3 pt-2">
-                                        <Button variant="outline" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold" onClick={() => setActionMode('menu')}>Back</Button>
-                                        <Button disabled={busy} className="bg-amber-600 hover:bg-amber-700 h-10 rounded-full px-5 text-white font-bold"
+                                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setActionMode('menu')}>Back</Button>
+                                        <Button disabled={busy} className="h-11 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white active:scale-[0.98] transition-all"
                                             onClick={() => runAction(() => bedBoardApi.dischargeAdmission(selected.admissionId!, notes || undefined), 'Patient discharged.')}>
                                             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
                                         </Button>
