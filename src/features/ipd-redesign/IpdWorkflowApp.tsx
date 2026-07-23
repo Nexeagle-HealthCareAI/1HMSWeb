@@ -37,7 +37,7 @@ export const IpdWorkflowApp: React.FC = () => {
     const [admitReferralContext, setAdmitReferralContext] = useState<AdmissionReferralItem | null>(null);
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
+        <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-zinc-950">
             {view.name === 'dashboard' && (
                 <IpdDashboard
                     onAdmit={() => setAdmitOpen(true)}
