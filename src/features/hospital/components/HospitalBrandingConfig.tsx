@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import confetti from 'canvas-confetti';
+import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
@@ -582,19 +583,19 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </div>
         <div className="hidden sm:flex flex-wrap gap-2">
           {isExistingHospital && !isEditMode && (
-            <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
+            <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto h-10 rounded-xl active:scale-[0.98] transition-all">
               {translate('hospitalBranding.buttons.editDetails', 'Edit details')}
             </Button>
           )}
           {isExistingHospital && isEditMode && (
             <>
-              <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
+              <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto h-10 rounded-xl active:scale-[0.98] transition-all">
                 {translate('hospitalBranding.buttons.cancel', 'Cancel')}
               </Button>
               <Button
                 onClick={handleSaveBranding}
                 disabled={updateHospitalMutation.isPending || isSaveDisabled}
-                className="sm:w-auto"
+                className="sm:w-auto h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {updateHospitalMutation.isPending
@@ -607,7 +608,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             <Button
               onClick={handleSaveBranding}
               disabled={registerHospitalMutation.isPending || isSaveDisabled}
-              className="sm:w-auto"
+              className="sm:w-auto h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white"
             >
               <Save className="h-4 w-4 mr-2" />
               {registerHospitalMutation.isPending
@@ -627,19 +628,19 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         className="grid gap-6"
       >
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+          <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
             <CardHeader className="max-sm:pb-2 max-sm:px-4">
-              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
-                <Building2 className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                <Building2 className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 {t('hospitalBranding.sections.core.title')}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.core.subtitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('hospitalBranding.sections.core.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hospitalName" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="hospitalName" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Building2 className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.name')}
                     <RequiredIndicator />
                   </Label>
@@ -650,9 +651,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.name')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.name && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.name')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.name')}</p>
                   {validationErrors.name && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
                       <AlertCircle className="h-3 w-3" />
@@ -660,9 +661,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hospitalType" className="flex items-center gap-2">
-                    <Type className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="hospitalType" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Type className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.type')}
                     <RequiredIndicator />
                   </Label>
@@ -671,10 +672,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onValueChange={(value) => updateBranding('type', value)}
                     disabled={isExistingHospital && !isEditMode}
                   >
-                    <SelectTrigger className={`w-full ${validationErrors.type ? 'border-red-500 focus:border-red-500' : ''}`}>
+                    <SelectTrigger className={cn("w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.type && "border-red-500 focus:border-red-500")}>
                       <SelectValue placeholder={t('hospitalBranding.placeholders.type')} />
                     </SelectTrigger>
-                    <SelectContent className="max-h-48 overflow-y-auto">
+                    <SelectContent className="max-h-48 overflow-y-auto rounded-xl">
                       {hospitalTypes.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
@@ -695,19 +696,19 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+          <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
             <CardHeader className="max-sm:pb-2 max-sm:px-4">
-              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
-                <Phone className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-550">
+                <Phone className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 {t('hospitalBranding.sections.contact.title')}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.contact.subtitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('hospitalBranding.sections.contact.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contact" className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="contact" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Phone className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.contact')}
                     <RequiredIndicator />
                   </Label>
@@ -718,7 +719,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.contact')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.contact ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.contact && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.contact && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -726,11 +727,11 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       {validationErrors.contact}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.primaryContact')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.primaryContact')}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="alternateContact" className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="alternateContact" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Phone className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.alternateContact')}
                   </Label>
                   <Input
@@ -739,7 +740,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateBranding('alternateContact', e.target.value)}
                     placeholder={t('hospitalBranding.placeholders.alternateContact')}
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.alternateContact ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.alternateContact && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.alternateContact && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -747,14 +748,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       {validationErrors.alternateContact}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.alternateContact')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.alternateContact')}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Mail className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.email')}
                     <RequiredIndicator />
                   </Label>
@@ -765,7 +766,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateBranding('email', e.target.value)}
                     placeholder={t('hospitalBranding.placeholders.email')}
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.email && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.email && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -773,11 +774,11 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       {validationErrors.email}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.email')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.email')}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="website" className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="website" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Globe className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.website')}
                   </Label>
                   <Input
@@ -786,7 +787,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateBranding('website', e.target.value)}
                     placeholder={t('hospitalBranding.placeholders.website')}
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.website ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.website && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.website && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -794,7 +795,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       {validationErrors.website}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.website')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.website')}</p>
                 </div>
               </div>
             </CardContent>
@@ -802,18 +803,18 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+          <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
             <CardHeader className="max-sm:pb-2 max-sm:px-4">
-              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
-                <MapPin className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                <MapPin className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 {t('hospitalBranding.sections.location.title')}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.location.subtitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('hospitalBranding.sections.location.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
-              <div className="space-y-2">
-                <Label htmlFor="location" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6">
+              <div className="space-y-1.5">
+                <Label htmlFor="location" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                  <MapPin className="h-3.5 w-3.5" />
                   {t('hospitalBranding.labels.location')}
                   <RequiredIndicator />
                 </Label>
@@ -825,9 +826,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   rows={3}
                   required
                   disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.location ? 'border-red-500 focus:border-red-500' : ''}
+                  className={cn("rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.location && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                 />
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.location')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.location')}</p>
                 {validationErrors.location && (
                   <div className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle className="h-3 w-3" />
@@ -837,8 +838,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="city" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                     {t('hospitalBranding.labels.city')}
                     <RequiredIndicator />
                   </Label>
@@ -849,7 +850,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.city')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.city ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.city && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.city && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -858,8 +859,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state" className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="state" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                     {t('hospitalBranding.labels.state')}
                     <RequiredIndicator />
                   </Label>
@@ -870,7 +871,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.state')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.state ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.state && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.state && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -882,8 +883,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="country" className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="country" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                     {t('hospitalBranding.labels.country')}
                     <RequiredIndicator />
                   </Label>
@@ -894,7 +895,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.country')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.country ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.country && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.country && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -903,8 +904,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pincode" className="flex items-center gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pincode" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                     {t('hospitalBranding.labels.pincode')}
                     <RequiredIndicator />
                   </Label>
@@ -915,7 +916,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.pincode')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.pincode ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.pincode && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.pincode && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -928,7 +929,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                     {translate('hospitalBranding.labels.geolocation', 'GPS Location')}
                   </Label>
                   <Button
@@ -937,7 +938,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     size="sm"
                     onClick={handleUseMyLocation}
                     disabled={(isExistingHospital && !isEditMode) || isLocatingGps}
-                    className="gap-2"
+                    className="gap-2 h-9 rounded-xl active:scale-[0.98] transition-all"
                   >
                     <LocateFixed className="h-3.5 w-3.5" />
                     {isLocatingGps
@@ -945,7 +946,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       : translate('hospitalBranding.geolocation.useMyLocation', 'Use my current location')}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] text-muted-foreground">
                   {translate(
                     'hospitalBranding.geolocation.description',
                     "Powers the \"get directions\" link on your doctors' public listings."
@@ -960,6 +961,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateGeoField('latitude', e.target.value)}
                     placeholder={translate('hospitalBranding.placeholders.latitude', 'Latitude')}
                     disabled={isExistingHospital && !isEditMode}
+                    className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
                   />
                   <Input
                     id="longitude"
@@ -969,6 +971,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateGeoField('longitude', e.target.value)}
                     placeholder={translate('hospitalBranding.placeholders.longitude', 'Longitude')}
                     disabled={isExistingHospital && !isEditMode}
+                    className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
                   />
                 </div>
               </div>
@@ -977,19 +980,19 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+          <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
             <CardHeader className="max-sm:pb-2 max-sm:px-4">
-              <CardTitle className="flex items-center gap-2 max-sm:text-xs max-sm:text-brand-600 max-sm:uppercase max-sm:tracking-wider">
-                <FileText className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                <FileText className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 {t('hospitalBranding.sections.config.title')}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.config.subtitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('hospitalBranding.sections.config.subtitle')}</p>
             </CardHeader>
-            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800">
+            <CardContent className="space-y-4 max-sm:px-4 max-sm:pb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="registrationNumber" className="flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="registrationNumber" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Hash className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.registrationNumber')}
                     <RequiredIndicator />
                   </Label>
@@ -1000,9 +1003,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     placeholder={t('hospitalBranding.placeholders.registrationNumber')}
                     required
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.registrationNumber ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.registrationNumber && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.registrationNumber')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.registrationNumber')}</p>
                   {validationErrors.registrationNumber && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
                       <AlertCircle className="h-3 w-3" />
@@ -1010,9 +1013,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gstin" className="flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="gstin" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Hash className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.gstin')}
                   </Label>
                   <Input
@@ -1021,7 +1024,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateBranding('gstin', e.target.value)}
                     placeholder={t('hospitalBranding.placeholders.gstin')}
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.gstin ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.gstin && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.gstin && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -1033,9 +1036,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pan" className="flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="pan" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Hash className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.pan')}
                   </Label>
                   <Input
@@ -1044,7 +1047,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateBranding('pan', e.target.value)}
                     placeholder={t('hospitalBranding.placeholders.pan')}
                     disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.pan ? 'border-red-500 focus:border-red-500' : ''}
+                    className={cn("h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", validationErrors.pan && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20")}
                   />
                   {validationErrors.pan && (
                     <div className="flex items-center gap-1 text-xs text-red-500">
@@ -1053,9 +1056,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nabhNumber" className="flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="nabhNumber" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Hash className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.nabhNumber')}
                   </Label>
                   <Input
@@ -1064,14 +1067,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onChange={(e) => updateBranding('nabhNumber', e.target.value)}
                     placeholder={t('hospitalBranding.placeholders.nabhNumber')}
                     disabled={isExistingHospital && !isEditMode}
+                    className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="timeZone" className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="timeZone" className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
+                    <Clock className="h-3.5 w-3.5" />
                     {t('hospitalBranding.labels.timeZone')}
                   </Label>
                   <Select
@@ -1079,10 +1083,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     onValueChange={(value) => updateBranding('timeZone', value)}
                     disabled={isExistingHospital && !isEditMode}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
                       <SelectValue placeholder={t('hospitalBranding.placeholders.timeZone')} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl">
                       {timeZones.map((tz) => (
                         <SelectItem key={tz.value} value={tz.value}>
                           {tz.label}
@@ -1090,7 +1094,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.timeZone')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hospitalBranding.helpers.timeZone')}</p>
                 </div>
               </div>
             </CardContent>
@@ -1159,12 +1163,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       </div>
 
       <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
           <DialogHeader className="text-center space-y-3">
-            <div className="mx-auto h-14 w-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="mx-auto h-14 w-14 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <DialogTitle className="text-2xl font-semibold">{t('hospitalBranding.completion.title')}</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold text-slate-900 dark:text-zinc-50">{t('hospitalBranding.completion.title')}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               {t('hospitalBranding.completion.description')}
             </DialogDescription>
@@ -1178,20 +1182,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           >
             <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-[2px]" />
             <div className="relative z-10 flex flex-col items-center">
-              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">{t('hospitalBranding.completion.score')}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">{t('hospitalBranding.completion.score')}</p>
               <p className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 mt-2 filter drop-shadow-sm">{completionPercent}%</p>
             </div>
           </motion.div>
 
           <div className="mt-4 space-y-2">
             {completionChecklist.map((item) => (
-              <div key={item.label} className="flex items-center gap-2 rounded-lg border border-border/60 p-2 text-sm">
+              <div key={item.label} className="flex items-center gap-2 rounded-xl border border-slate-100 dark:border-zinc-800/80 p-3 text-sm bg-slate-50/50 dark:bg-zinc-950/20">
                 {item.complete ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-amber-500" />
                 )}
-                <span className="font-medium text-foreground">{item.label}</span>
+                <span className="font-semibold text-slate-800 dark:text-zinc-200">{item.label}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {item.complete
                     ? t('hospitalBranding.completion.statusComplete')
@@ -1201,7 +1205,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             ))}
           </div>
 
-          <Button className="mt-6 w-full" onClick={handleCompletionContinue}>
+          <Button className="mt-6 w-full h-11 text-base font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white active:scale-[0.98] transition-all shadow-md shadow-brand-600/10" onClick={handleCompletionContinue}>
             {t('hospitalBranding.buttons.continue')}
           </Button>
         </DialogContent>

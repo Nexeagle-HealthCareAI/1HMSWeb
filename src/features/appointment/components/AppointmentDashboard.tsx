@@ -41,6 +41,8 @@ import {
   Pencil,
   MoreVertical,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -2186,7 +2188,8 @@ export const AppointmentDashboard = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-4 py-3 border-t border-brand-100/50 dark:border-zinc-800/50 bg-brand-50/30 dark:bg-brand-900/10 backdrop-blur-md rounded-b-2xl">
-              <div className="flex items-center justify-between">
+              {/* Desktop Pagination */}
+              <div className="hidden sm:flex items-center justify-between">
                 <div className="text-xs font-bold text-brand-900/60 dark:text-brand-200/60 uppercase tracking-widest">
                   {t('appointmentDashboard.pagination.showing', {
                     from: startIndex + 1,
@@ -2194,7 +2197,7 @@ export const AppointmentDashboard = () => {
                     total: filteredAppointments.length,
                   })}
                 </div>
-                <Pagination>
+                <Pagination className="w-auto mx-0">
                   <PaginationContent>
                     <PaginationItem>
                       <PaginationPrevious
@@ -2206,14 +2209,12 @@ export const AppointmentDashboard = () => {
                     {/* Page numbers - show more pages for better navigation */}
                     {Array.from({ length: totalPages }, (_, i) => {
                       const page = i + 1;
-                      // Show first 3 pages, last 3 pages, and pages around current
                       const shouldShow =
                         page <= 3 ||
                         page >= totalPages - 2 ||
                         Math.abs(page - currentPage) <= 1;
 
                       if (!shouldShow) {
-                        // Show ellipsis between gaps
                         if (page === 4 || page === totalPages - 3) {
                           return (
                             <PaginationItem key={`ellipsis-${page}`}>
@@ -2245,6 +2246,42 @@ export const AppointmentDashboard = () => {
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>
+              </div>
+
+              {/* Mobile Pagination */}
+              <div className="flex sm:hidden flex-col items-center gap-3">
+                <div className="text-[11px] font-bold text-brand-900/60 dark:text-brand-200/60 uppercase tracking-widest text-center">
+                  {t('appointmentDashboard.pagination.showing', {
+                    from: startIndex + 1,
+                    to: Math.min(endIndex, filteredAppointments.length),
+                    total: filteredAppointments.length,
+                  })}
+                </div>
+                <div className="flex items-center justify-between w-full gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="flex-1 h-9 gap-1 text-xs"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="flex-none px-3 py-1 bg-brand-50 dark:bg-zinc-800 border border-brand-100 dark:border-zinc-700 rounded-md text-xs font-semibold text-brand-900 dark:text-brand-100">
+                    {currentPage} / {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="flex-1 h-9 gap-1 text-xs"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}

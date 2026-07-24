@@ -145,15 +145,15 @@ export const InternalRequestsPanel: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Internal Requests</h3>
-                <div className="flex items-center gap-3">
-                    <Label>My Store (View As):</Label>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+                <h3 className="text-base font-bold text-slate-800 dark:text-zinc-200">Internal Requests</h3>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-zinc-550 shrink-0">My Store (View As):</Label>
                     <Select value={myStoreId} onValueChange={setMyStoreId}>
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-full sm:w-[200px] h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-xl">
                             {stores.map(s => (
                                 <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>
                             ))}
@@ -162,14 +162,14 @@ export const InternalRequestsPanel: React.FC = () => {
                 </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <div className="flex items-center justify-between border-b pb-2">
-                    <TabsList>
-                        <TabsTrigger value="my-requests">My Requests ({myRequests.length})</TabsTrigger>
-                        <TabsTrigger value="to-fulfill">To Fulfill ({toFulfill.length})</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+                    <TabsList className="bg-black/10 dark:bg-black/25 backdrop-blur-sm rounded-full p-1 h-auto flex max-w-sm w-full">
+                        <TabsTrigger value="my-requests" className="flex-1 rounded-full text-xs font-bold py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-brand-600 dark:data-[state=active]:text-brand-400 data-[state=active]:shadow-sm">My Requests ({myRequests.length})</TabsTrigger>
+                        <TabsTrigger value="to-fulfill" className="flex-1 rounded-full text-xs font-bold py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-brand-600 dark:data-[state=active]:text-brand-400 data-[state=active]:shadow-sm">To Fulfill ({toFulfill.length})</TabsTrigger>
                     </TabsList>
                     {activeTab === 'my-requests' && (
-                        <Button size="sm" onClick={() => setCreateOpen(true)}>
+                        <Button size="sm" onClick={() => setCreateOpen(true)} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-500/10 px-4">
                             <Plus className="h-4 w-4 mr-2" /> New Request
                         </Button>
                     )}
@@ -177,23 +177,23 @@ export const InternalRequestsPanel: React.FC = () => {
 
                 <TabsContent value="my-requests" className="mt-4 space-y-4">
                     {myRequests.length === 0 ? (
-                        <div className="text-center p-8 text-slate-500 bg-slate-50 rounded-lg border border-dashed">No requests found.</div>
+                        <div className="text-center p-8 text-slate-500 dark:text-zinc-500 bg-slate-50/50 dark:bg-zinc-950/20 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">No requests found.</div>
                     ) : (
                         <div className="grid gap-3">
                             {myRequests.map(req => (
-                                <div key={req.indentId} className="flex items-center justify-between p-4 border rounded-xl bg-white shadow-sm">
+                                <div key={req.indentId} className="flex items-center justify-between p-4 border border-slate-200/60 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-slate-900">{req.indentNumber}</span>
-                                            <Badge variant="outline" className={cn("text-[10px] font-bold border-none", INDENT_TONE[req.status] || INDENT_TONE.DRAFT)}>
+                                            <span className="font-bold text-slate-900 dark:text-zinc-100 text-sm">{req.indentNumber}</span>
+                                            <Badge variant="outline" className={cn("text-[10px] font-bold border-none rounded-full px-2.5 py-0.5", INDENT_TONE[req.status] || INDENT_TONE.DRAFT)}>
                                                 {req.status}
                                             </Badge>
                                         </div>
-                                        <div className="text-sm text-slate-500 mt-1">
-                                            Requested from: <span className="font-medium text-slate-700">{req.targetStoreName || 'Unknown'}</span>
+                                        <div className="text-xs text-slate-500 dark:text-zinc-450 mt-1">
+                                            Requested from: <span className="font-semibold text-slate-700 dark:text-zinc-355">{req.targetStoreName || 'Unknown'}</span>
                                         </div>
-                                        <div className="text-xs text-slate-400 mt-1">
-                                            {req.lineCount} items • {new Date(req.requestedAt).toLocaleString()}
+                                        <div className="text-[10px] text-slate-400 dark:text-zinc-550 mt-1 font-medium">
+                                            {req.lineCount} items &middot; {new Date(req.requestedAt).toLocaleString()}
                                         </div>
                                     </div>
                                 </div>
@@ -204,27 +204,27 @@ export const InternalRequestsPanel: React.FC = () => {
 
                 <TabsContent value="to-fulfill" className="mt-4 space-y-4">
                     {toFulfill.length === 0 ? (
-                        <div className="text-center p-8 text-slate-500 bg-slate-50 rounded-lg border border-dashed">No requests to fulfill.</div>
+                        <div className="text-center p-8 text-slate-500 dark:text-zinc-500 bg-slate-50/50 dark:bg-zinc-950/20 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">No requests to fulfill.</div>
                     ) : (
                         <div className="grid gap-3">
                             {toFulfill.map(req => (
-                                <div key={req.indentId} className="flex items-center justify-between p-4 border rounded-xl bg-white shadow-sm">
+                                <div key={req.indentId} className="flex items-center justify-between p-4 border border-slate-200/60 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-slate-900">{req.indentNumber}</span>
-                                            <Badge variant="outline" className={cn("text-[10px] font-bold border-none", INDENT_TONE[req.status] || INDENT_TONE.DRAFT)}>
+                                            <span className="font-bold text-slate-900 dark:text-zinc-100 text-sm">{req.indentNumber}</span>
+                                            <Badge variant="outline" className={cn("text-[10px] font-bold border-none rounded-full px-2.5 py-0.5", INDENT_TONE[req.status] || INDENT_TONE.DRAFT)}>
                                                 {req.status}
                                             </Badge>
                                         </div>
-                                        <div className="text-sm text-slate-500 mt-1">
-                                            Requested by: <span className="font-medium text-slate-700">{req.requestingStoreName || 'Unknown'}</span>
+                                        <div className="text-xs text-slate-500 dark:text-zinc-450 mt-1">
+                                            Requested by: <span className="font-semibold text-slate-700 dark:text-zinc-355">{req.requestingStoreName || 'Unknown'}</span>
                                         </div>
-                                        <div className="text-xs text-slate-400 mt-1">
-                                            {req.lineCount} items • {new Date(req.requestedAt).toLocaleString()}
+                                        <div className="text-[10px] text-slate-400 dark:text-zinc-550 mt-1 font-medium">
+                                            {req.lineCount} items &middot; {new Date(req.requestedAt).toLocaleString()}
                                         </div>
                                     </div>
                                     {(req.status === 'SUBMITTED' || req.status === 'PARTIALLY_ISSUED') && (
-                                        <Button size="sm" onClick={() => openIssue(req)} className="bg-brand-600 hover:bg-brand-700">
+                                        <Button size="sm" onClick={() => openIssue(req)} className="h-9 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-500/10 px-3.5">
                                             <PackageCheck className="h-4 w-4 mr-2" /> Fulfill
                                         </Button>
                                     )}
@@ -237,27 +237,27 @@ export const InternalRequestsPanel: React.FC = () => {
 
             {/* Create Dialog */}
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     <DialogHeader>
-                        <DialogTitle>New Internal Request</DialogTitle>
-                        <DialogDescription>Request stock from another store/department.</DialogDescription>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">New Internal Request</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">Request stock from another store/department.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Request From (Target Store)</Label>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Request From (Target Store)</Label>
                             <Select value={targetStoreId} onValueChange={setTargetStoreId}>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
                                     <SelectValue placeholder="Select store..." />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">
                                     {stores.filter(s => s.storeId !== myStoreId).map(s => (
                                         <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Items to Request</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Items to Request</Label>
                             <div className="flex gap-2 mb-2">
                                 <Select
                                     onValueChange={v => {
@@ -267,10 +267,10 @@ export const InternalRequestsPanel: React.FC = () => {
                                         }
                                     }}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
                                         <SelectValue placeholder="Add item..." />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-48 overflow-y-auto rounded-xl">
                                         {items.map(i => (
                                             <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>
                                         ))}
@@ -278,11 +278,11 @@ export const InternalRequestsPanel: React.FC = () => {
                                 </Select>
                             </div>
                             {newLines.length > 0 && (
-                                <div className="border rounded-md divide-y max-h-[300px] overflow-y-auto">
+                                <div className="border border-slate-100 dark:border-zinc-800/80 rounded-2xl divide-y divide-slate-100 dark:divide-zinc-800/80 max-h-[300px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {newLines.map((line, idx) => (
-                                        <div key={line.inventoryItemId} className="flex items-center gap-3 p-3">
-                                            <div className="flex-1 text-sm font-medium">{line.itemName}</div>
-                                            <div className="w-24">
+                                        <div key={line.inventoryItemId} className="flex items-center gap-3 p-3 bg-slate-50/50 dark:bg-zinc-950/20">
+                                            <div className="flex-1 text-sm font-semibold text-slate-800 dark:text-zinc-200">{line.itemName}</div>
+                                            <div className="w-24 shrink-0">
                                                 <Input 
                                                     type="number" 
                                                     min="1"
@@ -292,9 +292,10 @@ export const InternalRequestsPanel: React.FC = () => {
                                                         copy[idx].qty = Number(e.target.value);
                                                         setNewLines(copy);
                                                     }}
+                                                    className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono"
                                                 />
                                             </div>
-                                            <Button variant="ghost" size="sm" className="text-rose-500" onClick={() => setNewLines(newLines.filter((_, i) => i !== idx))}>
+                                            <Button variant="ghost" size="sm" className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/25 rounded-xl active:scale-[0.98] transition-all px-3" onClick={() => setNewLines(newLines.filter((_, i) => i !== idx))}>
                                                 Remove
                                             </Button>
                                         </div>
@@ -303,9 +304,9 @@ export const InternalRequestsPanel: React.FC = () => {
                             )}
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreate} disabled={createBusy}>
+                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-850">
+                        <Button variant="ghost" className="h-10 rounded-xl active:scale-[0.98] transition-all text-slate-650" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                        <Button onClick={handleCreate} disabled={createBusy} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 shadow-md shadow-brand-500/10">
                             {createBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                             Submit Request
                         </Button>
@@ -315,18 +316,18 @@ export const InternalRequestsPanel: React.FC = () => {
 
             {/* Issue Dialog */}
             <Dialog open={!!issueTarget} onOpenChange={o => !o && setIssueTarget(null)}>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-3xl rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     <DialogHeader>
-                        <DialogTitle>Fulfill Request</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">Fulfill Request</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">
                             Request #{issueTarget?.indentNumber} from {issueTarget?.requestingStoreName}
                         </DialogDescription>
                     </DialogHeader>
                     {!issueDetail ? (
                         <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
                     ) : (
-                        <div className="space-y-4 py-4">
-                            <div className="border rounded-md divide-y max-h-[400px] overflow-y-auto">
+                        <div className="space-y-4 py-2">
+                            <div className="border border-slate-150 dark:border-zinc-800 rounded-2xl divide-y divide-slate-100 dark:divide-zinc-800 max-h-[350px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                 {issueDetail.lines.filter(l => l.qty > l.issuedQty).map((line) => {
                                     const batches = availableBatches[line.inventoryItemId] || [];
                                     const lineIndex = issueLines.findIndex(il => il.indentLineId === line.indentLineId);
@@ -336,21 +337,21 @@ export const InternalRequestsPanel: React.FC = () => {
                                     const remainingQty = line.qty - line.issuedQty;
 
                                     return (
-                                        <div key={line.indentLineId} className="p-4 space-y-3 bg-slate-50/50">
-                                            <div className="flex justify-between items-center">
-                                                <div className="font-medium">{line.itemName}</div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="text-xs text-slate-500">
+                                        <div key={line.indentLineId} className="p-4 space-y-3 bg-slate-50/50 dark:bg-zinc-950/20">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                                <div className="font-semibold text-slate-800 dark:text-zinc-200 text-sm">{line.itemName}</div>
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                                                         Requested: {line.qty} | Issued: {line.issuedQty}
                                                     </div>
-                                                    <div className="text-sm font-semibold text-brand-700 bg-brand-50 px-2 py-1 rounded">
+                                                    <Badge variant="outline" className="text-[10px] font-bold text-brand-700 dark:text-brand-400 bg-brand-50/50 dark:bg-zinc-950/20 border-brand-200 dark:border-brand-900 rounded-full px-2.5 py-0.5">
                                                         Remaining: {remainingQty} {line.unit}
-                                                    </div>
+                                                    </Badge>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                                 <div className="flex-1">
-                                                    <Label className="text-xs">Issue From Batch</Label>
+                                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1.5">Issue From Batch</Label>
                                                     <Select
                                                         value={currentLine.batchId || ''}
                                                         onValueChange={v => {
@@ -359,10 +360,10 @@ export const InternalRequestsPanel: React.FC = () => {
                                                             setIssueLines(copy);
                                                         }}
                                                     >
-                                                        <SelectTrigger className="h-8 text-sm">
+                                                        <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all text-xs">
                                                             <SelectValue placeholder="Select batch..." />
                                                         </SelectTrigger>
-                                                        <SelectContent>
+                                                        <SelectContent className="max-h-48 overflow-y-auto rounded-xl">
                                                             {batches.map(b => (
                                                                 <SelectItem key={b.batchId} value={b.batchId}>
                                                                     {b.batchNumber} (Stock: {b.remainingQty}) - Exp: {b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : 'N/A'}
@@ -371,10 +372,10 @@ export const InternalRequestsPanel: React.FC = () => {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                                <div className="w-24">
-                                                    <Label className="text-xs">Issue Qty</Label>
+                                                <div className="w-full sm:w-28 shrink-0">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1.5">Issue Qty</Label>
                                                     <Input 
-                                                        className="h-8 text-sm"
+                                                        className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono"
                                                         type="number"
                                                         min="1"
                                                         max={remainingQty}
@@ -392,8 +393,8 @@ export const InternalRequestsPanel: React.FC = () => {
                                 })}
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
-                                <Button variant="outline" onClick={() => setIssueTarget(null)}>Cancel</Button>
-                                <Button onClick={handleIssue} disabled={issueBusy} className="bg-brand-600 hover:bg-brand-700">
+                                <Button variant="ghost" className="h-10 rounded-xl active:scale-[0.98] transition-all text-slate-650" onClick={() => setIssueTarget(null)}>Cancel</Button>
+                                <Button onClick={handleIssue} disabled={issueBusy} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 shadow-md shadow-brand-500/10">
                                     {issueBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                     Issue Stock
                                 </Button>

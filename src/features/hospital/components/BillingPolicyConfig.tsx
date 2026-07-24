@@ -6,10 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Save, Receipt, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Save, Receipt, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash, Loader2, AlertCircle, RefreshCw, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
+import { cn } from '@/lib/utils';
 
 type TriggerKey = 'opdConsultTrigger' | 'ipdBedChargeMode';
 
@@ -89,6 +91,16 @@ export const BillingPolicyConfig = () => {
 
     const handleChange = (key: keyof typeof config, value: string) => {
         setConfig(prev => ({ ...prev, [key]: value }));
+    };
+
+    const isGlobalAutoActive = config.opdConsultTrigger !== 'OFF' || config.ipdBedChargeMode !== 'OFF';
+
+    const handleGlobalToggle = (checked: boolean) => {
+        setConfig(prev => ({
+            ...prev,
+            opdConsultTrigger: checked ? 'AUTO' : 'OFF',
+            ipdBedChargeMode: checked ? 'DAILY_AUTO' : 'OFF'
+        }));
     };
 
     const handleSequenceChange = (key: keyof typeof sequenceConfigs['INV'], value: string) => {
@@ -225,18 +237,26 @@ export const BillingPolicyConfig = () => {
             </div>
         );
     }
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="space-y-6 max-w-5xl mx-auto"
+            className="space-y-6 max-w-2xl mx-auto px-4 pb-16 sm:px-0 relative"
         >
-            <div className="flex items-center justify-between">
+            {/* Background decorative glows */}
+            <div className="absolute top-[-50px] left-1/4 w-80 h-80 bg-brand-500/10 dark:bg-brand-500/15 rounded-full blur-[100px] pointer-events-none -z-10" />
+            <div className="absolute top-[180px] right-1/4 w-80 h-80 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none -z-10" />
+
+            {/* Header Area */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100/70 dark:border-zinc-800/80 pb-4">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Billing Policy Setup</h2>
-                    <p className="text-muted-foreground mt-1">Configure global billing rules, discounts, and integration triggers.</p>
+                    <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 dark:text-zinc-50">
+                        Billing Policy Setup
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+                        Configure global auto-billing triggers and sequence numbers.
+                    </p>
                 </div>
 
                 <div className="relative group">
@@ -246,233 +266,280 @@ export const BillingPolicyConfig = () => {
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: [1, 1.4, 2], opacity: [0.8, 0.4, 0] }}
                                 transition={{ duration: 1, ease: "easeOut" }}
-                                className="absolute inset-0 bg-green-400 rounded-md z-0"
+                                className="absolute inset-0 bg-green-400 rounded-2xl z-0"
                             />
                         )}
                     </AnimatePresence>
                     <Button
                         onClick={handleSave}
                         disabled={isSaving || showSuccess}
-                        className={`relative z-10 transition-all duration-300 shadow-lg ${showSuccess
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 border-none text-white scale-105 shadow-green-500/40'
-                            : 'bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-700 hover:to-brand-700 border-none text-white hover:scale-[1.02] shadow-brand-500/30 group-hover:shadow-brand-500/50'
-                            }`}
+                        className={cn(
+                            "relative z-10 w-full sm:w-auto h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-wider transition-all duration-300 shadow-lg active:scale-[0.97] border-none text-white",
+                            showSuccess
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/30'
+                                : 'bg-gradient-to-r from-brand-600 via-indigo-600 to-violet-600 shadow-brand-500/25 hover:shadow-brand-500/40 hover:brightness-105'
+                        )}
                     >
                         {isSaving ? (
                             <span className="flex items-center gap-2">
-                                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Saving...
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Saving Policy...
                             </span>
                         ) : showSuccess ? (
                             <motion.span
                                 initial={{ scale: 0.5, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="flex items-center gap-2 font-bold"
+                                className="flex items-center gap-2"
                             >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Saved!
+                                <CheckCircle2 className="h-4.5 w-4.5" />
+                                Settings Saved!
                             </motion.span>
                         ) : (
                             <span className="flex items-center gap-2">
-                                <Sparkles className="h-4 w-4" />
-                                Save Settings
+                                <Save className="h-4.5 w-4.5" />
+                                Save Changes
                             </span>
                         )}
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            {/* Auto-Billing Rules Cards */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-brand-50 dark:bg-brand-950/40 rounded-xl">
+                        <Settings2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+                        Auto-Billing Rules
+                    </span>
+                </div>
 
-                {/* Auto-Billing Rules */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                    <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden group hover:shadow-md transition-shadow duration-300">
-                        <CardHeader className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-brand-100 dark:bg-brand-900/50 rounded-lg group-hover:bg-brand-200 dark:group-hover:bg-brand-800/50 transition-colors">
-                                    <LinkIcon className="h-5 w-5 text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform" />
+                {/* Master Global Toggle Card */}
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-brand-500/10 via-brand-500/5 to-transparent dark:from-brand-950/20 dark:to-transparent border border-brand-200/50 dark:border-brand-900/40 rounded-2xl shadow-sm transition-all duration-300">
+                    <div className="flex-1 pr-5">
+                        <h4 className="font-extrabold text-sm text-slate-850 dark:text-zinc-150 flex items-center gap-2">
+                            Global Auto-Billing
+                            {isGlobalAutoActive ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/30">
+                                    Enabled
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-350 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700">
+                                    Disabled
+                                </span>
+                            )}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                            Turn auto-billing on or off globally for all modules.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={isGlobalAutoActive}
+                        onCheckedChange={handleGlobalToggle}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                    {AUTO_BILLING_RULES.map((rule) => {
+                        const isAuto = !!config[rule.key] && config[rule.key] !== 'OFF';
+                        return (
+                            <div
+                                key={rule.key}
+                                className={cn(
+                                    "flex items-center justify-between p-5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border rounded-2xl shadow-sm transition-all duration-300 relative overflow-hidden group",
+                                    isAuto 
+                                        ? "border-brand-500/30 dark:border-brand-500/30 bg-gradient-to-br from-white to-brand-50/10 dark:from-zinc-900 dark:to-brand-950/5 shadow-md shadow-brand-500/5"
+                                        : "border-slate-200/60 dark:border-zinc-805/80"
+                                )}
+                            >
+                                <div className="flex-1 pr-5">
+                                    <h4 className="font-extrabold text-sm text-slate-800 dark:text-zinc-100 flex items-center gap-2">
+                                        {rule.label}
+                                        {isAuto && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-200/30">
+                                                Active
+                                            </span>
+                                        )}
+                                    </h4>
+                                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                        {rule.desc}
+                                    </p>
                                 </div>
-                                <div>
-                                    <CardTitle className="text-lg">Auto-Billing Rules</CardTitle>
-                                    <CardDescription>Auto = charge posts to the bill automatically. Manual = staff adds it. Services &amp; amounts come from Charge Master.</CardDescription>
-                                </div>
+                                <Switch
+                                    checked={isAuto}
+                                    onCheckedChange={(checked) => handleChange(rule.key, checked ? rule.onValue : 'OFF')}
+                                />
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-1 pt-4">
-                            {AUTO_BILLING_RULES.map((rule, idx) => {
-                                const isAuto = !!config[rule.key] && config[rule.key] !== 'OFF';
-                                return (
-                                    <div
-                                        key={rule.key}
-                                        className={`grid grid-cols-[1fr_170px] items-center gap-4 p-2 -mx-2 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${idx > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}
-                                    >
-                                        <div>
-                                            <Label className="font-semibold text-gray-900 dark:text-gray-100">{rule.label}</Label>
-                                            <div className="text-xs text-muted-foreground">{rule.desc}</div>
-                                        </div>
-                                        <div className="inline-flex p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg" role="radiogroup" aria-label={rule.label}>
-                                            <button
-                                                type="button"
-                                                role="radio"
-                                                aria-checked={!isAuto}
-                                                onClick={() => handleChange(rule.key, 'OFF')}
-                                                className={`flex-1 h-8 px-3 rounded-md text-xs font-bold transition-all ${!isAuto ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                                            >
-                                                Manual
-                                            </button>
-                                            <button
-                                                type="button"
-                                                role="radio"
-                                                aria-checked={isAuto}
-                                                onClick={() => handleChange(rule.key, rule.onValue)}
-                                                className={`flex-1 h-8 px-3 rounded-md text-xs font-bold transition-all ${isAuto ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                                            >
-                                                Auto
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Document Sequencing */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-            >
-                <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden group hover:shadow-md transition-shadow duration-300">
-                    <CardHeader className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800 relative">
-                        <div className="flex items-center gap-2">
-                            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition-colors">
-                                <Hash className="h-5 w-5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-                            </div>
-                            <div className="flex-1">
-                                <CardTitle className="text-lg">Document Sequencing</CardTitle>
-                                <CardDescription>Invoice &amp; receipt numbers are set automatically — customize only if you need a specific format.</CardDescription>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl">
+                        <Hash className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+                        Document Numbering
+                    </span>
+                </div>
+
+                <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-slate-200/60 dark:border-zinc-805/80 rounded-2xl p-5 shadow-sm space-y-4">
+                    {/* Live Preview Cards */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50/50 dark:bg-zinc-950/20 p-4 rounded-xl border border-slate-200/40 dark:border-zinc-800/40 text-center relative overflow-hidden group">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                                Invoice series
+                            </span>
+                            <div className="text-xs sm:text-sm font-mono font-extrabold text-slate-800 dark:text-zinc-200 mt-2 break-all flex items-center gap-1.5 justify-center">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                {previewFor(sequenceConfigs.INV)}
                             </div>
                         </div>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                        {/* Numbers auto-default per hospital — the controls below are optional/advanced. */}
-                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-900/10 p-4">
-                            <div className="flex items-start gap-3">
-                                <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Numbers are assigned automatically</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">Every hospital gets clean, sequential invoice &amp; receipt numbers out of the box — no setup needed.</p>
-                                    <div className="flex flex-wrap gap-2 mt-3">
-                                        <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">Invoice: {previewFor(sequenceConfigs.INV)}</span>
-                                        <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">Receipt: {previewFor(sequenceConfigs.RCPT)}</span>
-                                    </div>
-                                </div>
+                        <div className="bg-slate-50/50 dark:bg-zinc-950/20 p-4 rounded-xl border border-slate-200/40 dark:border-zinc-800/40 text-center relative overflow-hidden group">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                                Receipt series
+                            </span>
+                            <div className="text-xs sm:text-sm font-mono font-extrabold text-slate-800 dark:text-zinc-200 mt-2 break-all flex items-center gap-1.5 justify-center">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                {previewFor(sequenceConfigs.RCPT)}
                             </div>
                         </div>
+                    </div>
 
-                        <button type="button" onClick={() => setShowSeqAdvanced(v => !v)} className="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 underline underline-offset-2">
-                            {showSeqAdvanced ? '− Hide advanced numbering' : '+ Customize numbering (advanced)'}
-                        </button>
+                    {/* Accordion Toggle */}
+                    <button
+                        type="button"
+                        onClick={() => setShowSeqAdvanced(!showSeqAdvanced)}
+                        className="w-full flex items-center justify-between p-4 bg-slate-50/40 dark:bg-zinc-950/20 hover:bg-slate-50 dark:hover:bg-zinc-950/50 border border-slate-200/50 dark:border-zinc-800/60 rounded-2xl transition-all duration-300 text-left active:scale-[0.99] group/btn"
+                    >
+                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-500 group-hover/btn:animate-spin" />
+                            Customize numbering sequence
+                        </span>
+                        <ChevronDown className={cn("h-4 w-4 text-slate-450 transition-transform duration-300", showSeqAdvanced && "rotate-180")} />
+                    </button>
 
+                    {/* Advanced Customization form */}
+                    <AnimatePresence>
                         {showSeqAdvanced && (
-                        <div className="flex flex-col md:flex-row gap-6">
-                            {/* Sequence Selector */}
-                            <div className="w-full md:w-1/4 space-y-4 border-r border-gray-100 dark:border-gray-800 pr-6">
-                                <div>
-                                    <Label className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 block">Series Code</Label>
-                                    <div className="flex flex-col gap-2">
-                                        {(['INV', 'RCPT'] as SequenceType[]).map((type) => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setSelectedSequence(type)}
-                                                className={`text-left px-4 py-3 rounded-xl border transition-all duration-200 ${selectedSequence === type
-                                                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
-                                                    : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                                    }`}
-                                            >
-                                                <div className="font-semibold text-sm">{type === 'INV' ? 'Invoices' : 'Receipts'}</div>
-                                                <div className="text-xs text-muted-foreground font-mono mt-1">{type}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Configuration Fields */}
-                            <div className="w-full md:w-3/4">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-xs font-semibold text-muted-foreground">{selectedSequence === 'INV' ? 'Invoice' : 'Receipt'} number format</span>
-                                    <button type="button" onClick={resetSequence} className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1">
-                                        <RefreshCw className="h-3 w-3" /> Reset to default
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                className="overflow-hidden space-y-4 pt-1"
+                            >
+                                {/* Mobile Segment Control */}
+                                <div className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedSequence('INV')}
+                                        className={cn(
+                                            "flex-1 h-10 rounded-xl text-xs font-extrabold transition-all duration-300 active:scale-[0.98]",
+                                            selectedSequence === 'INV'
+                                                ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm border border-slate-200/30"
+                                                : "text-slate-500 hover:text-slate-700"
+                                        )}
+                                    >
+                                        Invoices (INV)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedSequence('RCPT')}
+                                        className={cn(
+                                            "flex-1 h-10 rounded-xl text-xs font-extrabold transition-all duration-300 active:scale-[0.98]",
+                                            selectedSequence === 'RCPT'
+                                                ? "bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-sm border border-slate-200/30"
+                                                : "text-slate-500 hover:text-slate-700"
+                                        )}
+                                    >
+                                        Receipts (RCPT)
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                                    <div className="space-y-2">
-                                        <Label>Prefix</Label>
+
+                                <div className="flex items-center justify-between mt-2">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                        Configure {selectedSequence === 'INV' ? 'Invoice' : 'Receipt'} Series
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={resetSequence}
+                                        className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                                    >
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                        Reset default
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-zinc-400">Prefix</Label>
                                         <Input
                                             value={sequenceConfigs[selectedSequence].prefix}
                                             onChange={(e) => handleSequenceChange('prefix', e.target.value)}
-                                            className="font-mono"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850"
                                             placeholder="e.g. INV"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Year Format</Label>
-                                        <Select value={sequenceConfigs[selectedSequence].yearFormat} onValueChange={(val) => handleSequenceChange('yearFormat', val)}>
-                                            <SelectTrigger className="font-mono">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-zinc-400">Separator</Label>
+                                        <Input
+                                            value={sequenceConfigs[selectedSequence].separator}
+                                            onChange={(e) => handleSequenceChange('separator', e.target.value)}
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850"
+                                            placeholder="e.g. -"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-zinc-400">Year Format</Label>
+                                        <Select
+                                            value={sequenceConfigs[selectedSequence].yearFormat}
+                                            onValueChange={(val) => handleSequenceChange('yearFormat', val)}
+                                        >
+                                            <SelectTrigger className="font-mono h-11.5 rounded-2xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-850">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-2xl">
                                                 <SelectItem value="YYYY">YYYY (e.g. 2026)</SelectItem>
                                                 <SelectItem value="YY">YY (e.g. 26)</SelectItem>
-                                                <SelectItem value="YYYYMM">YYYYMM (e.g. 202602)</SelectItem>
+                                                <SelectItem value="YYYYMM">YYYYMM (202602)</SelectItem>
                                                 <SelectItem value="OFF">None</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Separator</Label>
-                                        <Input
-                                            value={sequenceConfigs[selectedSequence].separator}
-                                            onChange={(e) => handleSequenceChange('separator', e.target.value)}
-                                            className="font-mono"
-                                            placeholder="e.g. -"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Pad Length</Label>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-zinc-400">Digit Padding</Label>
                                         <Input
                                             type="number"
                                             min="3"
                                             max="10"
                                             value={sequenceConfigs[selectedSequence].padLength}
                                             onChange={(e) => handleSequenceChange('padLength', e.target.value)}
-                                            className="font-mono"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850"
                                         />
                                     </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label>Current Value (Next Number)</Label>
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <Label className="text-xs font-bold text-slate-600 dark:text-zinc-400">Next Sequence Value</Label>
                                         <Input
                                             type="number"
                                             min="1"
                                             value={sequenceConfigs[selectedSequence].currentValue}
                                             onChange={(e) => handleSequenceChange('currentValue', e.target.value)}
-                                            className="font-mono max-w-[200px]"
+                                            className="font-mono h-11.5 rounded-2xl focus-visible:ring-brand-500/20 focus-visible:ring-4 border-slate-200 dark:border-zinc-850 max-w-xs"
                                         />
                                     </div>
                                 </div>
 
-                                {/* Preview */}
-                                <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Live Preview</div>
-                                    <div className="text-2xl font-mono tracking-wider font-bold text-gray-900 dark:text-white">
+                                {/* Advanced Live Preview card */}
+                                <div className="p-4 bg-emerald-500/5 dark:bg-emerald-950/10 border border-dashed border-emerald-500/20 dark:border-emerald-900/30 rounded-2xl flex items-center justify-between">
+                                    <div className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-450">
+                                        Active Series Format
+                                    </div>
+                                    <div className="text-sm font-mono font-black text-emerald-800 dark:text-emerald-450">
                                         {sequenceConfigs[selectedSequence].prefix}
                                         {sequenceConfigs[selectedSequence].separator}
                                         {sequenceConfigs[selectedSequence].yearFormat === 'YYYY' ? new Date().getFullYear() : sequenceConfigs[selectedSequence].yearFormat === 'YY' ? new Date().getFullYear().toString().slice(-2) : sequenceConfigs[selectedSequence].yearFormat === 'YYYYMM' ? `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}` : ''}
@@ -480,13 +547,11 @@ export const BillingPolicyConfig = () => {
                                         {sequenceConfigs[selectedSequence].currentValue.padStart(safePadLength(sequenceConfigs[selectedSequence].padLength), '0')}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+                            </motion.div>
                         )}
-                    </CardContent>
-                </Card>
-            </motion.div>
-
+                    </AnimatePresence>
+                </div>
+            </div>
         </motion.div>
     );
 };

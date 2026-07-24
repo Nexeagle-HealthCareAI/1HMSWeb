@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Filter, Plus, Download, MoreVertical,
+    Search, Filter, Plus, Download, MoreVertical, Database, ArrowLeft,
     Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw,
     Stethoscope, FlaskConical, Activity, Syringe, Pill, LayoutGrid
 } from 'lucide-react';
@@ -365,10 +366,10 @@ export const ChargeMaster = () => {
                     {/* DESKTOP DROPDOWNS */}
                     <div className="hidden sm:flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
                         <Select value={filterAppliesTo} onValueChange={setFilterAppliesTo}>
-                            <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900 shadow-sm h-10">
+                            <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900 shadow-sm h-10 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectValue placeholder="Module" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectItem value="ALL">All Modules</SelectItem>
                                 <SelectItem value="OPD">OPD</SelectItem>
                                 <SelectItem value="IPD">IPD</SelectItem>
@@ -378,10 +379,10 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                         <Select value={filterCategory} onValueChange={setFilterCategory}>
-                            <SelectTrigger className="w-[130px] bg-white dark:bg-slate-900 shadow-sm h-10">
+                            <SelectTrigger className="w-[130px] bg-white dark:bg-slate-900 shadow-sm h-10 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectItem value="ALL">All Categories</SelectItem>
                                 <SelectItem value="CONSULT">Consultation</SelectItem>
                                 <SelectItem value="LAB">Laboratory</SelectItem>
@@ -392,10 +393,10 @@ export const ChargeMaster = () => {
                             </SelectContent>
                         </Select>
                         <Select value={filterActive} onValueChange={setFilterActive}>
-                            <SelectTrigger className="w-[110px] bg-white dark:bg-slate-900 shadow-sm h-10">
+                            <SelectTrigger className="w-[110px] bg-white dark:bg-slate-900 shadow-sm h-10 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-md">
                                 <SelectItem value="ALL">All Status</SelectItem>
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="INACTIVE">Inactive</SelectItem>
@@ -408,11 +409,12 @@ export const ChargeMaster = () => {
                         {['ALL', 'CONSULT', 'LAB', 'RAD', 'PROCEDURE', 'SERVICE', 'CONSUMABLE'].map(cat => (
                             <button
                                 key={cat}
+                                type="button"
                                 onClick={() => setFilterCategory(cat)}
-                                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide capitalize snap-center transition-all ${
+                                className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-extrabold tracking-wide capitalize snap-center transition-all ${
                                     filterCategory === cat 
                                     ? 'bg-brand-600 text-white shadow-md' 
-                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-gray-700'
+                                    : 'bg-white dark:bg-zinc-900 text-slate-605 dark:text-zinc-300 shadow-sm border border-slate-200 dark:border-zinc-800'
                                 }`}
                             >
                                 {cat === 'ALL' ? 'All' : cat.toLowerCase()}
@@ -433,7 +435,7 @@ export const ChargeMaster = () => {
 
 
             {/* TABLE */}
-            <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
+            <div className="flex-1 overflow-auto p-4 pb-36 hide-scrollbar relative">
                 <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm max-lg:bg-transparent max-lg:border-0 max-lg:shadow-none">
                     <table className="w-full text-sm text-left max-lg:hidden">
                         <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
@@ -556,124 +558,149 @@ export const ChargeMaster = () => {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 whileTap={{ scale: 0.98 }}
                                 key={`mob-${charge.id}`}
-                                className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-100/50 dark:border-gray-800/50 rounded-2xl p-4 shadow-sm flex flex-col gap-3 relative border-l-4 ${catStyle.color}`}
+                                className="bg-white/95 dark:bg-zinc-900/95 border border-slate-200/60 dark:border-zinc-800/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3.5 relative overflow-hidden active:scale-[0.99] transition-all hover:shadow-md"
                             >
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-start gap-3 pr-4">
-                                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${catStyle.bg}`}>
-                                            <Icon className="h-4 w-4" />
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 pr-2">
+                                        <div className={cn(
+                                            "w-11 h-11 rounded-xl shrink-0 flex items-center justify-center font-bold shadow-sm",
+                                            catStyle.bg
+                                        )}>
+                                            <Icon className="h-5 w-5" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <h3 className="font-bold text-gray-900 dark:text-white text-base leading-tight">
+                                            <h3 className="font-extrabold text-slate-800 dark:text-zinc-150 text-sm leading-snug">
                                                 {charge.displayName}
                                             </h3>
-                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{charge.categoryCode}</span>
-                                                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                                                <span className="text-xs text-gray-400 font-medium">{charge.appliesTo}</span>
+                                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                <span className="text-[10px] font-extrabold text-slate-400 dark:text-zinc-550 uppercase tracking-widest">{charge.categoryCode}</span>
+                                                <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-zinc-800"></span>
+                                                <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500">{charge.appliesTo}</span>
                                                 {charge.maxDiscountPercent > 0 && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 font-mono font-bold">
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-955/40 text-amber-600 dark:text-amber-400 font-mono font-black border border-amber-250/10">
                                                         Disc {charge.maxDiscountPercent}%
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-end shrink-0 pt-1">
-                                        <span className="font-mono font-bold text-lg text-gray-900 dark:text-white">
-                                            ₹{charge.defaultRate.toLocaleString('en-IN')}
+                                    <div className="flex flex-col items-end shrink-0 pt-0.5">
+                                        <span className="font-mono font-black text-sm text-slate-800 dark:text-zinc-150">
+                                            ₹{charge.defaultRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="border-t border-gray-100 dark:border-gray-800/60 pt-3 flex items-center justify-between">
+                                <div className="border-t border-slate-100 dark:border-zinc-800/80 pt-3 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Switch
                                             checked={charge.isActive}
                                             onCheckedChange={() => handleToggleActive(charge.id)}
                                             className="data-[state=checked]:bg-green-500 scale-75 origin-left"
                                         />
-                                        <span className={`text-xs font-medium ${charge.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                                        <span className={`text-[10px] font-extrabold uppercase tracking-wider ${charge.isActive ? 'text-green-600 dark:text-green-400' : 'text-slate-400'}`}>
                                             {charge.isActive ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-brand-600 bg-gray-50 dark:bg-slate-800/50 rounded-full" onClick={() => handleOpenDrawer(charge)}>
+                                    <div className="flex items-center gap-1.5">
+                                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 text-slate-500 hover:text-brand-600 bg-slate-50/50 dark:bg-zinc-850/50 rounded-xl" onClick={() => handleOpenDrawer(charge)}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" onClick={() => handleDeleteCharge(charge.id)}>
+                                        <Button variant="ghost" size="icon" className="h-8.5 w-8.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50/60 dark:hover:bg-rose-950/20 rounded-xl" onClick={() => handleDeleteCharge(charge.id)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>
                                 </div>
                             </motion.div>
-                        )})}
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* RATE CARDS: payer-type override + room-class multiplier */}
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Payer Rate Overrides</h3>
-                        <div className="grid grid-cols-[1fr_90px_110px_auto] gap-2 mb-3">
+                <div className="mt-6 hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="border border-gray-200 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm p-4.5">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Payer Rate Overrides</h3>
+                        <div className="flex flex-col sm:grid sm:grid-cols-[1fr_95px_110px_auto] gap-2.5 mb-4">
                             <Select value={newPayerRate.chargeId} onValueChange={v => setNewPayerRate(p => ({ ...p, chargeId: v }))}>
-                                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Charge item" /></SelectTrigger>
-                                <SelectContent>
+                                <SelectTrigger className="h-10 text-xs rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"><SelectValue placeholder="Charge item" /></SelectTrigger>
+                                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                     {charges.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <Select value={newPayerRate.payerType} onValueChange={v => setNewPayerRate(p => ({ ...p, payerType: v as PayerType }))}>
-                                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>
+                                <SelectTrigger className="h-10 text-xs rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                     <SelectItem value="CASH">CASH</SelectItem>
                                     <SelectItem value="TPA">TPA</SelectItem>
                                     <SelectItem value="SCHEME">SCHEME</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Input type="number" min="0" className="h-9 text-xs font-mono" placeholder="Rate ₹" value={newPayerRate.overrideRate} onChange={e => setNewPayerRate(p => ({ ...p, overrideRate: e.target.value }))} />
-                            <Button size="sm" className="h-9" disabled={rateCardSaving} onClick={handleAddPayerRate}>Save</Button>
+                            <Input type="number" min="0" className="h-10 text-xs font-mono rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800" placeholder="Rate ₹" value={newPayerRate.overrideRate} onChange={e => setNewPayerRate(p => ({ ...p, overrideRate: e.target.value }))} />
+                            <Button size="sm" className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold shadow-sm active:scale-95 transition-all" disabled={rateCardSaving} onClick={handleAddPayerRate}>Save</Button>
                         </div>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        <div className="space-y-1.5 max-h-60 overflow-y-auto hide-scrollbar">
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : payerRates.length === 0 ? (
-                                <p className="text-xs text-gray-400">No payer overrides configured — all payers bill at Default Rate.</p>
+                                <div className="flex items-center justify-center gap-1.5 py-3 text-slate-400 dark:text-zinc-550">
+                                    <Database className="h-4 w-4" />
+                                    <span className="text-[11px] font-bold">No payer overrides — defaulting to standard rates</span>
+                                </div>
                             ) : payerRates.map(r => (
-                                <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-gray-50 dark:bg-slate-800/50">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{r.chargeDisplayName ?? r.chargeCode}</span>
-                                    <span className="text-gray-500">{r.payerType} · ₹{r.overrideRate.toLocaleString('en-IN')}</span>
+                                <div key={r.chargeMasterPayerRateId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
+                                    <span className="font-semibold text-slate-700 dark:text-zinc-350">{r.chargeDisplayName ?? r.chargeCode}</span>
+                                    <span className="font-mono font-bold text-slate-500 dark:text-zinc-450">{r.payerType} · ₹{r.overrideRate.toLocaleString('en-IN')}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm p-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Room-Class Rate Multipliers</h3>
-                        <div className="grid grid-cols-[1fr_110px_auto] gap-2 mb-3">
+                    <div className="border border-gray-200 dark:border-zinc-800/80 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm p-4.5">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Room-Class Rate Multipliers</h3>
+                        <div className="flex flex-col sm:grid sm:grid-cols-[1fr_110px_auto] gap-2.5 mb-4">
                             <Select value={newRoomMultiplier.roomType} onValueChange={v => setNewRoomMultiplier(p => ({ ...p, roomType: v }))}>
-                                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>
+                                <SelectTrigger className="h-10 text-xs rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                     {['GENERAL', 'ICU', 'NICU', 'PICU', 'HDU', 'CCU', 'ICCU', 'PRIVATE', 'SEMI_PRIVATE', 'OTHER'].map(w => (
                                         <SelectItem key={w} value={w}>{w.replace('_', ' ')}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Input type="number" min="0" className="h-9 text-xs font-mono" placeholder="% (100 = no change)" value={newRoomMultiplier.multiplierPercent} onChange={e => setNewRoomMultiplier(p => ({ ...p, multiplierPercent: e.target.value }))} />
-                            <Button size="sm" className="h-9" disabled={rateCardSaving} onClick={handleAddRoomMultiplier}>Save</Button>
+                            <Input type="number" min="0" className="h-10 text-xs font-mono rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800" placeholder="% (100 = default)" value={newRoomMultiplier.multiplierPercent} onChange={e => setNewRoomMultiplier(p => ({ ...p, multiplierPercent: e.target.value }))} />
+                            <Button size="sm" className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold shadow-sm active:scale-95 transition-all" disabled={rateCardSaving} onClick={handleAddRoomMultiplier}>Save</Button>
                         </div>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        <div className="space-y-1.5 max-h-60 overflow-y-auto hide-scrollbar">
                             {rateCardLoading ? (
                                 <Skeleton className="h-8 w-full" />
                             ) : roomMultipliers.length === 0 ? (
-                                <p className="text-xs text-gray-400">No room multipliers configured — every room type bills at 100% of Default Rate.</p>
+                                <div className="flex items-center justify-center gap-1.5 py-3 text-slate-400 dark:text-zinc-550">
+                                    <Activity className="h-4 w-4" />
+                                    <span className="text-[11px] font-bold">No room multipliers — standard rates active</span>
+                                </div>
                             ) : roomMultipliers.map(r => (
-                                <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-gray-50 dark:bg-slate-800/50">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{r.roomType.replace('_', ' ')}</span>
-                                    <span className="text-gray-500">{r.multiplierPercent}%</span>
+                                <div key={r.roomClassRateMultiplierId} className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/20 dark:border-zinc-800/30">
+                                    <span className="font-semibold text-slate-700 dark:text-zinc-350">{r.roomType.replace('_', ' ')}</span>
+                                    <span className="font-mono font-bold text-slate-500 dark:text-zinc-450">{r.multiplierPercent}%</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
+
+                {/* Floating Action Button (FAB) for Mobile ( sitting above bottom navigation bar ) */}
+                <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                    onClick={() => handleOpenDrawer(null)}
+                    className="fixed bottom-24 right-4 z-40 sm:hidden h-12 px-5 bg-brand-600 hover:bg-brand-700 text-white rounded-full flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(79,70,229,0.3)] border border-brand-500/20 active:scale-95 transition-all"
+                >
+                    <Plus className="h-5 w-5" strokeWidth={3} />
+                    <span className="text-[11.5px] font-bold tracking-tight whitespace-nowrap">Add Charge Master</span>
+                </motion.button>
             </div>
 
             {/* RIGHT DRAWER: CREATE/EDIT */}
@@ -690,51 +717,55 @@ export const ChargeMaster = () => {
                             animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
                             exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[110] flex flex-col"
+                            className="fixed top-0 bottom-[68px] sm:inset-y-0 right-0 w-full md:w-[500px] h-[calc(100dvh-68px)] sm:h-screen bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[110] flex flex-col"
                         >
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-900/50 bg-slate-50/30 dark:bg-zinc-950/20">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-zinc-200" onClick={() => setIsDrawerOpen(false)}>
+                                    <ArrowLeft className="h-5 w-5" />
+                                </Button>
                                 <div>
-                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {editingRecord?.id ? 'Edit Charge' : 'New Charge'}
+                                    <h2 className="text-sm font-black text-slate-800 dark:text-zinc-100 tracking-tight">
+                                        {editingRecord?.id ? 'Edit Charge Master' : 'New Charge Master'}
                                     </h2>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsDrawerOpen(false)}>
-                                    <X className="h-5 w-5" />
-                                </Button>
                             </div>
 
                             {/* Drawer Content */}
-                            <div className="flex-1 overflow-y-auto p-6 max-sm:p-4 space-y-8 max-sm:space-y-6 [&_input]:max-sm:bg-gray-100/80 [&_input]:max-sm:border-transparent [&_input]:max-sm:rounded-xl [&_input]:max-sm:h-12 [&_input]:max-sm:px-4 [&_button[role='combobox']]:max-sm:bg-gray-100/80 [&_button[role='combobox']]:max-sm:border-transparent [&_button[role='combobox']]:max-sm:rounded-xl [&_button[role='combobox']]:max-sm:h-12 [&_textarea]:max-sm:bg-gray-100/80 [&_textarea]:max-sm:border-transparent [&_textarea]:max-sm:rounded-xl [&_textarea]:max-sm:p-4 dark:[&_input]:max-sm:bg-slate-800 dark:[&_button[role='combobox']]:max-sm:bg-slate-800 dark:[&_textarea]:max-sm:bg-slate-800 pb-24">
+                            <div className="flex-1 overflow-y-auto hide-scrollbar p-5 space-y-6 bg-white dark:bg-slate-950">
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Basic Details
-                                    </h3>
+                                {/* Section: Basic Details */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-brand-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">Basic Details</span>
+                                    </div>
                                     <div className="space-y-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">Display Name <span className="text-red-500">*</span></Label>
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="name" className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Display Name <span className="text-red-500">*</span></Label>
                                             <Input
                                                 id="name"
-                                                className="transition-shadow focus-visible:ring-brand-500"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 placeholder="e.g. Complete Blood Count"
                                                 value={editingRecord?.displayName || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, displayName: e.target.value }))}
                                             />
                                         </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Classification
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Applies To</Label>
+                                {/* Section: Classification */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-purple-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">Classification</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Applies To</Label>
                                             <Select value={editingRecord?.appliesTo} onValueChange={v => setEditingRecord(p => ({ ...p!, appliesTo: v as any }))}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                     <SelectItem value="OPD">OPD</SelectItem>
                                                     <SelectItem value="IPD">IPD</SelectItem>
                                                     <SelectItem value="LAB">LAB</SelectItem>
@@ -744,12 +775,11 @@ export const ChargeMaster = () => {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label>Category</Label>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Category</Label>
                                             <Select value={editingRecord?.categoryCode} onValueChange={v => setEditingRecord(p => {
                                                 if (!p) return p;
                                                 const next = { ...p, categoryCode: v as any };
-                                                // For NEW items, keep the Charge Code in sync with the category while it's blank or still an auto code.
                                                 if (!p.id) {
                                                     const oldPrefix = CATEGORY_CODE_PREFIX[p.categoryCode as string];
                                                     const looksAuto = oldPrefix ? new RegExp(`^${oldPrefix}-\\d+$`, 'i').test(p.chargeCode ?? '') : false;
@@ -757,8 +787,8 @@ export const ChargeMaster = () => {
                                                 }
                                                 return next;
                                             })}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                     <SelectItem value="CONSULT">Consultation</SelectItem>
                                                     <SelectItem value="LAB">Laboratory</SelectItem>
                                                     <SelectItem value="RAD">Radiology</SelectItem>
@@ -770,60 +800,62 @@ export const ChargeMaster = () => {
                                             </Select>
                                         </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Pricing
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Default Rate (₹) <span className="text-red-500">*</span></Label>
+                                {/* Section: Pricing */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-emerald-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Pricing & Incentive</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Default Rate (₹) <span className="text-red-500">*</span></Label>
                                             <Input
                                                 type="number"
                                                 min="0"
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 value={editingRecord?.defaultRate || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, defaultRate: Number(e.target.value) }))}
                                             />
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label>Default Quantity <span className="text-red-500">*</span></Label>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Default Qty <span className="text-red-500">*</span></Label>
                                             <Input
                                                 type="number"
                                                 min="1"
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 value={editingRecord?.defaultQty || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, defaultQty: Number(e.target.value) }))}
                                             />
                                         </div>
-                                        <div className="grid gap-2 col-span-2">
-                                            <Label className="flex justify-between">
-                                                <span>Max Discount (%)</span>
-                                                <span className="text-xs text-muted-foreground font-normal">If blank, global policy applies</span>
-                                            </Label>
+                                        <div className="grid gap-1.5 col-span-2">
+                                            <div className="flex justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Max Discount (%)</Label>
+                                                <span className="text-[9.5px] text-slate-400 dark:text-zinc-500">If blank, global policy applies</span>
+                                            </div>
                                             <div className="relative">
                                                 <Input
                                                     type="number"
                                                     min="0" max="100"
-                                                    className="font-mono pr-8"
+                                                    className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono pr-8 focus-visible:ring-1 focus-visible:ring-brand-500"
                                                     value={editingRecord?.maxDiscountPercent === 0 ? '0' : editingRecord?.maxDiscountPercent || ''}
                                                     onChange={e => setEditingRecord(p => ({ ...p!, maxDiscountPercent: Number(e.target.value) }))}
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                                                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</span>
                                             </div>
                                         </div>
-                                        <div className="grid gap-2 col-span-2">
-                                            <Label className="flex justify-between">
-                                                <span>Incentive (₹)</span>
-                                                <span className="text-xs text-muted-foreground font-normal">Default per unit · editable at billing · blank/0 = none</span>
-                                            </Label>
+                                        <div className="grid gap-1.5 col-span-2">
+                                            <div className="flex justify-between">
+                                                <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Doctor Incentive (₹)</Label>
+                                                <span className="text-[9.5px] text-slate-400 dark:text-zinc-500">Editable at billing · 0 = none</span>
+                                            </div>
                                             <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
                                                 <Input
                                                     type="number"
                                                     min="0"
-                                                    className="font-mono pl-7"
+                                                    className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono pl-7 focus-visible:ring-1 focus-visible:ring-brand-500"
                                                     placeholder="0"
                                                     value={editingRecord?.incentiveAmount === 0 ? '0' : editingRecord?.incentiveAmount || ''}
                                                     onChange={e => setEditingRecord(p => ({ ...p!, incentiveAmount: Number(e.target.value) }))}
@@ -831,30 +863,30 @@ export const ChargeMaster = () => {
                                             </div>
                                         </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Tax &amp; Insurance
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>HSN/SAC Code</Label>
+                                {/* Section: Tax & Insurance */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-blue-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Tax &amp; Insurance</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">HSN/SAC Code</Label>
                                             <Input
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 placeholder="e.g. 9993"
                                                 value={editingRecord?.hsnSacCode || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, hsnSacCode: e.target.value }))}
                                             />
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label className="flex justify-between">
-                                                <span>GST Slab (%)</span>
-                                            </Label>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">GST Slab (%)</Label>
                                             <Input
                                                 type="number"
                                                 min="0" max="28"
-                                                className="font-mono"
+                                                className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 font-mono focus-visible:ring-1 focus-visible:ring-brand-500"
                                                 disabled={!editingRecord?.isTaxable}
                                                 placeholder="0"
                                                 value={editingRecord?.gstSlabPercent ?? ''}
@@ -862,117 +894,111 @@ export const ChargeMaster = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer">Taxable</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Otherwise this item is GST-exempt</p>
-                                        </div>
-                                        <Switch
-                                            checked={!!editingRecord?.isTaxable}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isTaxable: v, gstSlabPercent: v ? p!.gstSlabPercent : undefined }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer">Rate is tax-inclusive</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Default Rate above already includes GST</p>
-                                        </div>
-                                        <Switch
-                                            checked={!!editingRecord?.taxInclusive}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, taxInclusive: v }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer">TPA/insurance payable</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Off = counted as non-payable in the IRDAI discharge split</p>
-                                        </div>
-                                        <Switch
-                                            checked={editingRecord?.isIRDAIPayable ?? true}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isIRDAIPayable: v }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                </section>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Settings
-                                    </h3>
-                                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                        <div>
-                                            <Label className="font-semibold cursor-pointer" htmlFor="isActiveSwitch">Active Status</Label>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Charge available for billing</p>
+                                    {/* Switches */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">Taxable</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Applies GST rate configured above</p>
+                                            </div>
+                                            <Switch
+                                                checked={!!editingRecord?.isTaxable}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, isTaxable: v, gstSlabPercent: v ? p!.gstSlabPercent : undefined }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
                                         </div>
-                                        <Switch
-                                            id="isActiveSwitch"
-                                            checked={editingRecord?.isActive}
-                                            onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))}
-                                            className="data-[state=checked]:bg-green-500"
-                                        />
+
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">Rate is tax-inclusive</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Rate already includes GST calculation</p>
+                                            </div>
+                                            <Switch
+                                                checked={!!editingRecord?.taxInclusive}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, taxInclusive: v }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">TPA/Insurance Payable</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Counted in IRDAI insurance claims split</p>
+                                            </div>
+                                            <Switch
+                                                checked={editingRecord?.isIRDAIPayable ?? true}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, isIRDAIPayable: v }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
+                                        </div>
                                     </div>
-                                </section>
+                                </div>
 
-                                <section className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-500" /> Notes
-                                    </h3>
-                                    <Textarea
-                                        placeholder="Internal notes or billing guidelines for this charge..."
-                                        className="resize-none h-24"
-                                        value={editingRecord?.notes || ''}
-                                        onChange={e => setEditingRecord(p => ({ ...p!, notes: e.target.value }))}
-                                    />
-                                </section>
-
+                                {/* Section: Settings & Notes */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-5 rounded-full bg-orange-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Settings</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
+                                            <div>
+                                                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer" htmlFor="isActiveSwitch">Active Status</Label>
+                                                <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Charge available for billing selectors</p>
+                                            </div>
+                                            <Switch
+                                                id="isActiveSwitch"
+                                                checked={editingRecord?.isActive}
+                                                onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))}
+                                                className="data-[state=checked]:bg-green-500"
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">Notes / Guidelines</Label>
+                                            <Textarea
+                                                placeholder="Internal notes or billing guidelines for billing desk..."
+                                                className="rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-xs min-h-[80px] focus-visible:ring-1 focus-visible:ring-brand-500"
+                                                value={editingRecord?.notes || ''}
+                                                onChange={e => setEditingRecord(p => ({ ...p!, notes: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Drawer Footer */}
-                            <div className="p-4 max-lg:pb-24 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                                <Button variant="ghost" onClick={() => setIsDrawerOpen(false)} className="text-gray-500">Cancel</Button>
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                    <Button
-                                        variant="outline"
-                                        disabled={isSaving}
-                                        onClick={() => handleSaveDrawer(true)}
-                                        className="flex-1 sm:flex-none border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/30"
-                                    >
-                                        Save & Add Next
-                                    </Button>
-                                    <motion.button
-                                        disabled={isSaving || isSuccess}
-                                        onClick={() => handleSaveDrawer(false)}
-                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-w-[100px] h-10 ${isSuccess
-                                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                            : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
-                                            }`}
-                                        animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        {isSaving ? (
-                                            "Saving..."
-                                        ) : isSuccess ? (
-                                            <><CheckCircle2 className="h-4 w-4" /> Saved!</>
-                                        ) : (
-                                            "Save"
-                                        )}
-                                    </motion.button>
-                                </div>
+                            <div className="p-4 pb-10 sm:pb-4 border-t border-slate-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setIsDrawerOpen(false)} 
+                                    className="flex-1 h-11 rounded-xl border-slate-200 text-slate-500 hover:bg-slate-50 font-bold"
+                                >
+                                    Cancel
+                                </Button>
+                                <motion.button
+                                    disabled={isSaving || isSuccess}
+                                    onClick={() => handleSaveDrawer(false)}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-w-[120px] h-11 transition-all ${isSuccess
+                                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 active:scale-[0.98]'
+                                        }`}
+                                    animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    {isSaving ? (
+                                        "Saving..."
+                                    ) : isSuccess ? (
+                                        <><CheckCircle2 className="h-4 w-4" /> Saved!</>
+                                    ) : (
+                                        "Save"
+                                    )}
+                                </motion.button>
                             </div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
-
-            {/* MOBILE FAB */}
-            <button 
-                className="sm:hidden fixed bottom-[90px] right-6 h-14 w-14 bg-brand-600 text-white rounded-2xl shadow-xl flex items-center justify-center z-40 hover:bg-brand-700 active:scale-95 transition-all shadow-brand-500/30"
-                onClick={() => handleOpenDrawer(null)}
-            >
-                <Plus className="h-6 w-6" />
-            </button>
         </div>
     );
 };

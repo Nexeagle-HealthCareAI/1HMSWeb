@@ -189,7 +189,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[98vh] overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col w-[95vw] sm:w-full">
+      <DialogContent className="max-w-6xl max-h-[85vh] sm:max-h-[92vh] overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col w-[95vw] sm:w-full">
         <DialogHeader className="bg-gray-50 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
             <User className="h-4 w-4 sm:h-5 sm:w-5 text-brand-600 dark:text-brand-400" />

@@ -96,7 +96,7 @@ export const AdminConfigModule = () => {
                 className={cn(
                     "bg-gray-50/50 dark:bg-slate-900/50 lg:border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative",
                     isSidebarCollapsed ? "lg:w-16" : "lg:w-64",
-                    !showMobileList ? "max-lg:hidden" : "max-lg:w-full max-lg:flex-1"
+                    !showMobileList ? "max-lg:hidden" : "max-lg:w-full max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-hidden"
                 )}
             >
                 {/* Toggle Button (Desktop Only) */}
@@ -128,7 +128,7 @@ export const AdminConfigModule = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 py-4 px-3 max-lg:px-0 max-lg:py-0 space-y-2 max-lg:space-y-0 overflow-y-auto hide-scrollbar">
+                <div className="flex-1 py-4 px-3 max-lg:px-0 max-lg:pt-0 max-lg:pb-24 space-y-2 max-lg:space-y-0 overflow-y-auto hide-scrollbar">
                     {navigationItems.map((item) => (
                         <button
                             key={item.id}
@@ -168,7 +168,7 @@ export const AdminConfigModule = () => {
 
             {/* Main Content */}
             <main className={cn(
-                "flex-1 overflow-x-hidden overflow-y-auto bg-transparent relative flex flex-col min-h-0",
+                "flex-1 overflow-x-hidden overflow-y-auto hide-scrollbar bg-transparent relative flex flex-col min-h-0",
                 showMobileList ? "max-lg:hidden" : "max-lg:flex"
             )}>
                 {/* Mobile Back Header */}

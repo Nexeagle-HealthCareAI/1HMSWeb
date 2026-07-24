@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Edit2, X, Loader2, RefreshCw, AlertCircle, Archive, Pill, ShieldAlert, Thermometer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import {
     inventoryApi, type InventoryItem, type InventoryCategory, type DrugScheduleClass,
@@ -150,22 +152,22 @@ export const ItemMaster: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 font-sans relative overflow-hidden">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 sticky top-0 z-10 shadow-sm">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 sticky top-0 z-10 shadow-sm">
                 <div className="flex-1 w-full flex flex-col sm:flex-row gap-3 items-center">
                     <div className="relative w-full sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             placeholder="Search item, code, generic name..."
-                            className="pl-9 bg-gray-50 dark:bg-slate-950"
+                            className="pl-9 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="w-[160px] h-10 bg-gray-50 dark:bg-slate-950">
+                        <SelectTrigger className="w-[160px] h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
                             <SelectValue placeholder="Category" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-xl">
                             <SelectItem value="ALL">All Categories</SelectItem>
                             {(Object.keys(CATEGORY_LABELS) as InventoryCategory[]).map(c => (
                                 <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
@@ -174,10 +176,10 @@ export const ItemMaster: React.FC = () => {
                     </Select>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" size="sm" onClick={() => loadItems(true)} disabled={refreshing || loading} className="gap-1.5">
+                    <Button variant="outline" size="sm" onClick={() => loadItems(true)} disabled={refreshing || loading} className="gap-1.5 h-10 rounded-xl active:scale-[0.98] transition-all">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
+                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
                         <Plus className="h-4 w-4" /> Add Item
                     </Button>
                 </div>
@@ -269,21 +271,24 @@ export const ItemMaster: React.FC = () => {
                     )
                 )}
             </div>
-
-            <AnimatePresence>
-                {isDrawerOpen && editingItem && (
-                    <>
+            {createPortal(
+                <AnimatePresence>
+                    {isDrawerOpen && editingItem && (
                         <motion.div
+                            key="drawer-overlay"
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
                             onClick={() => setIsDrawerOpen(false)}
                         />
+                    )}
+                    {isDrawerOpen && editingItem && (
                         <motion.div
+                            key="drawer-content"
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[520px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            className="fixed inset-y-0 right-0 w-[calc(100%-2rem)] sm:w-[520px] rounded-l-[32px] bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[60] flex flex-col overflow-hidden"
                         >
-                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600">
+                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600 text-white shrink-0">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
                                         <Pill className="h-5 w-5 text-white" />
@@ -292,73 +297,73 @@ export const ItemMaster: React.FC = () => {
                                         {editingItem.inventoryItemId ? 'Edit Item' : 'Add Item'}
                                     </h2>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/15" onClick={() => setIsDrawerOpen(false)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/15 active:scale-[0.98] transition-all" onClick={() => setIsDrawerOpen(false)}>
                                     <X className="h-5 w-5" />
                                 </Button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                 <section className="space-y-4">
-                                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Basic Details
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Item Code <span className="text-red-500">*</span></Label>
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Item Code <span className="text-red-500">*</span></Label>
                                             <Input
                                                 placeholder="e.g. DRG-PARA-500"
-                                                className={formErrors.itemCode ? 'border-red-500' : ''}
+                                                className={cn("h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", formErrors.itemCode ? 'border-red-500' : '')}
                                                 value={editingItem.itemCode ?? ''}
                                                 onChange={e => setEditingItem(p => ({ ...p!, itemCode: e.target.value }))}
                                             />
                                             {formErrors.itemCode && <p className="text-[10px] text-red-500">{formErrors.itemCode}</p>}
                                         </div>
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Item Name <span className="text-red-500">*</span></Label>
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Item Name <span className="text-red-500">*</span></Label>
                                             <Input
                                                 placeholder="e.g. Paracetamol 500mg"
-                                                className={formErrors.itemName ? 'border-red-500' : ''}
+                                                className={cn("h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", formErrors.itemName ? 'border-red-500' : '')}
                                                 value={editingItem.itemName ?? ''}
                                                 onChange={e => setEditingItem(p => ({ ...p!, itemName: e.target.value }))}
                                             />
                                             {formErrors.itemName && <p className="text-[10px] text-red-500">{formErrors.itemName}</p>}
                                         </div>
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Generic Name <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
-                                            <Input value={editingItem.genericName ?? ''} onChange={e => setEditingItem(p => ({ ...p!, genericName: e.target.value }))} />
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Generic Name <span className="text-[9px] text-muted-foreground font-normal lowercase">(optional)</span></Label>
+                                            <Input className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" value={editingItem.genericName ?? ''} onChange={e => setEditingItem(p => ({ ...p!, genericName: e.target.value }))} />
                                         </div>
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Manufacturer <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
-                                            <Input value={editingItem.manufacturer ?? ''} onChange={e => setEditingItem(p => ({ ...p!, manufacturer: e.target.value }))} />
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Manufacturer <span className="text-[9px] text-muted-foreground font-normal lowercase">(optional)</span></Label>
+                                            <Input className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" value={editingItem.manufacturer ?? ''} onChange={e => setEditingItem(p => ({ ...p!, manufacturer: e.target.value }))} />
                                         </div>
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Category</Label>
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Category</Label>
                                             <Select value={editingItem.category ?? 'CONSUMABLE'} onValueChange={v => setEditingItem(p => ({ ...p!, category: v as InventoryCategory }))}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="w-full h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl">
                                                     {(Object.keys(CATEGORY_LABELS) as InventoryCategory[]).map(c => (
                                                         <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Unit</Label>
-                                            <Input placeholder="PCS / STRIP / BOX" value={editingItem.unit ?? ''} onChange={e => setEditingItem(p => ({ ...p!, unit: e.target.value }))} />
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Unit</Label>
+                                            <Input placeholder="PCS / STRIP / BOX" className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" value={editingItem.unit ?? ''} onChange={e => setEditingItem(p => ({ ...p!, unit: e.target.value }))} />
                                         </div>
                                     </div>
                                 </section>
 
                                 <section className="space-y-4">
-                                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Regulatory &amp; Safety
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Drug Schedule <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Drug Schedule <span className="text-[9px] text-muted-foreground font-normal lowercase">(optional)</span></Label>
                                             <Select value={editingItem.scheduleClass ?? 'NONE'} onValueChange={v => setEditingItem(p => ({ ...p!, scheduleClass: v === 'NONE' ? null : v as DrugScheduleClass }))}>
-                                                <SelectTrigger><SelectValue placeholder="None (OTC)" /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="w-full h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="None (OTC)" /></SelectTrigger>
+                                                <SelectContent className="rounded-xl">
                                                     <SelectItem value="NONE">None (OTC)</SelectItem>
                                                     {(Object.keys(SCHEDULE_LABELS) as DrugScheduleClass[]).map(s => (
                                                         <SelectItem key={s} value={s}>{SCHEDULE_LABELS[s]}</SelectItem>
@@ -366,11 +371,11 @@ export const ItemMaster: React.FC = () => {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Storage Condition</Label>
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Storage Condition</Label>
                                             <Select value={editingItem.storageCondition ?? 'ROOM'} onValueChange={v => setEditingItem(p => ({ ...p!, storageCondition: v as StorageCondition }))}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="w-full h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl">
                                                     {(Object.keys(STORAGE_LABELS) as StorageCondition[]).map(s => (
                                                         <SelectItem key={s} value={s}>{STORAGE_LABELS[s]}</SelectItem>
                                                     ))}
@@ -378,16 +383,16 @@ export const ItemMaster: React.FC = () => {
                                             </Select>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 bg-gray-50/50 dark:bg-slate-900/40">
+                                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-zinc-800 px-4 py-3 bg-slate-50/50 dark:bg-zinc-950/20">
                                         <div>
-                                            <Label className="font-semibold">LASA</Label>
+                                            <Label className="font-semibold text-slate-800 dark:text-zinc-200">LASA</Label>
                                             <p className="text-[11px] text-muted-foreground mt-0.5">Look-Alike Sound-Alike drug — flagged in pickers.</p>
                                         </div>
                                         <Switch checked={editingItem.isLasa ?? false} onCheckedChange={v => setEditingItem(p => ({ ...p!, isLasa: v }))} className="data-[state=checked]:bg-purple-500" />
                                     </div>
-                                    <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 bg-gray-50/50 dark:bg-slate-900/40">
+                                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-zinc-800 px-4 py-3 bg-slate-50/50 dark:bg-zinc-950/20">
                                         <div>
-                                            <Label className="font-semibold">High Alert</Label>
+                                            <Label className="font-semibold text-slate-800 dark:text-zinc-200">High Alert</Label>
                                             <p className="text-[11px] text-muted-foreground mt-0.5">ISMP high-alert medication (electrolytes, insulin, anticoagulants...).</p>
                                         </div>
                                         <Switch checked={editingItem.isHighAlert ?? false} onCheckedChange={v => setEditingItem(p => ({ ...p!, isHighAlert: v }))} className="data-[state=checked]:bg-rose-500" />
@@ -395,45 +400,48 @@ export const ItemMaster: React.FC = () => {
                                 </section>
 
                                 <section className="space-y-4">
-                                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Stock Levels
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Min Stock Level</Label>
-                                            <Input type="number" min={0} value={editingItem.minStockLevel ?? ''} onChange={e => setEditingItem(p => ({ ...p!, minStockLevel: Number(e.target.value) }))} />
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Min Stock Level</Label>
+                                            <Input type="number" min={0} value={editingItem.minStockLevel ?? ''} onChange={e => setEditingItem(p => ({ ...p!, minStockLevel: Number(e.target.value) }))} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" />
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label>Reorder Qty</Label>
-                                            <Input type="number" min={0} value={editingItem.reorderQty ?? ''} onChange={e => setEditingItem(p => ({ ...p!, reorderQty: Number(e.target.value) }))} />
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Reorder Qty</Label>
+                                            <Input type="number" min={0} value={editingItem.reorderQty ?? ''} onChange={e => setEditingItem(p => ({ ...p!, reorderQty: Number(e.target.value) }))} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" />
+                                        </div>
+                                        <div className="col-span-2">
                                             <p className="text-[10px] text-muted-foreground">Quantity auto-drafted when stock hits Min Stock Level.</p>
                                         </div>
-                                        <div className="grid gap-2 col-span-2">
-                                            <Label>Max Stock Level <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
-                                            <Input type="number" min={0} value={editingItem.maxStockLevel ?? ''} onChange={e => setEditingItem(p => ({ ...p!, maxStockLevel: e.target.value ? Number(e.target.value) : null }))} />
+                                        <div className="grid gap-1.5 col-span-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Max Stock Level <span className="text-[9px] text-muted-foreground font-normal lowercase">(optional)</span></Label>
+                                            <Input type="number" min={0} value={editingItem.maxStockLevel ?? ''} onChange={e => setEditingItem(p => ({ ...p!, maxStockLevel: e.target.value ? Number(e.target.value) : null }))} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" />
                                         </div>
                                     </div>
                                 </section>
 
-                                <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 bg-gray-50/50 dark:bg-slate-900/40">
+                                <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-zinc-800 px-4 py-3 bg-slate-50/50 dark:bg-zinc-950/20">
                                     <div>
-                                        <Label className="cursor-pointer font-semibold">Active</Label>
+                                        <Label className="cursor-pointer font-semibold text-slate-800 dark:text-zinc-200">Active</Label>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">Inactive items are hidden from stock-movement pickers.</p>
                                     </div>
                                     <Switch checked={editingItem.isActive ?? true} onCheckedChange={v => setEditingItem(p => ({ ...p!, isActive: v }))} className="data-[state=checked]:bg-green-500" />
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
-                                <Button disabled={isSaving || !isValid} onClick={handleSave} className="bg-brand-600 hover:bg-brand-700 text-white">
+                            <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 flex justify-end gap-2 shrink-0">
+                                <Button variant="ghost" className="h-10 rounded-xl active:scale-[0.98] transition-all text-slate-650" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
+                                <Button disabled={isSaving || !isValid} onClick={handleSave} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold px-5">
                                     {isSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : (editingItem.inventoryItemId ? 'Save' : 'Create Item')}
                                 </Button>
                             </div>
                         </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 };

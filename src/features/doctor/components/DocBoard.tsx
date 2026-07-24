@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react';
 import type { AxiosError } from 'axios';
+import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ import {
   Settings,
   ShieldCheck,
   Signal,
+  Stethoscope,
   Sparkles,
   Star,
   SunMedium,
@@ -998,87 +1000,83 @@ export const ClinicalDashboard: React.FC = () => {
         className="flex flex-col flex-1 w-full"
         style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1 }}
       >
-        {/* Header - Matches AdminDashboard */}
-        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-brand-50/60 to-brand-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-brand-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+        {/* Header Card (Unified Theme & Layout matching IPD, Appointment, and Billing Dashboards) */}
+        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 pt-4 pb-2 shrink-0">
+          <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
+            {/* Decorative flare */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-            {/* Left: Title and Profile Stats */}
-            <div className="flex flex-col gap-1 min-w-0">
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                  {t('docBoard.header.title')}
-                </h1>
-
-                {clampedProfileCompletion < 100 && (
-                  <div className="flex items-center gap-2 text-[11px] sm:text-xs">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/profile?tab=professional')}
-                      className="flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-white/50 dark:bg-slate-800/50 border border-brand-100 dark:border-slate-700 hover:bg-brand-50 transition-colors"
-                      title={t('docBoard.header.viewProfessionalProfile')}
-                    >
-                      <span className="font-semibold text-brand-700 dark:text-brand-300">
-                        {clampedProfileCompletion}%
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400">Complete</span>
-                    </button>
-                    {/* Progress bar removed to match cleaner admin look, or could be kept if compact */}
+            <div className="relative z-10 flex flex-col gap-5">
+              {/* Header Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                    <Stethoscope className="h-5 w-5 text-white" />
                   </div>
-                )}
-
-                {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
-                  <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm">
-                    <UserCheck className="h-3 w-3 mr-1" />
-                    {t('docBoard.header.verified')}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Navigation Tabs */}
-            <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
-              {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
-                const isActive = activeNavButton === key;
-                const locked = requiresProfile && doctorProfileRestricted;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      if (!locked) setActiveNavButton(key);
-                    }}
-                    disabled={locked}
-                    aria-disabled={locked}
-                    aria-pressed={isActive}
-                    tabIndex={locked ? -1 : 0}
-                    title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
-                    className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
-                      ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white border-transparent shadow-xl shadow-brand-500/30'
-                      : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
-                      } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
-                  >
-                    <div className="flex items-center gap-1.5 text-[12px] font-semibold">
-                      <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-brand-500 dark:text-brand-400'}`} />
-                      </span>
-                      <span className="hidden sm:inline">{label}</span>
-                      <span className="sm:hidden">{shortLabel}</span>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-xl font-bold tracking-tight text-white leading-tight">
+                        {t('docBoard.header.title')}
+                      </h1>
+                      {clampedProfileCompletion < 100 && (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/profile?tab=professional')}
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+                          title={t('docBoard.header.viewProfessionalProfile')}
+                        >
+                          <span>{clampedProfileCompletion}% Complete</span>
+                        </button>
+                      )}
+                      {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
+                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] font-bold shadow-sm">
+                          <UserCheck className="h-2.5 w-2.5 mr-1" />
+                          {t('docBoard.header.verified')}
+                        </Badge>
+                      )}
                     </div>
-                    <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
-                      {description}
-                    </span>
-                    <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
-                      {description}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+                    <p className="text-[11px] text-brand-100 mt-0.5 leading-tight">Practice oversight, calendar and clinical records.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Tab Capsule */}
+              <nav className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
+                {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
+                  const isActive = activeNavButton === key;
+                  const locked = requiresProfile && doctorProfileRestricted;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        if (!locked) setActiveNavButton(key);
+                      }}
+                      disabled={locked}
+                      aria-disabled={locked}
+                      aria-pressed={isActive}
+                      tabIndex={locked ? -1 : 0}
+                      title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
+                      className={cn(
+                        "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 px-1 select-none whitespace-normal flex-1",
+                        isActive
+                          ? "bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm"
+                          : "text-brand-100 hover:bg-white/10 hover:text-white",
+                        locked && "opacity-40 cursor-not-allowed"
+                      )}
+                    >
+                      <Icon className="h-5 w-5 mb-1 shrink-0" />
+                      <span className="text-[9px] font-bold tracking-wide leading-tight hidden sm:inline">{label}</span>
+                      <span className="text-[9px] font-bold tracking-wide leading-tight sm:hidden">{shortLabel}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
         </div>
 
-        {/* Main Content - Mobile Responsive */}
         {activeNavButton === 'appointments' && (
-          <SubscriptionReadOnlyOverlay featureLabel="Managing appointments" className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <SubscriptionReadOnlyOverlay featureLabel="Managing appointments" className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             {/* Loading - Mobile Responsive */}
             {isDataLoading && (
               <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-8 text-center shadow-lg">
@@ -1418,7 +1416,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'all' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('all')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'all'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'all'
                               ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg'
                               : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                               }`}
@@ -1433,7 +1431,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'VITALS_REQUIRED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('VITALS_REQUIRED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'VITALS_REQUIRED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'VITALS_REQUIRED'
                               ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg'
                               : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:hover:bg-red-900/20'
                               }`}
@@ -1448,7 +1446,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'READY' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('READY')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'READY'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'READY'
                               ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
                               : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:hover:bg-green-900/20'
                               }`}
@@ -1463,7 +1461,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'UNDER_CONSULT' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('UNDER_CONSULT')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'UNDER_CONSULT'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'UNDER_CONSULT'
                               ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg'
                               : 'bg-brand-50 text-brand-700 border-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/20'
                               }`}
@@ -1478,7 +1476,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'LAB_REQUIRED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('LAB_REQUIRED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'LAB_REQUIRED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'LAB_REQUIRED'
                               ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
                               : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/20'
                               }`}
@@ -1493,7 +1491,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'AWAITING_RECONSULT' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('AWAITING_RECONSULT')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'AWAITING_RECONSULT'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'AWAITING_RECONSULT'
                               ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg'
                               : 'bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/20'
                               }`}
@@ -1508,7 +1506,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'COMPLETED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('COMPLETED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'COMPLETED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'COMPLETED'
                               ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg'
                               : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/20'
                               }`}
@@ -1523,7 +1521,7 @@ export const ClinicalDashboard: React.FC = () => {
                             variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleStatusClick('CANCELLED')}
-                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'CANCELLED'
+                            className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 rounded-full ${selectedStatus === 'CANCELLED'
                               ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg'
                               : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20'
                               }`}
@@ -1837,25 +1835,57 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-center mt-4 pb-2">
-                      <Pagination>
-                        <PaginationContent>
-                          <PaginationItem>
-                            <PaginationPrevious
-                              onClick={() => handlePageChange(currentPage - 1)}
-                              className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                            />
-                          </PaginationItem>
-                          {renderPaginationItems()}
-                          <PaginationItem>
-                            <PaginationNext
-                              onClick={() => handlePageChange(currentPage + 1)}
-                              className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                            />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    </div>
+                    {totalPages > 1 && (
+                      <>
+                        {/* Desktop Pagination */}
+                        <div className="hidden sm:flex justify-center mt-4 pb-2">
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                              {renderPaginationItems()}
+                              <PaginationItem>
+                                <PaginationNext
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </div>
+
+                        {/* Mobile Pagination */}
+                        <div className="flex sm:hidden items-center justify-between w-full gap-2 mt-4 pb-2 px-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="flex-1 h-9 gap-1 text-xs"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            {t('common.previous', 'Previous')}
+                          </Button>
+                          <div className="flex-none px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-700 dark:text-zinc-200">
+                            {currentPage} / {totalPages}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            className="flex-1 h-9 gap-1 text-xs"
+                          >
+                            {t('common.next', 'Next')}
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
 
                     {/* Past - Mobile Responsive */}
                   </TabsContent>
@@ -2118,25 +2148,57 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex justify-center mt-4">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                            {renderPaginationItems()}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
+                      {totalPages > 1 && (
+                        <>
+                          {/* Desktop Pagination */}
+                          <div className="hidden sm:flex justify-center mt-4">
+                            <Pagination>
+                              <PaginationContent>
+                                <PaginationItem>
+                                  <PaginationPrevious
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                                {renderPaginationItems()}
+                                <PaginationItem>
+                                  <PaginationNext
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                              </PaginationContent>
+                            </Pagination>
+                          </div>
+
+                          {/* Mobile Pagination */}
+                          <div className="flex sm:hidden items-center justify-between w-full gap-2 mt-4 px-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                              disabled={currentPage === 1}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              {t('common.previous', 'Previous')}
+                            </Button>
+                            <div className="flex-none px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-700 dark:text-zinc-200">
+                              {currentPage} / {totalPages}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                              disabled={currentPage === totalPages}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              {t('common.next', 'Next')}
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </TabsContent>
 
@@ -2395,26 +2457,58 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex justify-center mt-4">
-                        {/* Use same Pagination as above */}
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                            {renderPaginationItems()}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
+                      {totalPages > 1 && (
+                        <>
+                          {/* Desktop Pagination */}
+                          <div className="hidden sm:flex justify-center mt-4">
+                            {/* Use same Pagination as above */}
+                            <Pagination>
+                              <PaginationContent>
+                                <PaginationItem>
+                                  <PaginationPrevious
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                                {renderPaginationItems()}
+                                <PaginationItem>
+                                  <PaginationNext
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                              </PaginationContent>
+                            </Pagination>
+                          </div>
+
+                          {/* Mobile Pagination */}
+                          <div className="flex sm:hidden items-center justify-between w-full gap-2 mt-4 px-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                              disabled={currentPage === 1}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              {t('common.previous', 'Previous')}
+                            </Button>
+                            <div className="flex-none px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-700 dark:text-zinc-200">
+                              {currentPage} / {totalPages}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                              disabled={currentPage === totalPages}
+                              className="flex-1 h-9 gap-1 text-xs"
+                            >
+                              {t('common.next', 'Next')}
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </TabsContent>
                 </div>
@@ -2425,7 +2519,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Doctor Calendar - embedded in DocBoard */}
         {activeNavButton === 'calendar' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             <Suspense fallback={<div className="p-6 text-center">{t('docBoard.calendar.loading')}</div>}>
               <DoctorCalendar />
             </Suspense>
@@ -2434,7 +2528,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Analytics Page */}
         {activeNavButton === 'analytics' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             <Suspense fallback={<div className="p-6 text-center">{t('common.loading')}</div>}>
               <DoctorAnalyticsPage />
             </Suspense>
@@ -2443,7 +2537,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         {/* Prescription Settings */}
         {activeNavButton === 'settings' && (
-          <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
             <div className="p-2 sm:p-4">
               <Tabs
                 value={settingsTab}

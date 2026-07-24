@@ -40,36 +40,41 @@ export const BillingDashboard: React.FC = () => {
     return (
         <div className="flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-3 sm:px-6 pt-2 pb-4 gap-4 overflow-visible lg:overflow-hidden">
             <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0">
-                {/* Header + tab navigation in one row (matches the Admin / Appointment board) */}
-                <div className="flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-brand-500/5 ring-1 ring-black/5">
-                    <div className="flex items-center gap-3 w-full xl:w-auto shrink-0">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/30">
-                            <IndianRupee className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">Billing</h1>
-                            <p className="text-xs text-slate-500 truncate">Revenue, expenses and referral incentives.</p>
-                        </div>
-                    </div>
+                {/* Header Card (Unified Theme & Layout matching IPD & Appointment Dashboards) */}
+                <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden shrink-0 mb-1">
+                    {/* Decorative flare */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-                    {/* 2×2 card grid on phones — every tab visible at once, no horizontal swipe —
-                        a single row from sm up, reverting to the original inline flex row at xl. */}
-                    <TabsList className="h-auto w-full xl:w-auto xl:flex-1 xl:max-w-2xl grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-nowrap gap-2 rounded-2xl border border-slate-200 bg-white/70 p-1.5 sm:p-1 shadow-inner ring-1 ring-black/5">
-                        {TABS.map((t) => (
-                            <TabsTrigger key={t.id} value={t.id} className={TAB_TRIGGER} title={t.description}>
-                                <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
-                                    <span className="p-1 rounded-lg bg-gray-100 group-data-[state=active]:bg-white/20">
-                                        <t.icon className="h-3.5 w-3.5 shrink-0 text-brand-500 group-data-[state=active]:text-white" />
-                                    </span>
-                                    <span className="hidden sm:inline text-[12px] line-clamp-1">{t.label}</span>
-                                </div>
-                                <span className="sm:hidden text-[10px] font-medium w-full text-center line-clamp-1 leading-tight">{t.label}</span>
-                                <p className="hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 text-gray-500 group-data-[state=active]:text-white/90">
-                                    {t.description}
-                                </p>
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+                    <div className="relative z-10 flex flex-col gap-5">
+                        {/* Header Row */}
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                                <IndianRupee className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight">Billing</h1>
+                                <p className="text-[11px] text-brand-100 mt-0.5">Revenue, expenses and referral incentives.</p>
+                            </div>
+                        </div>
+
+                        {/* Navigation Tab Capsule */}
+                        <TabsList className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full border-0 shadow-none">
+                            {TABS.map((t) => (
+                                <TabsTrigger
+                                    key={t.id}
+                                    value={t.id}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white",
+                                        "px-1 select-none whitespace-normal flex-1"
+                                    )}
+                                    title={t.description}
+                                >
+                                    <t.icon className="h-5 w-5 mb-1 shrink-0" />
+                                    <span className="text-[9px] font-bold tracking-wide leading-tight">{t.label}</span>
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
                 </div>
 
                 <TabsContent value="revenue" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">

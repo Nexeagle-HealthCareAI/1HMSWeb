@@ -52,68 +52,92 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
     );
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
-            <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-md border border-slate-200/60 dark:border-zinc-800 overflow-hidden flex flex-col h-full">
+            <div className="p-4 border-b border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
                 <div>
-                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <Package2 className="h-5 w-5 text-brand-600" />
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                        <Package2 className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                         {boardType} Inventory
                     </h2>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-zinc-450 mt-0.5">
                         Showing stock for {stores.length} store(s) assigned to {boardType}
                     </p>
                 </div>
                 <input 
                     type="text" 
                     placeholder="Search items..." 
-                    className="w-full sm:w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full sm:w-64 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 px-3 py-2 text-sm bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
             </div>
             
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {loading && stockRows.length === 0 ? (
                     <div className="flex justify-center p-8 text-slate-400">
                         <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
                 ) : stores.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-slate-400">
-                        <ShieldAlert className="h-12 w-12 mb-4 text-slate-300" />
-                        <h3 className="text-lg font-medium text-slate-600 mb-1">No Stores Assigned</h3>
-                        <p className="text-sm text-center max-w-md">
+                        <ShieldAlert className="h-12 w-12 mb-4 text-slate-300 dark:text-zinc-700" />
+                        <h3 className="text-lg font-medium text-slate-650 dark:text-zinc-300 mb-1">No Stores Assigned</h3>
+                        <p className="text-sm text-center text-slate-500 dark:text-zinc-450 max-w-md">
                             There are currently no stores assigned to the {boardType} board. You can configure this in the Admin Store Master.
                         </p>
                     </div>
                 ) : stockRows.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-slate-400">
-                        <Package2 className="h-12 w-12 mb-4 text-slate-300" />
-                        <h3 className="text-lg font-medium text-slate-600 mb-1">No Stock Available</h3>
-                        <p className="text-sm">The assigned stores are currently empty.</p>
+                        <Package2 className="h-12 w-12 mb-4 text-slate-300 dark:text-zinc-700" />
+                        <h3 className="text-lg font-medium text-slate-650 dark:text-zinc-300 mb-1">No Stock Available</h3>
+                        <p className="text-sm text-slate-505">The assigned stores are currently empty.</p>
                     </div>
                 ) : (
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-500 font-medium sticky top-0 border-b border-slate-200 shadow-sm z-10">
-                            <tr>
-                                <th className="px-4 py-3">Store</th>
-                                <th className="px-4 py-3">Item Name</th>
-                                <th className="px-4 py-3">Category</th>
-                                <th className="px-4 py-3 text-right">Stock on Hand</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
+                    <>
+                        {/* Mobile Cards Layout (Hidden on desktop) */}
+                        <div className="md:hidden space-y-3 p-4 bg-slate-50/50 dark:bg-zinc-950/10">
                             {filteredRows.map((row, i) => (
-                                <tr key={`${row.storeId}-${row.inventoryItemId}-${i}`} className="hover:bg-slate-50">
-                                    <td className="px-4 py-3 font-medium text-slate-700">{row.storeName}</td>
-                                    <td className="px-4 py-3">{row.itemName}</td>
-                                    <td className="px-4 py-3"><Badge variant="outline" className="font-normal text-slate-600 bg-slate-50">{row.category}</Badge></td>
-                                    <td className="px-4 py-3 text-right font-bold text-slate-800">
-                                        {row.qtyOnHand.toLocaleString()} <span className="text-slate-400 text-xs ml-1 font-normal">{row.unit}</span>
-                                    </td>
-                                </tr>
+                                <div key={`${row.storeId}-${row.inventoryItemId}-${i}`} className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800/80 p-4 rounded-2xl shadow-sm space-y-2.5">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <div>
+                                            <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-200">{row.itemName}</h3>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mt-1">{row.storeName}</p>
+                                        </div>
+                                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 bg-slate-50/50 dark:bg-zinc-950/20">{row.category}</Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 dark:border-zinc-800/80">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Stock on Hand</span>
+                                        <span className="font-bold text-sm text-slate-900 dark:text-zinc-150">
+                                            {row.qtyOnHand.toLocaleString()} <span className="text-slate-400 dark:text-zinc-500 text-xs font-normal ml-0.5">{row.unit}</span>
+                                        </span>
+                                    </div>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+
+                        {/* Desktop Table View (Hidden on mobile) */}
+                        <table className="hidden md:table w-full text-sm text-left">
+                            <thead className="bg-slate-50 dark:bg-zinc-900 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 sticky top-0 border-b border-slate-200/60 dark:border-zinc-800 shadow-sm z-10">
+                                <tr>
+                                    <th className="px-4 py-3">Store</th>
+                                    <th className="px-4 py-3">Item Name</th>
+                                    <th className="px-4 py-3">Category</th>
+                                    <th className="px-4 py-3 text-right">Stock on Hand</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                                {filteredRows.map((row, i) => (
+                                    <tr key={`${row.storeId}-${row.inventoryItemId}-${i}`} className="hover:bg-slate-50/50 dark:hover:bg-zinc-950/10">
+                                        <td className="px-4 py-3 font-semibold text-slate-700 dark:text-zinc-350">{row.storeName}</td>
+                                        <td className="px-4 py-3 text-slate-800 dark:text-zinc-205">{row.itemName}</td>
+                                        <td className="px-4 py-3"><Badge variant="outline" className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400 bg-slate-50/50 dark:bg-zinc-950/20">{row.category}</Badge></td>
+                                        <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-zinc-200">
+                                            {row.qtyOnHand.toLocaleString()} <span className="text-slate-450 dark:text-zinc-500 text-xs ml-1 font-normal">{row.unit}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </>
                 )}
             </div>
         </div>

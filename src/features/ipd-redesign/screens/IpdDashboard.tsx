@@ -5,6 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -211,44 +218,66 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const paginatedAdmissions = filteredAdmissions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
-        <div className="w-full max-w-full pb-28 sm:pb-6 space-y-5 sm:space-y-6 bg-slate-50/50 min-h-screen">
-            {/* Header Banner */}
-            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 px-4 sm:px-8 xl:px-12 py-5 sm:py-8 shadow-lg shadow-brand-900/5 relative overflow-hidden">
-                {/* Decorative background flare */}
-                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="w-full max-w-full px-3 sm:px-4 lg:px-6 pt-2 pb-28 sm:pb-6 space-y-4 sm:space-y-6 bg-slate-50/50 dark:bg-zinc-950 min-h-screen">
+            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
+            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
+                {/* Decorative flare */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-5">
-                    <div>
-                        <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight drop-shadow-sm">Inpatient Department</h1>
-                        <p className="text-brand-100 text-xs sm:text-sm font-medium mt-1 drop-shadow-sm">Tap a patient to manage their bed, medications, and discharge.</p>
+                <div className="relative z-10 flex flex-col gap-5">
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                                <Hotel className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight">Inpatient Department</h1>
+                                <p className="text-[11px] text-brand-100 mt-0.5 animate-pulse">Manage live roster, beds &amp; referrals</p>
+                            </div>
+                        </div>
+                        {/* Admit button on the right for desktop */}
+                        <button 
+                            onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} 
+                            className="hidden sm:flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md shadow-black/5"
+                        >
+                            <Plus className="h-3.5 w-3.5 mr-1.5" /> Admit Patient
+                        </button>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto mt-4 sm:mt-0">
-                        {/* Quick nav — horizontal scroll on mobile, frosted inline pill on desktop */}
-                        <div className={cn(
-                            "flex items-center gap-2 sm:gap-1.5 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-1.5",
-                            !isLowBandwidthMode ? "sm:bg-black/10 sm:backdrop-blur-xl sm:border sm:border-white/10 sm:rounded-2xl sm:shadow-inner" : ""
-                        )}>
-                            {([
-                                { short: 'Bed Board', full: 'Live Bed Board', icon: LayoutGrid, onClick: onOpenBedBoard },
-                                { short: 'Admit Referrals', full: 'Admission Referral Board', icon: UserPlus, onClick: onOpenReferredAdmissions },
-                                { short: 'KPI', full: 'KPI Dashboard', icon: Gauge, onClick: onOpenKpiDashboard },
-                                { short: 'Ledger', full: 'Consultant Ledger', icon: Stethoscope, onClick: onOpenConsultantLedger },
-                            ] as const).map(({ short, full, icon: Icon, onClick }) => (
-                                <button key={short} onClick={onClick}
-                                    className={cn(
-                                        "flex items-center justify-center sm:justify-start h-10 sm:h-10 px-4 sm:px-4 rounded-full sm:rounded-xl shrink-0 text-[13px] sm:text-sm font-bold text-white snap-center active:scale-[0.97] transition-all whitespace-nowrap",
-                                        !isLowBandwidthMode ? "bg-white/20 sm:bg-transparent backdrop-blur-md border border-white/20 sm:border-0 hover:bg-white/30 shadow-sm" : "bg-brand-700 sm:bg-transparent border border-brand-500"
-                                    )}>
-                                    <Icon className="h-4 w-4 mr-2 text-brand-100 sm:text-brand-200 shrink-0" />
-                                    <span className="sm:hidden truncate">{short}</span>
-                                    <span className="hidden sm:inline">{full}</span>
-                                </button>
-                            ))}
+                    {/* Navigation Tab Capsule */}
+                    <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
+                        {/* Tab 1: Live Roster (Selected) */}
+                        <div className="bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm rounded-xl py-2 flex flex-col items-center justify-center text-center cursor-default">
+                            <Hotel className="h-5 w-5 mb-1" />
+                            <span className="text-[9px] font-bold tracking-wide leading-tight">Live<br/>Roster</span>
                         </div>
-                        {/* Admit — desktop header button; on mobile the sticky bottom bar handles this. */}
-                        <button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} className="hidden sm:flex items-center justify-center h-11 px-6 rounded-xl shrink-0 text-sm font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] transition-all shadow-lg shadow-black/10">
-                            <Plus className="h-4 w-4 mr-2" /> Admit Patient
+
+                        {/* Tab 2: Bed Board */}
+                        <button 
+                            onClick={onOpenBedBoard}
+                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
+                        >
+                            <LayoutGrid className="h-5 w-5 mb-1 opacity-80 group-hover:opacity-100" />
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Bed<br/>Board</span>
+                        </button>
+
+                        {/* Tab 3: Referrals */}
+                        <button 
+                            onClick={onOpenReferredAdmissions}
+                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
+                        >
+                            <UserPlus className="h-5 w-5 mb-1 opacity-80 group-hover:opacity-100" />
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Referred<br/>Admissions</span>
+                        </button>
+
+                        {/* Tab 4: Ledger */}
+                        <button 
+                            onClick={onOpenConsultantLedger}
+                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
+                        >
+                            <Stethoscope className="h-5 w-5 mb-1 opacity-80 group-hover:opacity-100" />
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Consultant<br/>Ledger</span>
                         </button>
                     </div>
                 </div>
@@ -282,20 +311,20 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
 
                         {/* Segmented filters — wrap onto their own rows on small screens */}
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
+                            <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 shrink-0 border border-slate-200/40 dark:border-zinc-800">
                                 {(['ACTIVE', 'DISCHARGED', 'ALL'] as AdmissionStatusFilter[]).map(s => (
                                     <button key={s} type="button" onClick={() => setStatusFilter(s)}
-                                        className={cn('h-9 px-4 rounded-lg text-xs font-bold transition-all duration-200 shrink-0',
-                                            statusFilter === s ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
+                                        className={cn('h-8 px-4 rounded-full text-xs font-extrabold transition-all duration-200 shrink-0',
+                                            statusFilter === s ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50')}>
                                         {s === 'ACTIVE' ? 'Active' : s === 'DISCHARGED' ? 'Discharged' : 'All'}
                                     </button>
                                 ))}
                             </div>
-                            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 shrink-0 border border-slate-200/40">
+                            <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 shrink-0 border border-slate-200/40 dark:border-zinc-800">
                                 {(['TODAY', 'ALL', 'RANGE'] as DateFilterMode[]).map(m => (
                                     <button key={m} type="button" onClick={() => setDateFilter(m)}
-                                        className={cn('h-9 px-4 rounded-lg text-xs font-bold transition-all duration-200 shrink-0',
-                                            dateFilter === m ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')}>
+                                        className={cn('h-8 px-4 rounded-full text-xs font-extrabold transition-all duration-200 shrink-0',
+                                            dateFilter === m ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50')}>
                                         {m === 'TODAY' ? 'Today' : m === 'ALL' ? 'All' : 'Range'}
                                     </button>
                                 ))}
@@ -316,42 +345,42 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     {/* Mobile Card Layout */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
                         {paginatedAdmissions.map(a => (
-                            <div key={a.admissionId} className={cn("border border-slate-200/60 rounded-[2rem] p-4 sm:p-5 flex flex-col gap-4 cursor-pointer transition-all active:scale-[0.98]",
-                                !isLowBandwidthMode ? "bg-white/80 backdrop-blur-xl shadow-lg shadow-brand-500/5 hover:shadow-xl hover:shadow-brand-500/10" : "bg-white shadow-sm hover:shadow-md"
+                            <div key={a.admissionId} className={cn("border border-slate-200/60 dark:border-zinc-800/85 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 cursor-pointer transition-all active:scale-[0.98]",
+                                !isLowBandwidthMode ? "bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-lg shadow-brand-500/5 hover:shadow-xl hover:shadow-brand-500/10" : "bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md"
                             )} onClick={() => onOpenWorkspace(a)}>
                                 <div className="flex justify-between items-start gap-3">
                                     <div>
-                                        <p className="font-bold text-slate-900 text-base leading-tight">{a.patientName || '—'}</p>
-                                        <p className="text-xs text-slate-500 mt-1 font-medium">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
+                                        <p className="font-bold text-slate-900 dark:text-zinc-50 text-base leading-tight">{a.patientName || '—'}</p>
+                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 font-medium">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
                                     </div>
                                     <Badge variant="outline" className={cn('text-[10px] font-bold px-2.5 py-0.5 shrink-0 rounded-full',
-                                        a.statusCode === 'ADMITTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                            a.statusCode === 'DISCHARGED' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                                                'bg-amber-50 text-amber-700 border-amber-200'
+                                        a.statusCode === 'ADMITTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900' :
+                                            a.statusCode === 'DISCHARGED' ? 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700' :
+                                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
                                     )}>
                                         {a.statusCode}
                                     </Badge>
                                 </div>
                                 {a.statusCode === 'ADMITTED' && (
                                     <div className="flex flex-wrap justify-end gap-2 mt-1">
-                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3" /></span>
-                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3" /></span>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
+                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
+                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300 border-0 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
                                             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                                         </Button>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border-0 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
                                             <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
                                         </Button>
                                     </div>
                                 )}
                                 {a.statusCode === 'PRE_ADMIT' && (
                                     <div className="flex flex-wrap justify-end gap-2 mt-1">
-                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3" /></span>
-                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3" /></span>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3" onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
+                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
+                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-brand-600 text-white border-0 hover:bg-brand-700 transition-colors shadow-sm" onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
                                             <CalendarCheck className="h-3.5 w-3.5 mr-1.5" /> Confirm arrival
                                         </Button>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
+                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-450 border-0 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
                                             <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
                                         </Button>
                                     </div>
@@ -361,22 +390,22 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                                         <PrintDischargeButton admission={a} />
                                     </div>
                                 )}
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs bg-slate-50 dark:bg-zinc-950 rounded-xl p-3 border border-slate-100 dark:border-zinc-850">
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Admission #</span>
-                                        <span className="font-mono text-brand-700 font-bold">{a.admissionNo}</span>
+                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Admission #</span>
+                                        <span className="font-mono text-brand-700 dark:text-brand-400 font-bold">{a.admissionNo}</span>
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Bed</span>
-                                        <span className={cn('font-semibold truncate', a.bedCode ? 'text-slate-800' : 'text-amber-600')}>{a.bedCode ? `${a.wardName ? a.wardName + ' · ' : ''}${a.bedCode}` : 'Unassigned'}</span>
+                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Bed</span>
+                                        <span className={cn('font-semibold truncate', a.bedCode ? 'text-slate-800 dark:text-zinc-200' : 'text-amber-600 dark:text-amber-400')}>{a.bedCode ? `${a.wardName ? a.wardName + ' · ' : ''}${a.bedCode}` : 'Unassigned'}</span>
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Payer</span>
-                                        <span className="text-slate-800 font-semibold truncate">{a.payerType} {a.payerName && <span className="text-slate-500 font-medium">({a.payerName})</span>}</span>
+                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Payer</span>
+                                        <span className="text-slate-800 dark:text-zinc-200 font-semibold truncate">{a.payerType} {a.payerName && <span className="text-slate-500 dark:text-zinc-450 font-medium">({a.payerName})</span>}</span>
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Admitted</span>
-                                        <span className="text-slate-800 font-semibold truncate">{formatIstDateTime(a.admittedAt).split(',')[0]}</span>
+                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Admitted</span>
+                                        <span className="text-slate-800 dark:text-zinc-200 font-semibold truncate">{formatIstDateTime(a.admittedAt).split(',')[0]}</span>
                                     </div>
                                 </div>
                             </div>
@@ -495,26 +524,32 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             </section>
 
             <Dialog open={!!confirmArrivalTarget} onOpenChange={o => { if (!o) setConfirmArrivalTarget(null); }}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     {confirmArrivalTarget && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Confirm arrival — {confirmArrivalTarget.patientName || confirmArrivalTarget.patientId}?</DialogTitle>
-                                <DialogDescription>Moves this pre-registration to a completed admission. Optionally assign a bed now.</DialogDescription>
+                                <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Confirm arrival — {confirmArrivalTarget.patientName || confirmArrivalTarget.patientId}?</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Moves this pre-registration to a completed admission. Optionally assign a bed now.</DialogDescription>
                             </DialogHeader>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Bed (optional)</Label>
-                                <select value={arrivalBedId} onChange={e => setArrivalBedId(e.target.value)}
-                                    className="h-10 mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 bg-white">
-                                    <option value="">— Assign later —</option>
-                                    {arrivalBeds.map(b => (
-                                        <option key={b.bedId} value={b.bedId}>{b.wardName ? `${b.wardName} · ` : ''}{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
-                                    ))}
-                                </select>
+                            <div className="mt-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Bed (optional)</Label>
+                                <Select value={arrivalBedId} onValueChange={setArrivalBedId}>
+                                    <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                        <SelectValue placeholder="— Assign later —" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[250px] overflow-y-auto rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                        <SelectItem value="assign-later" className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">— Assign later —</SelectItem>
+                                        {arrivalBeds.map(b => (
+                                            <SelectItem key={b.bedId} value={b.bedId} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
+                                                {b.wardName ? `${b.wardName} · ` : ''}{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setConfirmArrivalTarget(null)}>Cancel</Button>
-                                <Button disabled={confirmingArrival} className="bg-brand-600 hover:bg-brand-700" onClick={submitConfirmArrival}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setConfirmArrivalTarget(null)}>Cancel</Button>
+                                <Button disabled={confirmingArrival} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white" onClick={submitConfirmArrival}>
                                     {confirmingArrival ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm arrival
                                 </Button>
                             </div>
@@ -524,19 +559,19 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             </Dialog>
 
             <Dialog open={!!cancelAdmissionTarget} onOpenChange={o => { if (!o) setCancelAdmissionTarget(null); }}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl w-[calc(100%-2rem)] sm:w-full">
                     {cancelAdmissionTarget && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Cancel Admission?</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-550">Cancel Admission?</DialogTitle>
+                                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
                                     Are you sure you want to cancel the admission for <strong className="text-slate-800">{cancelAdmissionTarget.patientName || cancelAdmissionTarget.patientId}</strong>?
                                     This will release any assigned bed and mark the admission as cancelled. This action cannot be undone.
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="ghost" onClick={() => setCancelAdmissionTarget(null)}>No, keep it</Button>
-                                <Button disabled={cancellingAdmission} className="bg-rose-600 hover:bg-rose-700" onClick={submitCancelAdmission}>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                                <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setCancelAdmissionTarget(null)}>No, keep it</Button>
+                                <Button disabled={cancellingAdmission} className="h-11 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 active:scale-[0.98] transition-all text-white" onClick={submitCancelAdmission}>
                                     {cancellingAdmission ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Yes, cancel admission
                                 </Button>
                             </div>
@@ -544,7 +579,6 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                     )}
                 </DialogContent>
             </Dialog>
-
             <EditAdmissionSheet
                 open={!!editingAdmissionTarget}
                 onOpenChange={open => !open && setEditingAdmissionTarget(null)}
@@ -553,10 +587,11 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
             />
             </div>
 
-            {/* Mobile-only sticky primary action — thumb-reachable Admit button */}
-            <div className="sm:hidden fixed bottom-16 inset-x-0 z-30 px-4 pb-4 pt-8 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none">
-                <button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} className="pointer-events-auto w-full h-14 flex items-center justify-center rounded-2xl text-base font-bold bg-brand-600 text-white shadow-xl shadow-brand-600/30 active:scale-[0.98] transition-all">
-                    <Plus className="h-5 w-5 mr-2" /> Admit Patient
+            {/* Mobile-only Extended FAB */}
+            <div className="sm:hidden fixed bottom-20 right-4 z-40 pointer-events-auto">
+                <button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} className="h-14 px-5 flex items-center justify-center rounded-full text-sm font-black bg-brand-600 text-white shadow-xl shadow-brand-600/40 active:scale-95 hover:scale-[1.02] transition-all gap-1.5 border border-brand-500/20">
+                    <Plus className="h-5 w-5 stroke-[2.5]" />
+                    <span>Admit Patient</span>
                 </button>
             </div>
         </div>
@@ -569,7 +604,7 @@ const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.Rea
         indigo: 'bg-brand-50/70 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 border-brand-100/50 dark:border-brand-800/30',
         emerald: 'bg-emerald-50/70 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-800/30',
         sky: 'bg-sky-50/70 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400 border-sky-100/50 dark:border-sky-800/30',
-        rose: 'bg-rose-50/70 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-100/50 dark:border-rose-800/30',
+        rose: 'bg-rose-50/70 dark:bg-rose-900/20 text-rose-700 dark:text-rose-450 border-rose-100/50 dark:border-rose-800/30',
         amber: 'bg-amber-50/70 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100/50 dark:border-amber-800/30',
     };
     
@@ -584,21 +619,20 @@ const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.Rea
 
     return (
         <div className={cn(
-            'rounded-3xl border p-4 sm:p-5 transition-all overflow-hidden relative group',
-            !isLowBandwidthMode ? 'backdrop-blur-md shadow-lg shadow-slate-200/50 hover:shadow-xl hover:-translate-y-1' : 'shadow-sm',
+            'rounded-[1.5rem] border p-3.5 sm:p-5 transition-all overflow-hidden relative group flex flex-col justify-between min-h-[92px]',
+            !isLowBandwidthMode ? 'backdrop-blur-md shadow-sm hover:shadow-md hover:-translate-y-0.5' : 'shadow-sm',
             !isLowBandwidthMode ? tones[tone] : fallbackTones[tone]
         )}>
             {!isLowBandwidthMode && (
-                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
                     {icon}
                 </div>
             )}
-            <div className="flex items-center gap-2 opacity-80 mb-2 relative z-10">
-                <span className="inline shrink-0">{icon}</span>
-                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider sm:tracking-widest truncate">{label}</p>
+            <div className="flex flex-col gap-0.5">
+                <p className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white leading-none">{value}</p>
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mt-1.5 leading-tight">{label}</p>
             </div>
-            <p className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white relative z-10">{value}</p>
-            {sub && <p className="text-xs font-semibold mt-1 opacity-75">{sub}</p>}
+            {sub && <p className="text-[9px] font-semibold mt-1 opacity-75">{sub}</p>}
         </div>
     );
 };

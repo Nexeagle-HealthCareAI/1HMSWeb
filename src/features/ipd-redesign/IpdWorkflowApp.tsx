@@ -37,7 +37,7 @@ export const IpdWorkflowApp: React.FC = () => {
     const [admitReferralContext, setAdmitReferralContext] = useState<AdmissionReferralItem | null>(null);
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
+        <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-zinc-950">
             {view.name === 'dashboard' && (
                 <IpdDashboard
                     onAdmit={() => setAdmitOpen(true)}
@@ -55,11 +55,19 @@ export const IpdWorkflowApp: React.FC = () => {
                 <ReferredAdmissionBoard
                     onBack={() => setView({ name: 'dashboard' })}
                     onAdmitReferral={(referral) => { setAdmitReferralContext(referral); setAdmitOpen(true); }}
+                    onOpenDashboard={() => setView({ name: 'dashboard' })}
+                    onOpenBedBoard={() => setView({ name: 'bedboard' })}
+                    onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
                 />
             )}
 
             {view.name === 'bedboard' && (
-                <BedBoardScreen onBack={() => setView({ name: 'dashboard' })} />
+                <BedBoardScreen 
+                    onBack={() => setView({ name: 'dashboard' })} 
+                    onOpenDashboard={() => setView({ name: 'dashboard' })}
+                    onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
+                    onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
+                />
             )}
 
             {view.name === 'cssdboard' && (
@@ -71,7 +79,12 @@ export const IpdWorkflowApp: React.FC = () => {
             )}
 
             {view.name === 'consultantledger' && (
-                <ConsultantLedgerScreen onBack={() => setView({ name: 'dashboard' })} />
+                <ConsultantLedgerScreen 
+                    onBack={() => setView({ name: 'dashboard' })} 
+                    onOpenDashboard={() => setView({ name: 'dashboard' })}
+                    onOpenBedBoard={() => setView({ name: 'bedboard' })}
+                    onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
+                />
             )}
 
             {view.name === 'workspace' && (

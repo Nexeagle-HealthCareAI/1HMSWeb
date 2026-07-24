@@ -26,7 +26,7 @@ p, div, span {
 }
 
 /* Softer focus indicators for better eye comfort */
-*:focus {
+*:focus-visible {
   outline: 2px solid hsl(var(--primary) / 0.6);
   outline-offset: 2px;
   transition: outline 0.2s ease;
@@ -427,4 +427,15 @@ All colors MUST be HSL.
 
 .animate-scan {
   animation: scan 4s linear infinite;
+}
+
+/* Hide scrollbar utility class globally */
+.hide-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }

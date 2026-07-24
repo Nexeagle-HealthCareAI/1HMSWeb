@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { UserPlus, Loader2, Eye, EyeOff, Stethoscope, CheckCircle2, Copy, Check, Mail, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
@@ -266,7 +268,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px] max-w-none p-0 flex flex-col overflow-hidden gap-0 border-l border-slate-200">
+      <SheetContent side="right" className="w-[calc(100%-2rem)] sm:w-[540px] max-w-none p-0 flex flex-col overflow-hidden gap-0 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-l-[24px]">
         {!created ? (
           <>
             <div className="px-6 py-6 bg-gradient-to-br from-brand-600 to-violet-600 text-white flex items-center gap-4 shrink-0">
@@ -280,36 +282,36 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
             <div className="px-6 py-6 space-y-4 flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
-                  <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.fullName')} <span className="text-red-500">*</span></Label>
-                  <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.fullNamePlaceholder')} />
+                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.fullName')} <span className="text-red-500">*</span></Label>
+                  <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder={t('userManagement.quickAdd.fullNamePlaceholder')} />
                 </div>
                 <div>
-                  <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.mobile')} <span className="text-red-500">*</span></Label>
-                  <Input value={form.mobileNumber} onChange={e => set('mobileNumber', e.target.value)} className="mt-1 rounded-lg font-mono" placeholder={t('userManagement.quickAdd.mobilePlaceholder')} />
+                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.mobile')} <span className="text-red-500">*</span></Label>
+                  <Input value={form.mobileNumber} onChange={e => set('mobileNumber', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" placeholder={t('userManagement.quickAdd.mobilePlaceholder')} />
                 </div>
                 <div>
-                  <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.email')}</Label>
-                  <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.emailPlaceholder')} />
+                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.email')}</Label>
+                  <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder={t('userManagement.quickAdd.emailPlaceholder')} />
                 </div>
                 {!editMode && (
                   <>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.password')} <span className="text-red-500">*</span></Label>
-                      <div className="relative mt-1">
-                        <Input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} className="rounded-lg pr-9" placeholder={t('userManagement.quickAdd.passwordPlaceholder')} />
-                        <button type="button" onClick={() => setShowPwd(s => !s)} className="absolute right-2.5 top-3 text-slate-400 hover:text-slate-600">
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.password')} <span className="text-red-500">*</span></Label>
+                      <div className="relative mt-1.5">
+                        <Input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all pr-10" placeholder={t('userManagement.quickAdd.passwordPlaceholder')} />
+                        <button type="button" onClick={() => setShowPwd(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                           {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.confirmPassword')} <span className="text-red-500">*</span></Label>
-                      <Input type={showPwd ? 'text' : 'password'} value={form.confirm} onChange={e => set('confirm', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.confirmPlaceholder')} />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.confirmPassword')} <span className="text-red-500">*</span></Label>
+                      <Input type={showPwd ? 'text' : 'password'} value={form.confirm} onChange={e => set('confirm', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder={t('userManagement.quickAdd.confirmPlaceholder')} />
                     </div>
                   </>
                 )}
                 <div className="sm:col-span-2">
-                  <Label className="text-[11px] font-semibold text-slate-600 mb-2 block">{t('userManagement.quickAdd.role')} <span className="text-red-500">*</span></Label>
+                  <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-2 block">{t('userManagement.quickAdd.role')} <span className="text-red-500">*</span></Label>
                   <div className="flex flex-wrap gap-2">
                     {rolesQuery.isLoading ? <span className="text-sm text-slate-500">{t('userManagement.quickAdd.loadingRoles')}</span> : 
                       roles.map(r => {
@@ -324,16 +326,16 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
                                 : [...form.roles, r.roleName];
                               setForm(f => ({ ...f, roles: newRoles }));
                             }}
-                            className={`px-3.5 py-2 text-[13px] font-medium rounded-xl transition-all duration-200 border flex items-center gap-2 ${
+                            className={`px-3.5 py-2 text-[13px] font-semibold rounded-xl active:scale-[0.98] transition-all duration-200 border flex items-center gap-2 ${
                               isSelected 
-                                ? 'bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500/20 shadow-sm' 
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
+                                ? 'bg-brand-50 border-brand-500 text-brand-800 dark:bg-brand-950/20 dark:border-brand-800 dark:text-brand-300 ring-1 ring-brand-500/20 shadow-sm' 
+                                : 'bg-white border-slate-200 text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
                             }`}
                           >
                             {isSelected ? (
-                              <CheckCircle2 className="h-4 w-4 text-brand-600" />
+                              <CheckCircle2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                             ) : (
-                              <div className="h-4 w-4 rounded-full border border-slate-300 flex items-center justify-center bg-white" />
+                              <div className="h-4 w-4 rounded-full border border-slate-300 dark:border-zinc-700 flex items-center justify-center bg-white dark:bg-zinc-900" />
                             )}
                             {r.roleName}
                           </button>
@@ -350,56 +352,63 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
               </div>
 
               {isDoctor && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-3">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> {t('userManagement.quickAdd.doctorDetails')}</p>
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 p-4 space-y-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 flex items-center gap-1.5"><Stethoscope className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" /> {t('userManagement.quickAdd.doctorDetails')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.license')} <span className="text-red-500">*</span></Label>
-                      <Input value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.licensePlaceholder')} />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.license')} <span className="text-red-500">*</span></Label>
+                      <Input value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder={t('userManagement.quickAdd.licensePlaceholder')} />
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">State medical council <span className="text-red-500">*</span></Label>
-                      <Input value={form.medicalCouncil} onChange={e => set('medicalCouncil', e.target.value)} className="mt-1 rounded-lg" placeholder="e.g. Karnataka Medical Council" />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">State medical council <span className="text-red-500">*</span></Label>
+                      <Input value={form.medicalCouncil} onChange={e => set('medicalCouncil', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder="e.g. Karnataka Medical Council" />
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">Registration year <span className="text-red-500">*</span></Label>
-                      <Input type="number" min={1950} max={new Date().getFullYear()} value={form.registrationYear} onChange={e => set('registrationYear', e.target.value)} className="mt-1 rounded-lg font-mono" placeholder="e.g. 2012" />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Registration year <span className="text-red-500">*</span></Label>
+                      <Input type="number" min={1950} max={new Date().getFullYear()} value={form.registrationYear} onChange={e => set('registrationYear', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" placeholder="e.g. 2012" />
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.department')} <span className="text-red-500">*</span></Label>
-                      <select
-                        value={form.department}
-                        onChange={e => { set('department', e.target.value); setSpecializations([]); }}
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.department')} <span className="text-red-500">*</span></Label>
+                      <Select
+                        value={form.department || undefined}
+                        onValueChange={(value) => { set('department', value); setSpecializations([]); }}
                         disabled={departmentsQuery.isLoading || departmentOptions.length === 0}
-                        className="mt-1 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm bg-white outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400 disabled:bg-slate-100"
                       >
-                        <option value="">
-                          {departmentsQuery.isLoading
-                            ? t('userManagement.quickAdd.loadingDepartments')
-                            : departmentOptions.length === 0
-                              ? t('userManagement.quickAdd.noDepartments')
-                              : t('userManagement.quickAdd.selectDepartment')}
-                        </option>
-                        {departmentOptions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                      </select>
+                        <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all disabled:bg-slate-100 dark:disabled:bg-slate-800">
+                          <SelectValue placeholder={
+                            departmentsQuery.isLoading
+                              ? t('userManagement.quickAdd.loadingDepartments')
+                              : departmentOptions.length === 0
+                                ? t('userManagement.quickAdd.noDepartments')
+                                : t('userManagement.quickAdd.selectDepartment')
+                          } />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-48 overflow-y-auto rounded-xl">
+                          {departmentOptions.map(d => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.experience')}</Label>
-                      <Input type="number" min={0} value={form.experienceYears} onChange={e => set('experienceYears', e.target.value)} className="mt-1 rounded-lg font-mono" placeholder={t('userManagement.quickAdd.experiencePlaceholder')} />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.experience')}</Label>
+                      <Input type="number" min={0} value={form.experienceYears} onChange={e => set('experienceYears', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" placeholder={t('userManagement.quickAdd.experiencePlaceholder')} />
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.qualification')}</Label>
-                      <Input value={form.qualification} onChange={e => set('qualification', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.qualificationPlaceholder')} />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.qualification')}</Label>
+                      <Input value={form.qualification} onChange={e => set('qualification', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder={t('userManagement.quickAdd.qualificationPlaceholder')} />
                     </div>
                     <div>
-                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.consultFee')}</Label>
-                      <Input type="number" min={0} value={form.consultFee} onChange={e => set('consultFee', e.target.value)} className="mt-1 rounded-lg font-mono" placeholder={t('userManagement.quickAdd.consultFeePlaceholder')} />
+                      <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.consultFee')}</Label>
+                      <Input type="number" min={0} value={form.consultFee} onChange={e => set('consultFee', e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" placeholder={t('userManagement.quickAdd.consultFeePlaceholder')} />
                     </div>
                   </div>
 
                   {/* Specializations cascade from the chosen department — disabled until one is picked */}
                   <div className="pt-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.specializations')} <span className="text-red-500">*</span></Label>
+                    <Label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.specializations')} <span className="text-red-500">*</span></Label>
                     {!form.department && (
                       <p className="mt-1 text-[11px] text-slate-400">{t('userManagement.quickAdd.selectDepartmentFirst')}</p>
                     )}
@@ -425,9 +434,9 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
               )}
             </div>
 
-            <SheetFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
-              <Button variant="outline" onClick={closeAll}>{t('userManagement.quickAdd.cancel')}</Button>
-              <Button onClick={submit} disabled={submitting} className="bg-brand-600 hover:bg-brand-700">
+            <SheetFooter className="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 shrink-0">
+              <Button variant="outline" className="h-10 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800" onClick={closeAll}>{t('userManagement.quickAdd.cancel')}</Button>
+              <Button onClick={submit} disabled={submitting} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
                 {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />} {editMode ? 'Save Changes' : t('userManagement.quickAdd.addMember')}
               </Button>
             </SheetFooter>
@@ -443,19 +452,19 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
             </div>
 
             <div className="px-6 py-6 space-y-4 flex-1 overflow-y-auto">
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 divide-y divide-slate-200">
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('userManagement.quickAdd.loginMobileLabel')}</span>
-                  <span className="text-sm font-mono font-semibold text-slate-800">{created.mobileNumber}</span>
+              <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 divide-y divide-slate-100 dark:divide-zinc-800/85">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.loginMobileLabel')}</span>
+                  <span className="text-sm font-mono font-bold text-slate-800 dark:text-zinc-200">{created.mobileNumber}</span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('userManagement.quickAdd.passwordLabel')}</span>
-                  <span className="text-sm font-mono font-semibold text-slate-800">{created.password}</span>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">{t('userManagement.quickAdd.passwordLabel')}</span>
+                  <span className="text-sm font-mono font-bold text-slate-800 dark:text-zinc-200">{created.password}</span>
                 </div>
               </div>
 
-              <Button variant="outline" onClick={copy} className="w-full gap-2">
-                {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              <Button variant="outline" onClick={copy} className="w-full h-10 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-bold gap-2">
+                {copied ? <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-4 w-4" />}
                 {copied ? t('userManagement.quickAdd.copied') : t('userManagement.quickAdd.copy')}
               </Button>
 
@@ -464,7 +473,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
                   variant="outline"
                   onClick={() => send('whatsapp')}
                   disabled={sendingChannel !== null}
-                  className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                  className="h-10 rounded-xl active:scale-[0.98] transition-all border-emerald-250 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-400 dark:hover:bg-emerald-950/20 font-bold gap-2"
                 >
                   {sendingChannel === 'whatsapp' ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
                   {t('userManagement.quickAdd.sendWhatsapp')}
@@ -474,21 +483,21 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded,
                   onClick={() => send('email')}
                   disabled={sendingChannel !== null || !created.email}
                   title={created.email ? undefined : t('userManagement.quickAdd.noEmailDesc')}
-                  className="gap-2 border-brand-200 text-brand-700 hover:bg-brand-50"
+                  className="h-10 rounded-xl active:scale-[0.98] transition-all border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-brand-900 dark:text-brand-400 dark:hover:bg-brand-950/20 font-bold gap-2"
                 >
                   {sendingChannel === 'email' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                   {t('userManagement.quickAdd.sendEmail')}
                 </Button>
               </div>
 
-              <p className="text-[11px] text-slate-400 text-center">
+              <p className="text-[10px] text-muted-foreground text-center">
                 {t('userManagement.quickAdd.changeHint')}
               </p>
             </div>
 
-            <SheetFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
-              <Button variant="outline" onClick={() => { reset(); }}>{t('userManagement.quickAdd.addAnother')}</Button>
-              <Button onClick={closeAll} className="bg-brand-600 hover:bg-brand-700">{t('userManagement.quickAdd.done')}</Button>
+            <SheetFooter className="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 shrink-0">
+              <Button variant="outline" className="h-10 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800" onClick={() => { reset(); }}>{t('userManagement.quickAdd.addAnother')}</Button>
+              <Button onClick={closeAll} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">{t('userManagement.quickAdd.done')}</Button>
             </SheetFooter>
           </>
         )}

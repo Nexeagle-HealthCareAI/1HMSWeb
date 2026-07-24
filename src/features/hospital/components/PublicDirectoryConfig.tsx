@@ -224,13 +224,13 @@ export const PublicDirectoryConfig: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="border-gray-200 dark:border-gray-800 max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+      <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
             <Globe className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             {translate('publicDirectory.title', 'Online Listing')}
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {translate(
               'publicDirectory.description',
               "List your hospital's active doctors on NexEagle's platform-wide Find a Doctor page. Off by default — patients across the platform can only discover and book your doctors once you turn this on."
@@ -245,23 +245,23 @@ export const PublicDirectoryConfig: React.FC = () => {
           ) : (
             <div
               className={cn(
-                'flex items-center justify-between gap-3 rounded-lg border p-4 transition-colors duration-300',
+                'flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors duration-300',
                 isListed
-                  ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20'
-                  : 'border-gray-200 dark:border-gray-800'
+                  ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/30 dark:bg-emerald-950/20'
+                  : 'border-slate-200 dark:border-zinc-800 bg-slate-50/30 dark:bg-zinc-950/10'
               )}
             >
               <div className="flex items-center gap-3">
                 {isListed ? (
                   <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 ) : (
-                  <ShieldAlert className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <ShieldAlert className="h-5 w-5 text-slate-400 dark:text-zinc-500 shrink-0" />
                 )}
                 <div>
-                  <Label htmlFor="public-directory-toggle" className="text-sm font-medium">
+                  <Label htmlFor="public-directory-toggle" className="text-sm font-semibold text-slate-800 dark:text-zinc-200">
                     {translate('publicDirectory.toggleLabel', 'List this hospital publicly')}
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     {isListed
                       ? translate('publicDirectory.activeHint', 'Your doctors are visible on the public directory.')
                       : translate('publicDirectory.inactiveHint', 'Your doctors are not visible on the public directory.')}
@@ -279,13 +279,13 @@ export const PublicDirectoryConfig: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-gray-200 dark:border-gray-800 max-sm:border-x-0 max-sm:border-t-0 max-sm:rounded-none max-sm:shadow-none max-sm:bg-white max-sm:dark:bg-slate-950">
+      <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
             <Stethoscope className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             {translate('publicDirectory.doctorsTitle', 'Doctors on the directory')}
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {isListed
               ? translate('publicDirectory.doctorsDescription', 'Choose which of your doctors patients can find and book from the public directory, and keep their public profile up to date.')
               : translate('publicDirectory.doctorsDisabledHint', 'Turn on the public directory above before curating individual doctors.')}
@@ -293,12 +293,12 @@ export const PublicDirectoryConfig: React.FC = () => {
         </CardHeader>
         <CardContent className={!isListed ? 'opacity-50 pointer-events-none' : undefined}>
           <div className="relative mb-4 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={translate('publicDirectory.searchPlaceholder', 'Search doctors…')}
-              className="pl-9"
+              className="pl-10 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
               disabled={!isListed}
             />
           </div>
@@ -325,13 +325,12 @@ export const PublicDirectoryConfig: React.FC = () => {
                       transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.03, ease: 'easeOut' }}
                       whileHover={{ y: -3 }}
                     >
-                      <Card
+                       <Card
                         className={cn(
-                          'relative h-full overflow-hidden rounded-2xl border shadow-sm transition-all duration-300 hover:shadow-lg',
+                          'relative h-full overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:shadow-lg',
                           d.isPubliclyListed
-                            ? 'border-emerald-200 dark:border-emerald-900'
-                            : 'border-gray-200 dark:border-gray-800',
-                          'max-sm:rounded-none max-sm:border-x-0 max-sm:shadow-none max-sm:border-b max-sm:border-t-0 max-sm:border-gray-200 max-sm:dark:border-gray-800'
+                            ? 'border-emerald-250 dark:border-emerald-800 bg-gradient-to-br from-white to-emerald-50/10 dark:from-zinc-900 dark:to-emerald-950/5'
+                            : 'border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900'
                         )}
                       >
                         <div
@@ -470,23 +469,23 @@ export const PublicDirectoryConfig: React.FC = () => {
                             <div className="flex gap-2 w-full sm:w-auto sm:flex-1">
                               <Button
                                 variant="outline"
-                                className="flex-1 gap-2 h-11 sm:h-9 text-sm"
+                                className="flex-1 gap-2 h-10 text-xs font-semibold rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300"
                                 onClick={() => setEditingDoctor(d)}
                               >
-                                <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                                <Pencil className="h-3.5 w-3.5" />
                                 {translate('publicDirectory.tile.edit', 'Edit profile')}
                               </Button>
                               <Button
                                 variant="outline"
-                                className="px-3 h-11 sm:h-9"
+                                className="px-3 h-10 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300"
                                 title={translate('publicDirectory.tile.printQr', 'Print QR Poster')}
                                 onClick={() => handlePrintQr(d)}
                               >
-                                <Printer className="h-5 w-5 sm:h-4 sm:w-4 text-brand-600" />
+                                <Printer className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                               </Button>
                             </div>
-                            <div className="flex items-center justify-between sm:justify-center gap-2 rounded-xl sm:rounded-full border border-gray-200 dark:border-gray-800 px-4 sm:px-3 py-1.5 h-11 sm:h-auto w-full sm:w-auto">
-                              <span className="text-[13px] sm:text-[11px] font-medium text-muted-foreground">
+                            <div className="flex items-center justify-between sm:justify-center gap-2 rounded-xl border border-slate-200 dark:border-zinc-800 px-4 sm:px-3 py-1.5 h-10 w-full sm:w-auto bg-slate-50/50 dark:bg-zinc-950/20">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">
                                 {translate('publicDirectory.tile.public', 'Public')}
                               </span>
                               <Switch
@@ -531,9 +530,12 @@ export const PublicDirectoryConfig: React.FC = () => {
       />
 
       <AlertDialog open={pendingToggle !== null} onOpenChange={(open) => !open && !confirming && setPendingToggle(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <AlertDialogContent className="w-[calc(100%-2rem)] sm:max-w-[400px] rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900 gap-0">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-brand-50 dark:bg-brand-950/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
+            <Globe className="h-6 w-6" />
+          </div>
+          <AlertDialogHeader className="space-y-0 gap-0">
+            <AlertDialogTitle className="text-center text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-50 leading-snug">
               {pendingToggle?.kind === 'hospital'
                 ? pendingToggle.next
                   ? translate('publicDirectory.confirm.hospitalOnTitle', 'List this hospital publicly?')
@@ -545,7 +547,7 @@ export const PublicDirectoryConfig: React.FC = () => {
                       pendingToggle?.kind === 'doctor' ? pendingToggle.doctorName : ''
                     )}
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-center text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed">
               {pendingToggle?.kind === 'hospital'
                 ? pendingToggle.next
                   ? translate(
@@ -567,11 +569,11 @@ export const PublicDirectoryConfig: React.FC = () => {
                     )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={confirming}>
+          <AlertDialogFooter className="flex flex-row items-center justify-end gap-2 mt-6 pt-3 space-x-2 space-y-0 border-t border-slate-100 dark:border-zinc-800/80">
+            <AlertDialogCancel disabled={confirming} className="border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-wider rounded-xl px-4 py-2 mt-0 h-10 active:scale-[0.98] transition-colors">
               {translate('common.cancel', 'Cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmToggle} disabled={confirming} className="gap-2">
+            <AlertDialogAction onClick={handleConfirmToggle} disabled={confirming} className="bg-transparent hover:bg-brand-50 dark:hover:bg-brand-950/20 text-brand-600 dark:text-brand-400 hover:text-brand-700 font-bold text-xs uppercase tracking-wider rounded-xl px-4 py-2 h-10 active:scale-[0.98] transition-all border-none shadow-none gap-1.5">
               {confirming && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {translate('publicDirectory.confirm.action', 'Yes, continue')}
             </AlertDialogAction>

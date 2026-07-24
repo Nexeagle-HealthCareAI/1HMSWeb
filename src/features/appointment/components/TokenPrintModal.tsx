@@ -194,11 +194,18 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                     </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                <DialogFooter className="flex flex-row items-center justify-end gap-3 mt-4 sm:space-x-0">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => onOpenChange(false)} 
+                        className="flex-1 sm:flex-none"
+                    >
                         Cancel
                     </Button>
-                    <Button onClick={handlePrint} className="gap-2">
+                    <Button 
+                        onClick={handlePrint} 
+                        className="flex-1 sm:flex-none gap-2"
+                    >
                         <Printer className="w-4 h-4" />
                         Print Token
                     </Button>

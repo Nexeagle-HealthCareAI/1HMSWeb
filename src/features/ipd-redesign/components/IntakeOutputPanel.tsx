@@ -138,26 +138,28 @@ export const IntakeOutputPanel: React.FC<Props> = ({ admissionId, isActive }) =>
             )}
 
             <Dialog open={entryOpen} onOpenChange={setEntryOpen}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-sm rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4">
                     <DialogHeader>
-                        <DialogTitle>{direction === 'IN' ? 'Record intake' : 'Record output'} — {subtype.replace('_', ' ')}</DialogTitle>
-                        <DialogDescription>Volume in mL.</DialogDescription>
+                        <DialogTitle className="text-base font-extrabold text-slate-900 dark:text-zinc-50">{direction === 'IN' ? 'Record intake' : 'Record output'} — {subtype.replace('_', ' ')}</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Volume in mL.</DialogDescription>
                     </DialogHeader>
-                    <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Volume (mL)</Label>
-                        <Input type="number" min={1} max={20000} value={volumeMl} onChange={e => setVolumeMl(e.target.value)} className="h-9 mt-1" autoFocus />
-                    </div>
-                    <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Route / site</Label>
-                        <Input value={routeOrSite} onChange={e => setRouteOrSite(e.target.value)} className="h-9 mt-1" placeholder="Optional" />
-                    </div>
-                    <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Notes</Label>
-                        <Input value={notes} onChange={e => setNotes(e.target.value)} className="h-9 mt-1" placeholder="Optional" />
+                    <div className="space-y-4">
+                        <div>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Volume (mL)</Label>
+                            <Input type="number" min={1} max={20000} value={volumeMl} onChange={e => setVolumeMl(e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" autoFocus />
+                        </div>
+                        <div>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Route / site</Label>
+                            <Input value={routeOrSite} onChange={e => setRouteOrSite(e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder="Optional" />
+                        </div>
+                        <div>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Notes</Label>
+                            <Input value={notes} onChange={e => setNotes(e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder="Optional" />
+                        </div>
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setEntryOpen(false)}>Cancel</Button>
-                        <Button disabled={!volumeMl || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
+                        <Button variant="outline" className="h-11 sm:h-10 rounded-xl border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all w-full sm:w-auto" onClick={() => setEntryOpen(false)}>Cancel</Button>
+                        <Button disabled={!volumeMl || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl active:scale-[0.98] transition-all w-full sm:w-auto shadow-md shadow-brand-600/10">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
                         </Button>
                     </div>

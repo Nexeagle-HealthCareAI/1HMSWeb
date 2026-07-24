@@ -176,7 +176,7 @@ export const ReferrerPicker: React.FC<Props> = ({ hospitalId, referrerId, referr
                 <Plus className="h-3 w-3" /> Add new referrer
             </button>
             {open && (
-                <div className="absolute z-20 left-0 right-0 mt-1.5 max-h-52 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl divide-y divide-slate-100">
+                <div className="absolute z-20 left-0 right-0 mt-1.5 max-h-52 overflow-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-xl border border-slate-200 bg-white shadow-xl divide-y divide-slate-100">
                     {results.length === 0 && (
                         <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
                             <Search className="h-3.5 w-3.5" /> No referrers found — add one below.

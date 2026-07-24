@@ -155,43 +155,43 @@ export const RoundNotePanel: React.FC<Props> = ({ admissionId, isActive }) => {
             )}
 
             <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog(); }}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     <DialogHeader>
-                        <DialogTitle>{addendumFor ? 'Add addendum' : 'New round note'}</DialogTitle>
-                        <DialogDescription>{addendumFor ? `Addendum to the note from ${formatIstDateTime(addendumFor.notedAt)}` : 'SOAP format.'}</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">{addendumFor ? 'Add addendum' : 'New round note'}</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">{addendumFor ? `Addendum to the note from ${formatIstDateTime(addendumFor.notedAt)}` : 'SOAP format.'}</DialogDescription>
                     </DialogHeader>
                     {addendumFor && (
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Addendum reason *</Label>
-                            <Input value={addendumReason} onChange={e => setAddendumReason(e.target.value)} className="h-9 mt-1" placeholder="Why this addendum is needed" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Addendum reason *</Label>
+                            <Input value={addendumReason} onChange={e => setAddendumReason(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Why this addendum is needed..." />
                         </div>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Subjective</Label>
-                            <Textarea rows={3} value={form.subjective ?? ''} onChange={e => setForm(f => ({ ...f, subjective: e.target.value }))} className="text-sm mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Subjective</Label>
+                            <Textarea rows={3} value={form.subjective ?? ''} onChange={e => setForm(f => ({ ...f, subjective: e.target.value }))} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Symptom reports, patient comments..." />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Objective</Label>
-                            <Textarea rows={3} value={form.objective ?? ''} onChange={e => setForm(f => ({ ...f, objective: e.target.value }))} className="text-sm mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Objective</Label>
+                            <Textarea rows={3} value={form.objective ?? ''} onChange={e => setForm(f => ({ ...f, objective: e.target.value }))} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Vitals, physical exams, lab results..." />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Assessment</Label>
-                            <Textarea rows={3} value={form.assessment ?? ''} onChange={e => setForm(f => ({ ...f, assessment: e.target.value }))} className="text-sm mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Assessment</Label>
+                            <Textarea rows={3} value={form.assessment ?? ''} onChange={e => setForm(f => ({ ...f, assessment: e.target.value }))} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Clinical diagnoses, patient progress..." />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Plan</Label>
-                            <Textarea rows={3} value={form.plan ?? ''} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))} className="text-sm mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Plan</Label>
+                            <Textarea rows={3} value={form.plan ?? ''} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Medications prescribed, orders, follow-ups..." />
                         </div>
                     </div>
                     <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">Diagnosis</Label>
-                        <Input value={form.diagnosis ?? ''} onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))} className="h-9 mt-1" placeholder="Optional" />
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Diagnosis</Label>
+                        <Input value={form.diagnosis ?? ''} onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Optional diagnosis code/name..." />
                     </div>
-                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                        <Button variant="outline" className="h-11 sm:h-10" onClick={closeDialog}>Cancel</Button>
-                        <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className={cn('h-11 sm:h-10 bg-brand-600 hover:bg-brand-700')}>
-                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={closeDialog}>Cancel</Button>
+                        <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className={cn('h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white')}>
+                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save Note
                         </Button>
                     </div>
                 </DialogContent>
