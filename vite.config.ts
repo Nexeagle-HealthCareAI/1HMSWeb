@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 import path from "path";
 
 // https://vitejs.dev/config/
@@ -50,6 +51,7 @@ export default defineConfig(({ mode }) => {
       host: true,
     },
     plugins: [
+      basicSsl(),
       react(),
       VitePWA({
         registerType: 'autoUpdate',
@@ -89,6 +91,28 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           background_color: '#ffffff',
           theme_color: '#4f46e5',
+          icons: [
+            {
+              src: 'Logo.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: 'Logo.png',
+              sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: 'Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: 'Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png',
+              sizes: '512x512',
+              type: 'image/png'
+            }
+          ]
         },
       }),
     ],

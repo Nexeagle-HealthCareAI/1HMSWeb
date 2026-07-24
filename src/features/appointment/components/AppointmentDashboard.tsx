@@ -1282,13 +1282,13 @@ export const AppointmentDashboard = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`group flex-1 sm:flex-none min-w-[90px] flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 rounded-xl px-2 py-2.5 sm:py-2 border transition-all duration-300 relative overflow-hidden ${isActive
+                  className={`group flex-1 sm:flex-none min-w-[95px] flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 rounded-xl px-1.5 py-2 sm:py-2 border transition-all duration-300 relative overflow-hidden ${isActive
                     ? 'bg-white text-brand-600 border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] z-10 scale-[1.02]'
                     : 'bg-transparent border-transparent text-brand-50 hover:bg-white/10'
                     }`}
                 >
-                  <Icon className={`h-4 w-4 sm:h-4 sm:w-4 ${isActive ? 'text-brand-500' : 'opacity-80'}`} />
-                  <span className={`text-[12px] sm:text-[13px] tracking-wide ${isActive ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
+                  <Icon className={`h-4 w-4 sm:h-4 sm:w-4 mb-0.5 sm:mb-0 ${isActive ? 'text-brand-500' : 'opacity-80'}`} />
+                  <span className={`text-[9px] sm:text-[11px] tracking-wide leading-tight text-center sm:text-left ${isActive ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
                 </button>
               );
             })}
