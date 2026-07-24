@@ -109,13 +109,13 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                     {/* Mobile Card List View */}
                     <div className="space-y-3 sm:hidden">
                         {readings.map(r => (
-                            <div key={r.vitalReadingId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+                            <div key={r.vitalReadingId} className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-sm space-y-3">
                                 {/* Header: Time and Recorder */}
-                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-black text-slate-800 font-mono">
+                                <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2">
+                                    <span className="text-xs font-black text-slate-800 dark:text-zinc-300 font-mono">
                                         {formatIstDateTime(r.recordedAt)}
                                     </span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
                                         By: {r.recordedBy ?? '—'}
                                     </span>
                                 </div>
@@ -123,36 +123,36 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                 {/* Grid for core vitals */}
                                 <div className="grid grid-cols-2 gap-3 text-xs">
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Temperature</span>
-                                        <p className="font-bold text-slate-800">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? 'F'}` : '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Temperature</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? 'F'}` : '—'}</p>
                                     </div>
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Pulse</span>
-                                        <p className="font-bold text-slate-800">{r.pulse != null ? `${r.pulse} bpm` : '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Pulse</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.pulse != null ? `${r.pulse} bpm` : '—'}</p>
                                     </div>
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Blood Pressure</span>
-                                        <p className="font-bold text-slate-800">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Blood Pressure</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</p>
                                     </div>
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Respiratory Rate</span>
-                                        <p className="font-bold text-slate-800">{r.respiratoryRate ?? '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Respiratory Rate</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.respiratoryRate ?? '—'}</p>
                                     </div>
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">SpO2</span>
-                                        <p className="font-bold text-slate-800">{r.spO2 != null ? `${r.spO2}%` : '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">SpO2</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.spO2 != null ? `${r.spO2}%` : '—'}</p>
                                     </div>
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Pain Score</span>
-                                        <p className="font-bold text-slate-800">{r.painScore ?? '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Pain Score</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.painScore ?? '—'}</p>
                                     </div>
                                     <div className="space-y-0.5">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">GCS Score</span>
-                                        <p className="font-bold text-slate-800">{r.gcsTotal ?? '—'}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Score</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200">{r.gcsTotal ?? '—'}</p>
                                     </div>
                                     <div className="space-y-0.5 col-span-2">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Wt / Ht / BMI</span>
-                                        <p className="font-bold text-slate-800 truncate">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Wt / Ht / BMI</span>
+                                        <p className="font-bold text-slate-800 dark:text-zinc-200 truncate">
                                             {[r.weightKg ? `${r.weightKg}kg` : null, r.heightCm ? `${r.heightCm}cm` : null, r.bmi ? `BMI ${r.bmi}` : null].filter(Boolean).join(' / ') || '—'}
                                         </p>
                                     </div>
@@ -162,10 +162,10 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                     </div>
 
                     {/* Original Desktop/Tablet Table View */}
-                    <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto hidden sm:block">
+                    <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-x-auto hidden sm:block">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                <tr className="bg-slate-50 dark:bg-zinc-900/50 border-b border-slate-100 dark:border-zinc-800/80 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                     <th className="text-left px-3 py-2">Time</th>
                                     <th className="text-left px-3 py-2">Temp</th>
                                     <th className="text-left px-3 py-2">Pulse</th>
@@ -178,19 +178,19 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                     <th className="text-left px-3 py-2">By</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
                                 {readings.map(r => (
-                                    <tr key={r.vitalReadingId}>
-                                        <td className="px-3 py-2 whitespace-nowrap font-semibold text-slate-700">{formatIstDateTime(r.recordedAt)}</td>
-                                        <td className="px-3 py-2">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? ''}` : '—'}</td>
-                                        <td className="px-3 py-2">{r.pulse ?? '—'}</td>
-                                        <td className="px-3 py-2">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</td>
-                                        <td className="px-3 py-2">{r.respiratoryRate ?? '—'}</td>
-                                        <td className="px-3 py-2">{r.spO2 != null ? `${r.spO2}%` : '—'}</td>
-                                        <td className="px-3 py-2">{r.painScore ?? '—'}</td>
-                                        <td className="px-3 py-2">{r.gcsTotal ?? '—'}</td>
-                                        <td className="px-3 py-2">{[r.weightKg ? `${r.weightKg}kg` : null, r.heightCm ? `${r.heightCm}cm` : null, r.bmi ? `BMI ${r.bmi}` : null].filter(Boolean).join(' / ') || '—'}</td>
-                                        <td className="px-3 py-2 text-slate-500">{r.recordedBy ?? '—'}</td>
+                                    <tr key={r.vitalReadingId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                                        <td className="px-3 py-2 whitespace-nowrap font-semibold text-slate-700 dark:text-zinc-300">{formatIstDateTime(r.recordedAt)}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? ''}` : '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.pulse ?? '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.respiratoryRate ?? '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.spO2 != null ? `${r.spO2}%` : '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.painScore ?? '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{r.gcsTotal ?? '—'}</td>
+                                        <td className="px-3 py-2 text-slate-800 dark:text-zinc-200">{[r.weightKg ? `${r.weightKg}kg` : null, r.heightCm ? `${r.heightCm}cm` : null, r.bmi ? `BMI ${r.bmi}` : null].filter(Boolean).join(' / ') || '—'}</td>
+                                        <td className="px-3 py-2 text-slate-500 dark:text-zinc-450">{r.recordedBy ?? '—'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -200,18 +200,18 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             )}
 
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl bg-white dark:bg-zinc-950">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Record vital reading</DialogTitle>
                         <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Fill in whichever values were taken — at least one is required.</DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Temperature</Label>
-                            <Input type="number" step="0.1" value={form.temperature ?? ''} onChange={e => setField({ temperature: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Temperature</Label>
+                            <Input type="number" step="0.1" value={form.temperature ?? ''} onChange={e => setField({ temperature: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Unit</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Unit</Label>
                             <Select value={form.temperatureUnit ?? 'F'} onValueChange={v => setField({ temperatureUnit: v })}>
                                 <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
                                     <SelectValue />
@@ -223,57 +223,57 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                             </Select>
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Pulse</Label>
-                            <Input type="number" value={form.pulse ?? ''} onChange={e => setField({ pulse: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Pulse</Label>
+                            <Input type="number" value={form.pulse ?? ''} onChange={e => setField({ pulse: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Systolic BP</Label>
-                            <Input type="number" value={form.systolicBP ?? ''} onChange={e => setField({ systolicBP: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Systolic BP</Label>
+                            <Input type="number" value={form.systolicBP ?? ''} onChange={e => setField({ systolicBP: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Diastolic BP</Label>
-                            <Input type="number" value={form.diastolicBP ?? ''} onChange={e => setField({ diastolicBP: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Diastolic BP</Label>
+                            <Input type="number" value={form.diastolicBP ?? ''} onChange={e => setField({ diastolicBP: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Resp. rate</Label>
-                            <Input type="number" value={form.respiratoryRate ?? ''} onChange={e => setField({ respiratoryRate: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Resp. rate</Label>
+                            <Input type="number" value={form.respiratoryRate ?? ''} onChange={e => setField({ respiratoryRate: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">SpO2 %</Label>
-                            <Input type="number" step="0.1" value={form.spO2 ?? ''} onChange={e => setField({ spO2: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">SpO2 %</Label>
+                            <Input type="number" step="0.1" value={form.spO2 ?? ''} onChange={e => setField({ spO2: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Pain (0-10)</Label>
-                            <Input type="number" min={0} max={10} value={form.painScore ?? ''} onChange={e => setField({ painScore: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Pain (0-10)</Label>
+                            <Input type="number" min={0} max={10} value={form.painScore ?? ''} onChange={e => setField({ painScore: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Weight (kg)</Label>
-                            <Input type="number" step="0.1" value={form.weightKg ?? ''} onChange={e => setField({ weightKg: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Weight (kg)</Label>
+                            <Input type="number" step="0.1" value={form.weightKg ?? ''} onChange={e => setField({ weightKg: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Height (cm)</Label>
-                            <Input type="number" step="0.1" value={form.heightCm ?? ''} onChange={e => setField({ heightCm: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Height (cm)</Label>
+                            <Input type="number" step="0.1" value={form.heightCm ?? ''} onChange={e => setField({ heightCm: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Eye (1-4)</Label>
-                            <Input type="number" min={1} max={4} value={form.gcsEye ?? ''} onChange={e => setField({ gcsEye: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">GCS Eye (1-4)</Label>
+                            <Input type="number" min={1} max={4} value={form.gcsEye ?? ''} onChange={e => setField({ gcsEye: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Verbal (1-5)</Label>
-                            <Input type="number" min={1} max={5} value={form.gcsVerbal ?? ''} onChange={e => setField({ gcsVerbal: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">GCS Verbal (1-5)</Label>
+                            <Input type="number" min={1} max={5} value={form.gcsVerbal ?? ''} onChange={e => setField({ gcsVerbal: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">GCS Motor (1-6)</Label>
-                            <Input type="number" min={1} max={6} value={form.gcsMotor ?? ''} onChange={e => setField({ gcsMotor: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">GCS Motor (1-6)</Label>
+                            <Input type="number" min={1} max={6} value={form.gcsMotor ?? ''} onChange={e => setField({ gcsMotor: num(e.target.value) })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all dark:bg-zinc-900 dark:text-zinc-150" />
                         </div>
                     </div>
                     <div className="mt-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Notes</Label>
-                        <Input value={form.notes ?? ''} onChange={e => setField({ notes: e.target.value || undefined })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Optional notes..." />
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-455 dark:text-zinc-550">Notes</Label>
+                        <Input value={form.notes ?? ''} onChange={e => setField({ notes: e.target.value || undefined })} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all dark:bg-zinc-900 dark:text-zinc-150" placeholder="Optional notes..." />
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
-                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!hasAnyValue || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800" onClick={() => setNewOpen(false)}>Cancel</Button>
+                        <Button disabled={!hasAnyValue || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white shadow-md shadow-brand-500/10">
                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save Reading
                         </Button>
                     </div>
