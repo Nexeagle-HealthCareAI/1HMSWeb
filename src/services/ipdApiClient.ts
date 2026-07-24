@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { API_BASE_URL } from '@/app/api';
+import { mockAxiosAdapter } from './mockAdapter';
 
 const API_TIMEOUT = 30000;
 
@@ -32,6 +33,11 @@ ipdAxios.interceptors.request.use(
                 : AxiosHeaders.from(config.headers || {});
             headers.set('Authorization', `Bearer ${token}`);
             config.headers = headers;
+
+            // If in mock bypass mode, use mock adapter
+            if (token === 'mock-jwt-token-bypass') {
+                config.adapter = mockAxiosAdapter as any;
+            }
         }
 
         const csrfToken = localStorage.getItem('csrf-token');

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Plus, Edit2, X, Loader2, RefreshCw, AlertCircle, Archive, LayoutGrid, Wrench,
@@ -11,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
@@ -152,107 +154,112 @@ export const OtMaster: React.FC = () => {
 
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 font-sans relative overflow-hidden">
-                    {/* TOOLBAR */}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900">
-                        <div className="relative w-full sm:max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Search theatre name, code..."
-                                className="pl-9 bg-gray-50 dark:bg-slate-950"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <Button variant="outline" size="sm" onClick={() => loadTheatres(true)} disabled={refreshing || loading} className="gap-1.5">
-                                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
-                            </Button>
-                            <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
-                                <Plus className="h-4 w-4" /> Add Theatre
-                            </Button>
-                        </div>
-                    </div>
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-zinc-950/20 font-sans relative overflow-hidden rounded-2xl">
+            {/* TOOLBAR */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+                <div className="relative w-full sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                        placeholder="Search theatre name, code..."
+                        className="pl-9 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" onClick={() => loadTheatres(true)} disabled={refreshing || loading} className="h-10 rounded-xl active:scale-[0.98] transition-all gap-1.5 border-slate-200 text-slate-700 font-bold px-4">
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
+                    <Button onClick={() => handleOpenDrawer(null)} className="h-10 rounded-xl flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold active:scale-[0.98] transition-all px-5 shadow-md shadow-brand-500/20">
+                        <Plus className="h-4 w-4" /> Add Theatre
+                    </Button>
+                </div>
+            </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-slate-950/50">
-                        {loading && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
-                                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
-                            </div>
-                        )}
-                        {!loading && loadError && (
-                            <div className="flex flex-col items-center justify-center py-20 text-rose-600 gap-2">
-                                <AlertCircle className="h-8 w-8" />
-                                <p className="font-semibold">{loadError}</p>
-                                <Button size="sm" variant="outline" onClick={() => loadTheatres(true)} className="mt-2">
-                                    <RefreshCw className="h-3 w-3 mr-1" /> Retry
-                                </Button>
-                            </div>
-                        )}
-                        {!loading && !loadError && (
-                            filteredTheatres.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 ml:grid-cols-3 2xl:grid-cols-4 gap-4">
-                                    {filteredTheatres.map(t => (
-                                        <motion.div
-                                            layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key={t.theatreId}
-                                            className={`relative bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col group transition-shadow hover:shadow-md ${!t.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
-                                        >
-                                            <div className={`h-1.5 w-full ${(THEATRE_STATUS_COLORS[t.status] ?? THEATRE_STATUS_COLORS.AVAILABLE).split(' ')[0]}`} />
-                                            <div className="p-4 flex-1 flex flex-col">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <h3 className="text-xl font-bold font-mono text-gray-900 dark:text-white flex items-center gap-1.5">
-                                                            <Scissors className="h-4 w-4 text-gray-400" />
-                                                            {t.theatreName}
-                                                        </h3>
-                                                        <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                                            {t.theatreCode} {t.departmentName ? `• ${t.departmentName}` : ''}
-                                                        </p>
-                                                    </div>
-                                                    <Badge variant="outline" className={`ml-2 text-[10px] font-bold uppercase tracking-wider ${THEATRE_STATUS_COLORS[t.status] ?? THEATRE_STATUS_COLORS.AVAILABLE}`}>
-                                                        {t.status}
-                                                    </Badge>
-                                                </div>
-                                                <div className="mt-auto flex items-end justify-between">
-                                                    <div className="flex flex-col">
-                                                    </div>
-                                                    {!t.isActive && (
-                                                        <Badge variant="secondary" className="text-[10px]">Inactive</Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="absolute top-2.5 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm border border-gray-100 dark:border-gray-800" onClick={() => handleOpenDrawer(t)}>
-                                                    <Edit2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
-                                    <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                                    <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">{theatres.length === 0 ? 'No theatres configured yet' : 'No theatres match your search'}</p>
-                                    <p className="text-sm mt-1 max-w-sm">{theatres.length === 0 ? 'Click "Add Theatre" to set up your first operation theatre.' : 'Try a different search.'}</p>
-                                </div>
-                            )
-                        )}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 dark:bg-zinc-950/10 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {loading && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
+                        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
                     </div>
+                )}
+                {!loading && loadError && (
+                    <div className="flex flex-col items-center justify-center py-20 text-rose-600 gap-2">
+                        <AlertCircle className="h-8 w-8" />
+                        <p className="font-semibold">{loadError}</p>
+                        <Button size="sm" variant="outline" onClick={() => loadTheatres(true)} className="mt-2 rounded-xl active:scale-[0.98] transition-all">
+                            <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                        </Button>
+                    </div>
+                )}
+                {!loading && !loadError && (
+                    filteredTheatres.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 ml:grid-cols-3 2xl:grid-cols-4 gap-4">
+                            {filteredTheatres.map(t => (
+                                <motion.div
+                                    layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key={t.theatreId}
+                                    className={`relative bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800 shadow-md overflow-hidden flex flex-col group transition-all duration-200 hover:shadow-lg ${!t.isActive ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                                >
+                                    <div className={`h-1.5 w-full ${(THEATRE_STATUS_COLORS[t.status] ?? THEATRE_STATUS_COLORS.AVAILABLE).split(' ')[0]}`} />
+                                    <div className="p-4 flex-1 flex flex-col">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h3 className="text-base font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                                                    <Scissors className="h-4 w-4 text-brand-500/70" />
+                                                    {t.theatreName}
+                                                </h3>
+                                                <p className="text-xs text-slate-450 dark:text-zinc-400 font-medium truncate mt-0.5 max-w-[180px]">
+                                                    {t.theatreCode} {t.departmentName ? `• ${t.departmentName}` : ''}
+                                                </p>
+                                            </div>
+                                            <Badge variant="outline" className={`ml-2 text-[9px] font-bold uppercase tracking-wider rounded-full px-2.5 py-0.5 ${THEATRE_STATUS_COLORS[t.status] ?? THEATRE_STATUS_COLORS.AVAILABLE}`}>
+                                                {t.status}
+                                            </Badge>
+                                        </div>
+                                        <div className="mt-auto flex items-end justify-between">
+                                            <div className="flex flex-col">
+                                            </div>
+                                            {!t.isActive && (
+                                                <Badge variant="secondary" className="text-[9px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5">Inactive</Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur shadow-md border border-slate-100 dark:border-zinc-800 active:scale-[0.98] transition-all" onClick={() => handleOpenDrawer(t)}>
+                                            <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center py-20 text-slate-500 dark:text-zinc-450">
+                            <Archive className="h-12 w-12 text-slate-350 dark:text-zinc-700 mb-4" />
+                            <p className="font-semibold text-lg text-slate-700 dark:text-zinc-305">{theatres.length === 0 ? 'No theatres configured yet' : 'No theatres match your search'}</p>
+                            <p className="text-sm mt-1 max-w-sm">{theatres.length === 0 ? 'Click "Add Theatre" to set up your first operation theatre.' : 'Try a different search.'}</p>
+                        </div>
+                    )
+                )}
+            </div>
+
             {/* ADD/EDIT THEATRE DRAWER */}
-            <AnimatePresence>
-                {isDrawerOpen && editingTheatre && (
-                    <>
+            {createPortal(
+                <AnimatePresence>
+                    {isDrawerOpen && editingTheatre && (
                         <motion.div
+                            key="drawer-overlay"
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
                             onClick={() => setIsDrawerOpen(false)}
                         />
+                    )}
+                    {isDrawerOpen && editingTheatre && (
                         <motion.div
+                            key="drawer-content"
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            className="fixed inset-y-0 right-0 w-[calc(100%-2rem)] sm:w-[480px] rounded-l-[32px] bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[60] flex flex-col overflow-hidden"
                         >
-                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600">
+                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600 text-white shrink-0">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
                                         <Scissors className="h-5 w-5 text-white" />
@@ -261,38 +268,38 @@ export const OtMaster: React.FC = () => {
                                         {editingTheatre.theatreId ? 'Edit Theatre' : 'Add Operation Theatre'}
                                     </h2>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/15" onClick={() => setIsDrawerOpen(false)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/15 active:scale-[0.98] transition-all" onClick={() => setIsDrawerOpen(false)}>
                                     <X className="h-5 w-5" />
                                 </Button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                        <Label>Theatre Code <span className="text-red-500">*</span></Label>
+                                    <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Theatre Code <span className="text-red-500">*</span></Label>
                                         <Input
                                             placeholder="e.g. OT-1"
-                                            className={formErrors.theatreCode ? 'border-red-500' : ''}
+                                            className={cn("h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", formErrors.theatreCode ? 'border-red-500' : '')}
                                             value={editingTheatre.theatreCode ?? ''}
                                             onChange={e => setEditingTheatre(p => ({ ...p!, theatreCode: e.target.value }))}
                                         />
                                         {formErrors.theatreCode && <p className="text-[10px] text-red-500">{formErrors.theatreCode}</p>}
                                     </div>
-                                    <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                        <Label>Theatre Name <span className="text-red-500">*</span></Label>
+                                    <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Theatre Name <span className="text-red-500">*</span></Label>
                                         <Input
                                             placeholder="e.g. Main OT 1"
-                                            className={formErrors.theatreName ? 'border-red-500' : ''}
+                                            className={cn("h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all", formErrors.theatreName ? 'border-red-500' : '')}
                                             value={editingTheatre.theatreName ?? ''}
                                             onChange={e => setEditingTheatre(p => ({ ...p!, theatreName: e.target.value }))}
                                         />
                                         {formErrors.theatreName && <p className="text-[10px] text-red-500">{formErrors.theatreName}</p>}
                                     </div>
-                                    <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                        <Label>Department <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
+                                    <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Department <span className="text-[9px] text-muted-foreground font-normal lowercase">(optional)</span></Label>
                                         <Select value={editingTheatre.departmentId ?? 'NONE'} onValueChange={v => setEditingTheatre(p => ({ ...p!, departmentId: v === 'NONE' ? undefined : v }))}>
-                                            <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                                            <SelectContent>
+                                            <SelectTrigger className="w-full h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select department" /></SelectTrigger>
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="NONE">None</SelectItem>
                                                 {departments.map(d => (
                                                     <SelectItem key={d.departmentId} value={d.departmentId}>{d.departmentName}</SelectItem>
@@ -301,11 +308,11 @@ export const OtMaster: React.FC = () => {
                                         </Select>
                                     </div>
 
-                                    <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                        <Label>Status</Label>
+                                    <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Status</Label>
                                         <Select value={editingTheatre.status ?? 'AVAILABLE'} onValueChange={v => setEditingTheatre(p => ({ ...p!, status: v }))}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
+                                            <SelectTrigger className="w-full h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="AVAILABLE">Available</SelectItem>
                                                 <SelectItem value="IN_USE">In Use</SelectItem>
                                                 <SelectItem value="CLEANING">Cleaning</SelectItem>
@@ -315,25 +322,26 @@ export const OtMaster: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 bg-gray-50/50 dark:bg-slate-900/40">
+                                <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-zinc-800 px-4 py-3 bg-slate-50/50 dark:bg-zinc-950/20">
                                     <div>
-                                        <Label htmlFor="theatreActive" className="cursor-pointer font-semibold">Active</Label>
+                                        <Label htmlFor="theatreActive" className="cursor-pointer font-semibold text-slate-800 dark:text-zinc-200">Active</Label>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">Inactive theatres are hidden from booking.</p>
                                     </div>
                                     <Switch id="theatreActive" checked={editingTheatre.isActive} onCheckedChange={v => setEditingTheatre(p => ({ ...p!, isActive: v }))} className="data-[state=checked]:bg-green-500" />
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
-                                <Button disabled={isSaving || !isValid} onClick={handleSave} className="bg-brand-600 hover:bg-brand-700 text-white">
+                            <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-55 dark:bg-zinc-900/60 flex justify-end gap-2 shrink-0">
+                                <Button variant="ghost" className="h-10 rounded-xl active:scale-[0.98] transition-all text-slate-650" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
+                                <Button disabled={isSaving || !isValid} onClick={handleSave} className="h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 active:scale-[0.98] transition-all">
                                     {isSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : (editingTheatre.theatreId ? 'Save' : 'Create Theatre')}
                                 </Button>
                             </div>
                         </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
 
         </div>

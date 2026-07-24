@@ -604,8 +604,12 @@ const StatsTable: React.FC<StatsTableProps> = ({ title, icon, data, accentColor,
                                     axisLine={false}
                                     tickLine={false}
                                     fontSize={11}
-                                    width={120}
+                                    width={90}
                                     tick={{ fill: 'currentColor' }}
+                                    tickFormatter={(val) => {
+                                        if (typeof val !== 'string') return val;
+                                        return val.length > 14 ? `${val.substring(0, 11)}...` : val;
+                                    }}
                                     className="text-gray-600 dark:text-gray-400 font-medium"
                                 />
                                 <Tooltip

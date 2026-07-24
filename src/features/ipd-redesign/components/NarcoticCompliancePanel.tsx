@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -118,12 +119,12 @@ export const NarcoticCompliancePanel: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
-                <button onClick={() => setSubTab('register')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', subTab === 'register' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
-                    <ShieldAlert className="h-3.5 w-3.5" /> Narcotics Register
+            <div className="inline-flex rounded-full p-1 bg-black/10 dark:bg-black/25 backdrop-blur-sm shrink-0">
+                <button onClick={() => setSubTab('register')} className={cn('px-4 py-2 rounded-full text-xs font-bold active:scale-[0.98] transition-all flex items-center gap-1.5 border-none shadow-none', subTab === 'register' ? 'bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-650 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200')}>
+                    <ShieldAlert className="h-4 w-4 text-brand-600 dark:text-brand-400" /> Narcotics Register
                 </button>
-                <button onClick={() => setSubTab('coldchain')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', subTab === 'coldchain' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
-                    <Thermometer className="h-3.5 w-3.5" /> Cold Chain
+                <button onClick={() => setSubTab('coldchain')} className={cn('px-4 py-2 rounded-full text-xs font-bold active:scale-[0.98] transition-all flex items-center gap-1.5 border-none shadow-none', subTab === 'coldchain' ? 'bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-650 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200')}>
+                    <Thermometer className="h-4 w-4 text-brand-600 dark:text-brand-400" /> Cold Chain
                 </button>
             </div>
 
@@ -132,11 +133,11 @@ export const NarcoticCompliancePanel: React.FC = () => {
             ) : (
                 <>
                     {subTab === 'register' && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Narcotics Register (Forms 3D/3E/3H)</h2>
-                                <Button size="sm" className="h-8 bg-brand-600 hover:bg-brand-700" onClick={() => setShowDispense(true)}>
-                                    <Plus className="h-3.5 w-3.5 mr-1" /> Dispense Narcotic
+                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Narcotics Register (Forms 3D/3E/3H)</h2>
+                                <Button size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10" onClick={() => setShowDispense(true)}>
+                                    <Plus className="h-4 w-4 mr-1" /> Dispense Narcotic
                                 </Button>
                             </div>
                             {register.length === 0 ? (
@@ -144,32 +145,32 @@ export const NarcoticCompliancePanel: React.FC = () => {
                             ) : (
                                 <div className="space-y-2">
                                     {register.map(e => (
-                                        <div key={e.registerEntryId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
+                                        <div key={e.registerEntryId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/10 flex-wrap hover:border-slate-200 dark:hover:border-zinc-700 transition-all">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-800 text-sm">{e.itemName}</span>
-                                                <span className="text-xs text-slate-500">Batch {e.batchNumber} · {e.storeName}</span>
-                                                <Badge variant="outline" className={cn('text-[10px] font-bold', FORM_TONE[e.formType])}>Form {e.formType}</Badge>
-                                                <Badge variant="outline" className={cn('text-[10px] font-bold', e.direction === 'OUT' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
+                                                <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm">{e.itemName}</span>
+                                                <span className="text-xs text-slate-500">Batch {e.batchNumber} &middot; {e.storeName}</span>
+                                                <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', FORM_TONE[e.formType])}>Form {e.formType}</Badge>
+                                                <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', e.direction === 'OUT' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
                                                     {e.direction} {e.qty}
                                                 </Badge>
                                             </div>
                                             <div className="text-[11px] text-slate-500 text-right">
-                                                <p>Balance: {e.balanceAfter} · By {e.issuedBy} · Witness {e.witnessBy}</p>
-                                                <p>{formatIstDateTime(e.recordedAt)}</p>
+                                                <p className="font-medium text-slate-700 dark:text-zinc-300">Balance: {e.balanceAfter} &middot; By {e.issuedBy} &middot; Witness {e.witnessBy}</p>
+                                                <p className="text-[10px] text-muted-foreground">{formatIstDateTime(e.recordedAt)}</p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </Card>
                     )}
 
                     {subTab === 'coldchain' && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Cold-Chain Temperature Log</h2>
-                                <Button size="sm" className="h-8 bg-brand-600 hover:bg-brand-700" onClick={() => setShowReading(true)}>
-                                    <Plus className="h-3.5 w-3.5 mr-1" /> Record Reading
+                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Cold-Chain Temperature Log</h2>
+                                <Button size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10" onClick={() => setShowReading(true)}>
+                                    <Plus className="h-4 w-4 mr-1" /> Record Reading
                                 </Button>
                             </div>
                             {readings.length === 0 ? (
@@ -177,61 +178,61 @@ export const NarcoticCompliancePanel: React.FC = () => {
                             ) : (
                                 <div className="space-y-2">
                                     {readings.map(r => (
-                                        <div key={r.logId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
+                                        <div key={r.logId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/10 flex-wrap hover:border-slate-200 dark:hover:border-zinc-700 transition-all">
                                             <div className="flex items-center gap-2">
                                                 <Thermometer className={cn('h-4 w-4', r.breachFlag ? 'text-rose-500' : 'text-sky-500')} />
-                                                <span className="font-semibold text-slate-800 text-sm">{r.storeName}</span>
-                                                <span className="text-sm font-mono">{r.tempCelsius}°C</span>
-                                                {r.breachFlag && <Badge variant="outline" className="text-[10px] font-bold bg-rose-50 text-rose-700 border-rose-200">Breach</Badge>}
+                                                <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm">{r.storeName}</span>
+                                                <span className="text-sm font-mono font-bold text-slate-850 dark:text-zinc-150">{r.tempCelsius}°C</span>
+                                                {r.breachFlag && <Badge variant="outline" className="text-[10px] font-bold bg-rose-50 text-rose-700 border-rose-200 rounded-full">Breach</Badge>}
                                             </div>
-                                            <span className="text-[11px] text-slate-500">{formatIstDateTime(r.recordedAt)} · {r.recordedBy}</span>
+                                            <span className="text-[11px] text-slate-500">{formatIstDateTime(r.recordedAt)} &middot; {r.recordedBy}</span>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </Card>
                     )}
                 </>
             )}
 
             {/* DISPENSE NARCOTIC DIALOG */}
             <Dialog open={showDispense} onOpenChange={setShowDispense}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     <DialogHeader>
-                        <DialogTitle>Dispense Narcotic</DialogTitle>
-                        <DialogDescription>Requires a prescriber reference and a witness (two-person sign-off).</DialogDescription>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">Dispense Narcotic</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">Requires a prescriber reference and a witness (two-person sign-off).</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Item</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Item</Label>
                             <Select value={dispenseItemId} onValueChange={setDispenseItemId}>
-                                <SelectTrigger><SelectValue placeholder="Select narcotic item" /></SelectTrigger>
-                                <SelectContent>{narcoticItems.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>)}</SelectContent>
+                                <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select narcotic item" /></SelectTrigger>
+                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{narcoticItems.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>)}</SelectContent>
                             </Select>
-                            {narcoticItems.length === 0 && <p className="text-[10px] text-amber-600">No items are flagged Narcotic in Item Master yet.</p>}
+                            {narcoticItems.length === 0 && <p className="text-[10px] text-amber-600 mt-1">No items are flagged Narcotic in Item Master yet.</p>}
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Store</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Store</Label>
                             <Select value={dispenseStoreId} onValueChange={setDispenseStoreId}>
-                                <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
-                                <SelectContent>{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
+                                <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select store" /></SelectTrigger>
+                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Qty</Label>
-                            <Input type="number" min={1} value={dispenseQty} onChange={e => setDispenseQty(e.target.value)} />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Qty</Label>
+                            <Input type="number" min={1} value={dispenseQty} onChange={e => setDispenseQty(e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" />
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Prescriber Reference</Label>
-                            <Input value={dispensePrescriber} onChange={e => setDispensePrescriber(e.target.value)} placeholder="Doctor name / prescription no." />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Prescriber Reference</Label>
+                            <Input value={dispensePrescriber} onChange={e => setDispensePrescriber(e.target.value)} placeholder="Doctor name / prescription no." className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Witness Name</Label>
-                            <Input value={dispenseWitness} onChange={e => setDispenseWitness(e.target.value)} />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Witness Name</Label>
+                            <Input value={dispenseWitness} onChange={e => setDispenseWitness(e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                         </div>
-                        <div className="flex justify-end">
-                            <Button disabled={dispenseBusy} onClick={submitDispense} className="bg-brand-600 hover:bg-brand-700">
-                                {dispenseBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Dispense
+                        <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-zinc-850">
+                            <Button disabled={dispenseBusy} onClick={submitDispense} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
+                                {dispenseBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />} Dispense
                             </Button>
                         </div>
                     </div>
@@ -240,26 +241,26 @@ export const NarcoticCompliancePanel: React.FC = () => {
 
             {/* RECORD COLD-CHAIN READING DIALOG */}
             <Dialog open={showReading} onOpenChange={setShowReading}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     <DialogHeader>
-                        <DialogTitle>Record Cold-Chain Reading</DialogTitle>
-                        <DialogDescription>Flags a breach automatically against the store's configured temperature range.</DialogDescription>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-550">Record Cold-Chain Reading</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">Flags a breach automatically against the store's configured temperature range.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Store</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Store</Label>
                             <Select value={readingStoreId} onValueChange={setReadingStoreId}>
-                                <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
-                                <SelectContent>{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
+                                <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select store" /></SelectTrigger>
+                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Temperature (°C)</Label>
-                            <Input type="number" step="0.1" value={readingTemp} onChange={e => setReadingTemp(e.target.value)} />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Temperature (°C)</Label>
+                            <Input type="number" step="0.1" value={readingTemp} onChange={e => setReadingTemp(e.target.value)} className="h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" />
                         </div>
-                        <div className="flex justify-end">
-                            <Button disabled={readingBusy} onClick={submitReading} className="bg-brand-600 hover:bg-brand-700">
-                                {readingBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Record
+                        <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-zinc-850">
+                            <Button disabled={readingBusy} onClick={submitReading} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
+                                {readingBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />} Record
                             </Button>
                         </div>
                     </div>

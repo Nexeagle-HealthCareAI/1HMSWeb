@@ -357,69 +357,206 @@ interface CheckDuplicatesResponse {
     matches?: DuplicateMatch[];
 }
 
+const MOCK_ADMISSIONS_INTERNAL: ActiveAdmissionItem[] = [
+    {
+        admissionId: '1', admissionNo: 'ADM-2026-0481', admissionType: 'EMERGENCY', statusCode: 'ADMITTED',
+        payerType: 'CASH', admittedAt: new Date().toISOString(), patientId: 'UHID-100482', patientName: 'Rajesh Kumar Sharma',
+        patientAge: 54, patientSex: 'M', bedCode: 'ICU-04', wardName: 'ICU', payerName: null,
+        primaryDoctorId: 'd1', primaryDoctorName: 'Dr. Meera Kulkarni', referralSource: 'DOCTOR', referralName: 'Dr. Kavita Menon (ENT)',
+        admissionReason: 'Chest pain, suspected ACS', diagnosis: 'Acute coronary syndrome — under evaluation',
+        entitledRoomCategory: 'GENERAL'
+    },
+    {
+        admissionId: '2', admissionNo: 'ADM-2026-0480', admissionType: 'ELECTIVE', statusCode: 'ADMITTED',
+        payerType: 'INSURANCE', admittedAt: new Date().toISOString(), patientId: 'UHID-100199', patientName: 'Anita Deshpande',
+        patientAge: 41, patientSex: 'F', bedCode: 'GW-12', wardName: 'General Ward', payerName: 'Star Health',
+        primaryDoctorId: 'd2', primaryDoctorName: 'Dr. Arjun Rao'
+    },
+    {
+        admissionId: '3', admissionNo: 'ADM-2026-0479', admissionType: 'ELECTIVE', statusCode: 'PRE_ADMIT',
+        payerType: 'TPA', admittedAt: new Date().toISOString(), patientId: 'UHID-100777', patientName: 'Mohammed Faiz',
+        patientAge: 33, patientSex: 'M', bedCode: null, wardName: null, payerName: 'MediAssist',
+    },
+    {
+        admissionId: '4', admissionNo: 'ADM-2026-0477', admissionType: 'EMERGENCY', statusCode: 'ADMITTED',
+        payerType: 'CASH', admittedAt: new Date().toISOString(), patientId: 'UHID-100051', patientName: 'Sunita Rani',
+        patientAge: 67, patientSex: 'F', bedCode: null, wardName: null, payerName: null,
+    },
+    {
+        admissionId: '5', admissionNo: 'ADM-2026-0475', admissionType: 'DAYCARE', statusCode: 'ADMITTED',
+        payerType: 'CGHS', admittedAt: new Date().toISOString(), patientId: 'UHID-100634', patientName: 'Vikram Singh Rathore',
+        patientAge: 48, patientSex: 'M', bedCode: 'PVT-03', wardName: 'Private', payerName: 'CGHS Delhi',
+    },
+];
+
+const MOCK_DOCTORS_INTERNAL: HospitalDoctorItem[] = [
+    { doctorId: 'd1', fullName: 'Dr. Meera Kulkarni', departmentName: 'Cardiology' },
+    { doctorId: 'd2', fullName: 'Dr. Arjun Rao', departmentName: 'Orthopedics' },
+];
+
 export const admissionApi = {
-    searchPatients: (searchText: string, hospitalId?: string): Promise<PatientSearchResult[]> =>
-        ipdApiClient
+    searchPatients: (searchText: string, hospitalId?: string): Promise<PatientSearchResult[]> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const q = searchText.toLowerCase();
+            return Promise.resolve(
+                MOCK_ADMISSIONS_INTERNAL
+                    .filter(a => (a.patientName ?? '').toLowerCase().includes(q) || (a.patientId ?? '').toLowerCase().includes(q))
+                    .map(a => ({ patientId: a.patientId!, fullName: a.patientName, mobile: a.mobile, sex: a.patientSex, age: a.patientAge }))
+            );
+        }
+        return ipdApiClient
             .get<SearchPatientResponse>('/patient/search', {
-                params: { searchText, hospitalId: hospitalIdOrThrow(hospitalId) },
+                params: { searchText, hospitalId: id },
             })
-            .then(r => r.items ?? []),
+            .then(r => r.items ?? []);
+    },
 
-    getPatientAdmissions: (patientId: string, hospitalId?: string): Promise<GetPatientAdmissionsResponse> =>
-        ipdApiClient.get<GetPatientAdmissionsResponse>('/admission/patient', {
-            params: { hospitalId: hospitalIdOrThrow(hospitalId), patientId },
-        }),
+    getPatientAdmissions: (patientId: string, hospitalId?: string): Promise<GetPatientAdmissionsResponse> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const match = MOCK_ADMISSIONS_INTERNAL.find(a => a.patientId === patientId);
+            return Promise.resolve({
+                success: true,
+                patient: match ? {
+                    patientId: match.patientId!,
+                    fullName: match.patientName,
+                    sex: match.patientSex,
+                    ageYears: match.patientAge,
+                } : null,
+                admissions: match ? [{
+                    admissionId: match.admissionId,
+                    admissionNo: match.admissionNo,
+                    admissionType: match.admissionType,
+                    admittedAt: match.admittedAt,
+                    statusCode: match.statusCode,
+                    admissionReason: match.admissionReason,
+                    diagnosis: match.diagnosis,
+                }] : [],
+            });
+        }
+        return ipdApiClient.get<GetPatientAdmissionsResponse>('/admission/patient', {
+            params: { hospitalId: id, patientId },
+        });
+    },
 
-    getActiveAdmissions: (statusFilter?: AdmissionStatusFilter, hospitalId?: string): Promise<ActiveAdmissionItem[]> =>
-        ipdApiClient
-            .get<GetActiveAdmissionsResponse>('/admission/active', { params: { hospitalId: hospitalIdOrThrow(hospitalId), statusFilter } })
-            .then(r => r.items ?? []),
+    getActiveAdmissions: (statusFilter?: AdmissionStatusFilter, hospitalId?: string): Promise<ActiveAdmissionItem[]> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            if (statusFilter === 'DISCHARGED') return Promise.resolve(MOCK_ADMISSIONS_INTERNAL.filter(m => m.statusCode === 'DISCHARGED'));
+            if (statusFilter === 'ACTIVE') return Promise.resolve(MOCK_ADMISSIONS_INTERNAL.filter(m => m.statusCode !== 'DISCHARGED'));
+            return Promise.resolve(MOCK_ADMISSIONS_INTERNAL);
+        }
+        return ipdApiClient
+            .get<GetActiveAdmissionsResponse>('/admission/active', { params: { hospitalId: id, statusFilter } })
+            .then(r => r.items ?? []);
+    },
 
-    admit: (payload: AdmitPatientPayload, hospitalId?: string): Promise<AdmitPatientResponse> =>
-        ipdApiClient.post<AdmitPatientResponse>('/admission', {
+    admit: (payload: AdmitPatientPayload, hospitalId?: string): Promise<AdmitPatientResponse> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const admissionId = Math.random().toString();
+            return Promise.resolve({
+                success: true,
+                admissionId,
+                admissionNo: 'ADM-PREVIEW-' + Math.floor(Math.random() * 1000),
+                patientId: payload.patientId || 'UHID-PREVIEW-' + Math.floor(Math.random() * 1000),
+                admittedAt: new Date().toISOString(),
+                statusCode: payload.isPreRegistration ? 'PRE_ADMIT' : 'ADMITTED',
+            });
+        }
+        return ipdApiClient.post<AdmitPatientResponse>('/admission', {
             ...payload,
-            hospitalId: hospitalIdOrThrow(hospitalId),
-        }),
+            hospitalId: id,
+        });
+    },
 
-    confirmArrival: (admissionId: string, bedId?: string, hospitalId?: string): Promise<ConfirmArrivalResponse> =>
-        ipdApiClient.post<ConfirmArrivalResponse>('/admission/confirm-arrival', {
-            hospitalId: hospitalIdOrThrow(hospitalId), admissionId, bedId: bedId || undefined,
-        }),
+    confirmArrival: (admissionId: string, bedId?: string, hospitalId?: string): Promise<ConfirmArrivalResponse> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve({
+                success: true,
+                admissionId,
+                admittedAt: new Date().toISOString(),
+                bedId,
+            });
+        }
+        return ipdApiClient.post<ConfirmArrivalResponse>('/admission/confirm-arrival', {
+            hospitalId: id, admissionId, bedId: bedId || undefined,
+        });
+    },
 
-    getHospitalDoctors: (hospitalId?: string): Promise<HospitalDoctorItem[]> =>
-        ipdApiClient
-            .get<GetHospitalDoctorsResponse>('/doctors/hospital', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
-            .then(r => r.doctors ?? []),
+    getHospitalDoctors: (hospitalId?: string): Promise<HospitalDoctorItem[]> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve(MOCK_DOCTORS_INTERNAL);
+        }
+        return ipdApiClient
+            .get<GetHospitalDoctorsResponse>('/doctors/hospital', { params: { hospitalId: id } })
+            .then(r => r.doctors ?? []);
+    },
 
     updateDetails: async (payload: UpdateAdmissionDetailsPayload, hospitalId?: string) => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const match = MOCK_ADMISSIONS_INTERNAL.find(a => a.admissionId === payload.admissionId);
+            if (match) {
+                if (payload.primaryDoctorId) {
+                    const doc = MOCK_DOCTORS_INTERNAL.find(d => d.doctorId === payload.primaryDoctorId);
+                    if (doc) {
+                        match.primaryDoctorId = doc.doctorId;
+                        match.primaryDoctorName = doc.fullName;
+                    }
+                }
+                if (payload.admissionReason) match.admissionReason = payload.admissionReason;
+                if (payload.diagnosis) match.diagnosis = payload.diagnosis;
+                if (payload.payerType) match.payerType = payload.payerType;
+            }
+            return Promise.resolve({ success: true });
+        }
         try {
-            return await ipdApiClient.put('/admission/details', { ...payload, hospitalId: hospitalIdOrThrow(hospitalId) });
+            return await ipdApiClient.put('/admission/details', { ...payload, hospitalId: id });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not update admission details.'));
         }
     },
 
     upsertCoverage: async (payload: UpsertAdmissionCoveragePayload, hospitalId?: string) => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve({ success: true });
+        }
         try {
-            return await ipdApiClient.put('/admission/coverage', { ...payload, hospitalId: hospitalIdOrThrow(hospitalId) });
+            return await ipdApiClient.put('/admission/coverage', { ...payload, hospitalId: id });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not update coverage details.'));
         }
     },
 
-    checkDuplicates: (payload: CheckDuplicatesPayload, hospitalId?: string): Promise<DuplicateMatch[]> =>
-        ipdApiClient
+    checkDuplicates: (payload: CheckDuplicatesPayload, hospitalId?: string): Promise<DuplicateMatch[]> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve([]);
+        }
+        return ipdApiClient
             .post<CheckDuplicatesResponse>('/patient/check-duplicates', {
                 ...payload,
-                hospitalId: hospitalIdOrThrow(hospitalId),
+                hospitalId: id,
             })
             .then(r => r.matches ?? [])
-            .catch(() => []),
+            .catch(() => []);
+    },
 
     updateStatus: async (admissionId: string, toStatus: string, hospitalId?: string) => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const match = MOCK_ADMISSIONS_INTERNAL.find(a => a.admissionId === admissionId);
+            if (match) match.statusCode = toStatus;
+            return Promise.resolve({ success: true });
+        }
         try {
             return await ipdApiClient.post('/admission/status', {
-                hospitalId: hospitalIdOrThrow(hospitalId),
+                hospitalId: id,
                 admissionId,
                 toStatus,
             });
@@ -429,32 +566,62 @@ export const admissionApi = {
     },
 
     changeDoctor: async (admissionId: string, doctorId: string, hospitalId?: string): Promise<ChangeAdmittingDoctorResponse> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const match = MOCK_ADMISSIONS_INTERNAL.find(a => a.admissionId === admissionId);
+            const doc = MOCK_DOCTORS_INTERNAL.find(d => d.doctorId === doctorId);
+            if (match && doc) {
+                match.primaryDoctorId = doc.doctorId;
+                match.primaryDoctorName = doc.fullName;
+            }
+            return Promise.resolve({ success: true, assignmentId: 'new-da', doctorId, assignedAt: new Date().toISOString() });
+        }
         try {
-            return await ipdApiClient.post('/admission/doctor', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, doctorId });
+            return await ipdApiClient.post('/admission/doctor', { hospitalId: id, admissionId, doctorId });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not change the admitting doctor.'));
         }
     },
 
-    getDoctorHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionDoctorHistoryItem[]> =>
-        ipdApiClient
-            .get<GetAdmissionDoctorHistoryResponse>('/admission/doctor/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
-            .then(r => r.items ?? []),
+    getDoctorHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionDoctorHistoryItem[]> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve([]);
+        }
+        return ipdApiClient
+            .get<GetAdmissionDoctorHistoryResponse>('/admission/doctor/history', { params: { hospitalId: id, admissionId } })
+            .then(r => r.items ?? []);
+    },
 
     changeReferrer: async (
         admissionId: string,
         referral: { referralSource: 'SELF' | 'DOCTOR' | 'OTHER'; referrerId?: string | null; referrerName?: string | null; referrerType?: string | null },
         hospitalId?: string,
     ): Promise<ChangeAdmissionReferrerResponse> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            const match = MOCK_ADMISSIONS_INTERNAL.find(a => a.admissionId === admissionId);
+            if (match) {
+                match.referralSource = referral.referralSource;
+                match.referralName = referral.referrerName;
+                match.referredByReferrerId = referral.referrerId;
+            }
+            return Promise.resolve({ success: true, assignmentId: 'new-ra', assignedAt: new Date().toISOString() });
+        }
         try {
-            return await ipdApiClient.post('/admission/referrer', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, ...referral });
+            return await ipdApiClient.post('/admission/referrer', { hospitalId: id, admissionId, ...referral });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not change the referrer.'));
         }
     },
 
-    getReferrerHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionReferrerHistoryItem[]> =>
-        ipdApiClient
-            .get<GetAdmissionReferrerHistoryResponse>('/admission/referrer/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
-            .then(r => r.items ?? []),
+    getReferrerHistory: (admissionId: string, hospitalId?: string): Promise<AdmissionReferrerHistoryItem[]> => {
+        const id = hospitalIdOrThrow(hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve([]);
+        }
+        return ipdApiClient
+            .get<GetAdmissionReferrerHistoryResponse>('/admission/referrer/history', { params: { hospitalId: id, admissionId } })
+            .then(r => r.items ?? []);
+    },
 };

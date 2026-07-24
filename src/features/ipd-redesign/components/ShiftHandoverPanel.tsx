@@ -5,6 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, Check } from 'lucide-react';
@@ -171,88 +178,95 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
             )}
 
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     <DialogHeader>
-                        <DialogTitle>New shift handover</DialogTitle>
-                        <DialogDescription>Structured SBAR is the default — switch to free text any time; only Situation is ever required.</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">New shift handover</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Structured SBAR is the default — switch to free text any time; only Situation is ever required.</DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 w-fit">
+                    <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-zinc-900 w-fit">
                         <button type="button" onClick={() => setMode('structured')}
-                            className={cn('h-9 sm:h-8 px-3 rounded-md text-xs font-bold transition-all', mode === 'structured' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            className={cn('h-8 px-3 rounded-lg text-xs font-bold transition-all active:scale-95', mode === 'structured' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                             Structured (SBAR)
                         </button>
                         <button type="button" onClick={() => setMode('freeText')}
-                            className={cn('h-9 sm:h-8 px-3 rounded-md text-xs font-bold transition-all', mode === 'freeText' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            className={cn('h-8 px-3 rounded-lg text-xs font-bold transition-all active:scale-95', mode === 'freeText' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                             Free text
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Shift</Label>
-                            <select value={shiftCode} onChange={e => setShiftCode(e.target.value as ShiftCode)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                {SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Shift</Label>
+                            <Select value={shiftCode} onValueChange={v => setShiftCode(v as ShiftCode)}>
+                                <SelectTrigger className="h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                    {SHIFTS.map(s => (
+                                        <SelectItem key={s} value={s} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">{s}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Outgoing nurse *</Label>
-                            <Input value={outgoingNurseName} onChange={e => setOutgoingNurseName(e.target.value)} className="h-9 mt-1" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Outgoing nurse *</Label>
+                            <Input value={outgoingNurseName} onChange={e => setOutgoingNurseName(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" />
                         </div>
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Incoming nurse</Label>
-                            <Input value={incomingNurseName} onChange={e => setIncomingNurseName(e.target.value)} className="h-9 mt-1" placeholder="Optional" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Incoming nurse</Label>
+                            <Input value={incomingNurseName} onChange={e => setIncomingNurseName(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" placeholder="Optional" />
                         </div>
                     </div>
 
                     {mode === 'freeText' ? (
                         <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Handover note *</Label>
-                            <Textarea rows={6} value={freeTextNote} onChange={e => setFreeTextNote(e.target.value)} className="text-sm mt-1" placeholder="Write the handover in your own words" />
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Handover note *</Label>
+                            <Textarea rows={5} value={freeTextNote} onChange={e => setFreeTextNote(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Write the handover in your own words..." />
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                             <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Situation *</Label>
-                                <Textarea rows={3} value={situation} onChange={e => setSituation(e.target.value)} className="text-sm mt-1" placeholder="Why is the patient here, current status" />
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Situation *</Label>
+                                <Textarea rows={3} value={situation} onChange={e => setSituation(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Why is the patient here, current status..." />
                             </div>
                             <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Background</Label>
-                                <Textarea rows={3} value={background} onChange={e => setBackground(e.target.value)} className="text-sm mt-1" placeholder="Optional — allergies, comorbidities, precautions" />
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Background</Label>
+                                <Textarea rows={3} value={background} onChange={e => setBackground(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Optional — allergies, precautions..." />
                             </div>
                             <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Assessment</Label>
-                                <Textarea rows={3} value={assessment} onChange={e => setAssessment(e.target.value)} className="text-sm mt-1" placeholder="Optional — vitals, lines, drains, meds" />
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Assessment</Label>
+                                <Textarea rows={3} value={assessment} onChange={e => setAssessment(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Optional — vitals, lines, drains, meds..." />
                             </div>
                             <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Recommendation</Label>
-                                <Textarea rows={3} value={recommendation} onChange={e => setRecommendation(e.target.value)} className="text-sm mt-1" placeholder="Optional — plan for the next shift" />
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Recommendation</Label>
+                                <Textarea rows={3} value={recommendation} onChange={e => setRecommendation(e.target.value)} className="text-sm mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all p-3 resize-none w-full" placeholder="Optional — plan for the next shift..." />
                             </div>
                         </div>
                     )}
 
-                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                        <Button variant="outline" className="h-11 sm:h-10" onClick={() => setNewOpen(false)}>Cancel</Button>
-                        <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700">
-                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setNewOpen(false)}>Cancel</Button>
+                        <Button disabled={!canSubmit || submitting || isSubscriptionReadOnly} onClick={submit} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white">
+                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Save Note
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={!!ackingId} onOpenChange={(o) => { if (!o) setAckingId(null); }}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm rounded-[24px] border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl">
                     <DialogHeader>
-                        <DialogTitle>Acknowledge handover</DialogTitle>
-                        <DialogDescription>Confirm you've received this handover.</DialogDescription>
+                        <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-zinc-50">Acknowledge handover</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Confirm you've received this handover.</DialogDescription>
                     </DialogHeader>
-                    <div>
-                        <Label className="text-xs font-semibold text-slate-700">Your name *</Label>
-                        <Input value={ackName} onChange={e => setAckName(e.target.value)} className="h-9 mt-1" autoFocus />
+                    <div className="mt-2">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Your name *</Label>
+                        <Input value={ackName} onChange={e => setAckName(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 transition-all" autoFocus />
                     </div>
-                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                        <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setAckingId(null)}>Cancel</Button>
-                        <Button disabled={!ackName.trim() || ackBusy || isSubscriptionReadOnly} className="h-11 sm:h-10 bg-brand-600 hover:bg-brand-700" onClick={confirmAck}>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80 mt-4">
+                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setAckingId(null)}>Cancel</Button>
+                        <Button disabled={!ackName.trim() || ackBusy || isSubscriptionReadOnly} className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all text-white" onClick={confirmAck}>
                             {ackBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Acknowledge
                         </Button>
                     </div>

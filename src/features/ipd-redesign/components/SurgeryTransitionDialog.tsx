@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -51,24 +52,30 @@ const ChecklistPhaseSection: React.FC<{
     };
 
     return (
-        <div className={cn('rounded-xl border p-3', done ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/40')}>
+        <div className={cn('rounded-2xl border p-4 shadow-sm transition-all duration-200', done ? 'border-emerald-200/80 bg-emerald-50/40 dark:bg-emerald-950/15' : 'border-amber-200/80 bg-amber-50/20 dark:bg-amber-950/10')}>
             <button type="button" className="w-full flex items-center justify-between gap-2" onClick={() => setExpanded(o => !o)}>
-                <span className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
-                    {done ? <Check className="h-4 w-4 text-emerald-600" /> : <span className="h-4 w-4 rounded-full border-2 border-amber-400" />}
+                <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-zinc-200">
+                    {done ? (
+                        <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                            <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                    ) : (
+                        <span className="h-4 w-4 rounded-full border-2 border-amber-400 shrink-0" />
+                    )}
                     {meta.label}
                 </span>
                 {expanded ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
             </button>
             {expanded && !done && (
-                <div className="mt-3 space-y-1.5">
+                <div className="mt-3.5 space-y-2.5">
                     {meta.items.map(item => (
-                        <label key={item.key} className="flex items-start gap-2 text-xs text-slate-700">
-                            <input type="checkbox" checked={!!items[item.key]} onChange={e => setItems({ ...items, [item.key]: e.target.checked })} className="h-4 w-4 mt-0.5" />
-                            {item.label}
+                        <label key={item.key} className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-zinc-300 font-medium cursor-pointer">
+                            <input type="checkbox" checked={!!items[item.key]} onChange={e => setItems({ ...items, [item.key]: e.target.checked })} className="h-4.5 w-4.5 rounded border-slate-205 dark:border-zinc-800 text-brand-600 focus:ring-brand-500/20 mt-0.5" />
+                            <span>{item.label}</span>
                         </label>
                     ))}
-                    <div className="flex justify-end pt-1">
-                        <Button size="sm" className="h-9 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700" disabled={busy} onClick={submit}>
+                    <div className="flex justify-end pt-2">
+                        <Button size="sm" className="h-10 rounded-xl text-xs bg-brand-600 hover:bg-brand-700 font-bold active:scale-[0.98] transition-all px-4" disabled={busy} onClick={submit}>
                             {busy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Complete {meta.label.split(' ')[0]}
                         </Button>
                     </div>
@@ -197,67 +204,77 @@ export const SurgeryTransitionDialog: React.FC<Props> = ({ open, onOpenChange, s
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl overflow-y-auto max-h-[85vh] scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <DialogHeader>
-                    <DialogTitle>{surgeryCase.patientName || 'Patient'} — {toStatus.replace('_', ' ')}</DialogTitle>
-                    <DialogDescription>{surgeryCase.procedureName}</DialogDescription>
+                    <DialogTitle className="text-lg font-bold text-slate-800 dark:text-zinc-200">{surgeryCase.patientName || 'Patient'} — {toStatus.replace('_', ' ')}</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">{surgeryCase.procedureName}</DialogDescription>
                 </DialogHeader>
 
                 {toStatus === 'SCHEDULED' && (
-                    <div className="space-y-3">
-                        <div>
-                            <Label className="text-[11px] font-semibold text-slate-600">Theatre</Label>
-                            <select value={theatreId} onChange={e => setTheatreId(e.target.value)} className="h-10 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                <option value="">Select…</option>
-                                {theatres.map(t => <option key={t.theatreId} value={t.theatreId}>{t.theatreName}</option>)}
-                            </select>
+                    <div className="space-y-4 my-2">
+                        <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Theatre</Label>
+                            <Select value={theatreId} onValueChange={setTheatreId}>
+                                <SelectTrigger className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select Theatre..." /></SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {theatres.map(t => <SelectItem key={t.theatreId} value={t.theatreId}>{t.theatreName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Start</Label>
-                                <Input type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} className="h-10 mt-1" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Start Time</Label>
+                                <Input type="datetime-local" value={scheduledStart} onChange={e => setScheduledStart(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                             </div>
-                            <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">End</Label>
-                                <Input type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} className="h-10 mt-1" />
+                            <div className="flex flex-col gap-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">End Time</Label>
+                                <Input type="datetime-local" value={scheduledEnd} onChange={e => setScheduledEnd(e.target.value)} className="h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                             </div>
                         </div>
                     </div>
                 )}
 
                 {toStatus === 'IN_THEATRE' && (
-                    <div className="space-y-3">
-                        <div className={cn('rounded-xl border p-3', preOpDone ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/40')}>
+                    <div className="space-y-4 my-2">
+                        <div className={cn('rounded-2xl border p-4 shadow-sm transition-all duration-200', preOpDone ? 'border-emerald-200/80 bg-emerald-50/40 dark:bg-emerald-950/15' : 'border-amber-200/80 bg-amber-50/20 dark:bg-amber-950/10')}>
                             <button type="button" className="w-full flex items-center justify-between gap-2" onClick={() => setPreOpExpanded(o => !o)}>
-                                <span className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
-                                    {preOpDone ? <Check className="h-4 w-4 text-emerald-600" /> : <span className="h-4 w-4 rounded-full border-2 border-amber-400" />}
+                                <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-zinc-200">
+                                    {preOpDone ? (
+                                        <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                                            <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        </div>
+                                    ) : (
+                                        <span className="h-4 w-4 rounded-full border-2 border-amber-400 shrink-0" />
+                                    )}
                                     Pre-Op Assessment
                                 </span>
                                 {preOpExpanded ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
                             </button>
                             {preOpExpanded && !preOpDone && (
-                                <div className="mt-3 space-y-2.5">
-                                    <div>
-                                        <Label className="text-[11px] font-semibold text-slate-600">ASA grade</Label>
-                                        <select value={asaGrade} onChange={e => setAsaGrade(e.target.value)} className="h-9 mt-1 text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                            <option value="">—</option>
-                                            {['I', 'II', 'III', 'IV', 'V', 'VI'].map(g => <option key={g} value={g}>{g}</option>)}
-                                        </select>
+                                <div className="mt-3.5 space-y-3.5">
+                                    <div className="flex flex-col gap-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">ASA grade</Label>
+                                        <Select value={asaGrade} onValueChange={setAsaGrade}>
+                                            <SelectTrigger className="h-9 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                {['I', 'II', 'III', 'IV', 'V', 'VI'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <div className="flex flex-wrap gap-3">
+                                    <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { label: 'NPO confirmed', val: npoConfirmed, set: setNpoConfirmed },
                                             { label: 'Allergies reviewed', val: allergiesReviewed, set: setAllergiesReviewed },
                                             { label: 'Investigations reviewed', val: investigationsReviewed, set: setInvestigationsReviewed },
                                             { label: 'Consent confirmed', val: consentConfirmed, set: setConsentConfirmed },
                                         ].map(({ label, val, set }) => (
-                                            <label key={label} className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                                                <input type="checkbox" checked={val} onChange={e => set(e.target.checked)} className="h-4 w-4" /> {label}
+                                            <label key={label} className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-zinc-300 cursor-pointer">
+                                                <input type="checkbox" checked={val} onChange={e => set(e.target.checked)} className="h-4.5 w-4.5 rounded border-slate-205 dark:border-zinc-800 text-brand-600 focus:ring-brand-500/20" /> <span>{label}</span>
                                             </label>
                                         ))}
                                     </div>
                                     <div className="flex justify-end pt-1">
-                                        <Button size="sm" className="h-9 sm:h-8 text-xs bg-brand-600 hover:bg-brand-700" disabled={preOpBusy} onClick={submitPreOp}>
+                                        <Button size="sm" className="h-10 rounded-xl text-xs bg-brand-600 hover:bg-brand-700 font-bold active:scale-[0.98] transition-all px-4" disabled={preOpBusy} onClick={submitPreOp}>
                                             {preOpBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save assessment
                                         </Button>
                                     </div>
@@ -269,56 +286,58 @@ export const SurgeryTransitionDialog: React.FC<Props> = ({ open, onOpenChange, s
                 )}
 
                 {toStatus === 'POST_OP' && (
-                    <div className="space-y-3">
+                    <div className="space-y-4 my-2">
                         <ChecklistPhaseSection surgeryCaseId={surgeryCase.surgeryCaseId} phase="timeOut" done={timeOutDone} onDone={() => setTimeOutDone(true)} />
                         <ChecklistPhaseSection surgeryCaseId={surgeryCase.surgeryCaseId} phase="signOut" done={signOutDone} onDone={() => setSignOutDone(true)} />
-                        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Intra-op notes (optional)</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Anaesthesia type</Label>
-                                    <select value={anaesthesiaType} onChange={e => setAnaesthesiaType(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
-                                        <option value="">—</option>
-                                        {['GA', 'SPINAL', 'EPIDURAL', 'LOCAL', 'SEDATION', 'REGIONAL'].map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
+                        <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/20 p-4 space-y-3.5">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Intra-op notes (optional)</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Anaesthesia type</Label>
+                                    <Select value={anaesthesiaType} onValueChange={setAnaesthesiaType}>
+                                        <SelectTrigger className="h-9 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            {['GA', 'SPINAL', 'EPIDURAL', 'LOCAL', 'SEDATION', 'REGIONAL'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Blood loss (ml)</Label>
-                                    <Input type="number" min={0} value={estimatedBloodLossMl} onChange={e => setEstimatedBloodLossMl(e.target.value)} className="h-9 mt-1" />
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Blood loss (ml)</Label>
+                                    <Input type="number" min={0} value={estimatedBloodLossMl} onChange={e => setEstimatedBloodLossMl(e.target.value)} className="h-9 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all font-mono" />
                                 </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Surgery start</Label>
-                                    <Input type="datetime-local" value={surgeryStartAt} onChange={e => setSurgeryStartAt(e.target.value)} className="h-9 mt-1" />
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Surgery start</Label>
+                                    <Input type="datetime-local" value={surgeryStartAt} onChange={e => setSurgeryStartAt(e.target.value)} className="h-9 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                                 </div>
-                                <div>
-                                    <Label className="text-[11px] font-semibold text-slate-600">Surgery end</Label>
-                                    <Input type="datetime-local" value={surgeryEndAt} onChange={e => setSurgeryEndAt(e.target.value)} className="h-9 mt-1" />
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Surgery end</Label>
+                                    <Input type="datetime-local" value={surgeryEndAt} onChange={e => setSurgeryEndAt(e.target.value)} className="h-9 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                                 </div>
                             </div>
-                            <div className="mt-2">
-                                <Label className="text-[11px] font-semibold text-slate-600">Findings</Label>
-                                <Textarea value={findings} onChange={e => setFindings(e.target.value)} rows={2} className="mt-1" />
+                            <div className="flex flex-col gap-1 mt-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Findings</Label>
+                                <Textarea value={findings} onChange={e => setFindings(e.target.value)} rows={2} className="mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" />
                             </div>
                         </div>
                     </div>
                 )}
 
                 {toStatus === 'COMPLETED' && (
-                    <p className="text-sm text-slate-600">Mark this case as complete? This closes out the theatre workflow for the case.</p>
+                    <p className="text-sm text-slate-650 dark:text-zinc-300 my-4 font-medium">Mark this case as complete? This closes out the theatre workflow for the case.</p>
                 )}
 
                 {toStatus === 'CANCELLED' && (
-                    <div>
-                        <Label className="text-[11px] font-semibold text-rose-700">Reason for cancellation *</Label>
-                        <Textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={3} className="mt-1" placeholder="Required" />
+                    <div className="flex flex-col gap-1.5 my-3">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Reason for cancellation *</Label>
+                        <Textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={3} className="mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" placeholder="Enter cancellation details (Required)" />
                     </div>
                 )}
 
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                    <Button variant="ghost" className="h-11 sm:h-10" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80 mt-2">
+                    <Button variant="ghost" className="h-11 sm:h-10 rounded-xl active:scale-[0.98] transition-all text-slate-650" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button
                         disabled={!canFinalize || submitting}
-                        className={cn('h-11 sm:h-10', toStatus === 'CANCELLED' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand-600 hover:bg-brand-700')}
+                        className={cn('h-11 sm:h-10 rounded-xl active:scale-[0.98] transition-all font-bold px-5 text-white', toStatus === 'CANCELLED' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand-600 hover:bg-brand-700')}
                         onClick={finalize}
                     >
                         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} {finalizeLabel}

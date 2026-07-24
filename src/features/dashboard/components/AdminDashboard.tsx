@@ -248,7 +248,7 @@ export const AdminDashboard = () => {
 
 
   return (
-    <div ref={dashboardRootRef} className={`min-h-screen w-full bg-gray-50 dark:bg-gray-950 relative z-0 pt-1 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'px-0 pb-0' : 'px-2 sm:px-4 lg:px-6 pb-2 sm:pb-4 lg:pb-6 space-y-4 sm:space-y-6'}`}>
+    <div ref={dashboardRootRef} className={`min-h-screen w-full bg-slate-50 dark:bg-zinc-950 relative z-0 pt-2 overflow-x-hidden ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'px-0 pb-0' : 'px-3 sm:px-4 lg:px-6 pb-28 sm:pb-6 space-y-4 sm:space-y-6'}`}>
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog
         open={showHospitalRegistrationDialog}
@@ -416,21 +416,25 @@ export const AdminDashboard = () => {
       </AnimatePresence>
 
       {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
-      <section className={`mb-4 z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800 rounded-2xl shadow-lg shadow-brand-100/10 dark:shadow-black/20 px-3 py-3 sm:px-6 sm:py-4 ring-1 ring-black/5 dark:ring-white/5">
+      <section className={`z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 rounded-[2rem] p-5 text-white shadow-lg relative overflow-hidden">
+          {/* Decorative flare */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+
           {/* Left: Title, badges, hospital ID */}
-          <div className="flex flex-col gap-1 min-w-0 shrink-0 w-full xl:w-auto">
+          <div className="relative z-10 flex flex-col gap-1 min-w-0 shrink-0 w-full xl:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight drop-shadow-sm flex items-center gap-2">
+                <Building2 className="h-6 w-6 text-brand-200 shrink-0" />
                 {t('admin.adminBoard')}
               </h1>
               {hospitalAccessRestricted && (
                 <button
                   type="button"
                   onClick={focusHospitalBranding}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-all"
                 >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold text-white">
                     {Math.round(hospitalScore)}
                   </span>
                   <span className="hidden sm:inline">{hospitalAccessMessage || t('admin.hospitalAccessFallback')}</span>
@@ -438,43 +442,26 @@ export const AdminDashboard = () => {
                 </button>
               )}
               {hospitalScore === 100 && (
-                <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm px-2 py-0.5">
+                <Badge className="bg-white/20 text-white border-white/30 text-xs font-semibold shadow-sm px-2 py-0.5">
                   <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                   {t('admin.hospitalSetup100')}
                 </Badge>
               )}
             </div>
             {hospitalId && (
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground pl-1 mt-1 flex-wrap">
-                <span className="font-medium text-foreground whitespace-nowrap">{t('admin.hospitalIdLabel')}</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-brand-100 pl-1 mt-1 flex-wrap">
+                <span className="font-medium whitespace-nowrap">{t('admin.hospitalIdLabel')}</span>
                 <span className="relative group">
-                  <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-[160px] sm:max-w-none truncate cursor-pointer transition-all group-hover:bg-primary/10" onClick={handleCopyHospitalId} title={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}>
+                  <span className="font-mono bg-white/15 px-2 py-0.5 rounded border border-white/10 select-all cursor-pointer font-bold tracking-wider hover:bg-white/20 transition-all" title="Click to select and copy ID">
                     {hospitalId}
-                  </Badge>
-                  <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 rounded bg-black/80 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
-                    {t('admin.copyHospitalId')}
                   </span>
                 </span>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6 ml-1 text-muted-foreground hover:text-foreground"
-                  onClick={handleCopyHospitalId}
-                  aria-label={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}
-                  tabIndex={0}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span className="sr-only">{t('admin.hospitalIdCopySr')}</span>
-                </Button>
               </div>
             )}
           </div>
 
-          {/* Right: Navigation Tabs — 2×2 card grid on phones (every module reachable without a
-              horizontal swipe), a single row from sm, reverting to the original inline-flex row at
-              xl+ (same pattern used for the Billing tab nav). */}
-          <nav className="w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-nowrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1.5 xl:p-1 shadow-inner shadow-white/60 dark:shadow-black/40">
+          {/* Right: Navigation Tabs inside capsule */}
+          <nav className="relative z-10 w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-nowrap gap-2 bg-black/15 dark:bg-black/40 backdrop-blur-sm rounded-2xl p-1.5 shadow-inner">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
               const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
@@ -495,18 +482,18 @@ export const AdminDashboard = () => {
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
                   className={`group w-full xl:flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-2 xl:py-1.5 border transition-all duration-300 xl:min-w-[120px] ${isActive
-                    ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white border-transparent shadow-xl shadow-brand-500/30'
-                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'bg-white text-brand-600 dark:text-brand-400 border-transparent shadow-xl shadow-black/10'
+                    : 'bg-transparent border-transparent text-brand-50 hover:bg-white/10 hover:text-white'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
                   <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
-                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                      <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-brand-500 dark:text-brand-400'}`} />
+                    <span className={`p-1 rounded-lg ${isActive ? 'bg-brand-50 dark:bg-zinc-800' : 'bg-white/10 dark:bg-slate-800'}`}>
+                      <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-brand-600 dark:text-brand-400' : 'text-white'}`} />
                     </span>
-                    <span className="hidden sm:inline text-[12px] line-clamp-1">{module.name}</span>
+                    <span className={`hidden sm:inline text-[12px] line-clamp-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{module.name}</span>
                   </div>
                   <span className="sm:hidden text-[10px] font-medium w-full text-center line-clamp-1 leading-tight">{module.name}</span>
-                  <p className={`hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                  <p className={`hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 ${isActive ? 'text-brand-600/90 dark:text-brand-400/90 font-semibold' : 'text-brand-100/80 dark:text-gray-400'}`}>
                     {module.description}
                   </p>
                 </button>

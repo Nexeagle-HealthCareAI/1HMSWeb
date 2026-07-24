@@ -46,6 +46,7 @@ import { AdviseAdmissionSheet } from './AdviseAdmissionSheet';
 import { AdmissionStatusBanner } from './AdmissionStatusBanner';
 import type { VoiceRxFields } from '../services/voiceRxApi';
 import { DrawingGallerySection } from './DrawingBoard/DrawingGallerySection';
+import { InkRxPad } from './DrawingBoard/InkRxPad';
 
 // Fix: Add missing Select import for Immunizations section
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
@@ -1201,7 +1202,25 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     customFields.map(f => ({ key: f.key, label: f.label, value: customFieldValues[f.key] ?? '' }));
 
   // Drawing Board (shown in an inline sheet). The gallery fetches its own list whenever it opens.
+    // Drawing Board & InkRx
   const [drawingBoardOpen, setDrawingBoardOpen] = useState(false);
+  const [inkRxOpen, setInkRxOpen] = useState(false);
+  const [inkRxTemplateUrl, setInkRxTemplateUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const docId = getDoctorId();
+    // Same endpoint/params the prescription-settings page itself uses — the backend GET requires
+    // BOTH doctorId and hospitalId (400 otherwise), which the older prescriptionSettingsApi
+    // wrapper didn't send (and it hit a stale "prescription/…"-prefixed route on top).
+    const hospId = getHospitalId?.() || '';
+    if (!docId || !hospId) return;
+    prescriptionFieldConfigApi.getPrescriptionSettings(docId, hospId)
+      .then((res) => {
+        const uri = res?.data?.uri;
+        if (uri) setInkRxTemplateUrl(uri);
+      })
+      .catch(() => {}); // silently fail if not configured
+  }, [getDoctorId, getHospitalId]);
 
   // Patient timeline (shown in an inline sheet). Lazily fetched the first time the sheet opens.
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -2320,6 +2339,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
   return (
     <TooltipProvider>
+      <InkRxPad
+        open={inkRxOpen}
+        onClose={() => setInkRxOpen(false)}
+        templateUrl={inkRxTemplateUrl}
+        appointmentId={resolvedAppointmentId}
+        patientId={resolvedPatientId}
+        hospitalId={getHospitalId?.() || ''}
+        doctorId={getDoctorId() || ''}
+        patientName={patientProfile?.patientName}
+        patientAge={patientProfile?.dateOfBirth ? String(new Date().getFullYear() - new Date(patientProfile.dateOfBirth).getFullYear()) : ''}
+        onGoToSettings={() => window.open('/doctor?tab=settings&subtab=layout', '_blank')}
+      />
       <div className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
 
         <div className="flex max-w-7xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
@@ -2382,6 +2413,16 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   </SheetContent>
                 </Sheet>
 
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white shadow-md border-0"
+                  onClick={() => setInkRxOpen(true)}
+                >
+                  <PenTool className="w-4 h-4" />
+                  InkRx Pad
+                </Button>
+
                 <Sheet open={drawingBoardOpen} onOpenChange={setDrawingBoardOpen}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
@@ -2400,6 +2441,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         patientId={resolvedPatientId}
                         hospitalId={getHospitalId?.() || ''}
                         doctorId={getDoctorId() || ''}
+                        templateUrl={inkRxTemplateUrl}
+                        patientName={patientProfile?.patientName}
+                        patientAge={patientProfile?.dateOfBirth ? String(new Date().getFullYear() - new Date(patientProfile.dateOfBirth).getFullYear()) : ''}
+                        onGoToSettings={() => window.open('/doctor?tab=settings&subtab=layout', '_blank')}
                       />
                     </div>
                   </SheetContent>

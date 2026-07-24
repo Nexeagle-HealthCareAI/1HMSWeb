@@ -138,6 +138,27 @@ export const doctorApi = {
   },
   // Get doctor profile
   getDoctorProfile: async (doctorId: string): Promise<DoctorProfileResponse> => {
+    if (doctorId === 'PREVIEW-USER') {
+      return Promise.resolve({
+        doctorId: 'd1',
+        userId: 'PREVIEW-USER',
+        licenseNumber: 'MC-12345',
+        qualifications: ['MBBS', 'MD (Cardiology)'],
+        experienceYears: 15,
+        medicalCouncil: 'Medical Council of India',
+        registrationYear: 2011,
+        bio: 'Senior consultant cardiologist specializing in interventional cardiology.',
+        primaryDepartmentID: 'dept-1',
+        primaryDepartmentName: 'Cardiology',
+        primaryMedicalSpecialityId: 'spec-1',
+        primaryMedicalSpecialityName: 'Cardiology',
+        primaryMedicalSpecialityPatientFacingName: 'Cardiologist',
+        profileCompletionPercentage: 100,
+        createdAt: new Date().toISOString(),
+        doctorDepartments: [],
+        doctorSpecializations: []
+      });
+    }
     try {
       const response = await apiClient.get(`${API_ENDPOINTS.DOCTORS.PROFILE}/${doctorId}`);
       return response as DoctorProfileResponse;

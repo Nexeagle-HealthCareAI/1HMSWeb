@@ -99,7 +99,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       {/* --- MOBILE VIEW --- */}
       <div className="flex lg:hidden flex-col h-full w-full relative">
         {/* Mobile Hero (Top Half) */}
-        <div className="h-[45%] w-full bg-gradient-to-br from-brand-600 via-brand-500 to-blue-600 relative overflow-hidden flex flex-col items-center justify-center pt-8 pb-12">
+        <div className="h-[45%] w-full bg-gradient-to-br from-brand-600 via-brand-500 to-blue-600 relative overflow-hidden flex flex-col items-center justify-center pt-14 pb-8">
           {/* Ambient shapes */}
           <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-white/10 blur-[60px] pointer-events-none" />
           <div className="absolute bottom-[-10%] right-[-20%] w-[70%] h-[70%] rounded-full bg-blue-400/20 blur-[60px] pointer-events-none" />
@@ -108,12 +108,12 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             <img
               src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
               alt="Company Logo"
-              className="w-20 h-20 object-contain drop-shadow-xl mb-4"
+              className="w-16 h-16 object-contain drop-shadow-xl mb-3"
             />
-            <h1 className="text-3xl font-black text-white tracking-tight text-center">
+            <h1 className="text-2xl font-extrabold text-white tracking-tight text-center">
               {renderTitle(title)}
             </h1>
-            <p className="text-brand-100 font-medium text-sm mt-2 max-w-[80%] text-center opacity-90">
+            <p className="text-brand-100 font-semibold text-xs mt-1.5 max-w-[85%] text-center opacity-90">
               {subtitle || t('loginLayout.tagline')}
             </p>
           </div>

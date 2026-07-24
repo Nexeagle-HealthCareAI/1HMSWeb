@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Pencil, X, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Plus, Pencil, X, CheckCircle2, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { otPlanApi, OTPlanItem, RoomCategory, IcuLevel } from '@/features/hospital/services/otPlanApi';
 import { departmentApi, Department } from '@/features/hospital/services/departmentApi';
@@ -259,8 +261,8 @@ export const OtPlanMaster: React.FC = () => {
             {activeTab === 'PLANS' && (
             <>
             {/* TOOLBAR */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
-                <div className="flex-1 w-full flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3 p-4 border-b border-gray-150 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
+                <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center w-full">
                     <div className="relative w-full sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -270,12 +272,14 @@ export const OtPlanMaster: React.FC = () => {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex gap-2 text-sm overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                    
+                    {/* Desktop dropdowns */}
+                    <div className="max-sm:hidden flex gap-2 text-sm">
                         <Select value={filterDepartment} onValueChange={setFilterDepartment}>
                             <SelectTrigger className="w-[160px] bg-white dark:bg-slate-900 shadow-sm h-10">
                                 <SelectValue placeholder="Department" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                                 <SelectItem value="ALL">All Departments</SelectItem>
                                 <SelectItem value="NONE">General (no department)</SelectItem>
                                 {departments.map(d => <SelectItem key={d.departmentID} value={d.departmentID}>{d.name}</SelectItem>)}
@@ -285,27 +289,69 @@ export const OtPlanMaster: React.FC = () => {
                             <SelectTrigger className="w-[110px] bg-white dark:bg-slate-900 shadow-sm h-10">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                                 <SelectItem value="ALL">All Status</SelectItem>
                                 <SelectItem value="ACTIVE">Active</SelectItem>
                                 <SelectItem value="INACTIVE">Inactive</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* Desktop buttons */}
+                    <div className="max-sm:hidden flex items-center gap-2 shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => loadPlans(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
+                            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+                        </Button>
+                        <Button onClick={() => handleOpenDrawer(null)} className="gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
+                            <Plus className="h-4 w-4" /> New OT Plan
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                    <Button variant="outline" size="sm" onClick={() => loadPlans(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
-                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
-                    </Button>
-                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
-                        <Plus className="h-4 w-4" /> New OT Plan
-                    </Button>
+
+                {/* Mobile horizontal scrolling category chips for departments */}
+                <div className="sm:hidden flex gap-1.5 overflow-x-auto pb-1.5 mt-1 w-full hide-scrollbar">
+                    <button
+                        onClick={() => setFilterDepartment('ALL')}
+                        className={cn(
+                            "px-3.5 py-1.5 text-xs font-bold rounded-full transition-all shrink-0 border",
+                            filterDepartment === 'ALL'
+                                ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                : "bg-slate-50 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 border-slate-200 dark:border-zinc-800"
+                        )}
+                    >
+                        All Depts
+                    </button>
+                    <button
+                        onClick={() => setFilterDepartment('NONE')}
+                        className={cn(
+                            "px-3.5 py-1.5 text-xs font-bold rounded-full transition-all shrink-0 border",
+                            filterDepartment === 'NONE'
+                                ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                : "bg-slate-50 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 border-slate-200 dark:border-zinc-800"
+                        )}
+                    >
+                        General
+                    </button>
+                    {departments.map(d => (
+                        <button
+                            key={d.departmentID}
+                            onClick={() => setFilterDepartment(d.departmentID)}
+                            className={cn(
+                                "px-3.5 py-1.5 text-xs font-bold rounded-full transition-all shrink-0 border",
+                                filterDepartment === d.departmentID
+                                    ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                    : "bg-slate-50 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 border-slate-200 dark:border-zinc-800"
+                            )}
+                        >
+                            {d.name}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             {/* TABLE */}
             <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
-                <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                <div className="max-lg:hidden border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
                             <tr>
@@ -396,6 +442,89 @@ export const OtPlanMaster: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* PLANS MOBILE CARD LIST */}
+                {loading ? (
+                    <div className="lg:hidden flex flex-col gap-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton key={i} className="h-40 w-full rounded-2xl" />
+                        ))}
+                    </div>
+                ) : loadError ? (
+                    <div className="lg:hidden text-center py-12 text-rose-600 bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-2xl">
+                        <div className="flex flex-col items-center gap-2">
+                            <AlertCircle className="h-8 w-8 text-rose-500" />
+                            <p className="font-semibold">{loadError}</p>
+                            <Button size="sm" variant="outline" onClick={() => loadPlans(true)} className="mt-2 h-7 text-xs">
+                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                            </Button>
+                        </div>
+                    </div>
+                ) : filteredPlans.length === 0 ? (
+                    <div className="lg:hidden text-center py-12 text-slate-400 bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-2xl">
+                        <div className="flex flex-col items-center gap-2">
+                            <Search className="h-8 w-8 text-slate-355 dark:text-zinc-600" />
+                            <p className="font-medium text-xs text-slate-500">{plans.length === 0 ? 'No OT Plans configured yet' : 'No plans match your filters'}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="lg:hidden flex flex-col gap-3.5 pb-20">
+                        {filteredPlans.map(plan => (
+                            <Card key={plan.otPlanId} className={cn(
+                                "border border-slate-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 flex flex-col gap-3 shadow-sm",
+                                !plan.isActive && "opacity-75"
+                            )}>
+                                <div className="flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <h4 className="font-extrabold text-slate-800 dark:text-zinc-200 text-xs truncate">{plan.planName}</h4>
+                                        <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 truncate">{plan.procedureName}</p>
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-full text-slate-450 dark:text-zinc-500 hover:text-brand-600 dark:hover:text-brand-400"
+                                        onClick={() => handleOpenDrawer(plan)}
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                {/* Package Types badges */}
+                                {plan.packageTypes.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                        {plan.packageTypes.map(pt => (
+                                            <Badge key={pt.packageTypeId} variant="outline" className="text-[9px] font-bold rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800/80 px-2 py-0.5">
+                                                {pt.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Metadata Row */}
+                                <div className="flex items-center gap-4 text-[10px] text-slate-500 dark:text-zinc-500 font-bold bg-slate-50/50 dark:bg-zinc-950/20 rounded-xl p-2 mt-1">
+                                    <div>
+                                        <span className="text-slate-400 dark:text-zinc-500 font-normal">Room:</span>{' '}
+                                        <span className="text-slate-700 dark:text-zinc-350">{plan.defaultRoomCategory?.replace('_', ' ') ?? 'None'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-400 dark:text-zinc-500 font-normal">ICU:</span>{' '}
+                                        <span className="text-slate-700 dark:text-zinc-350">{plan.suggestedIcuLevel?.replace('_', ' ') ?? 'None'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Bottom active switch */}
+                                <div className="flex items-center justify-between mt-1 pt-2 border-t border-slate-100 dark:border-zinc-800/40">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-zinc-500">Active Status</span>
+                                    <Switch
+                                        checked={plan.isActive}
+                                        onCheckedChange={() => handleToggleActive(plan)}
+                                        className="data-[state=checked]:bg-green-500 dark:data-[state=checked]:bg-green-600 scale-90"
+                                    />
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* RIGHT DRAWER: CREATE/EDIT */}
@@ -404,41 +533,48 @@ export const OtPlanMaster: React.FC = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[100]"
                             onClick={() => setIsDrawerOpen(false)}
                         />
                         <motion.div
-                            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            initial={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
+                            animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
+                            exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed top-0 bottom-[68px] sm:inset-y-0 right-0 w-full md:w-[480px] h-[calc(100dvh-68px)] sm:h-screen bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[110] flex flex-col"
                         >
-                            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {editingPlan?.otPlanId ? 'Edit OT Plan' : 'New OT Plan'}
-                                </h2>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsDrawerOpen(false)}>
-                                    <X className="h-5 w-5" />
+                            {/* Drawer Header */}
+                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-900/50 bg-slate-50/30 dark:bg-zinc-950/20">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-zinc-200" onClick={() => setIsDrawerOpen(false)}>
+                                    <ArrowLeft className="h-5 w-5" />
                                 </Button>
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-800 dark:text-zinc-100 tracking-tight">
+                                        {editingPlan?.otPlanId ? 'Edit OT Plan' : 'New OT Plan'}
+                                    </h2>
+                                </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                <div className="grid gap-2">
-                                    <Label>Plan Name <span className="text-red-500">*</span></Label>
+                            {/* Drawer Content */}
+                            <div className="flex-1 overflow-y-auto hide-scrollbar p-5 space-y-5 bg-white dark:bg-slate-950">
+                                <div className="grid gap-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-550 dark:text-zinc-450">Plan Name <span className="text-red-500">*</span></Label>
                                     <Input
                                         placeholder="e.g. PCNL Plan"
+                                        className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                         value={editingPlan?.planName || ''}
                                         onChange={e => setEditingPlan(p => ({ ...p!, planName: e.target.value }))}
                                     />
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label>Department</Label>
+                                <div className="grid gap-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-555 dark:text-zinc-455">Department</Label>
                                     <Select
                                         value={editingPlan?.departmentId || 'NONE'}
                                         onValueChange={v => setEditingPlan(p => ({ ...p!, departmentId: v === 'NONE' ? null : v }))}
                                     >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
+                                        <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                             <SelectItem value="NONE">General (any department)</SelectItem>
                                             {departments.map(d => <SelectItem key={d.departmentID} value={d.departmentID}>{d.name}</SelectItem>)}
                                         </SelectContent>
@@ -451,38 +587,39 @@ export const OtPlanMaster: React.FC = () => {
                                     onChange={v => setEditingPlan(p => ({ ...p!, packageTypeIds: v }))}
                                 />
 
-                                <div className="grid gap-2">
-                                    <Label>Procedure Name <span className="text-red-500">*</span></Label>
+                                <div className="grid gap-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-555 dark:text-zinc-455">Procedure Name <span className="text-red-500">*</span></Label>
                                     <Input
                                         placeholder="e.g. Percutaneous Nephrolithotomy"
+                                        className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                         value={editingPlan?.procedureName || ''}
                                         onChange={e => setEditingPlan(p => ({ ...p!, procedureName: e.target.value }))}
                                     />
-                                    <p className="text-xs text-muted-foreground">Pre-fills the Surgery Case's procedure name when this plan is applied.</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-zinc-500">Pre-fills the Surgery Case's procedure name when this plan is applied.</p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label>Default Room</Label>
+                                <div className="grid grid-cols-2 gap-3.5">
+                                    <div className="grid gap-1.5">
+                                        <Label className="text-[11px] font-bold text-slate-555 dark:text-zinc-455">Default Room</Label>
                                         <Select
                                             value={editingPlan?.defaultRoomCategory || 'NONE'}
                                             onValueChange={v => setEditingPlan(p => ({ ...p!, defaultRoomCategory: v === 'NONE' ? null : v as RoomCategory }))}
                                         >
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
+                                            <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                 <SelectItem value="NONE">Not set</SelectItem>
                                                 {ROOM_CATEGORIES.map(r => <SelectItem key={r} value={r}>{r.replace('_', ' ')}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="grid gap-2">
-                                        <Label>Suggested ICU</Label>
+                                    <div className="grid gap-1.5">
+                                        <Label className="text-[11px] font-bold text-slate-555 dark:text-zinc-455">Suggested ICU</Label>
                                         <Select
                                             value={editingPlan?.suggestedIcuLevel || 'NONE'}
                                             onValueChange={v => setEditingPlan(p => ({ ...p!, suggestedIcuLevel: v === 'NONE' ? null : v as IcuLevel }))}
                                         >
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
+                                            <SelectTrigger className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                 <SelectItem value="NONE">Not expected</SelectItem>
                                                 {ICU_LEVELS.map(l => <SelectItem key={l} value={l}>{l.replace('_', ' ')}</SelectItem>)}
                                             </SelectContent>
@@ -490,10 +627,10 @@ export const OtPlanMaster: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
                                     <div>
-                                        <Label className="font-semibold cursor-pointer">Active</Label>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Available for doctors to select</p>
+                                        <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">Active Status</Label>
+                                        <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Available for doctors to select</p>
                                     </div>
                                     <Switch
                                         checked={editingPlan?.isActive ?? true}
@@ -503,14 +640,21 @@ export const OtPlanMaster: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2">
-                                <Button variant="ghost" onClick={() => setIsDrawerOpen(false)} className="text-gray-500">Cancel</Button>
+                            {/* Drawer Footer */}
+                            <div className="p-4 pb-10 sm:pb-4 border-t border-slate-100 dark:border-zinc-900/50 bg-white dark:bg-zinc-950 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setIsDrawerOpen(false)} 
+                                    className="flex-1 h-11 rounded-xl border-slate-200 text-slate-500 hover:bg-slate-50 font-bold"
+                                >
+                                    Cancel
+                                </Button>
                                 <motion.button
                                     disabled={isSaving || isSuccess}
                                     onClick={handleSaveDrawer}
-                                    className={`flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all min-w-[100px] h-10 px-4 ${isSuccess
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-w-[120px] h-11 transition-all ${isSuccess
                                         ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
+                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 active:scale-[0.98]'
                                         }`}
                                     animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
                                     whileTap={{ scale: 0.95 }}
@@ -528,11 +672,11 @@ export const OtPlanMaster: React.FC = () => {
             {activeTab === 'PACKAGE_TYPES' && (
             <>
             {/* TOOLBAR */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center p-4 border-b border-gray-150 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-slate-900/50 sticky top-0 z-10">
                 <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Reusable billing package labels (e.g. Full Package, Non Package) — optionally attach a price and included components.</p>
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                <div className="max-sm:hidden flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                     <Button variant="outline" size="sm" onClick={() => loadPackageTypes(true)} disabled={loadingPackageTypes} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
                         <RefreshCw className={`h-4 w-4 ${loadingPackageTypes ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
@@ -544,7 +688,7 @@ export const OtPlanMaster: React.FC = () => {
 
             {/* TABLE */}
             <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
-                <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                <div className="max-lg:hidden border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
                             <tr>
@@ -623,6 +767,79 @@ export const OtPlanMaster: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* PACKAGE TYPES MOBILE CARD LIST */}
+                {loadingPackageTypes ? (
+                    <div className="lg:hidden flex flex-col gap-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+                        ))}
+                    </div>
+                ) : pkgLoadError ? (
+                    <div className="lg:hidden text-center py-12 text-rose-600 bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-2xl">
+                        <div className="flex flex-col items-center gap-2">
+                            <AlertCircle className="h-8 w-8 text-rose-500" />
+                            <p className="font-semibold">{pkgLoadError}</p>
+                            <Button size="sm" variant="outline" onClick={() => loadPackageTypes(true)} className="mt-2 h-7 text-xs">
+                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                            </Button>
+                        </div>
+                    </div>
+                ) : packageTypes.length === 0 ? (
+                    <div className="lg:hidden text-center py-12 text-slate-400 bg-white dark:bg-zinc-900 border border-slate-150 dark:border-zinc-800 rounded-2xl">
+                        <div className="flex flex-col items-center gap-2">
+                            <Search className="h-8 w-8 text-slate-355 dark:text-zinc-650" />
+                            <p className="font-medium text-xs text-slate-500">No Package Types configured yet</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="lg:hidden flex flex-col gap-3.5 pb-20">
+                        {packageTypes.map(pkg => (
+                            <Card key={pkg.packageTypeId} className={cn(
+                                "border border-slate-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 flex flex-col gap-3 shadow-sm",
+                                !pkg.isActive && "opacity-75"
+                            )}>
+                                <div className="flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <h4 className="font-extrabold text-slate-800 dark:text-zinc-200 text-xs truncate">{pkg.name}</h4>
+                                        <p className="text-[10px] text-slate-400 dark:text-zinc-550 mt-0.5 font-bold font-mono">
+                                            {pkg.price != null ? `₹${pkg.price.toLocaleString('en-IN')}` : 'No price set'}
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-full text-slate-450 dark:text-zinc-500 hover:text-brand-600 dark:hover:text-brand-400"
+                                        onClick={() => handleOpenPkgDrawer(pkg)}
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                {/* Components */}
+                                {pkg.components?.length ? (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                        {pkg.components.map((c, i) => (
+                                            <Badge key={i} variant="outline" className="text-[9px] font-bold rounded-full bg-slate-50 dark:bg-zinc-950/40 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-800/80 px-2 py-0.5">
+                                                {c}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ) : <span className="text-[10px] text-slate-350 dark:text-zinc-650">—</span>}
+
+                                {/* Bottom active switch */}
+                                <div className="flex items-center justify-between mt-1 pt-2 border-t border-slate-100 dark:border-zinc-800/40">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-zinc-500">Active Status</span>
+                                    <Switch
+                                        checked={pkg.isActive}
+                                        onCheckedChange={() => handleTogglePkgActive(pkg)}
+                                        className="data-[state=checked]:bg-green-500 dark:data-[state=checked]:bg-green-600 scale-90"
+                                    />
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* RIGHT DRAWER: CREATE/EDIT PACKAGE TYPE */}
@@ -631,57 +848,66 @@ export const OtPlanMaster: React.FC = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[100]"
                             onClick={() => setIsPkgDrawerOpen(false)}
                         />
                         <motion.div
-                            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                            initial={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
+                            animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
+                            exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
+                            className="fixed top-0 bottom-[68px] sm:inset-y-0 right-0 w-full md:w-[480px] h-[calc(100dvh-68px)] sm:h-screen bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-zinc-800 shadow-2xl z-[110] flex flex-col"
                         >
-                            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {editingPkg?.packageTypeId ? 'Edit Package Type' : 'New Package Type'}
-                                </h2>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsPkgDrawerOpen(false)}>
-                                    <X className="h-5 w-5" />
+                            {/* Drawer Header */}
+                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-900/50 bg-slate-50/30 dark:bg-zinc-950/20">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-zinc-200" onClick={() => setIsPkgDrawerOpen(false)}>
+                                    <ArrowLeft className="h-5 w-5" />
                                 </Button>
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-800 dark:text-zinc-100 tracking-tight">
+                                        {editingPkg?.packageTypeId ? 'Edit Package Type' : 'New Package Type'}
+                                    </h2>
+                                </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                <div className="grid gap-2">
-                                    <Label>Name <span className="text-red-500">*</span></Label>
+                            {/* Drawer Content */}
+                            <div className="flex-1 overflow-y-auto hide-scrollbar p-5 space-y-5 bg-white dark:bg-slate-950">
+                                <div className="grid gap-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-550 dark:text-zinc-450">Name <span className="text-red-500">*</span></Label>
                                     <Input
                                         placeholder="e.g. Full Package"
+                                        className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                         value={editingPkg?.name || ''}
                                         onChange={e => setEditingPkg(p => ({ ...p!, name: e.target.value }))}
                                     />
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label>Price (optional)</Label>
+                                <div className="grid gap-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-550 dark:text-zinc-450">Price (optional)</Label>
                                     <Input
                                         type="number"
                                         placeholder="e.g. 50000"
+                                        className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                         value={editingPkg?.price ?? ''}
                                         onChange={e => setEditingPkg(p => ({ ...p!, price: e.target.value === '' ? null : Number(e.target.value) }))}
                                     />
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label>Components (optional)</Label>
+                                <div className="grid gap-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-550 dark:text-zinc-450">Components (optional)</Label>
                                     <Input
                                         placeholder="Comma separated — e.g. OT Med, Ward Med, Room Rent, Procedure"
+                                        className="h-10 text-xs rounded-xl bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-brand-500"
                                         value={editingPkg?.componentsText || ''}
                                         onChange={e => setEditingPkg(p => ({ ...p!, componentsText: e.target.value }))}
                                     />
-                                    <p className="text-xs text-muted-foreground">Free-text labels of what's bundled — for reference only, no per-item pricing.</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-zinc-500">Free-text labels of what's bundled — for reference only, no per-item pricing.</p>
                                 </div>
 
-                                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
+                                <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20">
                                     <div>
-                                        <Label className="font-semibold cursor-pointer">Active</Label>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Available for selection on OT Plans / Advise Admission</p>
+                                        <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200 cursor-pointer">Active Status</Label>
+                                        <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">Available for selection on OT Plans / Advise Admission</p>
                                     </div>
                                     <Switch
                                         checked={editingPkg?.isActive ?? true}
@@ -691,14 +917,21 @@ export const OtPlanMaster: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-between items-center gap-2">
-                                <Button variant="ghost" onClick={() => setIsPkgDrawerOpen(false)} className="text-gray-500">Cancel</Button>
+                            {/* Drawer Footer */}
+                            <div className="p-4 pb-10 sm:pb-4 border-t border-slate-100 dark:border-zinc-900/50 bg-white dark:bg-slate-950 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setIsPkgDrawerOpen(false)} 
+                                    className="flex-1 h-11 rounded-xl border-slate-200 text-slate-500 hover:bg-slate-50 font-bold"
+                                >
+                                    Cancel
+                                </Button>
                                 <motion.button
                                     disabled={isPkgSaving || isPkgSuccess}
                                     onClick={handleSavePkgDrawer}
-                                    className={`flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all min-w-[100px] h-10 px-4 ${isPkgSuccess
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-w-[120px] h-11 transition-all ${isPkgSuccess
                                         ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
+                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 active:scale-[0.98]'
                                         }`}
                                     animate={isPkgSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
                                     whileTap={{ scale: 0.95 }}
@@ -712,6 +945,23 @@ export const OtPlanMaster: React.FC = () => {
             </AnimatePresence>
             </>
             )}
+
+            {/* Mobile Floating Action Button */}
+            <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                onClick={activeTab === 'PLANS' ? () => handleOpenDrawer(null) : () => handleOpenPkgDrawer(null)}
+                className="fixed bottom-24 right-4 z-40 sm:hidden h-12 px-5 bg-brand-600 text-white rounded-full flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(79,70,229,0.3)] border border-brand-500/20 active:scale-95 transition-all"
+            >
+                <Plus className="h-5 w-5" strokeWidth={3} />
+                <span className="text-[11.5px] font-bold tracking-tight whitespace-nowrap">
+                    {activeTab === 'PLANS' ? 'Add OT Plan' : 'Add Package Type'}
+                </span>
+            </motion.button>
         </div>
     );
 };

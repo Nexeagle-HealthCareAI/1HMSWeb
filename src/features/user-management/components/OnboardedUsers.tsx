@@ -186,17 +186,17 @@ export const OnboardedUsers: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-col gap-4 mb-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder={t('userManagement.onboardedUsers.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 rounded-xl h-12 shadow-sm"
+            className="pl-10 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all shadow-sm"
           />
         </div>
         
         {/* Mobile Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Badge 
             variant={roleFilter === 'all' ? 'default' : 'outline'} 
             className="cursor-pointer shrink-0 rounded-full px-4 py-1.5 text-sm"
@@ -509,8 +509,8 @@ export const OnboardedUsers: React.FC = () => {
           setViewUser(null);
         }
       }}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto flex flex-col p-0 border-l border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-950">
-          <div className="p-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+        <SheetContent side="right" className="w-[calc(100%-2rem)] sm:max-w-md overflow-y-auto flex flex-col p-0 border-l border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-l-[24px]">
+          <div className="p-6 pb-4 border-b border-slate-100 dark:border-zinc-800/80">
             <SheetHeader>
               <SheetTitle className="text-lg flex items-center gap-2 text-left">
                 <Eye className="h-5 w-5 text-brand-500" />
@@ -607,8 +607,8 @@ export const OnboardedUsers: React.FC = () => {
             )}
           </div>
 
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 mt-auto flex justify-end">
-            <Button variant="outline" className="px-6 shadow-sm" onClick={() => setIsViewDialogOpen(false)}>{t('common.close')}</Button>
+          <div className="p-4 border-t border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/20 mt-auto flex justify-end">
+            <Button variant="outline" className="px-6 h-10 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300" onClick={() => setIsViewDialogOpen(false)}>{t('common.close')}</Button>
           </div>
         </SheetContent>
       </Sheet>
