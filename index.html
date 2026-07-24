@@ -19,8 +19,16 @@
         document.documentElement.style.colorScheme = 'light';
       }
       
-
+      // Capture PWA install prompt early before module scripts load
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+        if (window.onDeferredPromptReady) {
+          window.onDeferredPromptReady(e);
+        }
+      });
     </script>
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>NexEagle 1HMS</title>
     <meta name="description" content="NexEagle 1HMS - Healthcare Management System" />
     <meta name="author" content="NexEagle" />

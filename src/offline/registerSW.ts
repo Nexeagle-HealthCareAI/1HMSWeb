@@ -6,7 +6,7 @@ import { registerSW } from 'virtual:pwa-register';
  * a stale shell. Best-effort Background-Sync registration wakes the SW to nudge the page to drain.
  */
 export function registerServiceWorker() {
-    if (import.meta.env.DEV) return; // SW only in production builds
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
     const updateSW = registerSW({
         immediate: true,
         onNeedRefresh() { updateSW(true); },   // auto-reload on new version

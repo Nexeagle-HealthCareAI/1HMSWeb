@@ -11,7 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 // Global variable to hold the prompt event so multiple components can share it
-let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = typeof window !== "undefined" ? (window as any).deferredPrompt : null;
 let listeners: Array<(prompt: BeforeInstallPromptEvent | null) => void> = [];
 
 const setGlobalPrompt = (prompt: BeforeInstallPromptEvent | null) => {
@@ -20,6 +20,9 @@ const setGlobalPrompt = (prompt: BeforeInstallPromptEvent | null) => {
 };
 
 if (typeof window !== "undefined") {
+  (window as any).onDeferredPromptReady = (e: BeforeInstallPromptEvent) => {
+    setGlobalPrompt(e);
+  };
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     setGlobalPrompt(e as BeforeInstallPromptEvent);
@@ -62,9 +65,9 @@ export function useInstallPrompt() {
 
     if (!deferredPrompt) {
       toast({
-        title: "Manual Installation Required",
-        description: "Automatic install isn't available right now (usually due to testing on a non-HTTPS IP or incognito mode). Please use your browser's menu and select 'Install App' or 'Add to Home Screen'.",
-        duration: 5000,
+        title: "PWA Installation Details",
+        description: "To install this app:\n1. On Chrome/Edge (Desktop): Click the 'Install' icon in your browser's address bar (right side).\n2. On Safari (macOS): Click 'File' > 'Add to Dock' in the menu bar.\n3. On Mobile: Tap your browser's menu (three dots / share icon) and select 'Add to Home Screen'.",
+        duration: 8000,
       });
       return false;
     }
