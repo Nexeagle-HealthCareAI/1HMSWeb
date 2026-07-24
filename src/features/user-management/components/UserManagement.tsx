@@ -35,7 +35,7 @@ export const UserManagement: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
             {/* Doctor headcount vs. this hospital's subscription plan limit */}
             <UsageLimitBadge label="Doctor Capacity" current={usage?.currentDoctors ?? 0} max={usage?.maxDoctors ?? null} isLoading={isUsageLoading} />
-            <Button className="w-full sm:w-auto gap-2 shadow-md hover:shadow-lg transition-all" onClick={() => setShowQuickAdd(true)}>
+            <Button className="w-full sm:w-auto gap-2 h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10" onClick={() => setShowQuickAdd(true)}>
               <UserPlus className="h-4 w-4" /> Add team member
             </Button>
           </div>

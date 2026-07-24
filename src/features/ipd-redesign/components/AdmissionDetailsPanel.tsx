@@ -17,19 +17,19 @@ import { buildAdmissionConfirmationA4 } from '@/printTemplates/admissionConfirma
 import { useHospitalApi } from '@/hooks/useApi';
 import { EditAdmissionSheet } from './EditAdmissionSheet';
 
-const INPUT_CLS = 'h-10 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-4 focus:ring-brand-500/10 focus:border-brand-400 transition-all duration-200 hover:border-slate-300';
+const INPUT_CLS = 'h-10 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-205 dark:border-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200 hover:border-slate-300 dark:hover:border-zinc-700';
 
 const Field: React.FC<{ label: string; className?: string; children: React.ReactNode }> = ({ label, className, children }) => (
     <motion.div layout className={className}>
-        <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">{label}</Label>
+        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-zinc-550 ml-1">{label}</Label>
         <div className="mt-1.5">{children}</div>
     </motion.div>
 );
 
 const Item: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
-    <motion.div layout className="bg-slate-50/70 border border-slate-100 rounded-xl p-3.5 flex flex-col gap-1 transition-colors hover:bg-slate-50">
-        <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
-        <dd className="text-sm font-semibold text-slate-800 break-words">{value ?? <span className="text-slate-300 font-medium">—</span>}</dd>
+    <motion.div layout className="bg-slate-50/50 dark:bg-zinc-900/30 border border-slate-100 dark:border-zinc-800/80 rounded-xl p-3.5 flex flex-col gap-1 transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-900/50">
+        <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{label}</dt>
+        <dd className="text-sm font-semibold text-slate-800 dark:text-zinc-200 break-words">{value ?? <span className="text-slate-300 dark:text-zinc-700 font-medium">—</span>}</dd>
     </motion.div>
 );
 
@@ -80,19 +80,19 @@ export const AdmissionDetailsPanel: React.FC<Props> = ({ admission, isActive, on
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admission Details</h2>
                 <div className="flex items-center gap-2 flex-wrap">
-                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
-                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none active:scale-[0.98] transition-all rounded-xl border-slate-200/60 dark:border-zinc-800" onClick={() => printConfirmation('print')}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none active:scale-[0.98] transition-all rounded-xl border-slate-200/60 dark:border-zinc-800" onClick={() => printConfirmation('download')}><Download className="h-3.5 w-3.5 mr-1.5" /> Download</Button>
                     {isActive && (
-                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit</Button>
+                        <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all rounded-xl text-white shadow-md shadow-brand-500/10" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit</Button>
                     )}
                 </div>
             </div>
 
             {/* ── Identity ── */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Identity</h3>
-                    {isActive && <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px]" onClick={profile.handleEdit}><Pencil className="h-3 w-3 mr-1" /> Edit</Button>}
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-450 flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Identity</h3>
+                    {isActive && <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] rounded-lg active:scale-[0.97]" onClick={profile.handleEdit}><Pencil className="h-3 w-3 mr-1" /> Edit</Button>}
                 </div>
                 {profile.isLoading ? (
                     <p className="text-xs text-slate-400 flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</p>
@@ -113,9 +113,9 @@ export const AdmissionDetailsPanel: React.FC<Props> = ({ admission, isActive, on
             </div>
 
             {/* ── Admission / clinical / referral ── */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> Clinical &amp; Referral</h3>
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-450 flex items-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> Clinical &amp; Referral</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <Item label="Admitted" value={formatIstDateTime(admission.admittedAt)} />
@@ -131,9 +131,9 @@ export const AdmissionDetailsPanel: React.FC<Props> = ({ admission, isActive, on
             </div>
 
             {/* ── Payer & coverage ── */}
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Payer &amp; Coverage</h3>
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-450 flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Payer &amp; Coverage</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <Item label="Payer type" value={admission.payerType} />
@@ -193,11 +193,11 @@ const IdentityEditForm: React.FC<{ profile: ReturnType<typeof usePatientProfile>
 
     return (
         <Sheet open={profile.isEditing} onOpenChange={(open) => !open && profile.handleCancel()}>
-            <SheetContent side="right" className="w-[95vw] sm:max-w-[480px] overflow-y-auto p-0 border-l-slate-200">
-                <SheetHeader className="px-6 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
-                    <SheetTitle className="text-lg font-bold">Edit Identity</SheetTitle>
+            <SheetContent side="right" className="w-[95vw] sm:max-w-[480px] rounded-l-[32px] sm:rounded-l-[32px] flex flex-col p-0 border-l border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950">
+                <SheetHeader className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 sticky top-0 z-10 shrink-0">
+                    <SheetTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">Edit Identity</SheetTitle>
                 </SheetHeader>
-                <div className="p-6 space-y-4 bg-slate-50/30">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Field label="Name"><Input value={fullName} onChange={e => setFullName(e.target.value)} className={INPUT_CLS} /></Field>
                         <Field label="Mobile"><Input value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" maxLength={10} className={cn(INPUT_CLS, 'font-mono')} /></Field>
@@ -211,9 +211,9 @@ const IdentityEditForm: React.FC<{ profile: ReturnType<typeof usePatientProfile>
                         <Field label="Emergency contact phone"><Input value={emergencyContactPhone} onChange={e => setEmergencyContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" maxLength={10} className={cn(INPUT_CLS, 'font-mono')} /></Field>
                     </div>
                 </div>
-                <div className="sticky bottom-0 p-4 border-t border-slate-100 bg-white/80 backdrop-blur flex justify-end gap-2">
-                    <Button variant="ghost" className="rounded-xl h-10 px-6 font-semibold" onClick={profile.handleCancel}>Cancel</Button>
-                    <Button disabled={profile.isUpdating} className="bg-brand-600 hover:bg-brand-700 rounded-xl h-10 px-8 font-semibold shadow-md shadow-brand-500/20" onClick={() => profile.handleSave({
+                <div className="sticky bottom-0 p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur flex justify-end gap-2 shrink-0">
+                    <Button variant="ghost" className="rounded-xl h-10 px-6 font-semibold active:scale-[0.98] transition-all" onClick={profile.handleCancel}>Cancel</Button>
+                    <Button disabled={profile.isUpdating} className="bg-brand-600 hover:bg-brand-700 text-white rounded-xl h-10 px-8 font-semibold shadow-md shadow-brand-500/20 active:scale-[0.98] transition-all" onClick={() => profile.handleSave({
                         hospitalId: p.hospitalId, patientId: p.patientId,
                         fullName, mobile, ageYears: p.ageYears, sex: p.sex,
                         addressLine1, city, state: p.state ?? '', country: p.country, pincode: p.pincode,

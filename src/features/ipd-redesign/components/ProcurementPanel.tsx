@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -250,15 +251,15 @@ export const ProcurementPanel: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
-                <button onClick={() => setSubTab('indents')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', subTab === 'indents' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
-                    <ClipboardList className="h-3.5 w-3.5" /> Indents
+            <div className="inline-flex rounded-full p-1 bg-black/10 dark:bg-black/25 backdrop-blur-sm shrink-0">
+                <button onClick={() => setSubTab('indents')} className={cn('px-4 py-2 rounded-full text-xs font-bold active:scale-[0.98] transition-all flex items-center gap-1.5 border-none shadow-none', subTab === 'indents' ? 'bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-650 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200')}>
+                    <ClipboardList className="h-4 w-4" /> Indents
                 </button>
-                <button onClick={() => setSubTab('pos')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', subTab === 'pos' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
-                    <ShoppingCart className="h-3.5 w-3.5" /> Purchase Orders
+                <button onClick={() => setSubTab('pos')} className={cn('px-4 py-2 rounded-full text-xs font-bold active:scale-[0.98] transition-all flex items-center gap-1.5 border-none shadow-none', subTab === 'pos' ? 'bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-650 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200')}>
+                    <ShoppingCart className="h-4 w-4" /> Purchase Orders
                 </button>
-                <button onClick={() => setSubTab('grn')} className={cn('px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5', subTab === 'grn' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900')}>
-                    <PackageCheck className="h-3.5 w-3.5" /> Goods Receipts
+                <button onClick={() => setSubTab('grn')} className={cn('px-4 py-2 rounded-full text-xs font-bold active:scale-[0.98] transition-all flex items-center gap-1.5 border-none shadow-none', subTab === 'grn' ? 'bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-650 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200')}>
+                    <PackageCheck className="h-4 w-4" /> Goods Receipts
                 </button>
             </div>
 
@@ -267,11 +268,11 @@ export const ProcurementPanel: React.FC = () => {
             ) : (
                 <>
                     {subTab === 'indents' && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Indents</h2>
-                                <Button size="sm" className="h-8 bg-brand-600 hover:bg-brand-700" onClick={() => setShowNewIndent(true)}>
-                                    <Plus className="h-3.5 w-3.5 mr-1" /> New Indent
+                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Indents</h2>
+                                <Button size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10" onClick={() => setShowNewIndent(true)}>
+                                    <Plus className="h-4 w-4 mr-1" /> New Indent
                                 </Button>
                             </div>
                             {indents.length === 0 ? (
@@ -279,37 +280,37 @@ export const ProcurementPanel: React.FC = () => {
                             ) : (
                                 <div className="space-y-2">
                                     {indents.map(ind => (
-                                        <div key={ind.indentId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
+                                        <div key={ind.indentId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/10 flex-wrap hover:border-slate-200 dark:hover:border-zinc-700 transition-all">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-800 text-sm">{ind.indentNumber}</span>
-                                                <span className="text-xs text-slate-500">{ind.requestingStoreName} · {ind.lineCount} line(s)</span>
-                                                <Badge variant="outline" className={cn('text-[10px] font-bold', INDENT_TONE[ind.status])}>{ind.status.replace(/_/g, ' ')}</Badge>
-                                                {ind.isSystemGenerated && <Badge variant="outline" className="text-[9px]">Auto</Badge>}
+                                                <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm">{ind.indentNumber}</span>
+                                                <span className="text-xs text-slate-500">{ind.requestingStoreName} &middot; {ind.lineCount} line(s)</span>
+                                                <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', INDENT_TONE[ind.status])}>{ind.status.replace(/_/g, ' ')}</Badge>
+                                                {ind.isSystemGenerated && <Badge variant="outline" className="text-[9px] rounded-full">Auto</Badge>}
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 {ind.status === 'SUBMITTED' && (
                                                     <>
-                                                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => decideIndent(ind.indentId, true)}>Approve</Button>
-                                                        <Button size="sm" variant="outline" className="h-7 text-[11px] text-rose-600" onClick={() => decideIndent(ind.indentId, false)}>Reject</Button>
+                                                        <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300 px-3.5" onClick={() => decideIndent(ind.indentId, true)}>Approve</Button>
+                                                        <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-rose-600 px-3.5" onClick={() => decideIndent(ind.indentId, false)}>Reject</Button>
                                                     </>
                                                 )}
                                                 {ind.status === 'APPROVED' && (
-                                                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => openConvert(ind)}>Convert to PO</Button>
+                                                    <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300 px-3.5" onClick={() => openConvert(ind)}>Convert to PO</Button>
                                                 )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </Card>
                     )}
 
                     {subTab === 'pos' && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Purchase Orders</h2>
-                                <Button size="sm" className="h-8 bg-brand-600 hover:bg-brand-700" onClick={() => setShowNewPo(true)}>
-                                    <Plus className="h-3.5 w-3.5 mr-1" /> New PO
+                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Purchase Orders</h2>
+                                <Button size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10" onClick={() => setShowNewPo(true)}>
+                                    <Plus className="h-4 w-4 mr-1" /> New PO
                                 </Button>
                             </div>
                             {pos.length === 0 ? (
@@ -317,91 +318,101 @@ export const ProcurementPanel: React.FC = () => {
                             ) : (
                                 <div className="space-y-2">
                                     {pos.map(po => (
-                                        <div key={po.purchaseOrderId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
+                                        <div key={po.purchaseOrderId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/10 flex-wrap hover:border-slate-200 dark:hover:border-zinc-700 transition-all">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-800 text-sm">{po.poNumber}</span>
-                                                <span className="text-xs text-slate-500">{po.vendorName} · {po.lineCount} line(s)</span>
-                                                <Badge variant="outline" className={cn('text-[10px] font-bold', PO_TONE[po.status])}>{po.status.replace(/_/g, ' ')}</Badge>
+                                                <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm">{po.poNumber}</span>
+                                                <span className="text-xs text-slate-500">{po.vendorName} &middot; {po.lineCount} line(s)</span>
+                                                <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', PO_TONE[po.status])}>{po.status.replace(/_/g, ' ')}</Badge>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 {po.status === 'DRAFT' && (
-                                                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => poAction(() => procurementApi.approvePurchaseOrder(po.purchaseOrderId), 'PO approved')}>Approve</Button>
+                                                    <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300 px-3.5" onClick={() => poAction(() => procurementApi.approvePurchaseOrder(po.purchaseOrderId), 'PO approved')}>Approve</Button>
                                                 )}
                                                 {po.status === 'APPROVED' && (
-                                                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => poAction(() => procurementApi.markPurchaseOrderSent(po.purchaseOrderId), 'PO marked sent')}>Mark Sent</Button>
+                                                    <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300 px-3.5" onClick={() => poAction(() => procurementApi.markPurchaseOrderSent(po.purchaseOrderId), 'PO marked sent')}>Mark Sent</Button>
                                                 )}
                                                 {(po.status === 'SENT' || po.status === 'PARTIALLY_RECEIVED') && (
-                                                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => openReceive(po)}>Receive</Button>
+                                                    <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300 px-3.5" onClick={() => openReceive(po)}>Receive</Button>
                                                 )}
                                                 {['DRAFT', 'APPROVED', 'SENT'].includes(po.status) && (
-                                                    <Button size="sm" variant="outline" className="h-7 text-[11px] text-rose-600" onClick={() => poAction(() => procurementApi.cancelPurchaseOrder(po.purchaseOrderId, 'Cancelled from procurement board'), 'PO cancelled')}>Cancel</Button>
+                                                    <Button size="sm" variant="outline" className="h-8 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-semibold text-rose-600 px-3.5" onClick={() => poAction(() => procurementApi.cancelPurchaseOrder(po.purchaseOrderId, 'Cancelled from procurement board'), 'PO cancelled')}>Cancel</Button>
                                                 )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </Card>
                     )}
 
                     {subTab === 'grn' && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
-                            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">Goods Receipts</h2>
+                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md p-5">
+                            <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-3">Goods Receipts</h2>
                             {grns.length === 0 ? (
                                 <p className="text-sm text-slate-400 py-6 text-center">No goods receipts yet.</p>
                             ) : (
                                 <div className="space-y-2">
                                     {grns.map(g => (
-                                        <div key={g.grnId} className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-100 flex-wrap">
+                                        <div key={g.grnId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/10 flex-wrap hover:border-slate-200 dark:hover:border-zinc-700 transition-all">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-800 text-sm">{g.grnNumber}</span>
-                                                <span className="text-xs text-slate-500">{g.poNumber} · {g.vendorName} · {g.receivedStoreName}</span>
-                                                <Badge variant="outline" className={cn('text-[10px] font-bold', MATCH_TONE[g.matchStatus])}>{g.matchStatus}</Badge>
+                                                <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm">{g.grnNumber}</span>
+                                                <span className="text-xs text-slate-500">{g.poNumber} &middot; {g.vendorName} &middot; {g.receivedStoreName}</span>
+                                                <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', MATCH_TONE[g.matchStatus])}>{g.matchStatus}</Badge>
                                             </div>
                                             <span className="text-[11px] text-slate-500">{new Date(g.receivedAt).toLocaleDateString('en-IN')}</span>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </Card>
                     )}
                 </>
             )}
 
             {/* NEW INDENT DIALOG */}
             <Dialog open={showNewIndent} onOpenChange={setShowNewIndent}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     <DialogHeader>
-                        <DialogTitle>New Indent</DialogTitle>
-                        <DialogDescription>Request stock for a store.</DialogDescription>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">New Indent</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">Request stock for a store.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Requesting Store</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Requesting Store</Label>
                             <Select value={indentStoreId} onValueChange={setIndentStoreId}>
-                                <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
-                                <SelectContent>{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
+                                <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select store" /></SelectTrigger>
+                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs">Lines</Label>
-                            {indentLines.map((line, idx) => (
-                                <div key={idx} className="flex gap-2 items-center">
-                                    <Select value={line.inventoryItemId} onValueChange={v => updateLineRow(indentLines, setIndentLines, idx, { inventoryItemId: v })}>
-                                        <SelectTrigger className="flex-1"><SelectValue placeholder="Item" /></SelectTrigger>
-                                        <SelectContent>{items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                    <Input type="number" min={1} className="w-24" value={line.qty} onChange={e => updateLineRow(indentLines, setIndentLines, idx, { qty: e.target.value })} />
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => setIndentLines(indentLines.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                </div>
-                            ))}
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => setIndentLines([...indentLines, { inventoryItemId: '', qty: '1' }])}>
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Lines</Label>
+                            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                {indentLines.map((line, idx) => (
+                                    <div key={idx} className="flex flex-col sm:flex-row gap-2.5 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/20 items-stretch sm:items-center relative">
+                                        <div className="flex-1 min-w-0">
+                                            <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1">Item</Label>
+                                            <Select value={line.inventoryItemId} onValueChange={v => updateLineRow(indentLines, setIndentLines, idx, { inventoryItemId: v })}>
+                                                <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Item" /></SelectTrigger>
+                                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>)}</SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="w-full sm:w-24 shrink-0">
+                                            <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1">Qty</Label>
+                                            <Input type="number" min={1} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all w-full" value={line.qty} onChange={e => updateLineRow(indentLines, setIndentLines, idx, { qty: e.target.value })} />
+                                        </div>
+                                        {indentLines.length > 1 && (
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl active:scale-[0.98] transition-all self-end sm:self-center shrink-0" onClick={() => setIndentLines(indentLines.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <Button variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300" onClick={() => setIndentLines([...indentLines, { inventoryItemId: '', qty: '1' }])}>
                                 <Plus className="h-3.5 w-3.5 mr-1" /> Add Line
                             </Button>
                         </div>
-                        <div className="flex justify-end">
-                            <Button disabled={indentBusy} onClick={submitIndent} className="bg-brand-600 hover:bg-brand-700">
-                                {indentBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Submit Indent
+                        <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-zinc-850">
+                            <Button disabled={indentBusy} onClick={submitIndent} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
+                                {indentBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />} Submit Indent
                             </Button>
                         </div>
                     </div>
@@ -410,32 +421,32 @@ export const ProcurementPanel: React.FC = () => {
 
             {/* CONVERT TO PO DIALOG */}
             <Dialog open={!!convertTarget} onOpenChange={(o) => { if (!o) setConvertTarget(null); }}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     {convertTarget && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Convert {convertTarget.indentNumber} to PO</DialogTitle>
-                                <DialogDescription>Pick a vendor and set the rate for each line.</DialogDescription>
+                                <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">Convert {convertTarget.indentNumber} to PO</DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground">Pick a vendor and set the rate for each line.</DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <div className="grid gap-1.5">
-                                    <Label className="text-xs">Vendor</Label>
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Vendor</Label>
                                     <Select value={convertVendorId} onValueChange={setConvertVendorId}>
-                                        <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-                                        <SelectContent>{vendors.map(v => <SelectItem key={v.vendorId} value={v.vendorId}>{v.vendorName}</SelectItem>)}</SelectContent>
+                                        <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                                        <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{vendors.map(v => <SelectItem key={v.vendorId} value={v.vendorId}>{v.vendorName}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {convertLines.map(l => (
-                                        <div key={l.indentLineId} className="flex items-center justify-between gap-2 text-sm">
-                                            <span className="flex-1">{l.itemName} <span className="text-slate-400">({l.qty} {l.unit})</span></span>
-                                            <Input type="number" min={0} className="w-28" placeholder="Rate" value={convertRates[l.indentLineId] ?? ''} onChange={e => setConvertRates(p => ({ ...p, [l.indentLineId]: e.target.value }))} />
+                                        <div key={l.indentLineId} className="flex flex-col sm:flex-row gap-2.5 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/20 items-stretch sm:items-center">
+                                            <span className="flex-1 font-semibold text-slate-800 dark:text-zinc-200 text-sm">{l.itemName} <span className="text-slate-400 text-xs font-normal">({l.qty} {l.unit})</span></span>
+                                            <Input type="number" min={0} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all w-full sm:w-28 shrink-0" placeholder="Rate" value={convertRates[l.indentLineId] ?? ''} onChange={e => setConvertRates(p => ({ ...p, [l.indentLineId]: e.target.value }))} />
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex justify-end">
-                                    <Button disabled={convertBusy} onClick={submitConvert} className="bg-brand-600 hover:bg-brand-700">
-                                        {convertBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Create PO
+                                <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-zinc-850">
+                                    <Button disabled={convertBusy} onClick={submitConvert} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
+                                        {convertBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />} Create PO
                                     </Button>
                                 </div>
                             </div>
@@ -446,39 +457,54 @@ export const ProcurementPanel: React.FC = () => {
 
             {/* NEW PO DIALOG */}
             <Dialog open={showNewPo} onOpenChange={setShowNewPo}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     <DialogHeader>
-                        <DialogTitle>New Purchase Order</DialogTitle>
-                        <DialogDescription>Order stock directly from a vendor.</DialogDescription>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-50">New Purchase Order</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">Order stock directly from a vendor.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div className="grid gap-1.5">
-                            <Label className="text-xs">Vendor</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Vendor</Label>
                             <Select value={poVendorId} onValueChange={setPoVendorId}>
-                                <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-                                <SelectContent>{vendors.map(v => <SelectItem key={v.vendorId} value={v.vendorId}>{v.vendorName}</SelectItem>)}</SelectContent>
+                                <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{vendors.map(v => <SelectItem key={v.vendorId} value={v.vendorId}>{v.vendorName}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs">Lines</Label>
-                            {poLines.map((line, idx) => (
-                                <div key={idx} className="flex gap-2 items-center">
-                                    <Select value={line.inventoryItemId} onValueChange={v => updateLineRow(poLines, setPoLines, idx, { inventoryItemId: v })}>
-                                        <SelectTrigger className="flex-1"><SelectValue placeholder="Item" /></SelectTrigger>
-                                        <SelectContent>{items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                    <Input type="number" min={1} className="w-20" placeholder="Qty" value={line.qty} onChange={e => updateLineRow(poLines, setPoLines, idx, { qty: e.target.value })} />
-                                    <Input type="number" min={0} className="w-24" placeholder="Rate" value={line.rate} onChange={e => updateLineRow(poLines, setPoLines, idx, { rate: e.target.value })} />
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => setPoLines(poLines.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                </div>
-                            ))}
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => setPoLines([...poLines, { inventoryItemId: '', qty: '1', rate: '0' }])}>
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Lines</Label>
+                            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                {poLines.map((line, idx) => (
+                                    <div key={idx} className="flex flex-col sm:flex-row gap-2.5 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-950/20 items-stretch sm:items-center relative">
+                                        <div className="flex-1 min-w-0">
+                                            <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1">Item</Label>
+                                            <Select value={line.inventoryItemId} onValueChange={v => updateLineRow(poLines, setPoLines, idx, { inventoryItemId: v })}>
+                                                <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Item" /></SelectTrigger>
+                                                <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName}</SelectItem>)}</SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <div className="w-20 shrink-0">
+                                                <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1">Qty</Label>
+                                                <Input type="number" min={1} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all w-full" value={line.qty} onChange={e => updateLineRow(poLines, setPoLines, idx, { qty: e.target.value })} />
+                                            </div>
+                                            <div className="w-24 shrink-0">
+                                                <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block mb-1">Rate</Label>
+                                                <Input type="number" min={0} className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all w-full" value={line.rate} onChange={e => updateLineRow(poLines, setPoLines, idx, { rate: e.target.value })} />
+                                            </div>
+                                        </div>
+                                        {poLines.length > 1 && (
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl active:scale-[0.98] transition-all self-end sm:self-center shrink-0" onClick={() => setPoLines(poLines.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <Button variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300" onClick={() => setPoLines([...poLines, { inventoryItemId: '', qty: '1', rate: '0' }])}>
                                 <Plus className="h-3.5 w-3.5 mr-1" /> Add Line
                             </Button>
                         </div>
-                        <div className="flex justify-end">
-                            <Button disabled={poBusy} onClick={submitPo} className="bg-brand-600 hover:bg-brand-700">
-                                {poBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Create PO
+                        <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-zinc-850">
+                            <Button disabled={poBusy} onClick={submitPo} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
+                                {poBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />} Create PO
                             </Button>
                         </div>
                     </div>
@@ -487,36 +513,36 @@ export const ProcurementPanel: React.FC = () => {
 
             {/* RECEIVE (GRN) DIALOG */}
             <Dialog open={!!receiveTarget} onOpenChange={(o) => { if (!o) setReceiveTarget(null); }}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl rounded-[24px] border border-zinc-200/60 dark:border-zinc-800 p-6 shadow-xl space-y-4 bg-white dark:bg-zinc-900">
                     {receiveTarget && (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Receive {receiveTarget.poNumber}</DialogTitle>
-                                <DialogDescription>Record batch/expiry for each item received.</DialogDescription>
+                                <DialogTitle className="text-lg font-bold text-slate-900 dark:text-zinc-550">Receive {receiveTarget.poNumber}</DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground">Record batch/expiry for each item received.</DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <div className="grid gap-1.5">
-                                    <Label className="text-xs">Receiving Store</Label>
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Receiving Store</Label>
                                     <Select value={receiveStoreId} onValueChange={setReceiveStoreId}>
-                                        <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
-                                        <SelectContent>{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
+                                        <SelectTrigger className="w-full h-10 mt-1.5 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="Select store" /></SelectTrigger>
+                                        <SelectContent className="max-h-48 overflow-y-auto rounded-xl">{stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2 max-h-72 overflow-y-auto">
+                                <div className="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {receiveLines.map((line, idx) => (
-                                        <div key={line.purchaseOrderLineId} className="grid grid-cols-5 gap-2 items-center text-xs border-b border-slate-100 pb-2">
-                                            <span className="col-span-1 font-medium truncate">{itemsById.get(line.inventoryItemId)?.itemName ?? 'Item'}</span>
-                                            <Input placeholder="Batch #" className="col-span-1 h-8 text-xs" value={line.batchNumber} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, batchNumber: e.target.value } : l))} />
-                                            <Input type="date" className="col-span-1 h-8 text-xs" value={line.expiryDate} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, expiryDate: e.target.value } : l))} />
-                                            <Input type="number" min={0} max={line.qty - line.receivedQty} className="col-span-1 h-8 text-xs" value={line.receiveQty} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, receiveQty: e.target.value } : l))} />
-                                            <span className="col-span-1 text-slate-400">of {line.qty - line.receivedQty} pending</span>
+                                        <div key={line.purchaseOrderLineId} className="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center text-xs border-b border-slate-100 dark:border-zinc-850 pb-3 pt-1">
+                                            <span className="font-semibold text-slate-800 dark:text-zinc-200 truncate sm:col-span-1">{itemsById.get(line.inventoryItemId)?.itemName ?? 'Item'}</span>
+                                            <Input placeholder="Batch #" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1" value={line.batchNumber} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, batchNumber: e.target.value } : l))} />
+                                            <Input type="date" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1" value={line.expiryDate} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, expiryDate: e.target.value } : l))} />
+                                            <Input type="number" min={0} max={line.qty - line.receivedQty} className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1 font-mono" value={line.receiveQty} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, receiveQty: e.target.value } : l))} />
+                                            <span className="text-slate-400 sm:col-span-1 text-[11px]">of {line.qty - line.receivedQty} pending</span>
                                         </div>
                                     ))}
                                     {receiveLines.length === 0 && <p className="text-xs text-slate-400 py-4 text-center">Nothing pending on this PO.</p>}
                                 </div>
-                                <div className="flex justify-end">
-                                    <Button disabled={receiveBusy || receiveLines.length === 0} onClick={submitReceive} className="bg-brand-600 hover:bg-brand-700">
-                                        {receiveBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Record Receipt
+                                <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-zinc-850">
+                                    <Button disabled={receiveBusy || receiveLines.length === 0} onClick={submitReceive} className="h-10 rounded-xl active:scale-[0.98] transition-all bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10">
+                                        {receiveBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />} Record Receipt
                                     </Button>
                                 </div>
                             </div>

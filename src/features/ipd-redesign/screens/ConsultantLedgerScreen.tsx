@@ -3,6 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -94,10 +101,8 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
         } finally {
             setSettleBusy(false);
         }
-    };
-
-    return (
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-10">
+    };    return (
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-10">
             {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
             <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
                 {/* Decorative flare */}
@@ -126,13 +131,13 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
 
                     {/* Navigation Tab Capsule */}
                     <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                        {/* Tab 1: Active Census */}
+                        {/* Tab 1: Live Roster */}
                         <button 
                             onClick={onOpenDashboard || onBack}
                             className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
                         >
                             <Hotel className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Active<br/>Census</span>
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Live<br/>Roster</span>
                         </button>
 
                         {/* Tab 2: Bed Board */}
@@ -165,7 +170,7 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Doctor list */}
                 <div className={cn('rounded-[1.5rem] border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 lg:col-span-1 shadow-sm', selectedDoctorId && 'hidden lg:block')}>
-                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-550 dark:text-zinc-400 mb-3">Doctors</h2>
+                    <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-3">Doctors</h2>
                     {loadingSummary ? (
                         <div className="flex items-center justify-center py-10 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
                     ) : doctors.length === 0 ? (
@@ -174,8 +179,8 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
                         <div className="space-y-1.5">
                             {doctors.map(d => (
                                 <button key={d.doctorId} onClick={() => selectDoctor(d.doctorId)}
-                                    className={cn('w-full text-left p-3 rounded-xl border transition-all duration-205',
-                                        selectedDoctorId === d.doctorId ? 'border-brand-400 dark:border-brand-850 bg-brand-50/50 dark:bg-brand-950/20 shadow-sm' : 'border-zinc-100 dark:border-zinc-800/40 hover:bg-slate-50 dark:hover:bg-zinc-800/30')}>
+                                    className={cn('w-full text-left p-3 rounded-xl border transition-all duration-205 active:scale-[0.98]',
+                                        selectedDoctorId === d.doctorId ? 'border-brand-400 dark:border-brand-850 bg-brand-50/50 dark:bg-brand-950/20 shadow-sm font-bold' : 'border-zinc-100 dark:border-zinc-800/40 hover:bg-slate-50 dark:hover:bg-zinc-800/30')}>
                                     <p className="text-sm font-bold text-slate-800 dark:text-zinc-100">{d.doctorName || 'Unknown doctor'}</p>
                                     <div className="flex items-center gap-2 mt-1.5 text-[11px]">
                                         <span className="font-semibold text-amber-600 dark:text-amber-500">₹{d.accruedTotal.toLocaleString('en-IN')} accrued</span>
@@ -195,7 +200,7 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
                         <>
                             {/* Mobile drill-in: back to the doctor list */}
                             <button type="button" onClick={() => setSelectedDoctorId(null)}
-                                className="lg:hidden flex items-center gap-1.5 text-xs font-bold text-brand-700 dark:text-brand-400 mb-3 -mt-1">
+                                className="lg:hidden flex items-center gap-1.5 text-xs font-bold text-brand-700 dark:text-brand-400 mb-3 -mt-1 active:scale-[0.98] transition-all">
                                 <ArrowLeft className="h-4 w-4" /> All doctors
                             </button>
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
@@ -208,7 +213,7 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
                                         </div>
                                         <div className="rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/20 p-2 text-center">
                                             <p className="text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-500">Paid</p>
-                                            <p className="text-sm font-black text-emerald-800 dark:text-emerald-400">₹{totals.paidTotal.toLocaleString('en-IN')}</p>
+                                            <p className="text-sm font-black text-emerald-800 dark:text-amber-400">₹{totals.paidTotal.toLocaleString('en-IN')}</p>
                                         </div>
                                         <div className="rounded-xl bg-slate-50/50 dark:bg-zinc-900 border border-slate-205 dark:border-zinc-805 p-2 text-center">
                                             <p className="text-[9px] font-bold uppercase text-slate-500 dark:text-zinc-450">Cancelled</p>
@@ -216,30 +221,40 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as IncentiveLedgerStatus | 'ALL')}
-                                        className="h-10 sm:h-9 text-xs border border-slate-200 dark:border-zinc-800 rounded-xl px-2.5 bg-white dark:bg-zinc-900 flex-1 sm:flex-none min-w-0 outline-none hover:border-slate-300 dark:hover:border-zinc-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-505 transition-all">
-                                        <option value="ALL">All statuses</option>
-                                        <option value="ACCRUED">Accrued</option>
-                                        <option value="PAID">Paid</option>
-                                        <option value="CANCELLED">Cancelled</option>
-                                    </select>
-                                    <Button size="sm" className="h-10 sm:h-9 px-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10 shrink-0" disabled={accruedCount === 0} onClick={() => setShowSettle(o => !o)}>
+                                <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 self-center">
+                                    <Select value={statusFilter} onValueChange={val => setStatusFilter(val as IncentiveLedgerStatus | 'ALL')}>
+                                        <SelectTrigger className="h-10 sm:h-9 text-xs border border-slate-200 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 flex-1 sm:flex-none min-w-[130px] outline-none text-slate-700 dark:text-zinc-350 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
+                                            <SelectValue placeholder="All statuses" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-white dark:bg-zinc-905 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                                            <SelectItem value="ALL" className="font-semibold text-xs py-2 cursor-pointer rounded-lg">All statuses</SelectItem>
+                                            <SelectItem value="ACCRUED" className="font-semibold text-xs py-2 cursor-pointer rounded-lg">Accrued</SelectItem>
+                                            <SelectItem value="PAID" className="font-semibold text-xs py-2 cursor-pointer rounded-lg">Paid</SelectItem>
+                                            <SelectItem value="CANCELLED" className="font-semibold text-xs py-2 cursor-pointer rounded-lg">Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button size="sm" className="h-10 sm:h-9 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/10 shrink-0 active:scale-[0.98] transition-all" disabled={accruedCount === 0} onClick={() => setShowSettle(o => !o)}>
                                         Settle ({accruedCount})
                                     </Button>
                                 </div>
                             </div>
 
                             {showSettle && (
-                                <div className="rounded-xl border border-slate-205 dark:border-zinc-805 bg-slate-50/50 dark:bg-zinc-950/40 p-4 mb-4 space-y-3">
-                                    <p className="text-xs text-slate-500 dark:text-zinc-400 font-semibold">Marks every currently-accrued line for this doctor as PAID.</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div><Label className="text-[11px] font-semibold text-slate-555 dark:text-zinc-400">Payout reference</Label><Input value={payoutRef} onChange={e => setPayoutRef(e.target.value)} className="h-11 sm:h-10 rounded-xl border-slate-205 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 mt-1 bg-white dark:bg-zinc-900" placeholder="Voucher / bank ref" /></div>
-                                        <div><Label className="text-[11px] font-semibold text-slate-555 dark:text-zinc-400">TDS amount (194J, total)</Label><Input type="number" min={0} value={tdsAmount} onChange={e => setTdsAmount(e.target.value)} className="h-11 sm:h-10 rounded-xl border-slate-205 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 mt-1 bg-white dark:bg-zinc-900" placeholder="₹" /></div>
+                                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/40 p-4 mb-4 space-y-4 shadow-sm">
+                                    <p className="text-xs text-slate-550 dark:text-zinc-400 font-bold">Marks every currently-accrued line for this doctor as PAID.</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                        <div>
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Payout reference</Label>
+                                            <Input value={payoutRef} onChange={e => setPayoutRef(e.target.value)} className="h-11 rounded-xl border border-slate-205 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 mt-1 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="Voucher / bank ref" />
+                                        </div>
+                                        <div>
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">TDS amount (194J, total)</Label>
+                                            <Input type="number" min={0} value={tdsAmount} onChange={e => setTdsAmount(e.target.value)} className="h-11 rounded-xl border border-slate-205 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 mt-1 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="₹" />
+                                        </div>
                                     </div>
-                                    <div className="flex justify-end gap-2.5 pt-1.5">
-                                        <Button variant="outline" size="sm" className="h-9 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold" onClick={() => setShowSettle(false)}>Cancel</Button>
-                                        <Button size="sm" className="h-9 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold" disabled={settleBusy} onClick={submitSettle}>
+                                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+                                        <Button variant="outline" className="h-11 rounded-xl font-bold active:scale-[0.98] transition-all border-slate-200" onClick={() => setShowSettle(false)}>Cancel</Button>
+                                        <Button className="h-11 rounded-xl font-bold bg-brand-600 hover:bg-brand-700 text-white active:scale-[0.98] transition-all" disabled={settleBusy} onClick={submitSettle}>
                                             {settleBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Confirm settle
                                         </Button>
                                     </div>
@@ -259,7 +274,7 @@ export const ConsultantLedgerScreen: React.FC<Props> = ({ onBack, onOpenDashboar
                                                 <p className="text-[11px] text-slate-500 dark:text-zinc-450 mt-0.5 break-words font-medium">Patient {l.patientId} · Accrued {formatIstDateTime(l.accruedAt)}{l.paidAt ? ` · Paid ${formatIstDateTime(l.paidAt)}` : ''}{l.payoutRef ? ` · Ref ${l.payoutRef}` : ''}</p>
                                             </div>
                                             <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                                <span className="text-sm font-black text-slate-800 dark:text-zinc-150">₹{l.incentiveAmount.toLocaleString('en-IN')}</span>
+                                                <span className="text-sm font-black text-slate-800 dark:text-zinc-155">₹{l.incentiveAmount.toLocaleString('en-IN')}</span>
                                                 <Badge variant="outline" className={cn('text-[10px] font-bold px-2 py-0.5', STATUS_TONE[l.statusCode ?? ''])}>{l.statusCode}</Badge>
                                             </div>
                                         </div>

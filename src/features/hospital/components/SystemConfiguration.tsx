@@ -112,7 +112,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
           </p>
         </div>
 
-        <div className="flex-1 py-4 px-3 space-y-2 overflow-y-auto">
+        <div className="flex-1 py-4 px-3 space-y-2 overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navigationItems.map((item) => {
             if ('mobileOnly' in item && item.mobileOnly) return null;
             return (
@@ -151,7 +151,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto lg:p-8 bg-transparent max-lg:p-0">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto lg:p-8 bg-transparent max-lg:p-0 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="w-full h-full max-w-[1200px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             {/* Header Card (Unified Theme & Layout matching IPD & Appointment Dashboards) */}

@@ -6,6 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { generateUuid } from '@/utils/uuid';
 import {
@@ -187,7 +194,7 @@ const OptionalPill = () => (
 const Field: React.FC<{ label: string; required?: boolean; className?: string; children: React.ReactNode }> = ({ label, required, className, children }) => (
     <div className={className}>
         <div className="flex items-center gap-1">
-            <Label className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{label}</Label>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-450 dark:text-zinc-500">{label}</Label>
             {required && <span className="text-rose-500 font-bold text-sm leading-none">*</span>}
         </div>
         <div className="mt-1.5">{children}</div>
@@ -867,10 +874,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 </div>
                                             </Field>
                                             <Field label="Blood group">
-                                                <select value={form.bloodGroup} onChange={e => set('bloodGroup', e.target.value)} className={SELECT_CLS}>
-                                                    <option value="">Unknown</option>
-                                                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(g => <option key={g} value={g}>{g}</option>)}
-                                                </select>
+                                                <Select value={form.bloodGroup || 'none'} onValueChange={val => set('bloodGroup', val === 'none' ? '' : val)}>
+                                                    <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                        <SelectValue placeholder="Unknown" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl max-h-[200px] overflow-y-auto">
+                                                        <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Unknown</SelectItem>
+                                                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(g => (
+                                                            <SelectItem key={g} value={g} className="rounded-lg cursor-pointer font-semibold text-xs py-2">{g}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </Field>
                                             <Field label="Age" required={isEmergencyQuickAdmit}>
                                                 <div className="flex items-center h-10 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand-500/25 focus-within:border-brand-400 transition">
@@ -995,30 +1009,44 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber" allowOverflow>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Field label="Admitting consultant">
-                                                <select value={form.primaryDoctorId} onChange={e => set('primaryDoctorId', e.target.value)} className={SELECT_CLS}>
-                                                    <option value="">— Not specified —</option>
-                                                    {doctors.map(d => <option key={d.doctorId} value={d.doctorId}>{d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}</option>)}
-                                                </select>
+                                                <Select value={form.primaryDoctorId || 'none'} onValueChange={val => set('primaryDoctorId', val === 'none' ? '' : val)}>
+                                                    <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                        <SelectValue placeholder="— Not specified —" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl max-h-[200px] overflow-y-auto">
+                                                        <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— Not specified —</SelectItem>
+                                                        {doctors.map(d => (
+                                                            <SelectItem key={d.doctorId} value={d.doctorId} className="rounded-lg cursor-pointer font-semibold text-xs py-2">
+                                                                {d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </Field>
                                             <Field label="OT Plan" className="sm:col-span-2">
-                                                <select
-                                                    value={form.otPlanId}
-                                                    onChange={e => {
-                                                        const plan = otPlans.find(p => p.otPlanId === e.target.value);
-                                                        set('otPlanId', e.target.value);
+                                                <Select
+                                                    value={form.otPlanId || 'none'}
+                                                    onValueChange={val => {
+                                                        const rawVal = val === 'none' ? '' : val;
+                                                        const plan = otPlans.find(p => p.otPlanId === rawVal);
+                                                        set('otPlanId', rawVal);
                                                         if (plan && !form.entitledRoomCategory && plan.defaultRoomCategory) {
                                                             set('entitledRoomCategory', plan.defaultRoomCategory);
                                                         }
                                                     }}
-                                                    className={SELECT_CLS}
                                                 >
-                                                    <option value="">— No plan — free text below —</option>
-                                                    {otPlans.map(p => (
-                                                        <option key={p.otPlanId} value={p.otPlanId}>
-                                                            {p.planName}{p.departmentName ? ` (${p.departmentName})` : ''}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                        <SelectValue placeholder="— No plan — free text below —" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl max-h-[200px] overflow-y-auto">
+                                                        <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— No plan — free text below —</SelectItem>
+                                                        {otPlans.map(p => (
+                                                            <SelectItem key={p.otPlanId} value={p.otPlanId} className="rounded-lg cursor-pointer font-semibold text-xs py-2">
+                                                                {p.planName}{p.departmentName ? ` (${p.departmentName})` : ''}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                                 {(() => {
                                                     const selectedPlan = otPlans.find(p => p.otPlanId === form.otPlanId);
                                                     return selectedPlan?.suggestedIcuLevel ? (
@@ -1057,13 +1085,18 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <Textarea value={form.admissionReason} onChange={e => set('admissionReason', e.target.value)} rows={2} className="text-sm rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3" placeholder="Chief complaint / notes" />
                                             </Field>
                                             <Field label="Referred by">
-                                                <select value={form.referralSource} onChange={e => { set('referralSource', e.target.value as FormState['referralSource']); clearReferrerSelection(); }} className={SELECT_CLS}>
-                                                    <option value="">— Not specified —</option>
-                                                    <option value="SELF">Self</option>
-                                                    <option value="DOCTOR">Doctor</option>
-                                                    <option value="HOSPITAL">Hospital</option>
-                                                    <option value="OTHER">Other</option>
-                                                </select>
+                                                <Select value={form.referralSource || 'none'} onValueChange={val => { set('referralSource', val === 'none' ? '' : val as FormState['referralSource']); clearReferrerSelection(); }}>
+                                                    <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                        <SelectValue placeholder="— Not specified —" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                                                        <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— Not specified —</SelectItem>
+                                                        <SelectItem value="SELF" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Self</SelectItem>
+                                                        <SelectItem value="DOCTOR" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Doctor</SelectItem>
+                                                        <SelectItem value="HOSPITAL" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Hospital</SelectItem>
+                                                        <SelectItem value="OTHER" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Other</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </Field>
 
                                             {(form.referralSource === 'DOCTOR' || form.referralSource === 'OTHER') && (
@@ -1086,10 +1119,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <p className="text-[11px] font-semibold text-slate-500 mb-2">Transfer-in facility <span className="font-normal text-slate-400">(for referral records — PM-JAY rules &amp; your referral-network analytics)</span></p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <Field label="Facility type">
-                                                        <select value={form.referringFacilityType} onChange={e => set('referringFacilityType', e.target.value as FormState['referringFacilityType'])} className={SELECT_CLS}>
-                                                            <option value="">— Select —</option>
-                                                            {REFERRING_FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                                        </select>
+                                                        <Select value={form.referringFacilityType || 'none'} onValueChange={val => set('referringFacilityType', val === 'none' ? '' : val as FormState['referringFacilityType'])}>
+                                                            <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                                <SelectValue placeholder="— Select —" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                                                                <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— Select —</SelectItem>
+                                                                {REFERRING_FACILITY_TYPES.map(t => (
+                                                                    <SelectItem key={t.value} value={t.value} className="rounded-lg cursor-pointer font-semibold text-xs py-2">{t.label}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
                                                     </Field>
                                                     <Field label="Facility name">
                                                         <Input value={form.referringFacilityName} onChange={e => set('referringFacilityName', e.target.value)} className={INPUT_CLS} placeholder="e.g. Sub-District Hospital" />
@@ -1114,18 +1154,23 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     {/* ── Bed selection ──────────────────────────────── */}
                                     <SectionCard icon={<BedDouble className="h-4 w-4" />} title="Bed selection" subtitle="Optional — assign now or later from the bed board" tone="sky">
                                         <div className="relative">
-                                            <BedDouble className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            <select value={form.bedId} onChange={e => set('bedId', e.target.value)}
-                                                className="h-12 w-full text-sm font-semibold border border-slate-200 dark:border-zinc-800 rounded-xl pl-10 pr-4 bg-white dark:bg-zinc-900 outline-none transition focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-350 dark:hover:border-zinc-700 appearance-none">
-                                                <option value="">— Assign later —</option>
-                                                {Object.entries(bedsByWard).map(([ward, beds]) => (
-                                                    <optgroup key={ward} label={ward}>
-                                                        {beds.map(b => (
-                                                            <option key={b.bedId} value={b.bedId}>{b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
-                                                        ))}
-                                                    </optgroup>
-                                                ))}
-                                            </select>
+                                            <BedDouble className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+                                            <Select value={form.bedId || 'none'} onValueChange={val => set('bedId', val === 'none' ? '' : val)}>
+                                                <SelectTrigger className="h-12 w-full text-sm font-semibold border border-slate-205 dark:border-zinc-800 rounded-xl pl-10 pr-4 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                    <SelectValue placeholder="— Assign later —" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl max-h-[250px] overflow-y-auto">
+                                                    <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— Assign later —</SelectItem>
+                                                    {Object.entries(bedsByWard).map(([ward, beds]) => [
+                                                        <div key={`group-${ward}`} className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-555 bg-slate-50/50 dark:bg-zinc-950/20">{ward}</div>,
+                                                        ...beds.map(b => (
+                                                            <SelectItem key={b.bedId} value={b.bedId} className="rounded-lg cursor-pointer font-semibold text-xs py-2 pl-6">
+                                                                {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
+                                                            </SelectItem>
+                                                        ))
+                                                    ])}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
 
                                         <AnimatePresence mode="wait">
@@ -1190,13 +1235,18 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 {form.collectAdvanceNow && (
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                                                         <Field label="Payment mode">
-                                                            <select value={form.advancePaymentMode} onChange={e => set('advancePaymentMode', e.target.value as PaymentMode)} className={SELECT_CLS}>
-                                                                <option value="CASH">Cash</option>
-                                                                <option value="UPI">UPI</option>
-                                                                <option value="CARD">Card</option>
-                                                                <option value="BANK">Bank Transfer</option>
-                                                                <option value="INSURANCE">Insurance</option>
-                                                            </select>
+                                                            <Select value={form.advancePaymentMode} onValueChange={val => set('advancePaymentMode', val as PaymentMode)}>
+                                                                <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                                    <SelectValue placeholder="Cash" />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                                                                    <SelectItem value="CASH" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Cash</SelectItem>
+                                                                    <SelectItem value="UPI" className="rounded-lg cursor-pointer font-semibold text-xs py-2">UPI</SelectItem>
+                                                                    <SelectItem value="CARD" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Card</SelectItem>
+                                                                    <SelectItem value="BANK" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Bank Transfer</SelectItem>
+                                                                    <SelectItem value="INSURANCE" className="rounded-lg cursor-pointer font-semibold text-xs py-2">Insurance</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
                                                         </Field>
                                                         {form.advancePaymentMode !== 'CASH' && (
                                                             <Field label="Transaction ID">
@@ -1228,10 +1278,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                     <Input value={form.packageCode} onChange={e => set('packageCode', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="e.g. PM-JAY HBP code" />
                                                 </Field>
                                                 <Field label="Entitled room category">
-                                                    <select value={form.entitledRoomCategory} onChange={e => set('entitledRoomCategory', e.target.value)} className={SELECT_CLS}>
-                                                        <option value="">— Not specified —</option>
-                                                        {ROOM_CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
-                                                    </select>
+                                                    <Select value={form.entitledRoomCategory || 'none'} onValueChange={val => set('entitledRoomCategory', val === 'none' ? '' : val)}>
+                                                        <SelectTrigger className="h-10 w-full text-sm border border-slate-205 dark:border-zinc-800 rounded-xl px-3 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                                                            <SelectValue placeholder="— Not specified —" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                                                            <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— Not specified —</SelectItem>
+                                                            {ROOM_CATEGORIES.map(c => (
+                                                                <SelectItem key={c} value={c} className="rounded-lg cursor-pointer font-semibold text-xs py-2">{c.replace('_', ' ')}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </Field>
                                                 <Field label="Sanctioned amount (₹)">
                                                     <Input type="number" min={0} value={form.sanctionedAmount} onChange={e => set('sanctionedAmount', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
@@ -1269,38 +1326,38 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                 </div>
                             )}
                             <div className="flex items-center gap-2 sm:gap-3">
-                                <Button variant="outline" className="h-11 sm:h-10 px-4 rounded-full border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
+                                <Button variant="outline" className="h-11 sm:h-10 px-4 rounded-xl border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
                                     {step === 'admissionType' ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
                                 </Button>
                                 {/* Desktop: push actions to the right; mobile: buttons flex-fill instead. */}
                                 <div className="hidden sm:block sm:flex-1" />
                                 {step === 'admissionType' && (
-                                    <Button onClick={() => setStep('personal')} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
+                                    <Button onClick={() => setStep('personal')} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
                                         Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                     </Button>
                                 )}
                                 {step === 'personal' && (
                                     <>
-                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-full border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0">
+                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-xl border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0 active:scale-[0.98] transition-all">
                                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
                                         </Button>
-                                        <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
+                                        <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
                                             Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                         </Button>
                                     </>
                                 )}
                                 {step === 'clinical' && (
                                     <>
-                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-full border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0">
+                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-xl border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0 active:scale-[0.98] transition-all">
                                             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
                                         </Button>
-                                        <Button onClick={() => setStep('advanceBed')} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
+                                        <Button onClick={() => setStep('advanceBed')} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
                                             Next <ArrowRight className="h-4 w-4 ml-1.5" />
                                         </Button>
                                     </>
                                 )}
                                 {step === 'advanceBed' && (
-                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-full shadow-md shadow-brand-600/10 transition-colors">
+                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
                                         {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
                                         {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
                                     </Button>

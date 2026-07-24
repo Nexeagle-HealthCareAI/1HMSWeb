@@ -105,40 +105,98 @@ export const VitalsPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             ) : view === 'chart' ? (
                 <VitalsTrendChart readings={readings} />
             ) : (
-                <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                <th className="text-left px-3 py-2">Time</th>
-                                <th className="text-left px-3 py-2">Temp</th>
-                                <th className="text-left px-3 py-2">Pulse</th>
-                                <th className="text-left px-3 py-2">BP</th>
-                                <th className="text-left px-3 py-2">RR</th>
-                                <th className="text-left px-3 py-2">SpO2</th>
-                                <th className="text-left px-3 py-2">Pain</th>
-                                <th className="text-left px-3 py-2">GCS</th>
-                                <th className="text-left px-3 py-2">Wt/Ht/BMI</th>
-                                <th className="text-left px-3 py-2">By</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {readings.map(r => (
-                                <tr key={r.vitalReadingId}>
-                                    <td className="px-3 py-2 whitespace-nowrap font-semibold text-slate-700">{formatIstDateTime(r.recordedAt)}</td>
-                                    <td className="px-3 py-2">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? ''}` : '—'}</td>
-                                    <td className="px-3 py-2">{r.pulse ?? '—'}</td>
-                                    <td className="px-3 py-2">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</td>
-                                    <td className="px-3 py-2">{r.respiratoryRate ?? '—'}</td>
-                                    <td className="px-3 py-2">{r.spO2 != null ? `${r.spO2}%` : '—'}</td>
-                                    <td className="px-3 py-2">{r.painScore ?? '—'}</td>
-                                    <td className="px-3 py-2">{r.gcsTotal ?? '—'}</td>
-                                    <td className="px-3 py-2">{[r.weightKg ? `${r.weightKg}kg` : null, r.heightCm ? `${r.heightCm}cm` : null, r.bmi ? `BMI ${r.bmi}` : null].filter(Boolean).join(' / ') || '—'}</td>
-                                    <td className="px-3 py-2 text-slate-500">{r.recordedBy ?? '—'}</td>
+                <>
+                    {/* Mobile Card List View */}
+                    <div className="space-y-3 sm:hidden">
+                        {readings.map(r => (
+                            <div key={r.vitalReadingId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+                                {/* Header: Time and Recorder */}
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                    <span className="text-xs font-black text-slate-800 font-mono">
+                                        {formatIstDateTime(r.recordedAt)}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                        By: {r.recordedBy ?? '—'}
+                                    </span>
+                                </div>
+                                
+                                {/* Grid for core vitals */}
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Temperature</span>
+                                        <p className="font-bold text-slate-800">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? 'F'}` : '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Pulse</span>
+                                        <p className="font-bold text-slate-800">{r.pulse != null ? `${r.pulse} bpm` : '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Blood Pressure</span>
+                                        <p className="font-bold text-slate-800">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Respiratory Rate</span>
+                                        <p className="font-bold text-slate-800">{r.respiratoryRate ?? '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">SpO2</span>
+                                        <p className="font-bold text-slate-800">{r.spO2 != null ? `${r.spO2}%` : '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Pain Score</span>
+                                        <p className="font-bold text-slate-800">{r.painScore ?? '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">GCS Score</span>
+                                        <p className="font-bold text-slate-800">{r.gcsTotal ?? '—'}</p>
+                                    </div>
+                                    <div className="space-y-0.5 col-span-2">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Wt / Ht / BMI</span>
+                                        <p className="font-bold text-slate-800 truncate">
+                                            {[r.weightKg ? `${r.weightKg}kg` : null, r.heightCm ? `${r.heightCm}cm` : null, r.bmi ? `BMI ${r.bmi}` : null].filter(Boolean).join(' / ') || '—'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Original Desktop/Tablet Table View */}
+                    <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto hidden sm:block">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                    <th className="text-left px-3 py-2">Time</th>
+                                    <th className="text-left px-3 py-2">Temp</th>
+                                    <th className="text-left px-3 py-2">Pulse</th>
+                                    <th className="text-left px-3 py-2">BP</th>
+                                    <th className="text-left px-3 py-2">RR</th>
+                                    <th className="text-left px-3 py-2">SpO2</th>
+                                    <th className="text-left px-3 py-2">Pain</th>
+                                    <th className="text-left px-3 py-2">GCS</th>
+                                    <th className="text-left px-3 py-2">Wt/Ht/BMI</th>
+                                    <th className="text-left px-3 py-2">By</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {readings.map(r => (
+                                    <tr key={r.vitalReadingId}>
+                                        <td className="px-3 py-2 whitespace-nowrap font-semibold text-slate-700">{formatIstDateTime(r.recordedAt)}</td>
+                                        <td className="px-3 py-2">{r.temperature != null ? `${r.temperature}°${r.temperatureUnit ?? ''}` : '—'}</td>
+                                        <td className="px-3 py-2">{r.pulse ?? '—'}</td>
+                                        <td className="px-3 py-2">{r.systolicBP != null && r.diastolicBP != null ? `${r.systolicBP}/${r.diastolicBP}` : '—'}</td>
+                                        <td className="px-3 py-2">{r.respiratoryRate ?? '—'}</td>
+                                        <td className="px-3 py-2">{r.spO2 != null ? `${r.spO2}%` : '—'}</td>
+                                        <td className="px-3 py-2">{r.painScore ?? '—'}</td>
+                                        <td className="px-3 py-2">{r.gcsTotal ?? '—'}</td>
+                                        <td className="px-3 py-2">{[r.weightKg ? `${r.weightKg}kg` : null, r.heightCm ? `${r.heightCm}cm` : null, r.bmi ? `BMI ${r.bmi}` : null].filter(Boolean).join(' / ') || '—'}</td>
+                                        <td className="px-3 py-2 text-slate-500">{r.recordedBy ?? '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
 
             <Dialog open={newOpen} onOpenChange={setNewOpen}>

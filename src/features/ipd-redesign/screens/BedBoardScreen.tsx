@@ -271,13 +271,13 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
 
                     {/* Navigation Tab Capsule */}
                     <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                        {/* Tab 1: Active Census */}
+                        {/* Tab 1: Live Roster */}
                         <button 
                             onClick={onOpenDashboard || onBack}
                             className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
                         >
                             <Hotel className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Active<br/>Census</span>
+                            <span className="text-[9px] font-medium tracking-wide leading-tight">Live<br/>Roster</span>
                         </button>
 
                         {/* Tab 2: Bed Board (Selected) */}

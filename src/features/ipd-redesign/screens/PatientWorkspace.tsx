@@ -578,17 +578,17 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                             <div className="lg:col-span-2">
                                 <DeteriorationAlertBanner admissionId={current.admissionId} />
                             </div>
-                            <div className="rounded-[1.5rem] border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
-                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-550 dark:text-zinc-400 mb-2">Bed</h2>
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300">
+                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">Bed</h2>
                                 {current.bedCode ? (
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <p className="font-semibold text-slate-900 dark:text-zinc-100">{current.wardName ? `${current.wardName} · ` : ''}{current.bedCode}</p>
                                         {isActive && (
                                             <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 hover:bg-slate-50 dark:border-zinc-850 dark:hover:bg-zinc-800/50 font-bold gap-1.5" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
+                                                <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 hover:bg-slate-50 dark:border-zinc-850 dark:hover:bg-zinc-800/50 font-bold gap-1.5 active:scale-[0.98] transition-all" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
                                                     <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
                                                 </Button>
-                                                <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 text-slate-500 hover:text-rose-600 hover:bg-rose-50/50 dark:border-zinc-855 dark:hover:bg-rose-950/20 font-bold gap-1.5" onClick={releaseBed} disabled={bedBusy || isSubscriptionReadOnly}>
+                                                <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 text-slate-500 hover:text-rose-600 hover:bg-rose-50/50 dark:border-zinc-855 dark:hover:bg-rose-950/20 font-bold gap-1.5 active:scale-[0.98] transition-all" onClick={releaseBed} disabled={bedBusy || isSubscriptionReadOnly}>
                                                     <X className="h-3.5 w-3.5 mr-1.5" /> Release
                                                 </Button>
                                             </div>
@@ -598,7 +598,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Unassigned' : 'No bed'}</p>
                                         {isActive && (
-                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/50 font-bold gap-1.5" onClick={() => { setBedActionMode('assign'); setPickedBedId(''); }}>
+                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/50 font-bold gap-1.5 active:scale-[0.98] transition-all" onClick={() => { setBedActionMode('assign'); setPickedBedId(''); }}>
                                                 <BedDouble className="h-3.5 w-3.5 mr-1.5" /> Assign a bed
                                             </Button>
                                         )}
@@ -613,7 +613,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                                 <SelectTrigger className="h-11 sm:h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
                                                     <SelectValue placeholder="Select a bed…" />
                                                 </SelectTrigger>
-                                                <SelectContent className="max-h-[250px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                <SelectContent className="max-h-[250px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-955 shadow-lg">
                                                     {freeBeds.map(b => (
                                                         <SelectItem key={b.bedId} value={b.bedId} className="rounded-xl focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
                                                             {(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
@@ -623,8 +623,8 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                             </Select>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none" onClick={() => setBedActionMode(null)}>Cancel</Button>
-                                            <Button size="sm" disabled={!pickedBedId || bedBusy} className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none"
+                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none active:scale-[0.98] transition-all" onClick={() => setBedActionMode(null)}>Cancel</Button>
+                                            <Button size="sm" disabled={!pickedBedId || bedBusy} className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none active:scale-[0.98] transition-all"
                                                 onClick={() => runBedAction(
                                                     () => bedActionMode === 'assign'
                                                         ? bedBoardApi.assignBed(current.admissionId, pickedBedId)
@@ -634,31 +634,23 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                                 {bedActionMode === 'assign' ? 'Assign' : 'Transfer'}
                                             </Button>
                                         </div>
-                                        {isAboveEntitlement(freeBeds.find(b => b.bedId === pickedBedId)?.wardType, current.entitledRoomCategory) && (
-                                            <div className="w-full flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50/50 p-3">
-                                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                                                <p className="text-[11px] text-amber-800 font-medium">
-                                                    Patient is entitled to <span className="font-semibold">{current.entitledRoomCategory?.replace('_', ' ')}</span> — this bed is above that. The differential will show as non-payable at discharge unless the patient/family accepts the upgrade.
-                                                </p>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
 
-                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-shadow">
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300">
                                 <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">Admission details</h2>
                                 <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Admitted</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{formatIstDateTime(current.admittedAt)}</dd></div>
-                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Type</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{current.admissionType ?? '—'}</dd></div>
-                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Payer</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{current.payerType}</dd></div>
+                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Admitted</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{formatIstDateTime(current.admittedAt)}</dd></div>
+                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Type</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{current.admissionType ?? '—'}</dd></div>
+                                    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Payer</dt><dd className="text-slate-800 dark:text-zinc-200 font-semibold">{current.payerType}</dd></div>
                                 </dl>
                                 {(current.admissionReason || current.diagnosis) && (
                                     <p className="text-sm text-slate-700 dark:text-zinc-300 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80 font-medium">{current.diagnosis || current.admissionReason}</p>
                                 )}
                             </div>
 
-                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-shadow">
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300">
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">Doctor</h2>
                                     <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] shrink-0 font-bold" onClick={toggleDoctorHistory}>
@@ -673,7 +665,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                         <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Not assigned' : 'No doctor'}</p>
                                     )}
                                     {isActive && (
-                                        <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 hover:bg-slate-50 dark:border-zinc-855 dark:hover:bg-zinc-800/50 font-bold gap-1.5" onClick={() => { setDoctorActionMode('change'); setPickedDoctorId(current.primaryDoctorId ?? ''); }}>
+                                        <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 hover:bg-slate-50 dark:border-zinc-855 dark:hover:bg-zinc-800/50 font-bold gap-1.5 active:scale-[0.98] transition-all" onClick={() => { setDoctorActionMode('change'); setPickedDoctorId(current.primaryDoctorId ?? ''); }}>
                                             <Stethoscope className="h-3.5 w-3.5 mr-1.5" /> Change doctor
                                         </Button>
                                     )}
@@ -687,7 +679,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                                 <SelectTrigger className="h-11 sm:h-10 mt-1 w-full rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left">
                                                     <SelectValue placeholder="Select a doctor…" />
                                                 </SelectTrigger>
-                                                <SelectContent className="max-h-[250px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
+                                                <SelectContent className="max-h-[250px] overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-955 shadow-lg">
                                                     {doctors.map(d => (
                                                         <SelectItem key={d.doctorId} value={d.doctorId} className="rounded-xl focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">
                                                             {d.fullName || 'Unnamed'}{d.departmentName ? ` · ${d.departmentName}` : ''}
@@ -697,9 +689,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                             </Select>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none" onClick={() => setDoctorActionMode(null)}>Cancel</Button>
+                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none active:scale-[0.98] transition-all" onClick={() => setDoctorActionMode(null)}>Cancel</Button>
                                             <Button size="sm" disabled={!pickedDoctorId || pickedDoctorId === current.primaryDoctorId || doctorBusy}
-                                                className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none"
+                                                className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none active:scale-[0.98] transition-all"
                                                 onClick={() => runDoctorAction(() => admissionApi.changeDoctor(current.admissionId, pickedDoctorId), 'Doctor changed.')}>
                                                 {doctorBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
                                                 Change
@@ -717,12 +709,12 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                         ) : (
                                             <ul className="space-y-2">
                                                 {doctorHistory.map(h => (
-                                                    <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-2.5 rounded-xl border border-zinc-150/65 dark:border-zinc-800 bg-slate-50/20 dark:bg-zinc-900/30 text-xs">
+                                                    <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl border border-zinc-150/65 dark:border-zinc-800 bg-slate-50/20 dark:bg-zinc-900/30 text-xs shadow-sm">
                                                         <span className="font-semibold text-slate-800 dark:text-zinc-200 truncate">
                                                             {h.doctorName ?? '—'}
-                                                            {h.statusCode === 'ACTIVE' && <Badge variant="outline" className="ml-1.5 text-[9px] font-bold px-1.5 py-0 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-444 border-emerald-250 dark:border-emerald-900/30 rounded-full">Current</Badge>}
+                                                            {h.statusCode === 'ACTIVE' && <Badge variant="outline" className="ml-1.5 text-[9px] font-bold px-1.5 py-0 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-250 dark:border-emerald-900/30 rounded-full">Current</Badge>}
                                                         </span>
-                                                        <span className="text-slate-500 dark:text-zinc-500 font-medium shrink-0">
+                                                        <span className="text-slate-550 dark:text-zinc-500 font-medium shrink-0">
                                                             {formatIstDateTime(h.assignedAt)} → {h.unassignedAt ? formatIstDateTime(h.unassignedAt) : 'Present'}
                                                         </span>
                                                     </li>
@@ -733,7 +725,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
                             </div>
 
-                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-shadow">
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300">
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                     <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">Referrer</h2>
                                     <Button variant="ghost" size="sm" className="h-8 sm:h-7 text-[11px] shrink-0 font-bold" onClick={toggleReferrerHistory}>
@@ -753,7 +745,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                         <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Not specified' : 'None'}</p>
                                     )}
                                     {isActive && (
-                                        <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 hover:bg-slate-50 dark:border-zinc-855 dark:hover:bg-zinc-800/50 font-bold gap-1.5" onClick={startChangeReferrer}>
+                                        <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-slate-205 hover:bg-slate-50 dark:border-zinc-855 dark:hover:bg-zinc-800/50 font-bold gap-1.5 active:scale-[0.98] transition-all" onClick={startChangeReferrer}>
                                             <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Change referrer
                                         </Button>
                                     )}
@@ -767,7 +759,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                                 return (
                                                     <button key={opt} type="button"
                                                         onClick={() => { setPickedReferralSource(opt); setPickedReferrerId(''); setPickedReferrerName(''); setPickedReferrerType(''); }}
-                                                        className={cn('flex-1 h-10 rounded-full border text-xs font-black transition-all',
+                                                        className={cn('flex-1 h-10 rounded-full border text-xs font-black transition-all active:scale-[0.98]',
                                                             active ? 'bg-brand-600 text-white border-transparent shadow-sm' : 'bg-slate-55 dark:bg-zinc-900 border-slate-200/60 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/50')}>
                                                         {opt === 'SELF' ? 'Self' : opt === 'DOCTOR' ? 'Doctor' : 'Other'}
                                                     </button>
@@ -778,9 +770,9 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                         {(pickedReferralSource === 'DOCTOR' || pickedReferralSource === 'OTHER') && (
                                             <ReferrerPicker
                                                 hospitalId={hospitalId}
-                                                referrerId={pickedReferrerId}
-                                                referrerName={pickedReferrerName}
-                                                referrerType={pickedReferrerType}
+                                                referrerId={pickedReferralSource === 'SELF' ? '' : pickedReferrerId}
+                                                referrerName={pickedReferralSource === 'SELF' ? '' : pickedReferrerName}
+                                                referrerType={pickedReferralSource === 'SELF' ? '' : pickedReferrerType}
                                                 lockedType={pickedReferralSource === 'DOCTOR' ? 'DOCTOR' : 'REFERRER'}
                                                 onSelect={(id, name, type) => { setPickedReferrerId(id); setPickedReferrerName(name); setPickedReferrerType(type); }}
                                                 onClear={() => { setPickedReferrerId(''); setPickedReferrerName(''); setPickedReferrerType(''); }}
@@ -788,10 +780,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                         )}
 
                                         <div className="flex items-center justify-end gap-2 mt-2">
-                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none" onClick={() => setReferrerActionMode(null)}>Cancel</Button>
+                                            <Button variant="outline" size="sm" className="h-10 rounded-full px-4 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold flex-1 sm:flex-none active:scale-[0.98] transition-all" onClick={() => setReferrerActionMode(null)}>Cancel</Button>
                                             <Button size="sm"
                                                 disabled={(pickedReferralSource !== 'SELF' && !pickedReferrerId) || referrerBusy}
-                                                className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none"
+                                                className="h-10 rounded-full px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold flex-1 sm:flex-none active:scale-[0.98] transition-all"
                                                 onClick={() => runReferrerAction(() => admissionApi.changeReferrer(current.admissionId, {
                                                     referralSource: pickedReferralSource,
                                                     referrerId: pickedReferralSource === 'SELF' ? null : pickedReferrerId,
@@ -806,7 +798,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                 )}
 
                                 {referrerHistoryOpen && (
-                                    <div className="mt-3 pt-3 border-t border-slate-100">
+                                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
                                         {referrerHistoryLoading ? (
                                             <p className="text-xs text-slate-400 flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</p>
                                         ) : referrerHistory.length === 0 ? (
@@ -814,13 +806,13 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                                         ) : (
                                             <ul className="space-y-2">
                                                 {referrerHistory.map(h => (
-                                                    <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-3 text-xs">
-                                                        <span className="font-semibold text-slate-800 truncate">
+                                                    <li key={h.assignmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl border border-zinc-150/65 dark:border-zinc-800 bg-slate-50/20 dark:bg-zinc-900/30 text-xs shadow-sm">
+                                                        <span className="font-semibold text-slate-800 dark:text-zinc-200 truncate">
                                                             {h.referralSource === 'SELF' ? 'Self' : h.referrerName ?? '—'}
-                                                            {h.referrerType && <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400">{REFERRER_LABEL[h.referrerType] ?? h.referrerType}</span>}
-                                                            {h.statusCode === 'ACTIVE' && <span className="ml-1.5 text-[10px] font-bold uppercase text-emerald-600">Current</span>}
+                                                            {h.referrerType && <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400 dark:text-zinc-500">{REFERRER_LABEL[h.referrerType] ?? h.referrerType}</span>}
+                                                            {h.statusCode === 'ACTIVE' && <Badge variant="outline" className="ml-1.5 text-[9px] font-bold px-1.5 py-0 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-444 border-emerald-250 dark:border-emerald-900/30 rounded-full">Current</Badge>}
                                                         </span>
-                                                        <span className="text-slate-500 shrink-0">
+                                                        <span className="text-slate-550 dark:text-zinc-500 font-medium shrink-0">
                                                             {formatIstDateTime(h.assignedAt)} → {h.unassignedAt ? formatIstDateTime(h.unassignedAt) : 'Present'}
                                                         </span>
                                                     </li>

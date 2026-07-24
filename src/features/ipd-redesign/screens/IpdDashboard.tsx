@@ -233,7 +233,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                             </div>
                             <div>
                                 <h1 className="text-xl font-bold tracking-tight">Inpatient Department</h1>
-                                <p className="text-[11px] text-brand-100 mt-0.5 animate-pulse">Manage active census, beds & referrals</p>
+                                <p className="text-[11px] text-brand-100 mt-0.5 animate-pulse">Manage live roster, beds &amp; referrals</p>
                             </div>
                         </div>
                         {/* Admit button on the right for desktop */}
@@ -247,10 +247,10 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
 
                     {/* Navigation Tab Capsule */}
                     <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                        {/* Tab 1: Active Census (Selected) */}
+                        {/* Tab 1: Live Roster (Selected) */}
                         <div className="bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm rounded-xl py-2 flex flex-col items-center justify-center text-center cursor-default">
                             <Hotel className="h-5 w-5 mb-1" />
-                            <span className="text-[9px] font-bold tracking-wide leading-tight">Active<br/>Census</span>
+                            <span className="text-[9px] font-bold tracking-wide leading-tight">Live<br/>Roster</span>
                         </div>
 
                         {/* Tab 2: Bed Board */}
