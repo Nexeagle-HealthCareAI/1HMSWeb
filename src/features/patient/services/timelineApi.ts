@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/axiosClient';
-import { API_ENDPOINTS, API_BASE_URL } from '@/app/api';
+import { API_ENDPOINTS } from '@/app/api';
 
 // --- Interfaces based on the provided JSON response ---
 
@@ -130,21 +130,13 @@ export interface TimelineApiResponse {
 
 export const timelineApi = {
     getEvents: async (patientId: string, doctorId: string, hospitalId: string): Promise<TimelineApiResponse> => {
-        // Construct the URL using the helper from API_ENDPOINTS
+        // apiClient already has baseURL configured (API_REQUEST_BASE_URL, see axiosClient.ts) —
+        // pass the relative endpoint straight through, same as every other call in this codebase.
+        // Manually prepending the base URL here (as this used to) bypasses that baseURL entirely
+        // once it's absolute, which broke in dev (mixed-content: page is HTTPS, the real API host
+        // is plain HTTP — see app/api.ts's API_REQUEST_BASE_URL comment).
         const endpoint = API_ENDPOINTS.TIMELINE.GET_EVENTS(patientId, doctorId, hospitalId);
-        // Combine base URL and endpoint (assuming API_BASE_URL doesn't end with slash and endpoint doesn't start with one, or handled by helper)
-        // Note: API_ENDPOINTS usually return relative paths.
-        // If apiClient handles baseURL, we just pass the relative path.
-        // If not, we might need `${API_BASE_URL}/${endpoint}`. 
-        // Checking previous code, it used `${API_BASE_URL}/${API_ENDPOINTS...}`.
-        // Let's assume standard practice.
-
-        // However, looking at api.ts, API_ENDPOINTS returns the path starting with e-prescription/...
-        // Let's try passing the relative URL if apiClient has baseURL configured, or construct full URL.
-        // Safest based on typical patterns in this codebase:
-        const url = `${API_BASE_URL}/${endpoint}`;
-
-        const response = await apiClient.get<TimelineApiResponse>(url);
+        const response = await apiClient.get<TimelineApiResponse>(endpoint);
         return response;
     }
 };

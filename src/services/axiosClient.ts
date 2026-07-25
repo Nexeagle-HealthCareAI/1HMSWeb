@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { useAppStore } from '@/store/appStore';
-import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
+import { API_REQUEST_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
 import { toast } from '@/hooks/use-toast';
 import { mockAxiosAdapter } from './mockAdapter';
 
@@ -10,7 +10,7 @@ const API_TIMEOUT = 30000; // 30 seconds
 
 // Create axios instance
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_REQUEST_BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',

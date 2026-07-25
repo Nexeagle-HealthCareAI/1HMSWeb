@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { API_BASE_URL } from '@/app/api';
+import { API_REQUEST_BASE_URL } from '@/app/api';
 
 interface ConnectivityState {
     navigatorOnline: boolean;
@@ -18,7 +18,9 @@ export const useConnectivityStore = create<ConnectivityState>((set) => ({
     setNavigatorOnline: (v) => set({ navigatorOnline: v }),
 }));
 
-const HEALTH_URL = `${API_BASE_URL.replace(/\/$/, '')}/health`;
+// API_REQUEST_BASE_URL, not API_BASE_URL — dev serves this page over HTTPS, and a direct
+// fetch() to the plain-HTTP backend would be mixed-content blocked (see app/api.ts).
+const HEALTH_URL = `${API_REQUEST_BASE_URL.replace(/\/$/, '')}/health`;
 const OK_INTERVAL = 20_000;
 const FAIL_MIN = 4_000;
 const FAIL_MAX = 20_000;
