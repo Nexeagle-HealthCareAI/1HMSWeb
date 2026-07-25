@@ -38,6 +38,14 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       cors: true,
       proxy: {
+        // Catch-all for axiosClient's dev-mode baseURL (see src/services/axiosClient.ts) — every
+        // API_ENDPOINTS path (most with no leading slash, e.g. 'auth/user/login', but some like
+        // SUBSCRIPTION already embedding '/api/v1/...') lands here as /dev-api/<original path>,
+        // gets the /dev-api prefix stripped, and forwards to apiBaseUrl exactly as the old
+        // absolute-URL axios baseURL used to hit it directly. Needed because the dev server serves
+        // over HTTPS (basicSsl, required elsewhere for camera/geolocation) while apiBaseUrl is
+        // plain HTTP — browsers block that as mixed content when called directly from the page.
+        '/dev-api': createProxyConfig((path) => path.replace(/^\/dev-api/, '')),
         '/api': createProxyConfig((path) => path.replace(/^\/api/, '')),
         '/doctors': createProxyConfig(),
         '/prescription': createProxyConfig(),

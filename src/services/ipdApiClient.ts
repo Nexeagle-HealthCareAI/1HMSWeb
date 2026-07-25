@@ -1,13 +1,16 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
-import { API_BASE_URL } from '@/app/api';
+import { API_REQUEST_BASE_URL } from '@/app/api';
 import { mockAxiosAdapter } from './mockAdapter';
 
 const API_TIMEOUT = 30000;
 
 // Consolidated: this client targets the single easyHMSAPI host (no separate IPD host).
+// API_REQUEST_BASE_URL (not API_BASE_URL) — see its comment in app/api.ts: dev serves this
+// page over HTTPS, so browser-side requests need to go through the /dev-api proxy instead
+// of hitting the plain-HTTP backend directly (mixed-content block).
 const ipdAxios: AxiosInstance = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_REQUEST_BASE_URL,
     timeout: API_TIMEOUT,
     headers: {
         'Content-Type': 'application/json',
