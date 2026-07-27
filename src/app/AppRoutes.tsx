@@ -440,11 +440,11 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
-            {/* Doctor Calendar Route - Restricted to Doctor and AdminDoctor roles */}
+            {/* Doctor Calendar Route - Doctor manages their own; Admin/AdminDoctor/Receptionist can manage any doctor's availability */}
             <Route
               path="/calendar"
               element={
-                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor', 'Admin', 'Receptionist']}>
                   <MainLayout>
                     <DoctorCalendar />
                   </MainLayout>

@@ -171,6 +171,8 @@ export const API_ENDPOINTS = {
     GET_DOCTOR_CONFIG: (doctorId: string, hospitalId: string, startDate: string, days: number) => `calendar/doctor/config?doctorId=${doctorId}&hospitalId=${hospitalId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
     CREATE_DOCTOR_OVERRIDE: 'calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `calendar/doctor/override/${overrideId}`,
+    GET_HOSPITAL_DOCTORS: (hospitalId: string) => `doctors/hospital?hospitalId=${hospitalId}`,
+    GET_AVAILABILITY_ROSTER: (hospitalId: string, date: string) => `calendar/roster?hospitalId=${hospitalId}&date=${encodeURIComponent(date)}`,
   },
   PRESCRIPTION: {
     UPLOAD_ASSET: 'prescription/assets/upload',

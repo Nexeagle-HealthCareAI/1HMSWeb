@@ -11,3 +11,7 @@ export * from './ShiftDetailsCard';
 export * from './DateRangeSelectionPopup';
 export * from './CalendarEventContent';
 export * from './GamifiedHeader';
+export * from './DoctorSwitcher';
+export * from './CalendarSidebar';
+export * from './MarkUnavailableModal';
+export * from './AvailabilityRosterPage';

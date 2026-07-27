@@ -107,6 +107,8 @@ import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
 import { getOpdDocHtml, buildPrintSettingsFromHospital, type OpdDocKind } from '@/features/billing/utils/opdDocuments';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { useAvailabilityRoster } from '@/features/doctor-calendar/hooks/useCalendar';
+import { DoctorCalendarPage } from '@/features/doctor-calendar/DoctorCalendarPage';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -123,6 +125,7 @@ export const AppointmentDashboard = () => {
   const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('all');
+  const [showAvailabilityDialog, setShowAvailabilityDialog] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -663,6 +666,16 @@ export const AppointmentDashboard = () => {
     });
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [appointments]);
+
+  // Today's availability status per doctor, for the small dot next to each name in the doctor
+  // filter below — same batched TimeOff > Override > Template resolution as the "Manage
+  // Availability" roster, so the two stay consistent.
+  const todayIso = dateFnsFormat(new Date(), 'yyyy-MM-dd');
+  const { data: availabilityRoster = [] } = useAvailabilityRoster(hospitalId ?? '', todayIso);
+  const availabilityByDoctorId = useMemo(
+    () => new Map(availabilityRoster.map((d) => [d.doctorId, d.isAvailable])),
+    [availabilityRoster]
+  );
 
   const departmentOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -1425,12 +1438,28 @@ export const AppointmentDashboard = () => {
                       <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">{t('appointmentDashboard.allDoctors')}</SelectItem>
                       {doctorOptions.map((doctor) => (
                         <SelectItem key={doctor.value} value={doctor.value} className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">
-                          {doctor.label}
+                          <span className="inline-flex items-center gap-1.5">
+                            {availabilityByDoctorId.has(doctor.value) && (
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
+                            )}
+                            {doctor.label}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Manage Availability - opens the availability roster/scheduler inline, pre-selecting the filtered doctor if one is chosen */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAvailabilityDialog(true)}
+                  className="h-10 gap-2 rounded-xl border-brand-100/50 dark:border-zinc-800/80 font-medium shrink-0"
+                >
+                  <CalendarClock className="h-4 w-4" />
+                  {t('appointmentDashboard.manageAvailability', 'Manage Availability')}
+                </Button>
 
                 {/* Department Filter Dropdown */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1533,7 +1562,12 @@ export const AppointmentDashboard = () => {
                         <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
                         {doctorOptions.map((doctor) => (
                           <SelectItem key={doctor.value} value={doctor.value}>
-                            {doctor.label}
+                            <span className="inline-flex items-center gap-1.5">
+                              {availabilityByDoctorId.has(doctor.value) && (
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
+                              )}
+                              {doctor.label}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2769,6 +2803,20 @@ export const AppointmentDashboard = () => {
         open={showQuickGuide}
         onOpenChange={setShowQuickGuide}
       />
+
+      {/* Manage Availability - shown inline over the board instead of navigating to /calendar */}
+      <Dialog open={showAvailabilityDialog} onOpenChange={setShowAvailabilityDialog}>
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 overflow-hidden [&>button]:hidden">
+          <DoctorCalendarPage
+            initialDoctorId={
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedDoctor)
+                ? selectedDoctor
+                : undefined
+            }
+            onRequestClose={() => setShowAvailabilityDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Floating Action Button Constraints Area (Mobile Only) */}
       <div className="md:hidden fixed inset-0 pointer-events-none z-40" ref={fabConstraintsRef} />

@@ -1,4 +1,4 @@
-export { 
+export {
   useCalendarEvents,
   useCreateOverride,
   useDeleteOverride,
@@ -6,5 +6,7 @@ export {
   useCreateTimeOff,
   useDeleteTimeOff,
   useDoctorCalendarConfig,
-  calendarKeys 
+  useHospitalDoctors,
+  useAvailabilityRoster,
+  calendarKeys
 } from './useCalendar';
