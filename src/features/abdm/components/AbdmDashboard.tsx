@@ -2,18 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Link2, Loader2, FileBadge2 } from 'lucide-react';
+import { UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
 import { CreateAbhaWizard } from './CreateAbhaWizard';
 import { LinkExistingAbhaWizard } from './LinkExistingAbhaWizard';
+import { EditAbhaProfileWizard } from './EditAbhaProfileWizard';
+import { AbdmGuidePanel } from './AbdmGuidePanel';
 
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
   const hospitalId = useAuthStore(s => s.hospitalId) || '';
   const [createOpen, setCreateOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [editAccount, setEditAccount] = useState<AbhaAccountSummary | null>(null);
   const [accounts, setAccounts] = useState<AbhaAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +48,9 @@ export const AbdmDashboard: React.FC = () => {
           <h1 className="text-xl font-semibold">ABHA / ABDM</h1>
         </div>
         <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => setGuideOpen(true)}>
+            <HelpCircle className="h-4 w-4 mr-2" /> Guide
+          </Button>
           <Button variant="outline" onClick={() => setLinkOpen(true)}>
             <Link2 className="h-4 w-4 mr-2" /> Link existing ABHA
           </Button>
@@ -55,6 +62,14 @@ export const AbdmDashboard: React.FC = () => {
 
       <CreateAbhaWizard hospitalId={hospitalId} open={createOpen} onOpenChange={setCreateOpen} onDone={onWizardDone} />
       <LinkExistingAbhaWizard hospitalId={hospitalId} open={linkOpen} onOpenChange={setLinkOpen} onDone={onWizardDone} />
+      <EditAbhaProfileWizard
+        hospitalId={hospitalId}
+        account={editAccount}
+        open={!!editAccount}
+        onOpenChange={(v) => { if (!v) setEditAccount(null); }}
+        onUpdated={onWizardDone}
+      />
+      <AbdmGuidePanel open={guideOpen} onOpenChange={setGuideOpen} />
 
       <Card>
         <CardHeader>
@@ -78,8 +93,10 @@ export const AbdmDashboard: React.FC = () => {
                     <th className="py-2 pr-4">ABHA number</th>
                     <th className="py-2 pr-4">ABHA address</th>
                     <th className="py-2 pr-4">Mobile</th>
+                    <th className="py-2 pr-4">Email</th>
                     <th className="py-2 pr-4">Source</th>
                     <th className="py-2 pr-4">Added</th>
+                    <th className="py-2 pr-4" />
                   </tr>
                 </thead>
                 <tbody>
@@ -89,12 +106,18 @@ export const AbdmDashboard: React.FC = () => {
                       <td className="py-2 pr-4 font-mono">{a.abhaNumber}</td>
                       <td className="py-2 pr-4 font-mono">{a.abhaAddress || '—'}</td>
                       <td className="py-2 pr-4">{a.mobile || '—'}</td>
+                      <td className="py-2 pr-4">{a.email || '—'}</td>
                       <td className="py-2 pr-4">
                         <Badge variant={a.source === 'Login' ? 'secondary' : 'default'}>
                           {a.source === 'Login' ? 'Linked' : 'Created here'}
                         </Badge>
                       </td>
                       <td className="py-2 pr-4 text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</td>
+                      <td className="py-2 pr-4">
+                        <Button variant="ghost" size="sm" onClick={() => setEditAccount(a)}>
+                          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

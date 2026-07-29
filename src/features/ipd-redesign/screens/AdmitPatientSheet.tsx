@@ -19,9 +19,10 @@ import {
     UserPlus, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
     User, CalendarCheck, Sun, LogOut, AlertTriangle, Wallet, BedDouble,
-    Printer, Download, Search,
+    Printer, Download, Search, Link2, FileBadge2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { LinkExistingAbhaWizard } from '@/features/abdm/components/LinkExistingAbhaWizard';
 import {
     admissionApi, type AdmissionTypeCode, type AdmitPatientPayload,
     type AdmissionPatientDetail, type AdmissionHistoryItem,
@@ -214,6 +215,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
     const [step, setStep] = useState<WizardStep>('admissionType');
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
+    const [linkAbhaOpen, setLinkAbhaOpen] = useState(false);
     const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
     // Phone fields: digits only, max 10 — same convention as PatientForm's mobile input.
     const setPhone = (k: 'mobile' | 'alternateMobile' | 'emergencyContactPhone' | 'referringFacilityContact', v: string) =>
@@ -617,6 +619,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     };
 
     return (
+        <>
         <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
             <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0 overflow-hidden bg-slate-50">
                 {/* Premium gradient header */}
@@ -675,6 +678,38 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                     </div>
                 ) : (
                     <>
+                        {/* ABHA link banner — persistent across all steps, first thing staff see */}
+                        <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-2xl border-2 border-dashed border-brand-300 dark:border-brand-800 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-transparent px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="h-8 w-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0 shadow-md shadow-brand-600/20">
+                                    <FileBadge2 className="h-4 w-4 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-bold text-brand-900 dark:text-brand-300">ABHA (Ayushman Bharat Health Account)</p>
+                                    {form.abhaId ? (
+                                        <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 truncate">{form.abhaId}</p>
+                                    ) : (
+                                        <p className="text-[11px] text-brand-600/80 dark:text-brand-400/70 truncate">Not linked yet</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                {form.abhaId && (
+                                    <Badge variant="outline" className="hidden sm:flex text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-400 gap-1">
+                                        <Check className="h-3 w-3" /> Linked
+                                    </Badge>
+                                )}
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.abhaId ? 'outline' : 'default'}
+                                    className={cn('h-8 rounded-full text-xs font-bold', !form.abhaId && 'bg-brand-600 hover:bg-brand-700 text-white')}
+                                    onClick={() => setLinkAbhaOpen(true)}
+                                >
+                                    <Link2 className="h-3.5 w-3.5 mr-1.5" /> {form.abhaId ? 'Change' : 'Link ABHA'}
+                                </Button>
+                            </div>
+                        </div>
                         {/* Restore-draft banner */}
                         {pendingDraft && (
                             <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-2xl border border-brand-100 dark:border-brand-900/25 bg-brand-50/50 dark:bg-brand-950/20 px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
@@ -963,7 +998,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     </SectionCard>
 
                                     <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="Government ID" tone="emerald" right={<OptionalPill />}>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {!selectedPatientId ? (
                                                 <Field label="Aadhaar">
                                                     <Input value={form.aadhaarNumber} onChange={e => set('aadhaarNumber', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="12 digits" />
@@ -976,10 +1011,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             <Field label="PAN">
                                                 <Input value={form.panNumber} onChange={e => set('panNumber', e.target.value)} className={cn(INPUT_CLS, 'font-mono uppercase')} placeholder="Optional" />
                                             </Field>
-                                            <Field label="ABHA ID">
-                                                <Input value={form.abhaId} onChange={e => set('abhaId', e.target.value)} className={cn(INPUT_CLS, 'font-mono')} placeholder="Optional" />
-                                            </Field>
                                         </div>
+                                        {/* ABHA is linked from the highlighted banner at the top of this sheet, not here. */}
                                     </SectionCard>
 
                                     {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
@@ -1368,5 +1401,13 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                 )}
             </SheetContent>
         </Sheet>
+        <LinkExistingAbhaWizard
+            hospitalId={hospitalId}
+            open={linkAbhaOpen}
+            onOpenChange={setLinkAbhaOpen}
+            onDone={() => { /* accounts list refresh not needed inline here */ }}
+            onLinked={(profile) => set('abhaId', profile.abhaNumber || form.abhaId)}
+        />
+        </>
     );
 };

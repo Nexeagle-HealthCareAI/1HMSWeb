@@ -33,6 +33,9 @@ export interface AbdmAddressSuggestionsResponse {
 export interface AbdmProfileResponse {
   success: boolean;
   message?: string;
+  // Authenticated session handle from a just-completed OTP verification — pass to the
+  // profile-update calls below while it's still live (~20 min).
+  txnId?: string;
   abhaNumber?: string;
   abhaAddress?: string;
   fullName?: string;
@@ -56,6 +59,7 @@ export interface AbhaAccountSummary {
   gender?: string;
   dateOfBirth?: string;
   mobile?: string;
+  email?: string;
   source: string;
   linkedPatientId?: string;
   createdAt: string;
@@ -66,6 +70,13 @@ export interface GetAbhaAccountsResponse {
   success: boolean;
   message?: string;
   accounts: AbhaAccountSummary[];
+}
+
+export interface AbdmUpdateResponse {
+  success: boolean;
+  message?: string;
+  mobile?: string;
+  email?: string;
 }
 
 // ---- API -------------------------------------------------------------------------------
@@ -110,4 +121,15 @@ export const abdmApi = {
       dateOfBirth: profile.dateOfBirth,
       mobile: profile.mobile,
     }),
+
+  // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live
+  // sessionTxnId, then update mobile (OTP-gated) or email (direct) using it.
+  requestUpdateMobileOtp: (sessionTxnId: string, newMobile: string) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/profile/mobile/generate-otp', { sessionTxnId, newMobile }),
+
+  verifyUpdateMobileOtp: (hospitalId: string, abhaNumber: string, sessionTxnId: string, updateTxnId: string, otp: string) =>
+    apiClient.post<AbdmUpdateResponse>('/abdm/profile/mobile/verify-otp', { hospitalId, abhaNumber, sessionTxnId, updateTxnId, otp }),
+
+  updateEmail: (hospitalId: string, abhaNumber: string, sessionTxnId: string, newEmail: string) =>
+    apiClient.post<AbdmUpdateResponse>('/abdm/profile/email', { hospitalId, abhaNumber, sessionTxnId, newEmail }),
 };

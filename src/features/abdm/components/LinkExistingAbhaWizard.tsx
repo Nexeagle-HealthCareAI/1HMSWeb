@@ -22,9 +22,12 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
+  // Fired with the fetched profile right after it's saved — lets a host form (appointment
+  // booking, IPD admission) pull the ABHA number into its own field without re-fetching.
+  onLinked?: (profile: AbdmProfileResponse) => void;
 }
 
-export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone }) => {
+export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone, onLinked }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('login');
   const [busy, setBusy] = useState(false);
@@ -93,6 +96,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
       const res = await abdmApi.saveLinkedAccount(hospitalId, profile);
       if (!res.success) { fail(res.message); return; }
       toast({ title: 'ABHA account linked', description: res.message });
+      onLinked?.(profile);
       onDone();
       handleOpenChange(false);
     } catch (e: any) {
