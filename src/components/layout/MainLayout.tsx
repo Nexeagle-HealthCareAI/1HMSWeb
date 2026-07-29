@@ -250,6 +250,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'patients', name: t('header.patients') || 'Patients', icon: Users, path: '/patients' },
     { id: 'ipd-workspace', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
+    { id: 'abdm', name: 'ABHA / ABDM', icon: FileBadge2, path: '/abdm' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
@@ -277,6 +278,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
     if (item.id === 'billing') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
+    }
+    if (item.id === 'abdm') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist');
     }
     if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');

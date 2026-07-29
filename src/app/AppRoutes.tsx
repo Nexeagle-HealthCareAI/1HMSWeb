@@ -76,6 +76,7 @@ const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage')
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
 const ChainManagement = lazy(() => import('@/features/hospital/components/ChainManagement').then(module => ({ default: module.ChainManagement })));
+const AbdmDashboard = lazy(() => import('@/features/abdm/components/AbdmDashboard').then(module => ({ default: module.AbdmDashboard })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
@@ -369,6 +370,16 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <ChainManagement />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/abdm"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist']}>
+                  <MainLayout>
+                    <AbdmDashboard />
                   </MainLayout>
                 </RouteGuard>
               }
