@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Link2, Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmProfileResponse } from '../services/abdmApi';
 
 type Step = 'login' | 'otp' | 'confirm';
 type LoginHint = 'mobile' | 'aadhaar' | 'abha-number';
 
+const STEP_LABELS: Record<Step, string> = {
+  login: 'Identify the ABHA holder',
+  otp: 'Verify OTP',
+  confirm: 'Confirm & save',
+};
+
 interface Props {
   hospitalId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onDone: () => void;
-  onCancel: () => void;
 }
 
-export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, onCancel }) => {
+export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('login');
   const [busy, setBusy] = useState(false);
@@ -27,6 +34,21 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, on
   const [otp, setOtp] = useState('');
   const [txnId, setTxnId] = useState('');
   const [profile, setProfile] = useState<AbdmProfileResponse | null>(null);
+
+  const reset = () => {
+    setStep('login');
+    setBusy(false);
+    setLoginHint('mobile');
+    setLoginId('');
+    setOtp('');
+    setTxnId('');
+    setProfile(null);
+  };
+
+  const handleOpenChange = (v: boolean) => {
+    if (!v) reset();
+    onOpenChange(v);
+  };
 
   const fail = (message?: string) => toast({ title: 'Something went wrong', description: message || 'Please try again.', variant: 'destructive' });
 
@@ -72,6 +94,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, on
       if (!res.success) { fail(res.message); return; }
       toast({ title: 'ABHA account linked', description: res.message });
       onDone();
+      handleOpenChange(false);
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
     } finally {
@@ -79,15 +102,30 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, on
     }
   };
 
+  const steps: Step[] = ['login', 'otp', 'confirm'];
+  const stepIndex = steps.indexOf(step);
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel} className="p-2 h-auto"><ArrowLeft className="h-4 w-4" /></Button>
-          <CardTitle className="text-base">Link existing ABHA</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 max-w-md">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0 overflow-hidden">
+        <SheetHeader className="px-5 sm:px-6 pt-5 pb-4 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900/30 flex items-center justify-center shadow-inner">
+              <Link2 className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+            </div>
+            <div>
+              <SheetTitle className="text-base font-extrabold">Link existing ABHA</SheetTitle>
+              <SheetDescription className="text-xs">{STEP_LABELS[step]}</SheetDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 pt-1">
+            {steps.map((s, i) => (
+              <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-primary' : 'bg-muted'}`} />
+            ))}
+          </div>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
         {step === 'login' && (
           <>
             <div className="space-y-2">
@@ -143,7 +181,8 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, on
             </Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };

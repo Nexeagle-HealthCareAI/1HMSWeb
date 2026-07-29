@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
 
@@ -21,11 +21,12 @@ const STEP_LABELS: Record<Step, string> = {
 
 interface Props {
   hospitalId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onDone: () => void;
-  onCancel: () => void;
 }
 
-export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, onCancel }) => {
+export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('aadhaar');
   const [busy, setBusy] = useState(false);
@@ -40,6 +41,26 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, onCancel
   const [chosenAddress, setChosenAddress] = useState('');
   const [customAddress, setCustomAddress] = useState('');
   const [finalResult, setFinalResult] = useState<AbdmEnrollResponse | null>(null);
+
+  const reset = () => {
+    setStep('aadhaar');
+    setBusy(false);
+    setAadhaar('');
+    setAadhaarOtp('');
+    setMobile('');
+    setMobileOtp('');
+    setTxnId('');
+    setEnrollResult(null);
+    setSuggestions([]);
+    setChosenAddress('');
+    setCustomAddress('');
+    setFinalResult(null);
+  };
+
+  const handleOpenChange = (v: boolean) => {
+    if (!v) reset();
+    onOpenChange(v);
+  };
 
   const fail = (message?: string) => toast({ title: 'Something went wrong', description: message || 'Please try again.', variant: 'destructive' });
 
@@ -147,20 +168,32 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, onCancel
   const steps: Step[] = ['aadhaar', 'aadhaar-otp', 'mobile', 'mobile-otp', 'address', 'success'];
   const stepIndex = steps.indexOf(step);
 
+  const finishAndClose = () => {
+    onDone();
+    handleOpenChange(false);
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel} className="p-2 h-auto"><ArrowLeft className="h-4 w-4" /></Button>
-          <CardTitle className="text-base">Create ABHA — {STEP_LABELS[step]}</CardTitle>
-        </div>
-        <div className="flex items-center gap-1 pl-10">
-          {steps.map((s, i) => (
-            <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-primary' : 'bg-muted'}`} />
-          ))}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 max-w-md">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0 overflow-hidden">
+        <SheetHeader className="px-5 sm:px-6 pt-5 pb-4 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900/30 flex items-center justify-center shadow-inner">
+              <FileBadge2 className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+            </div>
+            <div>
+              <SheetTitle className="text-base font-extrabold">Create ABHA</SheetTitle>
+              <SheetDescription className="text-xs">{STEP_LABELS[step]}</SheetDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 pt-1">
+            {steps.map((s, i) => (
+              <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-primary' : 'bg-muted'}`} />
+            ))}
+          </div>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
         {step === 'aadhaar' && (
           <>
             <div className="space-y-2">
@@ -245,10 +278,11 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, onDone, onCancel
             <p className="text-sm text-muted-foreground">{finalResult.fullName}</p>
             <p className="text-sm">ABHA number: <span className="font-mono">{finalResult.abhaNumber}</span></p>
             {finalResult.abhaAddress && <p className="text-sm">ABHA address: <span className="font-mono">{finalResult.abhaAddress}</span></p>}
-            <Button onClick={onDone} className="w-full">Done</Button>
+            <Button onClick={finishAndClose} className="w-full">Done</Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };

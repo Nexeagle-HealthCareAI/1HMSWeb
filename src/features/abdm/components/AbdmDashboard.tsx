@@ -9,12 +9,11 @@ import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
 import { CreateAbhaWizard } from './CreateAbhaWizard';
 import { LinkExistingAbhaWizard } from './LinkExistingAbhaWizard';
 
-type Mode = 'list' | 'create' | 'link';
-
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
   const hospitalId = useAuthStore(s => s.hospitalId) || '';
-  const [mode, setMode] = useState<Mode>('list');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
   const [accounts, setAccounts] = useState<AbhaAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,25 +33,8 @@ export const AbdmDashboard: React.FC = () => {
   useEffect(() => { void load(); }, [hospitalId]);
 
   const onWizardDone = () => {
-    setMode('list');
     void load();
   };
-
-  if (mode === 'create') {
-    return (
-      <div className="p-6">
-        <CreateAbhaWizard hospitalId={hospitalId} onDone={onWizardDone} onCancel={() => setMode('list')} />
-      </div>
-    );
-  }
-
-  if (mode === 'link') {
-    return (
-      <div className="p-6">
-        <LinkExistingAbhaWizard hospitalId={hospitalId} onDone={onWizardDone} onCancel={() => setMode('list')} />
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-4">
@@ -62,14 +44,17 @@ export const AbdmDashboard: React.FC = () => {
           <h1 className="text-xl font-semibold">ABHA / ABDM</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setMode('link')}>
+          <Button variant="outline" onClick={() => setLinkOpen(true)}>
             <Link2 className="h-4 w-4 mr-2" /> Link existing ABHA
           </Button>
-          <Button onClick={() => setMode('create')}>
+          <Button onClick={() => setCreateOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" /> Create new ABHA
           </Button>
         </div>
       </div>
+
+      <CreateAbhaWizard hospitalId={hospitalId} open={createOpen} onOpenChange={setCreateOpen} onDone={onWizardDone} />
+      <LinkExistingAbhaWizard hospitalId={hospitalId} open={linkOpen} onOpenChange={setLinkOpen} onDone={onWizardDone} />
 
       <Card>
         <CardHeader>
