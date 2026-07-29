@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Search, CalendarX, ChevronRight as ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, CalendarX, ChevronRight as ArrowRight, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,9 +16,15 @@ interface AvailabilityRosterPageProps {
   onSelectDoctor: (doctorId: string, doctorName?: string) => void;
 }
 
+const initialsFrom = (name?: string | null) => {
+  const parts = (name || '').replace(/^Dr\.?\s*/i, '').trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
+};
+
 // The staff landing screen: "who's available today" at a glance across every doctor at the
 // hospital, before drilling into any one doctor's calendar. Answers the question staff actually
-// have first, rather than making them pick a doctor blind.
+// have first, rather than making them pick a doctor blind. Unavailable doctors sort first —
+// that's the signal staff are scanning for.
 export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ hospitalId, onSelectDoctor }) => {
   const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -30,17 +36,23 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
 
   const isToday = format(new Date(), 'yyyy-MM-dd') === dateIso;
 
+  const sortedDoctors = useMemo(
+    () => [...doctors].sort((a, b) => Number(a.isAvailable) - Number(b.isAvailable) || (a.fullName || '').localeCompare(b.fullName || '')),
+    [doctors]
+  );
+
   const filteredDoctors = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return doctors;
-    return doctors.filter(
+    if (!term) return sortedDoctors;
+    return sortedDoctors.filter(
       (d) =>
         d.fullName?.toLowerCase().includes(term) ||
         d.departmentName?.toLowerCase().includes(term)
     );
-  }, [doctors, search]);
+  }, [sortedDoctors, search]);
 
   const availableCount = doctors.filter((d) => d.isAvailable).length;
+  const unavailableCount = doctors.length - availableCount;
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,13 +106,28 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
         </div>
       </div>
 
+      {/* Stat tiles */}
       {!isLoading && doctors.length > 0 && (
-        <p className="text-xs text-gray-500 px-1">
-          {t('doctorCalendar.roster.summary', '{{available}} of {{total}} doctors available', {
-            available: availableCount,
-            total: doctors.length,
-          })}
-        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-[#e6f4ea] flex items-center justify-center shrink-0">
+              <UserCheck className="h-4 w-4 text-[#188038]" />
+            </span>
+            <div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white leading-none">{availableCount}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t('doctorCalendar.roster.availableLabel', 'Available')}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-[#fce8e6] flex items-center justify-center shrink-0">
+              <UserX className="h-4 w-4 text-[#d93025]" />
+            </span>
+            <div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white leading-none">{unavailableCount}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t('doctorCalendar.roster.unavailableLabel', 'Unavailable')}</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Roster list */}
@@ -121,9 +148,15 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer group"
                 onClick={() => onSelectDoctor(doctor.doctorId, doctor.fullName || undefined)}
               >
-                <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${doctor.isAvailable ? 'bg-[#188038]' : 'bg-[#d93025]'}`}
-                />
+                <span className="relative shrink-0">
+                  <span className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    {initialsFrom(doctor.fullName)}
+                  </span>
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 ${doctor.isAvailable ? 'bg-[#188038]' : 'bg-[#d93025]'}`}
+                  />
+                </span>
+
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {doctor.fullName || t('doctorCalendar.doctorFallback')}
@@ -135,7 +168,7 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
                 </div>
 
                 <span
-                  className={`text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                  className={`hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
                     doctor.isAvailable
                       ? 'bg-[#e6f4ea] text-[#188038]'
                       : 'bg-[#fce8e6] text-[#a50e0e]'
@@ -150,14 +183,14 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-7 text-xs shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       setMarkUnavailableTarget(doctor);
                     }}
                   >
-                    <CalendarX className="h-3 w-3 mr-1" />
-                    {t('doctorCalendar.roster.markUnavailable', 'Mark unavailable')}
+                    <CalendarX className="h-3 w-3 sm:mr-1" />
+                    <span className="hidden sm:inline">{t('doctorCalendar.roster.markUnavailable', 'Mark unavailable')}</span>
                   </Button>
                 )}
 

@@ -6,18 +6,17 @@ const trimStart = (s: string) => s.replace(/^\/+/, '');
 const join = (base: string, path: string) => `${trimEnd(base)}/${trimStart(path)}`;
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL
-  || 'http://151.185.45.77:5001';
+  || 'https://1hms-dev-api.nexeagle.com';
 
 export const API_BASE_URL = ensureProtocol(rawApiUrl);
 
 // Use this (not API_BASE_URL) anywhere the browser itself makes a request — axiosClient,
-// ipdApiClient, the offline connectivity health-check, etc. The dev server serves the page
-// over HTTPS (basicSsl plugin, needed elsewhere for camera/geolocation) while API_BASE_URL
-// in dev is plain HTTP, so a direct browser request to it gets mixed-content blocked.
-// /dev-api (vite.config.ts) proxies same-origin HTTPS requests server-side to the real
-// host, sidestepping that entirely. Production already serves the API over HTTPS, so it
-// uses API_BASE_URL directly, unchanged. Keep API_BASE_URL itself as the real absolute host
-// for anything that needs a genuinely absolute URL — e.g. an externally-shared link.
+// ipdApiClient, the offline connectivity health-check, etc. /dev-api (vite.config.ts) proxies
+// same-origin requests server-side to the real dev API host, avoiding cross-origin/cert issues
+// between the dev server (basicSsl, self-signed) and the real API host. Production serves the
+// API over HTTPS with a trusted cert, so it uses API_BASE_URL directly, unchanged. Keep
+// API_BASE_URL itself as the real absolute host for anything that needs a genuinely absolute
+// URL — e.g. an externally-shared link.
 export const API_REQUEST_BASE_URL = import.meta.env.DEV ? '/dev-api' : API_BASE_URL;
 
 // API Endpoints

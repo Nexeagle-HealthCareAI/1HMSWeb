@@ -22,7 +22,7 @@
 #   DEV_SSH_HOST 151.185.45.77 | DEV_SSH_USER root | DEV_SSH_PASSWORD
 #   PROD_SSH_HOST 151.185.45.67 | PROD_SSH_USER root | PROD_SSH_KEY_B64
 # OPTIONAL repo VARIABLES (Settings → Variables) to override the API URL the SPA calls:
-#   DEV_API_BASE_URL   default http://151.185.45.77:5001
+#   DEV_API_BASE_URL   default https://1hms-dev-api.nexeagle.com
 #   PROD_API_BASE_URL  default http://151.185.45.67:5001
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -87,7 +87,7 @@ jobs:
           context: .
           push: true
           build-args: |
-            VITE_API_BASE_URL=${{ vars.DEV_API_BASE_URL || 'http://151.185.45.77:5001' }}
+            VITE_API_BASE_URL=${{ vars.DEV_API_BASE_URL || 'https://1hms-dev-api.nexeagle.com' }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
             ${{ steps.vars.outputs.image }}:develop
