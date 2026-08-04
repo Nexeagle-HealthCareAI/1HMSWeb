@@ -182,9 +182,10 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
     try {
       const res = await abdmApi.updateEmail(hospitalId, account.abhaNumber, sessionTxnId, clean);
       if (!res.success) { fail(res.message); return; }
-      setCurrentEmail(res.email || clean);
-      toast({ title: 'Email updated', description: res.message });
-      onUpdated();
+      // Unlike mobile, ABDM doesn't update the email synchronously — it only sends a verification
+      // link to the new address, and the change takes effect once the patient clicks it (outside
+      // this app entirely). Don't optimistically show the new email as already active.
+      toast({ title: 'Verification link sent', description: res.message });
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
     } finally {
