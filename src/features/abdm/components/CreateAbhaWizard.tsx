@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
 import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
@@ -138,8 +139,12 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     }
   };
 
-  const verifyAadhaarOtp = async () => {
-    const cleanOtp = aadhaarOtp.replace(/\D/g, '');
+  const verifyAadhaarOtp = async (otpOverride?: string) => {
+    // input-otp's onComplete fires within the same update as its onChange, before this
+    // component's own aadhaarOtp state has re-rendered — reading the completed value from the
+    // callback argument (rather than the still-stale aadhaarOtp closure) avoids a spurious
+    // "Enter the 6-digit OTP" toast on auto-verify.
+    const cleanOtp = (otpOverride ?? aadhaarOtp).replace(/\D/g, '');
     const cleanMobile = mobile.replace(/\D/g, '');
     if (cleanOtp.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
     if (cleanMobile.length !== 10) { toast({ title: 'Enter a valid 10-digit mobile number', variant: 'destructive' }); return; }
@@ -200,8 +205,8 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     }
   };
 
-  const verifyMobileOtp = async () => {
-    const clean = mobileOtp.replace(/\D/g, '');
+  const verifyMobileOtp = async (otpOverride?: string) => {
+    const clean = (otpOverride ?? mobileOtp).replace(/\D/g, '');
     if (clean.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
     setBusy(true);
     try {
@@ -296,7 +301,19 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
           <>
             <div className="space-y-2">
               <Label>Aadhaar number</Label>
-              <Input value={aadhaar} onChange={e => setAadhaar(e.target.value)} maxLength={12} inputMode="numeric" placeholder="12-digit Aadhaar number" />
+              <InputOTP maxLength={12} value={aadhaar} onChange={setAadhaar} containerClassName="justify-center flex-wrap gap-y-2">
+                <InputOTPGroup>
+                  {[0, 1, 2, 3].map(i => <InputOTPSlot key={i} index={i} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  {[4, 5, 6, 7].map(i => <InputOTPSlot key={i} index={i} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  {[8, 9, 10, 11].map(i => <InputOTPSlot key={i} index={i} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
+                </InputOTPGroup>
+              </InputOTP>
             </div>
             <Button onClick={sendAadhaarOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Send OTP
@@ -307,15 +324,25 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         {step === 'aadhaar-otp' && (
           <>
             <div className="space-y-2">
-              <Label>Enter the OTP sent to the Aadhaar-linked mobile</Label>
-              <Input value={aadhaarOtp} onChange={e => setAadhaarOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
-            </div>
-            <div className="space-y-2">
               <Label>Primary mobile number for this ABHA account</Label>
               <Input value={mobile} onChange={e => setMobile(e.target.value)} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
               <p className="text-xs text-muted-foreground">Can be the same as the Aadhaar-linked mobile, or a different one — ABDM verifies it either way.</p>
             </div>
-            <Button onClick={verifyAadhaarOtp} disabled={busy} className="w-full">
+            <div className="space-y-2">
+              <Label>Enter the OTP sent to the Aadhaar-linked mobile</Label>
+              <InputOTP
+                maxLength={6}
+                value={aadhaarOtp}
+                onChange={setAadhaarOtp}
+                containerClassName="justify-center"
+                onComplete={value => { if (mobile.replace(/\D/g, '').length === 10) verifyAadhaarOtp(value); }}
+              >
+                <InputOTPGroup>
+                  {[0, 1, 2, 3, 4, 5].map(i => <InputOTPSlot key={i} index={i} />)}
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <Button onClick={() => verifyAadhaarOtp()} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
             {aadhaarResends < MAX_RESENDS && (
@@ -335,9 +362,13 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
           <>
             <div className="space-y-2">
               <Label>Enter the OTP sent to {mobile}</Label>
-              <Input value={mobileOtp} onChange={e => setMobileOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
+              <InputOTP maxLength={6} value={mobileOtp} onChange={setMobileOtp} containerClassName="justify-center" onComplete={value => verifyMobileOtp(value)}>
+                <InputOTPGroup>
+                  {[0, 1, 2, 3, 4, 5].map(i => <InputOTPSlot key={i} index={i} />)}
+                </InputOTPGroup>
+              </InputOTP>
             </div>
-            <Button onClick={verifyMobileOtp} disabled={busy} className="w-full">
+            <Button onClick={() => verifyMobileOtp()} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
             {mobileResends < MAX_RESENDS && (
