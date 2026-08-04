@@ -9,13 +9,12 @@ import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
 
-type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile' | 'mobile-otp' | 'address' | 'success';
+type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile-otp' | 'address' | 'success';
 
 const STEP_LABELS: Record<Step, string> = {
   consent: 'Consent',
   aadhaar: 'Aadhaar number',
   'aadhaar-otp': 'Verify Aadhaar OTP',
-  mobile: 'Mobile number',
   'mobile-otp': 'Verify mobile OTP',
   address: 'Choose ABHA address',
   success: 'Done',
@@ -140,19 +139,24 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   };
 
   const verifyAadhaarOtp = async () => {
-    const clean = aadhaarOtp.replace(/\D/g, '');
-    if (clean.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
+    const cleanOtp = aadhaarOtp.replace(/\D/g, '');
+    const cleanMobile = mobile.replace(/\D/g, '');
+    if (cleanOtp.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
+    if (cleanMobile.length !== 10) { toast({ title: 'Enter a valid 10-digit mobile number', variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      const res = await abdmApi.verifyAadhaarOtp(hospitalId, txnId, clean);
+      const res = await abdmApi.verifyAadhaarOtp(hospitalId, txnId, cleanOtp, cleanMobile);
       if (!res.success) { fail(res.message); return; }
       setEnrollResult(res);
-      setTxnId(res.txnId || txnId);
-      setMobile(res.mobile || '');
+      const nextTxnId = res.txnId || txnId;
+      setTxnId(nextTxnId);
       if (res.mobileVerified) {
-        await loadSuggestions(res.txnId || txnId);
+        await loadSuggestions(nextTxnId);
       } else {
-        setStep('mobile');
+        // The mobile just submitted didn't match the Aadhaar-linked one, so ABDM still needs it
+        // OTP-verified separately — the number is already known, so go straight to sending that
+        // OTP instead of asking for it again.
+        await sendMobileOtp(nextTxnId, cleanMobile);
       }
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
@@ -161,25 +165,20 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     }
   };
 
-  const sendMobileOtp = async () => {
-    const clean = mobile.replace(/\D/g, '');
-    if (clean.length !== 10) { toast({ title: 'Enter a valid 10-digit mobile number', variant: 'destructive' }); return; }
-    setBusy(true);
+  const sendMobileOtp = async (tx: string, cleanMobile: string) => {
     try {
-      const res = await abdmApi.generateMobileOtp(hospitalId, txnId, clean);
+      const res = await abdmApi.generateMobileOtp(hospitalId, tx, cleanMobile);
       if (!res.success) { fail(res.message); return; }
       // ABDM issues a fresh txnId for this OTP transaction, distinct from the Aadhaar-enrollment
       // one — must carry it forward or the next verify call will reference a stale transaction
       // (same pattern as verifyAadhaarOtp/verifyMobileOtp below).
-      setTxnId(res.txnId || txnId);
+      setTxnId(res.txnId || tx);
       setMobileResends(0);
       startCooldown(setMobileCooldown);
       toast({ title: 'OTP sent', description: res.message || 'Check the mobile number.' });
       setStep('mobile-otp');
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -247,7 +246,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     }
   };
 
-  const steps: Step[] = ['consent', 'aadhaar', 'aadhaar-otp', 'mobile', 'mobile-otp', 'address', 'success'];
+  const steps: Step[] = ['consent', 'aadhaar', 'aadhaar-otp', 'mobile-otp', 'address', 'success'];
   const stepIndex = steps.indexOf(step);
 
   const finishAndClose = () => {
@@ -311,6 +310,11 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
               <Label>Enter the OTP sent to the Aadhaar-linked mobile</Label>
               <Input value={aadhaarOtp} onChange={e => setAadhaarOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
             </div>
+            <div className="space-y-2">
+              <Label>Primary mobile number for this ABHA account</Label>
+              <Input value={mobile} onChange={e => setMobile(e.target.value)} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
+              <p className="text-xs text-muted-foreground">Can be the same as the Aadhaar-linked mobile, or a different one — ABDM verifies it either way.</p>
+            </div>
             <Button onClick={verifyAadhaarOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
@@ -324,21 +328,6 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
                 {aadhaarCooldown > 0 ? `Resend OTP in ${aadhaarCooldown}s` : `Resend OTP (${MAX_RESENDS - aadhaarResends} left)`}
               </button>
             )}
-          </>
-        )}
-
-        {step === 'mobile' && (
-          <>
-            {enrollResult?.fullName && (
-              <p className="text-sm text-muted-foreground">Aadhaar KYC found: <span className="font-medium text-foreground">{enrollResult.fullName}</span></p>
-            )}
-            <div className="space-y-2">
-              <Label>Mobile number for this ABHA account</Label>
-              <Input value={mobile} onChange={e => setMobile(e.target.value)} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
-            </div>
-            <Button onClick={sendMobileOtp} disabled={busy} className="w-full">
-              {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Send OTP
-            </Button>
           </>
         )}
 

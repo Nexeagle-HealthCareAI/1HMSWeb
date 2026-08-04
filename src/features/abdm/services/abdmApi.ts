@@ -105,8 +105,9 @@ export const abdmApi = {
   generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string) =>
     apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber }),
 
-  verifyAadhaarOtp: (hospitalId: string, txnId: string, otp: string) =>
-    apiClient.post<AbdmEnrollResponse>('/abdm/aadhaar/verify-otp', { hospitalId, txnId, otp }),
+  // mobile is mandatory on ABDM's side even when it matches the Aadhaar-linked number.
+  verifyAadhaarOtp: (hospitalId: string, txnId: string, otp: string, mobile: string) =>
+    apiClient.post<AbdmEnrollResponse>('/abdm/aadhaar/verify-otp', { hospitalId, txnId, otp, mobile }),
 
   generateMobileOtp: (hospitalId: string, txnId: string, mobile: string) =>
     apiClient.post<AbdmOtpTxnResponse>('/abdm/mobile/generate-otp', { hospitalId, txnId, mobile }),
