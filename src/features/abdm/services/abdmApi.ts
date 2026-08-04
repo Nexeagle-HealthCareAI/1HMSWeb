@@ -101,6 +101,10 @@ export const abdmApi = {
   getAccounts: (hospitalId: string) =>
     apiClient.get<GetAbhaAccountsResponse>(`/abdm/accounts?hospitalId=${encodeURIComponent(hospitalId)}`),
 
+  // Removes the local hospital record only — does not deactivate/delete the ABHA number itself.
+  removeAccount: (hospitalId: string, abhaAccountId: string) =>
+    apiClient.delete<{ success: boolean; message?: string }>(`/abdm/accounts/${encodeURIComponent(abhaAccountId)}?hospitalId=${encodeURIComponent(hospitalId)}`),
+
   // Create ABHA — Aadhaar OTP
   generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string) =>
     apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber }),

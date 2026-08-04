@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle, RotateCcw } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
@@ -20,6 +24,8 @@ export const AbdmDashboard: React.FC = () => {
   const [guideOpen, setGuideOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<AbhaAccountSummary | null>(null);
+  const [removeAccount, setRemoveAccount] = useState<AbhaAccountSummary | null>(null);
+  const [removing, setRemoving] = useState(false);
   const [accounts, setAccounts] = useState<AbhaAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,6 +43,22 @@ export const AbdmDashboard: React.FC = () => {
   };
 
   useEffect(() => { void load(); }, [hospitalId]);
+
+  const confirmRemove = async () => {
+    if (!removeAccount) return;
+    setRemoving(true);
+    try {
+      const res = await abdmApi.removeAccount(hospitalId, removeAccount.abhaAccountId);
+      if (!res.success) { toast({ title: 'Could not remove', description: res.message, variant: 'destructive' }); return; }
+      toast({ title: 'Removed from hospital records' });
+      setRemoveAccount(null);
+      void load();
+    } catch (e: any) {
+      toast({ title: 'Could not remove', description: e?.response?.data?.Message || e?.message, variant: 'destructive' });
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const onWizardDone = () => {
     void load();
@@ -116,6 +138,24 @@ export const AbdmDashboard: React.FC = () => {
       <ReactivateAbhaDialog hospitalId={hospitalId} open={reactivateOpen} onOpenChange={setReactivateOpen} onReactivated={onWizardDone} />
       <AbdmGuidePanel open={guideOpen} onOpenChange={setGuideOpen} />
 
+      <AlertDialog open={!!removeAccount} onOpenChange={(v) => { if (!v) setRemoveAccount(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this ABHA account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This only removes <span className="font-mono">{removeAccount?.abhaNumber}</span> from this hospital's local records.
+              It does not deactivate or delete the ABHA number itself on ABDM — the patient's actual ABHA account is unaffected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} disabled={removing} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+              {removing && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />} Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Accounts Table */}
       <Card className="border-border/50 shadow-sm overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 bg-muted/20">
@@ -193,14 +233,24 @@ export const AbdmDashboard: React.FC = () => {
                         })}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 border border-transparent group-hover:border-border/50"
-                          onClick={() => setEditAccount(a)}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => setEditAccount(a)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-900/40 dark:text-red-400"
+                            onClick={() => setRemoveAccount(a)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Remove
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
