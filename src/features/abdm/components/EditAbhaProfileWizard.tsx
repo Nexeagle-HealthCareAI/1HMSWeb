@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { UserCog, Loader2, CheckCircle2, Pencil } from 'lucide-react';
+import { UserCog, Loader2, CheckCircle2, Pencil, RefreshCw, QrCode, Download, PowerOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
 
@@ -40,6 +41,21 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
 
   const [emailDraft, setEmailDraft] = useState('');
 
+  const [profilePhoto, setProfilePhoto] = useState('');
+  const [qrBusy, setQrBusy] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
+  const [qrOpen, setQrOpen] = useState(false);
+
+  type DeactivateStep = 'idle' | 'reason' | 'otp';
+  const [deactivateStep, setDeactivateStep] = useState<DeactivateStep>('idle');
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [deactivateOtp, setDeactivateOtp] = useState('');
+  const [deactivateTxnId, setDeactivateTxnId] = useState('');
+  // Same OTP system the holder just re-verified identity with — reused so deactivation doesn't
+  // need to ask them to pick Aadhaar vs. mobile a second time.
+  const [verifiedOtpSystem, setVerifiedOtpSystem] = useState<'abdm' | 'aadhaar'>('abdm');
+
   useEffect(() => {
     if (open && account) {
       setStep('verify');
@@ -55,8 +71,21 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setMobileOtp('');
       setUpdateTxnId('');
       setEmailDraft(account.email || '');
+      setProfilePhoto('');
+      setQrUrl('');
+      setQrOpen(false);
+      setDeactivateStep('idle');
+      setDeactivateReason('');
+      setDeactivateOtp('');
+      setDeactivateTxnId('');
     }
   }, [open, account]);
+
+  // The QR object URL is only valid while this wizard instance is mounted — revoke it on unmount
+  // or when a fresh one replaces it, otherwise it leaks for the tab's lifetime.
+  useEffect(() => {
+    return () => { if (qrUrl) URL.revokeObjectURL(qrUrl); };
+  }, [qrUrl]);
 
   const fail = (message?: string) => toast({ title: 'Something went wrong', description: message || 'Please try again.', variant: 'destructive' });
 
@@ -71,6 +100,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       const res = await abdmApi.requestLoginOtp(hospitalId, clean, loginHint, otpSystem);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setSessionTxnId(res.txnId);
+      setVerifiedOtpSystem(otpSystem);
       toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to continue.' });
       setStep('otp');
     } catch (e: any) {
@@ -87,6 +117,17 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
     try {
       const res = await abdmApi.verifyLoginOtp(hospitalId, sessionTxnId, clean);
       if (!res.success) { fail(res.message); return; }
+      // The OTP was verified for whatever mobile/Aadhaar/ABHA-number was typed in the previous
+      // step — that may not be the account this wizard was opened for (wrong patient, typo, etc).
+      // Editing would otherwise apply the real ABDM-side change to whoever WAS verified while
+      // updating the wrong local AbhaAccount row, so refuse to proceed on a mismatch.
+      const normalize = (s?: string) => (s || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (res.abhaNumber && normalize(res.abhaNumber) !== normalize(account.abhaNumber)) {
+        fail(`The verified identity (ABHA ${res.abhaNumber}) doesn't match this account (${account.abhaNumber}). Re-verify using this account's own mobile, Aadhaar, or ABHA number.`);
+        setOtp('');
+        setStep('verify');
+        return;
+      }
       setSessionTxnId(res.txnId || sessionTxnId);
       setCurrentMobile(res.mobile || currentMobile);
       setStep('edit');
@@ -102,7 +143,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
     if (clean.length !== 10) { toast({ title: 'Enter a valid 10-digit mobile number', variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      const res = await abdmApi.requestUpdateMobileOtp(sessionTxnId, clean);
+      const res = await abdmApi.requestUpdateMobileOtp(hospitalId, sessionTxnId, clean);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setUpdateTxnId(res.txnId);
       toast({ title: 'OTP sent', description: res.message || 'Check the new mobile number.' });
@@ -125,7 +166,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setMobileEdit('idle');
       setNewMobile('');
       setMobileOtp('');
-      toast({ title: 'Mobile number updated' });
+      toast({ title: 'Mobile number updated', description: res.message });
       onUpdated();
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
@@ -142,8 +183,82 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       const res = await abdmApi.updateEmail(hospitalId, account.abhaNumber, sessionTxnId, clean);
       if (!res.success) { fail(res.message); return; }
       setCurrentEmail(res.email || clean);
-      toast({ title: 'Email updated' });
+      toast({ title: 'Email updated', description: res.message });
       onUpdated();
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refreshFromAbdm = async () => {
+    setBusy(true);
+    try {
+      const res = await abdmApi.getProfile(hospitalId, sessionTxnId);
+      if (!res.success) { fail(res.message); return; }
+      setCurrentMobile(res.mobile || currentMobile);
+      setCurrentEmail(res.email || currentEmail);
+      setProfilePhoto(res.profilePhoto || '');
+      toast({ title: 'Profile refreshed from ABDM' });
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const showQrCode = async () => {
+    setQrBusy(true);
+    try {
+      if (qrUrl) URL.revokeObjectURL(qrUrl);
+      const url = await abdmApi.getQrCodeBlobUrl(hospitalId, sessionTxnId);
+      setQrUrl(url);
+      setQrOpen(true);
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message || 'Could not fetch the QR code.');
+    } finally {
+      setQrBusy(false);
+    }
+  };
+
+  const downloadCard = async () => {
+    setCardBusy(true);
+    try {
+      await abdmApi.downloadAbhaCard(hospitalId, sessionTxnId, account.abhaNumber);
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message || 'Could not download the ABHA card.');
+    } finally {
+      setCardBusy(false);
+    }
+  };
+
+  const requestDeactivate = async () => {
+    if (!deactivateReason.trim()) { toast({ title: 'Enter a reason for deactivation', variant: 'destructive' }); return; }
+    setBusy(true);
+    try {
+      const res = await abdmApi.requestDeactivateOtp(hospitalId, sessionTxnId, account.abhaNumber, verifiedOtpSystem);
+      if (!res.success || !res.txnId) { fail(res.message); return; }
+      setDeactivateTxnId(res.txnId);
+      toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to confirm deactivation.' });
+      setDeactivateStep('otp');
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyDeactivate = async () => {
+    const clean = deactivateOtp.replace(/\D/g, '');
+    if (clean.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
+    setBusy(true);
+    try {
+      const res = await abdmApi.verifyDeactivateOtp(hospitalId, sessionTxnId, deactivateTxnId, clean, deactivateReason.trim());
+      if (!res.success) { fail(res.message); return; }
+      toast({ title: 'ABHA number deactivated', description: res.message });
+      onUpdated();
+      onOpenChange(false);
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
     } finally {
@@ -255,6 +370,61 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
                 </Button>
               </div>
 
+              {/* ABDM-side artifacts (§9/§10/§11) — same live session as the edits above */}
+              <div className="rounded-xl border p-3.5 space-y-3">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">ABDM profile</Label>
+                {profilePhoto && (
+                  <img
+                    src={`data:image/jpeg;base64,${profilePhoto}`}
+                    alt="ABHA profile"
+                    className="h-16 w-16 rounded-lg object-cover border"
+                  />
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={refreshFromAbdm} disabled={busy}>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={showQrCode} disabled={qrBusy}>
+                    {qrBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5 mr-1.5" />} QR
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={downloadCard} disabled={cardBusy}>
+                    {cardBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />} Card
+                  </Button>
+                </div>
+              </div>
+
+              {/* §8.4 Deactivate ABHA — danger zone */}
+              <div className="rounded-xl border border-red-200 dark:border-red-900/40 p-3.5 space-y-2.5">
+                <Label className="text-xs uppercase tracking-wide text-red-600 dark:text-red-400">Deactivate this ABHA number</Label>
+                {deactivateStep === 'idle' && (
+                  <Button type="button" variant="outline" size="sm" className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400" onClick={() => setDeactivateStep('reason')}>
+                    <PowerOff className="h-3.5 w-3.5 mr-1.5" /> Deactivate
+                  </Button>
+                )}
+                {deactivateStep === 'reason' && (
+                  <div className="space-y-2">
+                    <Input value={deactivateReason} onChange={e => setDeactivateReason(e.target.value)} placeholder="Reason for deactivation" />
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setDeactivateStep('idle')}>Cancel</Button>
+                      <Button type="button" variant="destructive" size="sm" className="flex-1" onClick={requestDeactivate} disabled={busy}>
+                        {busy && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />} Send OTP
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {deactivateStep === 'otp' && (
+                  <div className="space-y-2">
+                    <Input value={deactivateOtp} onChange={e => setDeactivateOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setDeactivateStep('idle'); setDeactivateOtp(''); }}>Cancel</Button>
+                      <Button type="button" variant="destructive" size="sm" className="flex-1" onClick={verifyDeactivate} disabled={busy}>
+                        {busy && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />} Confirm deactivation
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Identity verified for this session
               </div>
@@ -264,6 +434,15 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
           )}
         </div>
       </SheetContent>
+
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-sm">ABHA QR code</DialogTitle>
+          </DialogHeader>
+          {qrUrl && <img src={qrUrl} alt="ABHA QR code" className="w-full rounded-lg border" />}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 };

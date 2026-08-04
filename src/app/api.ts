@@ -126,6 +126,7 @@ export const API_ENDPOINTS = {
     CREATE_PRESCRIPTION: 'doctors/prescriptions',
     GET_DASHBOARD: 'doctors/dashboard',
     UPDATE_AVAILABILITY: 'doctors/availability',
+    UPDATE_ONLINE_STATUS_SELF: 'doctors/online-status/self',
     GET_AVAILABLE_SLOTS: (date: string) => `doctors/available-slots/${date}`,
     UPDATE_PRESCRIPTION_SETTINGS: () => `prescription/prescription-settings`,
     GET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings?doctorId=${id}`,
@@ -172,6 +173,7 @@ export const API_ENDPOINTS = {
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `calendar/doctor/override/${overrideId}`,
     GET_HOSPITAL_DOCTORS: (hospitalId: string) => `doctors/hospital?hospitalId=${hospitalId}`,
     GET_AVAILABILITY_ROSTER: (hospitalId: string, date: string) => `calendar/roster?hospitalId=${hospitalId}&date=${encodeURIComponent(date)}`,
+    UPDATE_ONLINE_STATUS: (hospitalId: string) => `doctors/online-status?hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   PRESCRIPTION: {
     UPLOAD_ASSET: 'prescription/assets/upload',

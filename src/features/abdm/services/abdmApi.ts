@@ -1,4 +1,4 @@
-import { apiClient } from '@/services/axiosClient';
+import { apiClient, axiosInstance } from '@/services/axiosClient';
 
 // ---- Shared shapes -------------------------------------------------------------------
 
@@ -43,6 +43,8 @@ export interface AbdmProfileResponse {
   dateOfBirth?: string;
   mobile?: string;
   email?: string;
+  // Only populated by getProfile() (§9 Get Profile) — base64 JPEG.
+  profilePhoto?: string;
 }
 
 export interface SaveAbhaAccountResponse {
@@ -77,6 +79,20 @@ export interface AbdmUpdateResponse {
   message?: string;
   mobile?: string;
   email?: string;
+}
+
+export interface AbdmFindAbhaCandidate {
+  index: number;
+  abhaNumber: string;
+  name?: string;
+  gender?: string;
+}
+
+export interface AbdmFindAbhaSearchResponse {
+  success: boolean;
+  message?: string;
+  txnId?: string;
+  candidates: AbdmFindAbhaCandidate[];
 }
 
 // ---- API -------------------------------------------------------------------------------
@@ -124,12 +140,64 @@ export const abdmApi = {
 
   // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live
   // sessionTxnId, then update mobile (OTP-gated) or email (direct) using it.
-  requestUpdateMobileOtp: (sessionTxnId: string, newMobile: string) =>
-    apiClient.post<AbdmOtpTxnResponse>('/abdm/profile/mobile/generate-otp', { sessionTxnId, newMobile }),
+  requestUpdateMobileOtp: (hospitalId: string, sessionTxnId: string, newMobile: string) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/profile/mobile/generate-otp', { hospitalId, sessionTxnId, newMobile }),
 
   verifyUpdateMobileOtp: (hospitalId: string, abhaNumber: string, sessionTxnId: string, updateTxnId: string, otp: string) =>
     apiClient.post<AbdmUpdateResponse>('/abdm/profile/mobile/verify-otp', { hospitalId, abhaNumber, sessionTxnId, updateTxnId, otp }),
 
   updateEmail: (hospitalId: string, abhaNumber: string, sessionTxnId: string, newEmail: string) =>
     apiClient.post<AbdmUpdateResponse>('/abdm/profile/email', { hospitalId, abhaNumber, sessionTxnId, newEmail }),
+
+  // Read-only ABDM-side artifacts — same live sessionTxnId as the profile-update calls above.
+  getProfile: (hospitalId: string, sessionTxnId: string) =>
+    apiClient.get<AbdmProfileResponse>(`/abdm/profile?hospitalId=${encodeURIComponent(hospitalId)}&sessionTxnId=${encodeURIComponent(sessionTxnId)}`),
+
+  // QR code / ABHA card are binary (image or PDF) — fetched as a blob rather than through the
+  // JSON-only apiClient wrapper, with the object URL left for the caller to revoke.
+  getQrCodeBlobUrl: async (hospitalId: string, sessionTxnId: string): Promise<string> => {
+    const response = await axiosInstance.get(
+      `/abdm/profile/qr-code?hospitalId=${encodeURIComponent(hospitalId)}&sessionTxnId=${encodeURIComponent(sessionTxnId)}`,
+      { responseType: 'blob' }
+    );
+    return URL.createObjectURL(response.data as Blob);
+  },
+
+  downloadAbhaCard: async (hospitalId: string, sessionTxnId: string, abhaNumber: string): Promise<void> => {
+    const response = await axiosInstance.get(
+      `/abdm/profile/abha-card?hospitalId=${encodeURIComponent(hospitalId)}&sessionTxnId=${encodeURIComponent(sessionTxnId)}`,
+      { responseType: 'blob' }
+    );
+    const blob = response.data as Blob;
+    const extension = blob.type === 'application/pdf' ? 'pdf' : blob.type.startsWith('image/') ? blob.type.split('/')[1] : 'bin';
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ABHA-Card-${abhaNumber}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
+
+  // §7.6 Find ABHA — for a holder who has a mobile/Aadhaar but doesn't remember their ABHA
+  // number/address. Step 3 (verify) reuses verifyLoginOtp above — same endpoint/response shape.
+  findAbhaSearch: (hospitalId: string, value: string, searchBy: 'mobile' | 'aadhaar') =>
+    apiClient.post<AbdmFindAbhaSearchResponse>('/abdm/find/search', { hospitalId, value, searchBy }),
+
+  findAbhaGenerateOtp: (hospitalId: string, txnId: string, index: number, searchBy: 'mobile' | 'aadhaar') =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/find/generate-otp', { hospitalId, txnId, index, searchBy }),
+
+  // §8.4/§8.5 Deactivate / Re-activate ABHA
+  requestDeactivateOtp: (hospitalId: string, sessionTxnId: string, abhaNumber: string, otpSystem: 'abdm' | 'aadhaar') =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/profile/deactivate/generate-otp', { hospitalId, sessionTxnId, abhaNumber, otpSystem }),
+
+  verifyDeactivateOtp: (hospitalId: string, sessionTxnId: string, deactivateTxnId: string, otp: string, reason: string) =>
+    apiClient.post<AbdmUpdateResponse>('/abdm/profile/deactivate/verify-otp', { hospitalId, sessionTxnId, deactivateTxnId, otp, reason }),
+
+  requestReactivateOtp: (hospitalId: string, abhaNumber: string) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/profile/reactivate/generate-otp', { hospitalId, abhaNumber }),
+
+  verifyReactivateOtp: (hospitalId: string, txnId: string, otp: string) =>
+    apiClient.post<AbdmProfileResponse>('/abdm/profile/reactivate/verify-otp', { hospitalId, txnId, otp }),
 };

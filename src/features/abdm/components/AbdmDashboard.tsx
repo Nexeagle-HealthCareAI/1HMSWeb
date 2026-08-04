@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle } from 'lucide-react';
+import { UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
@@ -10,6 +10,7 @@ import { CreateAbhaWizard } from './CreateAbhaWizard';
 import { LinkExistingAbhaWizard } from './LinkExistingAbhaWizard';
 import { EditAbhaProfileWizard } from './EditAbhaProfileWizard';
 import { AbdmGuidePanel } from './AbdmGuidePanel';
+import { ReactivateAbhaDialog } from './ReactivateAbhaDialog';
 
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
@@ -17,6 +18,7 @@ export const AbdmDashboard: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [reactivateOpen, setReactivateOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<AbhaAccountSummary | null>(null);
   const [accounts, setAccounts] = useState<AbhaAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,9 @@ export const AbdmDashboard: React.FC = () => {
           <Button variant="ghost" onClick={() => setGuideOpen(true)}>
             <HelpCircle className="h-4 w-4 mr-2" /> Guide
           </Button>
+          <Button variant="ghost" onClick={() => setReactivateOpen(true)}>
+            <RotateCcw className="h-4 w-4 mr-2" /> Reactivate ABHA
+          </Button>
           <Button variant="outline" onClick={() => setLinkOpen(true)}>
             <Link2 className="h-4 w-4 mr-2" /> Link existing ABHA
           </Button>
@@ -69,6 +74,7 @@ export const AbdmDashboard: React.FC = () => {
         onOpenChange={(v) => { if (!v) setEditAccount(null); }}
         onUpdated={onWizardDone}
       />
+      <ReactivateAbhaDialog hospitalId={hospitalId} open={reactivateOpen} onOpenChange={setReactivateOpen} onReactivated={onWizardDone} />
       <AbdmGuidePanel open={guideOpen} onOpenChange={setGuideOpen} />
 
       <Card>

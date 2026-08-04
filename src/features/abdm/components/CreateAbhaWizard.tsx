@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
 
-type Step = 'aadhaar' | 'aadhaar-otp' | 'mobile' | 'mobile-otp' | 'address' | 'success';
+type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile' | 'mobile-otp' | 'address' | 'success';
 
 const STEP_LABELS: Record<Step, string> = {
+  consent: 'Consent',
   aadhaar: 'Aadhaar number',
   'aadhaar-otp': 'Verify Aadhaar OTP',
   mobile: 'Mobile number',
@@ -18,6 +20,15 @@ const STEP_LABELS: Record<Step, string> = {
   address: 'Choose ABHA address',
   success: 'Done',
 };
+
+// NHA-published consent declaration for Aadhaar-based ABHA creation (CRT_ABHA_102, mandatory for
+// M1). Verify this against NHA's current officially published consent copy before go-live — exact
+// wording is a compliance requirement, not just UX text.
+const ABHA_CONSENT_TEXT = `I hereby declare that I am voluntarily sharing my Aadhaar number and demographic information issued by UIDAI, with the National Health Authority (NHA), for the sole purpose of creating an Ayushman Bharat Health Account (ABHA) number and ABHA Address. I understand that my Aadhaar number / Virtual ID and demographic information will be used only for this purpose and will not be used for any other purpose. This consent is given in accordance with the provisions of the Aadhaar Act, 2016 and the regulations made thereunder. I understand that my personally identifiable information (name, address, age, date of birth, gender, photograph, mobile number) may be shared with entities in the National Digital Health Ecosystem that I choose to interact with, only after my informed consent.`;
+
+// Max 2 resends, each gated by a 60s cooldown (CRT_ABHA_106, mandatory for M1).
+const RESEND_COOLDOWN_SECONDS = 60;
+const MAX_RESENDS = 2;
 
 interface Props {
   hospitalId: string;
@@ -28,8 +39,9 @@ interface Props {
 
 export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone }) => {
   const { toast } = useToast();
-  const [step, setStep] = useState<Step>('aadhaar');
+  const [step, setStep] = useState<Step>('consent');
   const [busy, setBusy] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const [aadhaar, setAadhaar] = useState('');
   const [aadhaarOtp, setAadhaarOtp] = useState('');
@@ -42,9 +54,30 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const [customAddress, setCustomAddress] = useState('');
   const [finalResult, setFinalResult] = useState<AbdmEnrollResponse | null>(null);
 
+  // Resend-OTP: max 2 resends per OTP step, each gated by a 60s cooldown (CRT_ABHA_106).
+  const [aadhaarResends, setAadhaarResends] = useState(0);
+  const [aadhaarCooldown, setAadhaarCooldown] = useState(0);
+  const [mobileResends, setMobileResends] = useState(0);
+  const [mobileCooldown, setMobileCooldown] = useState(0);
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startCooldown = (setCooldown: React.Dispatch<React.SetStateAction<number>>) => {
+    setCooldown(RESEND_COOLDOWN_SECONDS);
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    cooldownTimer.current = setInterval(() => {
+      setCooldown(c => {
+        if (c <= 1) { if (cooldownTimer.current) clearInterval(cooldownTimer.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => () => { if (cooldownTimer.current) clearInterval(cooldownTimer.current); }, []);
+
   const reset = () => {
-    setStep('aadhaar');
+    setStep('consent');
     setBusy(false);
+    setConsentChecked(false);
     setAadhaar('');
     setAadhaarOtp('');
     setMobile('');
@@ -55,6 +88,11 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setChosenAddress('');
     setCustomAddress('');
     setFinalResult(null);
+    setAadhaarResends(0);
+    setAadhaarCooldown(0);
+    setMobileResends(0);
+    setMobileCooldown(0);
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current);
   };
 
   const handleOpenChange = (v: boolean) => {
@@ -72,8 +110,28 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       const res = await abdmApi.generateAadhaarOtp(hospitalId, clean);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
+      setAadhaarResends(0);
+      startCooldown(setAadhaarCooldown);
       toast({ title: 'OTP sent', description: res.message || 'Check the Aadhaar-linked mobile number.' });
       setStep('aadhaar-otp');
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendAadhaarOtp = async () => {
+    if (aadhaarCooldown > 0 || aadhaarResends >= MAX_RESENDS) return;
+    setBusy(true);
+    try {
+      const clean = aadhaar.replace(/\D/g, '');
+      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean);
+      if (!res.success || !res.txnId) { fail(res.message); return; }
+      setTxnId(res.txnId);
+      setAadhaarResends(n => n + 1);
+      startCooldown(setAadhaarCooldown);
+      toast({ title: 'OTP resent', description: res.message });
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
     } finally {
@@ -110,8 +168,32 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     try {
       const res = await abdmApi.generateMobileOtp(hospitalId, txnId, clean);
       if (!res.success) { fail(res.message); return; }
+      // ABDM issues a fresh txnId for this OTP transaction, distinct from the Aadhaar-enrollment
+      // one — must carry it forward or the next verify call will reference a stale transaction
+      // (same pattern as verifyAadhaarOtp/verifyMobileOtp below).
+      setTxnId(res.txnId || txnId);
+      setMobileResends(0);
+      startCooldown(setMobileCooldown);
       toast({ title: 'OTP sent', description: res.message || 'Check the mobile number.' });
       setStep('mobile-otp');
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendMobileOtp = async () => {
+    if (mobileCooldown > 0 || mobileResends >= MAX_RESENDS) return;
+    setBusy(true);
+    try {
+      const clean = mobile.replace(/\D/g, '');
+      const res = await abdmApi.generateMobileOtp(hospitalId, txnId, clean);
+      if (!res.success) { fail(res.message); return; }
+      setTxnId(res.txnId || txnId);
+      setMobileResends(n => n + 1);
+      startCooldown(setMobileCooldown);
+      toast({ title: 'OTP resent', description: res.message });
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
     } finally {
@@ -165,7 +247,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     }
   };
 
-  const steps: Step[] = ['aadhaar', 'aadhaar-otp', 'mobile', 'mobile-otp', 'address', 'success'];
+  const steps: Step[] = ['consent', 'aadhaar', 'aadhaar-otp', 'mobile', 'mobile-otp', 'address', 'success'];
   const stepIndex = steps.indexOf(step);
 
   const finishAndClose = () => {
@@ -194,6 +276,23 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
+        {step === 'consent' && (
+          <>
+            <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground max-h-64 overflow-y-auto">
+              {ABHA_CONSENT_TEXT}
+            </div>
+            <div className="flex items-start gap-2">
+              <Checkbox id="abha-consent" checked={consentChecked} onCheckedChange={v => setConsentChecked(v === true)} className="mt-0.5" />
+              <label htmlFor="abha-consent" className="text-sm cursor-pointer">
+                I have read and agree to the above consent for sharing my Aadhaar details and creating an ABHA number.
+              </label>
+            </div>
+            <Button onClick={() => setStep('aadhaar')} disabled={!consentChecked} className="w-full">
+              Continue
+            </Button>
+          </>
+        )}
+
         {step === 'aadhaar' && (
           <>
             <div className="space-y-2">
@@ -215,6 +314,16 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
             <Button onClick={verifyAadhaarOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
+            {aadhaarResends < MAX_RESENDS && (
+              <button
+                type="button"
+                onClick={resendAadhaarOtp}
+                disabled={busy || aadhaarCooldown > 0}
+                className="w-full text-center text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground disabled:cursor-not-allowed"
+              >
+                {aadhaarCooldown > 0 ? `Resend OTP in ${aadhaarCooldown}s` : `Resend OTP (${MAX_RESENDS - aadhaarResends} left)`}
+              </button>
+            )}
           </>
         )}
 
@@ -242,6 +351,16 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
             <Button onClick={verifyMobileOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
+            {mobileResends < MAX_RESENDS && (
+              <button
+                type="button"
+                onClick={resendMobileOtp}
+                disabled={busy || mobileCooldown > 0}
+                className="w-full text-center text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground disabled:cursor-not-allowed"
+              >
+                {mobileCooldown > 0 ? `Resend OTP in ${mobileCooldown}s` : `Resend OTP (${MAX_RESENDS - mobileResends} left)`}
+              </button>
+            )}
           </>
         )}
 

@@ -7,11 +7,17 @@ export interface DoctorAvailabilityRosterItem {
   departmentName?: string | null;
   isAvailable: boolean;
   reason?: string | null;
+  isOnlineNow: boolean;
 }
 
 interface GetDoctorAvailabilityRosterResponse {
   success?: boolean;
   doctors?: DoctorAvailabilityRosterItem[];
+}
+
+interface UpdateDoctorOnlineStatusResponse {
+  success: boolean;
+  message?: string | null;
 }
 
 export const availabilityRosterApi = {
@@ -21,4 +27,11 @@ export const availabilityRosterApi = {
     );
     return response.doctors ?? [];
   },
+
+  updateOnlineStatus: (
+    hospitalId: string,
+    doctorId: string,
+    isOnlineNow: boolean
+  ): Promise<UpdateDoctorOnlineStatusResponse> =>
+    apiClient.patch(API_ENDPOINTS.CALENDAR.UPDATE_ONLINE_STATUS(hospitalId), { doctorId, isOnlineNow }),
 };

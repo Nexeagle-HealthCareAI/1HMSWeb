@@ -4,15 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Link2, Loader2, CheckCircle2 } from 'lucide-react';
+import { Link2, Loader2, CheckCircle2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { abdmApi, type AbdmProfileResponse } from '../services/abdmApi';
+import { abdmApi, type AbdmProfileResponse, type AbdmFindAbhaCandidate } from '../services/abdmApi';
 
-type Step = 'login' | 'otp' | 'confirm';
+type Step = 'login' | 'pick' | 'otp' | 'confirm';
 type LoginHint = 'mobile' | 'aadhaar' | 'abha-number';
 
 const STEP_LABELS: Record<Step, string> = {
   login: 'Identify the ABHA holder',
+  pick: 'Choose an ABHA number',
   otp: 'Verify OTP',
   confirm: 'Confirm & save',
 };
@@ -38,6 +39,12 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
   const [txnId, setTxnId] = useState('');
   const [profile, setProfile] = useState<AbdmProfileResponse | null>(null);
 
+  // "Find ABHA" mode — for a holder who doesn't remember their exact ABHA number/address but has
+  // the mobile/Aadhaar it's linked to. A search can surface more than one linked ABHA.
+  const [findMode, setFindMode] = useState(false);
+  const [candidates, setCandidates] = useState<AbdmFindAbhaCandidate[]>([]);
+  const [searchTxnId, setSearchTxnId] = useState('');
+
   const reset = () => {
     setStep('login');
     setBusy(false);
@@ -46,6 +53,9 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     setOtp('');
     setTxnId('');
     setProfile(null);
+    setFindMode(false);
+    setCandidates([]);
+    setSearchTxnId('');
   };
 
   const handleOpenChange = (v: boolean) => {
@@ -62,6 +72,45 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     try {
       const otpSystem = loginHint === 'aadhaar' ? 'aadhaar' : 'abdm';
       const res = await abdmApi.requestLoginOtp(hospitalId, clean, loginHint, otpSystem);
+      if (!res.success || !res.txnId) { fail(res.message); return; }
+      setTxnId(res.txnId);
+      toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to continue.' });
+      setStep('otp');
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // "I don't remember my ABHA number" — search by mobile/Aadhaar first; a single match skips
+  // straight to OTP, multiple matches show a picker.
+  const searchForAbha = async () => {
+    const clean = loginId.trim();
+    const searchBy = loginHint === 'aadhaar' ? 'aadhaar' : 'mobile';
+    if (!clean) { toast({ title: `Enter a ${searchBy === 'aadhaar' ? 'Aadhaar number' : 'mobile number'}`, variant: 'destructive' }); return; }
+    setBusy(true);
+    try {
+      const res = await abdmApi.findAbhaSearch(hospitalId, clean, searchBy);
+      if (!res.success || !res.txnId) { fail(res.message); return; }
+      setSearchTxnId(res.txnId);
+      if (res.candidates.length === 1) {
+        await generateOtpForCandidate(res.txnId, res.candidates[0].index, searchBy);
+      } else {
+        setCandidates(res.candidates);
+        setStep('pick');
+      }
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const generateOtpForCandidate = async (txn: string, index: number, searchBy: 'mobile' | 'aadhaar') => {
+    setBusy(true);
+    try {
+      const res = await abdmApi.findAbhaGenerateOtp(hospitalId, txn, index, searchBy);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
       toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to continue.' });
@@ -106,7 +155,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     }
   };
 
-  const steps: Step[] = ['login', 'otp', 'confirm'];
+  const steps: Step[] = ['login', 'pick', 'otp', 'confirm'];
   const stepIndex = steps.indexOf(step);
 
   return (
@@ -153,9 +202,41 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
               <Label>{loginHint === 'mobile' ? 'Mobile number' : loginHint === 'aadhaar' ? 'Aadhaar number' : 'ABHA number'}</Label>
               <Input value={loginId} onChange={e => setLoginId(e.target.value)} placeholder="Enter to receive an OTP" />
             </div>
-            <Button onClick={sendOtp} disabled={busy} className="w-full">
-              {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Send OTP
+            {loginHint !== 'abha-number' && (
+              <button
+                type="button"
+                className="text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2"
+                onClick={() => setFindMode(f => !f)}
+              >
+                {findMode ? "I know my ABHA number" : "I don't remember my ABHA number"}
+              </button>
+            )}
+            <Button onClick={findMode && loginHint !== 'abha-number' ? searchForAbha : sendOtp} disabled={busy} className="w-full">
+              {busy
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : findMode && loginHint !== 'abha-number' ? <Search className="h-4 w-4 mr-2" /> : null}
+              {findMode && loginHint !== 'abha-number' ? 'Search' : 'Send OTP'}
             </Button>
+          </>
+        )}
+
+        {step === 'pick' && (
+          <>
+            <p className="text-sm text-muted-foreground">More than one ABHA number is linked — choose one.</p>
+            <div className="space-y-2">
+              {candidates.map(c => (
+                <button
+                  key={c.index}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => generateOtpForCandidate(searchTxnId, c.index, loginHint === 'aadhaar' ? 'aadhaar' : 'mobile')}
+                  className="w-full text-left rounded-xl border p-3 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  <p className="font-mono text-sm">{c.abhaNumber}</p>
+                  <p className="text-xs text-muted-foreground">{[c.name, c.gender].filter(Boolean).join(' · ') || '—'}</p>
+                </button>
+              ))}
+            </div>
           </>
         )}
 

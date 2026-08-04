@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 import { useAvailabilityRoster } from '../hooks/useCalendar';
 import { MarkUnavailableModal } from './MarkUnavailableModal';
-import { DoctorAvailabilityRosterItem } from '../api/availabilityRosterApi';
+import { availabilityRosterApi, DoctorAvailabilityRosterItem } from '../api/availabilityRosterApi';
 
 interface AvailabilityRosterPageProps {
   hospitalId: string;
@@ -27,12 +29,47 @@ const initialsFrom = (name?: string | null) => {
 // that's the signal staff are scanning for.
 export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ hospitalId, onSelectDoctor }) => {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [search, setSearch] = useState('');
   const [markUnavailableTarget, setMarkUnavailableTarget] = useState<DoctorAvailabilityRosterItem | null>(null);
+  // Optimistic overlay for the "Online now" switch — cleared once a fresh roster fetch lands.
+  const [onlineOverrides, setOnlineOverrides] = useState<Record<string, boolean>>({});
+  const [savingOnlineIds, setSavingOnlineIds] = useState<Set<string>>(new Set());
 
   const dateIso = format(selectedDate, 'yyyy-MM-dd');
   const { data: doctors = [], isLoading, refetch } = useAvailabilityRoster(hospitalId, dateIso);
+
+  const handleToggleOnline = async (doctor: DoctorAvailabilityRosterItem, next: boolean) => {
+    setOnlineOverrides((prev) => ({ ...prev, [doctor.doctorId]: next }));
+    setSavingOnlineIds((prev) => new Set(prev).add(doctor.doctorId));
+    try {
+      const response = await availabilityRosterApi.updateOnlineStatus(hospitalId, doctor.doctorId, next);
+      if (!response.success) {
+        setOnlineOverrides((prev) => ({ ...prev, [doctor.doctorId]: !next }));
+        toast({
+          variant: 'destructive',
+          title: t('doctorCalendar.roster.onlineStatusSaveFailed', 'Could not save'),
+          description: response.message ?? '',
+        });
+      } else {
+        refetch();
+      }
+    } catch (e: any) {
+      setOnlineOverrides((prev) => ({ ...prev, [doctor.doctorId]: !next }));
+      toast({
+        variant: 'destructive',
+        title: t('doctorCalendar.roster.onlineStatusSaveFailed', 'Could not save'),
+        description: e?.message ?? '',
+      });
+    } finally {
+      setSavingOnlineIds((prev) => {
+        const next = new Set(prev);
+        next.delete(doctor.doctorId);
+        return next;
+      });
+    }
+  };
 
   const isToday = format(new Date(), 'yyyy-MM-dd') === dateIso;
 
@@ -177,6 +214,17 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
                   {doctor.isAvailable
                     ? t('doctorCalendar.roster.available', 'Available')
                     : t('doctorCalendar.roster.unavailable', 'Unavailable')}
+                </span>
+
+                <span className="hidden sm:flex items-center gap-1.5 shrink-0">
+                  <span className="text-[11px] text-gray-500">{t('doctorCalendar.roster.online', 'Online')}</span>
+                  <Switch
+                    checked={onlineOverrides[doctor.doctorId] ?? doctor.isOnlineNow}
+                    disabled={savingOnlineIds.has(doctor.doctorId)}
+                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={(checked) => handleToggleOnline(doctor, checked)}
+                    className="h-4 w-7 [&>span]:h-3 [&>span]:w-3 data-[state=checked]:[&>span]:translate-x-3"
+                  />
                 </span>
 
                 {doctor.isAvailable && (

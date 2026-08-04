@@ -47,6 +47,8 @@ export interface DoctorProfileResponse {
   createdAt: string;
   doctorDepartments: DoctorDepartment[];
   doctorSpecializations: DoctorSpecialization[];
+  // Manual "online now" presence toggle — see DocBoard's self-service switch.
+  isOnlineNow?: boolean;
 }
 
 export interface DoctorSpecialization {
@@ -136,6 +138,11 @@ export const doctorApi = {
       throw error;
     }
   },
+  // Doctor self-service "online now" toggle — identity resolved server-side from the JWT, no
+  // doctorId/hospitalId needed in the body.
+  updateOwnOnlineStatus: (isOnlineNow: boolean): Promise<{ success: boolean; message?: string | null }> =>
+    apiClient.patch(API_ENDPOINTS.DOCTORS.UPDATE_ONLINE_STATUS_SELF, { isOnlineNow }),
+
   // Get doctor profile
   getDoctorProfile: async (doctorId: string): Promise<DoctorProfileResponse> => {
     if (doctorId === 'PREVIEW-USER') {
