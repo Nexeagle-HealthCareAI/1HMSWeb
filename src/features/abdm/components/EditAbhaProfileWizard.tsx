@@ -115,7 +115,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
     if (clean.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      const res = await abdmApi.verifyLoginOtp(hospitalId, sessionTxnId, clean);
+      const res = await abdmApi.verifyLoginOtp(hospitalId, sessionTxnId, clean, loginHint === 'aadhaar' ? 'aadhaar' : 'mobile');
       if (!res.success) { fail(res.message); return; }
       // The OTP was verified for whatever mobile/Aadhaar/ABHA-number was typed in the previous
       // step — that may not be the account this wizard was opened for (wrong patient, typo, etc).

@@ -127,7 +127,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     if (clean.length !== 6) { toast({ title: 'Enter the 6-digit OTP', variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      const res = await abdmApi.verifyLoginOtp(hospitalId, txnId, clean);
+      const res = await abdmApi.verifyLoginOtp(hospitalId, txnId, clean, loginHint === 'aadhaar' ? 'aadhaar' : 'mobile');
       if (!res.success) { fail(res.message); return; }
       setProfile(res);
       setStep('confirm');

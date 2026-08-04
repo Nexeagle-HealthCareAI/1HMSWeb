@@ -125,8 +125,10 @@ export const abdmApi = {
   requestLoginOtp: (hospitalId: string, loginId: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number', otpSystem: 'abdm' | 'aadhaar') =>
     apiClient.post<AbdmOtpTxnResponse>('/abdm/login/generate-otp', { hospitalId, loginId, loginHint, otpSystem }),
 
-  verifyLoginOtp: (hospitalId: string, txnId: string, otp: string) =>
-    apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp }),
+  // loginHint must match what was passed to requestLoginOtp for this txnId — ABDM validates the
+  // verify call's scope strictly against it.
+  verifyLoginOtp: (hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number') =>
+    apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint }),
 
   saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse) =>
     apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', {
