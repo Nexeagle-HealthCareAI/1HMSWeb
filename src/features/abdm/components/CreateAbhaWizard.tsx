@@ -225,7 +225,15 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setBusy(true);
     try {
       const res = await abdmApi.getAbhaAddressSuggestions(tx);
-      if (res.success) setSuggestions(res.suggestions || []);
+      if (res.success) {
+        const list = res.suggestions || [];
+        setSuggestions(list);
+        // Pre-select the first suggestion so "Create ABHA address" works immediately without
+        // forcing an extra click when the user is happy with a suggested one.
+        if (list.length > 0) setChosenAddress(list[0]);
+      } else {
+        fail(res.message || 'Could not load ABHA address suggestions — type one manually below.');
+      }
       setStep('address');
     } catch (e: any) {
       fail(e?.response?.data?.Message || e?.message);
