@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { UserCog, Loader2, CheckCircle2, Pencil, RefreshCw, QrCode, Download, PowerOff, IdCard } from 'lucide-react';
+import { UserCog, Loader2, CheckCircle2, Pencil, RefreshCw, QrCode, Download, PowerOff, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
 
@@ -408,7 +408,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
                     {qrBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5 mr-1.5" />} QR
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={viewCard} disabled={cardBusy}>
-                    {cardBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <IdCard className="h-3.5 w-3.5 mr-1.5" />} Card
+                    {cardBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5 mr-1.5" />} Card
                   </Button>
                 </div>
               </div>
