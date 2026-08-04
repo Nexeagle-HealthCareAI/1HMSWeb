@@ -170,17 +170,22 @@ export const abdmApi = {
     return URL.createObjectURL(response.data as Blob);
   },
 
-  downloadAbhaCard: async (hospitalId: string, sessionTxnId: string, abhaNumber: string): Promise<void> => {
+  // Fetches the raw card blob so the caller can preview it before deciding to download —
+  // downloadBlob below does the actual save-to-disk from an already-fetched blob.
+  getAbhaCardBlob: async (hospitalId: string, sessionTxnId: string): Promise<Blob> => {
     const response = await axiosInstance.get(
       `/abdm/profile/abha-card?hospitalId=${encodeURIComponent(hospitalId)}&sessionTxnId=${encodeURIComponent(sessionTxnId)}`,
       { responseType: 'blob' }
     );
-    const blob = response.data as Blob;
+    return response.data as Blob;
+  },
+
+  downloadBlob: (blob: Blob, filenameBase: string): void => {
     const extension = blob.type === 'application/pdf' ? 'pdf' : blob.type.startsWith('image/') ? blob.type.split('/')[1] : 'bin';
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ABHA-Card-${abhaNumber}.${extension}`;
+    link.download = `${filenameBase}.${extension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

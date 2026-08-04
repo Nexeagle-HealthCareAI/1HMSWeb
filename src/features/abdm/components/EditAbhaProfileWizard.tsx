@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { UserCog, Loader2, CheckCircle2, Pencil, RefreshCw, QrCode, Download, PowerOff } from 'lucide-react';
+import { UserCog, Loader2, CheckCircle2, Pencil, RefreshCw, QrCode, Download, PowerOff, IdCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
 
@@ -46,6 +46,9 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
   const [cardBusy, setCardBusy] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [qrOpen, setQrOpen] = useState(false);
+  const [cardBlob, setCardBlob] = useState<Blob | null>(null);
+  const [cardUrl, setCardUrl] = useState('');
+  const [cardOpen, setCardOpen] = useState(false);
 
   type DeactivateStep = 'idle' | 'reason' | 'otp';
   const [deactivateStep, setDeactivateStep] = useState<DeactivateStep>('idle');
@@ -74,6 +77,9 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setProfilePhoto('');
       setQrUrl('');
       setQrOpen(false);
+      setCardBlob(null);
+      setCardUrl('');
+      setCardOpen(false);
       setDeactivateStep('idle');
       setDeactivateReason('');
       setDeactivateOtp('');
@@ -81,11 +87,15 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
     }
   }, [open, account]);
 
-  // The QR object URL is only valid while this wizard instance is mounted — revoke it on unmount
-  // or when a fresh one replaces it, otherwise it leaks for the tab's lifetime.
+  // The QR/card object URLs are only valid while this wizard instance is mounted — revoke them on
+  // unmount or when a fresh one replaces it, otherwise they leak for the tab's lifetime.
   useEffect(() => {
     return () => { if (qrUrl) URL.revokeObjectURL(qrUrl); };
   }, [qrUrl]);
+
+  useEffect(() => {
+    return () => { if (cardUrl) URL.revokeObjectURL(cardUrl); };
+  }, [cardUrl]);
 
   const fail = (message?: string) => toast({ title: 'Something went wrong', description: message || 'Please try again.', variant: 'destructive' });
 
@@ -223,15 +233,24 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
     }
   };
 
-  const downloadCard = async () => {
+  const viewCard = async () => {
     setCardBusy(true);
     try {
-      await abdmApi.downloadAbhaCard(hospitalId, sessionTxnId, account.abhaNumber);
+      if (cardUrl) URL.revokeObjectURL(cardUrl);
+      const blob = await abdmApi.getAbhaCardBlob(hospitalId, sessionTxnId);
+      setCardBlob(blob);
+      setCardUrl(URL.createObjectURL(blob));
+      setCardOpen(true);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message || 'Could not download the ABHA card.');
+      fail(e?.response?.data?.Message || e?.message || 'Could not fetch the ABHA card.');
     } finally {
       setCardBusy(false);
     }
+  };
+
+  const downloadCurrentCard = () => {
+    if (!cardBlob) return;
+    abdmApi.downloadBlob(cardBlob, `ABHA-Card-${account.abhaNumber}`);
   };
 
   const requestDeactivate = async () => {
@@ -388,8 +407,8 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
                   <Button type="button" variant="outline" size="sm" onClick={showQrCode} disabled={qrBusy}>
                     {qrBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5 mr-1.5" />} QR
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={downloadCard} disabled={cardBusy}>
-                    {cardBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />} Card
+                  <Button type="button" variant="outline" size="sm" onClick={viewCard} disabled={cardBusy}>
+                    {cardBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <IdCard className="h-3.5 w-3.5 mr-1.5" />} Card
                   </Button>
                 </div>
               </div>
@@ -442,6 +461,24 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
             <DialogTitle className="text-sm">ABHA QR code</DialogTitle>
           </DialogHeader>
           {qrUrl && <img src={qrUrl} alt="ABHA QR code" className="w-full rounded-lg border" />}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cardOpen} onOpenChange={setCardOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">ABHA card</DialogTitle>
+          </DialogHeader>
+          {cardUrl && (
+            cardBlob?.type === 'application/pdf' ? (
+              <iframe src={cardUrl} title="ABHA card" className="w-full h-96 rounded-lg border" />
+            ) : (
+              <img src={cardUrl} alt="ABHA card" className="w-full rounded-lg border" />
+            )
+          )}
+          <Button type="button" onClick={downloadCurrentCard} className="w-full">
+            <Download className="h-4 w-4 mr-2" /> Download
+          </Button>
         </DialogContent>
       </Dialog>
     </Sheet>
