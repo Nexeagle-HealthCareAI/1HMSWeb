@@ -1614,9 +1614,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const [activeMedicationId, setActiveMedicationId] = useState<string | null>(null);
   const [medicineInfoCache, setMedicineInfoCache] = useState<Record<number, MedicineInfoResponse | 'loading' | 'error'>>({});
   // Which master-catalog medicine (if any) is currently selected for each medication row,
-  // so the right-side info panel knows what to show. Keyed by medication.id, not persisted
-  // as part of the medication itself - purely local UI state for the RxNorm lookup.
-  const [selectedMasterMedicineId, setSelectedMasterMedicineId] = useState<Record<string, number>>({});
+  // so the right-side info panel knows what to show (price, RxNorm ingredient info). Keyed
+  // by medication.id, not persisted as part of the medication itself - purely local UI state.
+  const [selectedMasterMedicine, setSelectedMasterMedicine] = useState<Record<string, MedicineSearchItem>>({});
 
   const loadMedicineInfo = (medicineId: number) => {
     if (medicineInfoCache[medicineId]) return;
@@ -2286,10 +2286,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
     if (itemData?.medicineId != null) {
       const medicineId = itemData.medicineId;
-      setSelectedMasterMedicineId(prev => ({ ...prev, [id]: medicineId }));
+      setSelectedMasterMedicine(prev => ({ ...prev, [id]: itemData }));
       loadMedicineInfo(medicineId);
     } else {
-      setSelectedMasterMedicineId(prev => {
+      setSelectedMasterMedicine(prev => {
         if (!(id in prev)) return prev;
         const next = { ...prev };
         delete next[id];
@@ -4519,7 +4519,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                   const val = e.target.value;
                                   updateMedication(medication.id, 'name', val);
                                   setMedicationQuery(val);
-                                  setSelectedMasterMedicineId(prev => {
+                                  setSelectedMasterMedicine(prev => {
                                     if (!(medication.id in prev)) return prev;
                                     const next = { ...prev };
                                     delete next[medication.id];
@@ -4888,15 +4888,22 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           </div>
                         </div>
                         {(() => {
-                          const selectedMedicineId = selectedMasterMedicineId[medication.id];
-                          if (selectedMedicineId == null) return null;
+                          const selected = selectedMasterMedicine[medication.id];
+                          if (!selected || selected.medicineId == null) return null;
                           return (
-                            <div className="hidden lg:block w-72 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 text-sm">
-                              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-gray-500">
-                                <Info className="h-3.5 w-3.5" />
-                                Medicine info
+                            <div className="hidden lg:block w-72 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 text-sm space-y-3">
+                              <div>
+                                <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase text-gray-500">
+                                  <Info className="h-3.5 w-3.5" />
+                                  Medicine info
+                                </div>
+                                {typeof selected.price === 'number' && selected.price > 0 && (
+                                  <div className="text-gray-700 dark:text-gray-200">
+                                    Approx. price: <span className="font-medium">₹{selected.price.toFixed(2)}</span>
+                                  </div>
+                                )}
                               </div>
-                              <MedicineInfoPanel entry={medicineInfoCache[selectedMedicineId]} />
+                              <MedicineInfoPanel entry={medicineInfoCache[selected.medicineId]} />
                             </div>
                           );
                         })()}
