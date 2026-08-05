@@ -66,6 +66,7 @@ export interface MedicineSearchItem {
     isActive?: boolean;
     usageCount?: number;
     lastModifiedAt?: string;
+    prescriptionFormat?: string;
 }
 
 export interface MedicineSearchResponse {

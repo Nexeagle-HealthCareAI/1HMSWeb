@@ -4518,7 +4518,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                                       const masterItems = (results.masterMedicine || []).map(item => ({
                                         id: item.id || `temp-${Math.random()}`,
-                                        name: item.medicineName || item.brandName || item.genericName,
+                                        name: item.prescriptionFormat || item.medicineName || item.brandName || item.genericName,
                                         source: 'general' as const,
                                         shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
                                         original: item
@@ -4556,7 +4556,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                                         const masterItems = (results.masterMedicine || []).map(item => ({
                                           id: item.id || `temp-${Math.random()}`,
-                                          name: item.medicineName || item.brandName || item.genericName,
+                                          name: item.prescriptionFormat || item.medicineName || item.brandName || item.genericName,
                                           source: 'general' as const,
                                           shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
                                           original: item
