@@ -618,6 +618,16 @@ const MedicineInfoPanel: React.FC<{ entry: MedicineInfoResponse | 'loading' | 'e
               )}
             </>
           )}
+          {ing.usage && (
+            <div className="mt-1.5 text-xs text-gray-600">
+              <span className="font-semibold text-gray-700">Usage: </span>{ing.usage}
+            </div>
+          )}
+          {ing.sideEffects && (
+            <div className="mt-1 text-xs text-gray-600">
+              <span className="font-semibold text-gray-700">Side effects: </span>{ing.sideEffects}
+            </div>
+          )}
         </div>
       ))}
     </div>

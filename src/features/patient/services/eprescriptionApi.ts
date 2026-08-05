@@ -84,6 +84,8 @@ export interface IngredientInfo {
     rxCui?: string;
     displayName?: string;
     availableForms: string[];
+    usage?: string;
+    sideEffects?: string;
 }
 
 export interface MedicineInfoResponse {
