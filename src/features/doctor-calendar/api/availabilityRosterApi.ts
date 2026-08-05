@@ -7,6 +7,9 @@ export interface DoctorAvailabilityRosterItem {
   departmentName?: string | null;
   isAvailable: boolean;
   reason?: string | null;
+  timeOffId?: string | null;
+  timeOffFromDate?: string | null;
+  timeOffToDate?: string | null;
   isOnlineNow: boolean;
 }
 

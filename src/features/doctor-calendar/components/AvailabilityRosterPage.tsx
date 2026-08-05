@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Search, CalendarX, ChevronRight as ArrowRight, UserCheck, UserX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, CalendarX, X, ChevronRight as ArrowRight, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -9,8 +9,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useAvailabilityRoster } from '../hooks/useCalendar';
+import { useAvailabilityRoster, useDeleteTimeOff } from '../hooks/useCalendar';
 import { MarkUnavailableModal } from './MarkUnavailableModal';
+import { DeleteTimeOffDialog } from './DeleteTimeOffDialog';
 import { availabilityRosterApi, DoctorAvailabilityRosterItem } from '../api/availabilityRosterApi';
 
 interface AvailabilityRosterPageProps {
@@ -33,9 +34,11 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [search, setSearch] = useState('');
   const [markUnavailableTarget, setMarkUnavailableTarget] = useState<DoctorAvailabilityRosterItem | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<DoctorAvailabilityRosterItem | null>(null);
   // Optimistic overlay for the "Online now" switch — cleared once a fresh roster fetch lands.
   const [onlineOverrides, setOnlineOverrides] = useState<Record<string, boolean>>({});
   const [savingOnlineIds, setSavingOnlineIds] = useState<Set<string>>(new Set());
+  const deleteTimeOffMutation = useDeleteTimeOff();
 
   const dateIso = format(selectedDate, 'yyyy-MM-dd');
   const { data: doctors = [], isLoading, refetch } = useAvailabilityRoster(hospitalId, dateIso);
@@ -69,6 +72,26 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
         return next;
       });
     }
+  };
+
+  const handleConfirmCancelUnavailability = () => {
+    if (!cancelTarget?.timeOffId) return;
+    deleteTimeOffMutation.mutate(
+      { doctorId: cancelTarget.doctorId, hospitalId, timeOffId: cancelTarget.timeOffId },
+      {
+        onSuccess: () => {
+          setCancelTarget(null);
+          refetch();
+        },
+        onError: (e: any) => {
+          toast({
+            variant: 'destructive',
+            title: t('doctorCalendar.roster.cancelUnavailableFailed', 'Could not cancel'),
+            description: e?.message ?? '',
+          });
+        },
+      }
+    );
   };
 
   const isToday = format(new Date(), 'yyyy-MM-dd') === dateIso;
@@ -227,7 +250,7 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
                   />
                 </span>
 
-                {doctor.isAvailable && (
+                {doctor.isAvailable ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -240,7 +263,20 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
                     <CalendarX className="h-3 w-3 sm:mr-1" />
                     <span className="hidden sm:inline">{t('doctorCalendar.roster.markUnavailable', 'Mark unavailable')}</span>
                   </Button>
-                )}
+                ) : doctor.timeOffId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs shrink-0 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCancelTarget(doctor);
+                    }}
+                  >
+                    <X className="h-3 w-3 sm:mr-1" />
+                    <span className="hidden sm:inline">{t('doctorCalendar.roster.cancelUnavailable', 'Cancel')}</span>
+                  </Button>
+                ) : null}
 
                 <ArrowRight className="h-4 w-4 text-gray-300 shrink-0 group-hover:text-gray-500 transition-colors" />
               </div>
@@ -256,6 +292,23 @@ export const AvailabilityRosterPage: React.FC<AvailabilityRosterPageProps> = ({ 
         doctorName={markUnavailableTarget?.fullName || undefined}
         hospitalId={hospitalId}
         onCreated={() => refetch()}
+      />
+
+      <DeleteTimeOffDialog
+        isOpen={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleConfirmCancelUnavailability}
+        isPending={deleteTimeOffMutation.isPending}
+        timeOffData={
+          cancelTarget?.timeOffId
+            ? {
+                timeOffId: cancelTarget.timeOffId,
+                reason: cancelTarget.reason || '',
+                fromDate: cancelTarget.timeOffFromDate || '',
+                toDate: cancelTarget.timeOffToDate || '',
+              }
+            : undefined
+        }
       />
     </div>
   );
