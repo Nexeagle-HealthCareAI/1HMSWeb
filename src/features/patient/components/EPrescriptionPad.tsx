@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Activity,
   AlertCircle,
@@ -1614,6 +1613,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const [medicationActiveIndex, setMedicationActiveIndex] = useState(0);
   const [activeMedicationId, setActiveMedicationId] = useState<string | null>(null);
   const [medicineInfoCache, setMedicineInfoCache] = useState<Record<number, MedicineInfoResponse | 'loading' | 'error'>>({});
+  // Which master-catalog medicine (if any) is currently selected for each medication row,
+  // so the right-side info panel knows what to show. Keyed by medication.id, not persisted
+  // as part of the medication itself - purely local UI state for the RxNorm lookup.
+  const [selectedMasterMedicineId, setSelectedMasterMedicineId] = useState<Record<string, number>>({});
 
   const loadMedicineInfo = (medicineId: number) => {
     if (medicineInfoCache[medicineId]) return;
@@ -2280,6 +2283,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     }
 
     // saveMedicineToDrPreference(trimmed, itemData);
+
+    if (itemData?.medicineId != null) {
+      const medicineId = itemData.medicineId;
+      setSelectedMasterMedicineId(prev => ({ ...prev, [id]: medicineId }));
+      loadMedicineInfo(medicineId);
+    } else {
+      setSelectedMasterMedicineId(prev => {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
 
     setMedicationOpenForId(null);
   };
@@ -4468,6 +4484,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             }`}
                           onClick={() => setActiveMedicationId(medication.id)}
                         >
+                        <div className="flex gap-4 items-start">
+                        <div className="flex-1 min-w-0 space-y-3">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -4501,6 +4519,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                   const val = e.target.value;
                                   updateMedication(medication.id, 'name', val);
                                   setMedicationQuery(val);
+                                  setSelectedMasterMedicineId(prev => {
+                                    if (!(medication.id in prev)) return prev;
+                                    const next = { ...prev };
+                                    delete next[medication.id];
+                                    return next;
+                                  });
 
                                   if (val && val.length > 2) {
                                     try {
@@ -4643,44 +4667,20 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                             {general.map((item, idx) => {
                                               const globalIdx = personalCount + idx;
                                               const isActive = medicationActiveIndex === globalIdx;
-                                              const medicineId = item.original?.medicineId;
                                               return (
-                                                <div key={item.id} className="relative">
-                                                  <button
-                                                    type="button"
-                                                    className={`flex flex-col items-start w-full rounded-md px-3 py-2 ${medicineId != null ? 'pr-8' : ''} text-left text-sm border ${isActive ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                                                    onMouseEnter={() => setMedicationActiveIndex(globalIdx)}
-                                                    onMouseDown={(event) => {
-                                                      event.preventDefault();
-                                                      commitMedicationNameSelection(medication.id, item.name, item.original);
-                                                    }}
-                                                  >
-                                                    <span className="font-medium text-gray-800">{item.name}</span>
-                                                    {item.shortDesc && <span className="text-[11px] text-gray-500">{item.shortDesc}</span>}
-                                                  </button>
-                                                  {medicineId != null && (
-                                                    <Popover onOpenChange={(open) => { if (open) loadMedicineInfo(medicineId); }}>
-                                                      <PopoverTrigger asChild>
-                                                        <button
-                                                          type="button"
-                                                          title="Medicine info"
-                                                          className="absolute right-1.5 top-1.5 rounded p-1 text-gray-400 hover:text-brand-600 hover:bg-gray-100"
-                                                          onMouseDown={(event) => event.stopPropagation()}
-                                                          onClick={(event) => event.stopPropagation()}
-                                                        >
-                                                          <Info className="h-3.5 w-3.5" />
-                                                        </button>
-                                                      </PopoverTrigger>
-                                                      <PopoverContent
-                                                        className="w-80 text-sm"
-                                                        onOpenAutoFocus={(event) => event.preventDefault()}
-                                                        onMouseDown={(event) => event.stopPropagation()}
-                                                      >
-                                                        <MedicineInfoPanel entry={medicineInfoCache[medicineId]} />
-                                                      </PopoverContent>
-                                                    </Popover>
-                                                  )}
-                                                </div>
+                                                <button
+                                                  key={item.id}
+                                                  type="button"
+                                                  className={`flex flex-col items-start w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                                  onMouseEnter={() => setMedicationActiveIndex(globalIdx)}
+                                                  onMouseDown={(event) => {
+                                                    event.preventDefault();
+                                                    commitMedicationNameSelection(medication.id, item.name, item.original);
+                                                  }}
+                                                >
+                                                  <span className="font-medium text-gray-800">{item.name}</span>
+                                                  {item.shortDesc && <span className="text-[11px] text-gray-500">{item.shortDesc}</span>}
+                                                </button>
                                               );
                                             })}
                                             {general.length === 0 && (
@@ -4886,6 +4886,21 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               </Button>
                             </div>
                           </div>
+                        </div>
+                        {(() => {
+                          const selectedMedicineId = selectedMasterMedicineId[medication.id];
+                          if (selectedMedicineId == null) return null;
+                          return (
+                            <div className="hidden lg:block w-72 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 text-sm">
+                              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-gray-500">
+                                <Info className="h-3.5 w-3.5" />
+                                Medicine info
+                              </div>
+                              <MedicineInfoPanel entry={medicineInfoCache[selectedMedicineId]} />
+                            </div>
+                          );
+                        })()}
+                        </div>
                         </div>
                       );
                     })}
