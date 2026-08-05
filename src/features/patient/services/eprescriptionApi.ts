@@ -52,6 +52,7 @@ export interface LookupDetailsResponse {
 
 export interface MedicineSearchItem {
     id?: string;
+    medicineId?: number;
     medicineName: string;
     brandName: string;
     genericName: string;
@@ -74,6 +75,21 @@ export interface MedicineSearchResponse {
     masterMedicine: MedicineSearchItem[];
     success: boolean;
     message: string;
+}
+
+export interface IngredientInfo {
+    ingredientName: string;
+    found: boolean;
+    rxCui?: string;
+    displayName?: string;
+    availableForms: string[];
+}
+
+export interface MedicineInfoResponse {
+    success: boolean;
+    message: string;
+    medicineName?: string;
+    ingredients: IngredientInfo[];
 }
 
 export interface UploadVisitSummaryResponse {
@@ -214,6 +230,10 @@ export const eprescriptionApi = {
     ): Promise<MedicineSearchResponse> => {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_SEARCH(hospitalId, doctorId, searchText);
         return apiClient.get<MedicineSearchResponse>(endpoint);
+    },
+    getMedicineInfo: async (medicineId: number): Promise<MedicineInfoResponse> => {
+        const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_INFO(medicineId);
+        return apiClient.get<MedicineInfoResponse>(endpoint);
     },
     saveDoctorPreference: async (data: DoctorPreferenceReq): Promise<{ success: boolean; message: string }> => {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE(data.source);

@@ -63,6 +63,7 @@ export const API_ENDPOINTS = {
       `/e-prescription/configuration/personalized-medicine/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     MEDICINE_SEARCH: (hospitalId: string, doctorId: string, searchText: string) =>
       `/medicines/search?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&searchText=${encodeURIComponent(searchText)}`,
+    MEDICINE_INFO: (medicineId: number) => `/medicines/${medicineId}/info`,
     SAVE_DRAFT: (actionType: string = 'draft') => `/e-prescription/details/actionType=${actionType}`,
     GET_DRAFT: (appointmentId: string, patientId: string, doctorId: string, hospitalId: string) =>
       `/e-prescription/details/appointmentId=${encodeURIComponent(appointmentId)}&patientId=${encodeURIComponent(patientId)}&doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
