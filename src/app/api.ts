@@ -276,6 +276,7 @@ export const IPD_API_ENDPOINTS = {
       return `admission-referral/list?${parts.join('&')}`;
     },
     UPDATE_STATUS: 'admission-referral/status',
+    UPDATE_DETAILS: 'admission-referral/details',
     ADD_COMMENT: 'admission-referral/comment',
     COMMENTS: (hospitalId: string, referralId: string) =>
       `admission-referral/comments?hospitalId=${encodeURIComponent(hospitalId)}&referralId=${encodeURIComponent(referralId)}`,
