@@ -97,7 +97,10 @@ export const DischargeMedicationsEditor: React.FC<Props> = ({ value, onChange, h
 
     const selectMedicine = (index: number, item: MedicineSearchItem) => {
         updateRow(index, {
-            medicineName: item.medicineName,
+            // Prefer the "Tab X 500mg"-style prescription shorthand (matches EPrescriptionPad.tsx)
+            // over the raw catalog name - falls back cleanly for personal/preferred medicines,
+            // which have no prescriptionFormat field.
+            medicineName: item.prescriptionFormat || item.medicineName,
             saltName: item.genericName || value[index]?.saltName,
             dosage: item.strength || value[index]?.dosage,
         });
@@ -143,7 +146,7 @@ export const DischargeMedicationsEditor: React.FC<Props> = ({ value, onChange, h
                                                     {results.personal.map((it, i) => (
                                                         <button key={`p-${i}`} type="button" onMouseDown={e => e.preventDefault()} onClick={() => selectMedicine(index, it)}
                                                             className="w-full text-left px-3 py-1.5 text-sm hover:bg-brand-50 transition-colors">
-                                                            <span className="font-medium text-slate-800">{it.medicineName}</span>
+                                                            <span className="font-medium text-slate-800">{it.prescriptionFormat || it.medicineName}</span>
                                                             {it.strength && <span className="text-xs text-slate-400 ml-1.5">{it.strength}</span>}
                                                         </button>
                                                     ))}
@@ -155,7 +158,7 @@ export const DischargeMedicationsEditor: React.FC<Props> = ({ value, onChange, h
                                                     {results.general.map((it, i) => (
                                                         <button key={`g-${i}`} type="button" onMouseDown={e => e.preventDefault()} onClick={() => selectMedicine(index, it)}
                                                             className="w-full text-left px-3 py-1.5 text-sm hover:bg-brand-50 transition-colors">
-                                                            <span className="font-medium text-slate-800">{it.medicineName}</span>
+                                                            <span className="font-medium text-slate-800">{it.prescriptionFormat || it.medicineName}</span>
                                                             {it.strength && <span className="text-xs text-slate-400 ml-1.5">{it.strength}</span>}
                                                         </button>
                                                     ))}
