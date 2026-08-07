@@ -38,6 +38,8 @@ const LoginPage = () => {
       } else if (userRole === 'Doctor') {
         const isMobile = window.innerWidth < 1024;
         navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
+      } else if (userRole === 'Accountant') {
+        navigate('/billing');
       } else {
         // Default fallback
         navigate('/appointment-dashboard');
@@ -70,6 +72,9 @@ const LoginPage = () => {
       const isMobile = window.innerWidth < 1024;
       console.log('[LOGIN-DEBUG] handleLogin: navigating to', isMobile ? '/appointment-dashboard' : '/dashboard', '(Doctor branch)');
       navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
+    } else if (currentUserRole === 'Accountant') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /billing (Accountant branch)');
+      navigate('/billing');
     } else {
       // Default fallback
       console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (default fallback branch) — currentUserRole was', JSON.stringify(currentUserRole));
