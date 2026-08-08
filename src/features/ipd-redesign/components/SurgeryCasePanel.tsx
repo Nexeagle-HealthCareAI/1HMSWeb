@@ -20,6 +20,7 @@ import { cssdApi, type InstrumentSet } from '../services/cssdApi';
 import { formatIstDateTime } from '../utils/istDate';
 import { WHO_CHECKLIST_PHASES, type ChecklistPhaseKey } from './surgeryChecklistItems';
 import { PrintSurgeryCaseButton } from './PrintSurgeryCaseButton';
+import { PostOpOrderSetDialog } from './PostOpOrderSetDialog';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 
 interface Props {
@@ -535,6 +536,9 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                             {admission && <PrintSurgeryCaseButton admission={admission} detail={detail} />}
+                            {isActive && (detail.statusCode === 'POST_OP' || detail.statusCode === 'COMPLETED') && (
+                                <PostOpOrderSetDialog admissionId={admissionId} surgeryCaseId={detail.surgeryCaseId} />
+                            )}
                             {isActive && NEXT_STATUS[detail.statusCode] && (
                                 <>
                                     {!showCancel && (

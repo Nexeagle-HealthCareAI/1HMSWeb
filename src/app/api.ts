@@ -320,6 +320,15 @@ export const IPD_API_ENDPOINTS = {
     },
     UPSERT: 'package-type/upsert',
   },
+  ORDER_SET: {
+    LIST: (hospitalId: string, opts?: { category?: string; includeInactive?: boolean }) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (opts?.category) parts.push(`category=${encodeURIComponent(opts.category)}`);
+      if (opts?.includeInactive) parts.push(`includeInactive=true`);
+      return `order-set/list?${parts.join('&')}`;
+    },
+    UPSERT: 'order-set/upsert',
+  },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {
       const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
