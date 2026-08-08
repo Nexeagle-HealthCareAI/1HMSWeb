@@ -7,10 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Check, Plus, HeartPulse, Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, Check, Plus, HeartPulse, Activity, TrendingUp, TrendingDown, Wind } from 'lucide-react';
 import {
     icuApi, type IcuLevel, type IcuLevelOfCareEntry, type ApacheIIScoreEntry, type SofaScoreEntry,
-    type ChronicHealthCategory, type VasopressorTier,
+    type ChronicHealthCategory, type VasopressorTier, type VentilatorSettingsEntry, type WeaningAssessmentEntry,
 } from '../services/icuApi';
 import { formatIstDateTime, formatIstTime } from '../utils/istDate';
 import { DevicesPanel } from './DevicesPanel';
@@ -68,6 +68,25 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
     const [sofaRespSupport, setSofaRespSupport] = useState(false);
     const [sofaVasoTier, setSofaVasoTier] = useState<VasopressorTier>('NONE');
 
+    // Ventilator settings
+    const [ventHistory, setVentHistory] = useState<VentilatorSettingsEntry[]>([]);
+    const [ventLoading, setVentLoading] = useState(true);
+    const [ventOpen, setVentOpen] = useState(false);
+    const [ventBusy, setVentBusy] = useState(false);
+    const [ventForm, setVentForm] = useState<Record<string, string>>({});
+    const [ventMode, setVentMode] = useState('AC');
+
+    // Weaning assessment (SAT/SBT)
+    const [weaningHistory, setWeaningHistory] = useState<WeaningAssessmentEntry[]>([]);
+    const [weaningLoading, setWeaningLoading] = useState(true);
+    const [weaningOpen, setWeaningOpen] = useState(false);
+    const [weaningBusy, setWeaningBusy] = useState(false);
+    const [satPerformed, setSatPerformed] = useState(false);
+    const [satPassed, setSatPassed] = useState(false);
+    const [sbtPerformed, setSbtPerformed] = useState(false);
+    const [sbtPassed, setSbtPassed] = useState(false);
+    const [weaningNotes, setWeaningNotes] = useState('');
+
     const loadLoc = () => {
         setLocLoading(true);
         icuApi.getLevelOfCareHistory(admissionId).then(setLocHistory).catch(() => setLocHistory([])).finally(() => setLocLoading(false));
@@ -80,8 +99,16 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
         setSofaLoading(true);
         icuApi.getSofaHistory(admissionId).then(setSofaHistory).catch(() => setSofaHistory([])).finally(() => setSofaLoading(false));
     };
+    const loadVent = () => {
+        setVentLoading(true);
+        icuApi.getVentilatorHistory(admissionId).then(setVentHistory).catch(() => setVentHistory([])).finally(() => setVentLoading(false));
+    };
+    const loadWeaning = () => {
+        setWeaningLoading(true);
+        icuApi.getWeaningHistory(admissionId).then(setWeaningHistory).catch(() => setWeaningHistory([])).finally(() => setWeaningLoading(false));
+    };
 
-    useEffect(() => { loadLoc(); loadApache(); loadSofa(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { loadLoc(); loadApache(); loadSofa(); loadVent(); loadWeaning(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const currentLevel = locHistory[0]?.level;
 
@@ -205,6 +232,60 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
     const sofaTrend = sofaHistory.length >= 2
         ? sofaHistory[0].totalScore === sofaHistory[1].totalScore ? 'flat' : sofaHistory[0].totalScore > sofaHistory[1].totalScore ? 'rising' : 'falling'
         : null;
+
+    // ── Ventilator settings ─────────────────────────────────────────────
+    const openVent = () => {
+        setVentOpen(true);
+        setVentMode('AC');
+        setVentForm({});
+    };
+
+    const ventField = (key: string, label: string, step = '1') => (
+        <div>
+            <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
+            <Input type="number" step={step} value={ventForm[key] ?? ''} onChange={e => setVentForm(f => ({ ...f, [key]: e.target.value }))} className="h-9 mt-1" />
+        </div>
+    );
+
+    const submitVent = async () => {
+        setVentBusy(true);
+        const n = (k: string) => (ventForm[k] ? Number(ventForm[k]) : undefined);
+        try {
+            await icuApi.recordVentilatorSettings(admissionId, {
+                mode: ventMode, fiO2Percent: n('fiO2Percent'), peepCmH2o: n('peepCmH2o'), tidalVolumeMl: n('tidalVolumeMl'),
+                respiratoryRateSet: n('respiratoryRateSet'), peakInspiratoryPressure: n('peakInspiratoryPressure'), plateauPressure: n('plateauPressure'),
+            });
+            toast({ title: 'Ventilator settings recorded.' });
+            setVentOpen(false);
+            loadVent();
+        } catch (err) {
+            toast({ title: 'Could not record settings', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setVentBusy(false);
+        }
+    };
+
+    // ── Weaning assessment (SAT/SBT) ─────────────────────────────────────
+    const openWeaning = () => {
+        setWeaningOpen(true);
+        setSatPerformed(false); setSatPassed(false); setSbtPerformed(false); setSbtPassed(false); setWeaningNotes('');
+    };
+
+    const submitWeaning = async () => {
+        setWeaningBusy(true);
+        try {
+            await icuApi.recordWeaningAssessment(admissionId, {
+                satPerformed, satPassed, sbtPerformed, sbtPassed, notes: weaningNotes.trim() || undefined,
+            });
+            toast({ title: 'Weaning assessment recorded.' });
+            setWeaningOpen(false);
+            loadWeaning();
+        } catch (err) {
+            toast({ title: 'Could not record assessment', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setWeaningBusy(false);
+        }
+    };
 
     return (
         <div className="space-y-5">
@@ -422,6 +503,134 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                                 </div>
                             </>
                         )}
+                    </div>
+                )}
+            </div>
+
+            {/* Ventilator settings */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Wind className="h-3.5 w-3.5" /> Ventilator Settings</h2>
+                    {isActive && (
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openVent}>
+                            <Plus className="h-3.5 w-3.5 mr-1.5" /> New reading
+                        </Button>
+                    )}
+                </div>
+
+                {ventLoading ? (
+                    <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-slate-400" /></div>
+                ) : ventHistory.length === 0 ? (
+                    <p className="text-sm text-slate-400 mt-2">No ventilator settings recorded yet.</p>
+                ) : (
+                    <div className="mt-2 space-y-1.5">
+                        {ventHistory.map((v, i) => (
+                            <div key={v.ventilatorSettingsId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 text-sm">
+                                <span className={cn('font-bold', i === 0 ? 'text-slate-800' : 'text-slate-500')}>
+                                    {v.mode}
+                                    <span className="font-normal text-slate-400">
+                                        {' '}{[v.fiO2Percent != null ? `FiO2 ${v.fiO2Percent}%` : null, v.peepCmH2o != null ? `PEEP ${v.peepCmH2o}` : null, v.tidalVolumeMl != null ? `TV ${v.tidalVolumeMl}mL` : null, v.respiratoryRateSet != null ? `RR ${v.respiratoryRateSet}` : null].filter(Boolean).join(' · ')}
+                                    </span>
+                                </span>
+                                <span className="text-[11px] text-slate-500 shrink-0">{v.scoredBy} · {formatIstDateTime(v.scoredAt)}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {ventOpen && isActive && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                        <div>
+                            <Label className="text-[11px] font-semibold text-slate-600">Mode</Label>
+                            <select value={ventMode} onChange={e => setVentMode(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                <option value="AC">AC (Assist Control)</option>
+                                <option value="SIMV">SIMV</option>
+                                <option value="PSV">PSV (Pressure Support)</option>
+                                <option value="CPAP">CPAP</option>
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {ventField('fiO2Percent', 'FiO2 (%)')}
+                            {ventField('peepCmH2o', 'PEEP (cmH2O)', '0.1')}
+                            {ventField('tidalVolumeMl', 'Tidal volume (mL)')}
+                            {ventField('respiratoryRateSet', 'Set respiratory rate')}
+                            {ventField('peakInspiratoryPressure', 'Peak insp. pressure', '0.1')}
+                            {ventField('plateauPressure', 'Plateau pressure', '0.1')}
+                        </div>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setVentOpen(false)}>Cancel</Button>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={ventBusy} onClick={submitVent}>
+                                {ventBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Weaning assessment (SAT/SBT) */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Weaning Assessment</h2>
+                    {isActive && (
+                        <Button size="sm" variant="outline" className="h-9 sm:h-8 text-xs self-start" onClick={openWeaning}>
+                            <Plus className="h-3.5 w-3.5 mr-1.5" /> New assessment
+                        </Button>
+                    )}
+                </div>
+
+                {weaningLoading ? (
+                    <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-slate-400" /></div>
+                ) : weaningHistory.length === 0 ? (
+                    <p className="text-sm text-slate-400 mt-2">No weaning assessment recorded yet.</p>
+                ) : (
+                    <div className="mt-2 space-y-1.5">
+                        {weaningHistory.map((w, i) => (
+                            <div key={w.weaningAssessmentId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 text-sm">
+                                <span className={cn('font-bold', i === 0 ? 'text-slate-800' : 'text-slate-500')}>
+                                    SAT: {w.satPerformed ? (w.satPassed ? 'Passed' : 'Failed') : 'Not performed'} · SBT: {w.sbtPerformed ? (w.sbtPassed ? 'Passed' : 'Failed') : 'Not performed'}
+                                </span>
+                                <span className="text-[11px] text-slate-500 shrink-0">{w.assessedBy} · {formatIstDateTime(w.assessedAt)}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {weaningOpen && isActive && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">SAT</p>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" checked={satPerformed} onChange={e => { setSatPerformed(e.target.checked); if (!e.target.checked) setSatPassed(false); }} className="h-4 w-4" />
+                                    Performed
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" checked={satPassed} disabled={!satPerformed} onChange={e => setSatPassed(e.target.checked)} className="h-4 w-4" />
+                                    Passed
+                                </label>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">SBT</p>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" checked={sbtPerformed} onChange={e => { setSbtPerformed(e.target.checked); if (!e.target.checked) setSbtPassed(false); }} className="h-4 w-4" />
+                                    Performed
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" checked={sbtPassed} disabled={!sbtPerformed} onChange={e => setSbtPassed(e.target.checked)} className="h-4 w-4" />
+                                    Passed
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-[11px] font-semibold text-slate-600">Notes</Label>
+                            <Textarea value={weaningNotes} onChange={e => setWeaningNotes(e.target.value)} rows={2} className="mt-1" />
+                        </div>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-10 sm:h-9" onClick={() => setWeaningOpen(false)}>Cancel</Button>
+                            <Button size="sm" className="h-10 sm:h-9 bg-brand-600 hover:bg-brand-700" disabled={weaningBusy} onClick={submitWeaning}>
+                                {weaningBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Save
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

@@ -97,6 +97,50 @@ export interface SofaScoreEntry {
     notes?: string | null;
 }
 
+export interface VentilatorSettingsInput {
+    mode: string;
+    fiO2Percent?: number;
+    peepCmH2o?: number;
+    tidalVolumeMl?: number;
+    respiratoryRateSet?: number;
+    peakInspiratoryPressure?: number;
+    plateauPressure?: number;
+    notes?: string;
+}
+
+export interface VentilatorSettingsEntry {
+    ventilatorSettingsId: string;
+    mode: string;
+    fiO2Percent?: number | null;
+    peepCmH2o?: number | null;
+    tidalVolumeMl?: number | null;
+    respiratoryRateSet?: number | null;
+    peakInspiratoryPressure?: number | null;
+    plateauPressure?: number | null;
+    scoredBy: string;
+    scoredAt: string;
+    notes?: string | null;
+}
+
+export interface WeaningAssessmentInput {
+    satPerformed: boolean;
+    satPassed: boolean;
+    sbtPerformed: boolean;
+    sbtPassed: boolean;
+    notes?: string;
+}
+
+export interface WeaningAssessmentEntry {
+    weaningAssessmentId: string;
+    satPerformed: boolean;
+    satPassed: boolean;
+    sbtPerformed: boolean;
+    sbtPassed: boolean;
+    assessedBy: string;
+    assessedAt: string;
+    notes?: string | null;
+}
+
 export interface IcuBoardCase {
     admissionId: string;
     encounterId: string;
@@ -171,4 +215,30 @@ export const icuApi = {
         ipdApiClient
             .get<{ scores?: SofaScoreEntry[] }>('/icu/sofa/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
             .then(r => r.scores ?? []),
+
+    recordVentilatorSettings: async (admissionId: string, input: VentilatorSettingsInput, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/icu/ventilator', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, ...input });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not record ventilator settings.'));
+        }
+    },
+
+    getVentilatorHistory: (admissionId: string, hospitalId?: string): Promise<VentilatorSettingsEntry[]> =>
+        ipdApiClient
+            .get<{ settings?: VentilatorSettingsEntry[] }>('/icu/ventilator/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .then(r => r.settings ?? []),
+
+    recordWeaningAssessment: async (admissionId: string, input: WeaningAssessmentInput, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/icu/weaning', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, ...input });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not record the weaning assessment.'));
+        }
+    },
+
+    getWeaningHistory: (admissionId: string, hospitalId?: string): Promise<WeaningAssessmentEntry[]> =>
+        ipdApiClient
+            .get<{ assessments?: WeaningAssessmentEntry[] }>('/icu/weaning/history', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .then(r => r.assessments ?? []),
 };
