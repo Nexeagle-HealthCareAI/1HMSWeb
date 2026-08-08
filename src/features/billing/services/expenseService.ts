@@ -42,6 +42,27 @@ export interface UpsertExpenseRequest {
     notes?: string;
 }
 
+export interface BulkExpenseLine {
+    amount: number;
+    reason?: string;
+}
+
+export interface BulkAddExpenseRequest {
+    categoryCode: string;
+    expenseDate?: string;
+    vendor?: string;
+    paymentMode?: string;
+    statusCode?: string;
+    lines: BulkExpenseLine[];
+}
+
+export interface BulkAddExpenseResponse {
+    success: boolean;
+    message?: string;
+    createdCount: number;
+    expenseIds: string[];
+}
+
 const hospitalIdOrThrow = (override?: string) => {
     const id = override ?? useAuthStore.getState().getHospitalId();
     if (!id) throw new Error('Hospital ID is not available on the current user session.');
@@ -62,6 +83,9 @@ export const expenseService = {
 
     upsert: (req: UpsertExpenseRequest, hospitalId?: string): Promise<{ expenseId: string; message?: string }> =>
         apiClient.put(`/expenses?hospitalId=${encodeURIComponent(hospitalIdOrThrow(hospitalId))}`, req),
+
+    bulkAdd: (req: BulkAddExpenseRequest, hospitalId?: string): Promise<BulkAddExpenseResponse> =>
+        apiClient.post(`/expenses/bulk?hospitalId=${encodeURIComponent(hospitalIdOrThrow(hospitalId))}`, req),
 
     remove: (expenseId: string, hospitalId?: string): Promise<{ isSuccess: boolean; message?: string }> =>
         apiClient.delete(`/expenses?hospitalId=${encodeURIComponent(hospitalIdOrThrow(hospitalId))}&expenseId=${encodeURIComponent(expenseId)}`),

@@ -291,7 +291,7 @@ export const AppointmentDashboard = () => {
       COMPLETED: t('appointmentDashboard.statusLabels.completed'),
       SCHEDULED: t('appointmentDashboard.statusLabels.scheduled'),
       CANCELLED: t('appointmentDashboard.statusLabels.cancelled'),
-      PRE_APPOINTMENT: t('appointmentDashboard.statusLabels.preAppointment', { defaultValue: 'Pre-Appointment' }),
+      PRE_APPOINTMENT: t('appointmentDashboard.statusLabels.preAppointment', { defaultValue: 'Online Appointment' }),
     } as Record<string, string>;
 
     switch (status) {
@@ -1328,7 +1328,7 @@ export const AppointmentDashboard = () => {
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
           </div>
 
-          {/* Pre-Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
+          {/* Online Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
           {kpiStats.preAppointment > 0 && (
             <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
@@ -1339,7 +1339,7 @@ export const AppointmentDashboard = () => {
                 <div className="p-2.5 bg-amber-100 dark:bg-amber-500/20 rounded-xl shadow-inner ring-1 ring-amber-500/30 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 text-amber-600 dark:text-amber-400">
                   <CalendarClock className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' })}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' })}</span>
               </div>
               <div className="text-4xl font-mono font-black text-amber-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all">{kpiStats.preAppointment}</div>
             </div>
@@ -1642,7 +1642,7 @@ export const AppointmentDashboard = () => {
                     { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200/50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 hover:bg-yellow-200' },
                     { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-200' },
                     { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300/50 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 hover:bg-gray-200' },
-                    { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
+                    { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
                       const appointmentStartDate = new Date(a.startAt);

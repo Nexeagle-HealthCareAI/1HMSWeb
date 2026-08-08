@@ -37,7 +37,6 @@ import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
 import { EditChargeDialog } from '../components/dialogs/EditChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
-import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 import { VISIT_TYPES, visitTypeLabel } from '../utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
@@ -1166,11 +1165,6 @@ export const BillingPage: React.FC = () => {
                                 <p className="font-bold">VISIT CANCELLED</p>
                                 {selectedEncounter.cancelReason && <p className="mt-1">{selectedEncounter.cancelReason}</p>}
                             </div>
-                        )}
-
-                        {/* Credit approvals (only renders if any approvals exist for this encounter) */}
-                        {selectedEncounterId && (
-                            <CreditApprovalsCard encounterId={selectedEncounterId} pendingOnly={false} />
                         )}
                     </CardContent>
                 </Card>

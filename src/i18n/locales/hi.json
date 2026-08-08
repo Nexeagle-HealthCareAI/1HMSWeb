@@ -1299,7 +1299,7 @@
       "awaitingReconsult": "पुनः परामर्श प्रतीक्षित",
       "completed": "पूर्ण",
       "cancelled": "रद्द",
-      "preAppointment": "पूर्व-अपॉइंटमेंट"
+      "preAppointment": "ऑनलाइन अपॉइंटमेंट"
     },
     "statusLabels": {
       "vitalsRequired": "वाइटल्स",
@@ -1310,7 +1310,7 @@
       "completed": "पूर्ण",
       "scheduled": "शेड्यूल",
       "cancelled": "रद्द",
-      "preAppointment": "पूर्व-अपॉइंटमेंट"
+      "preAppointment": "ऑनलाइन अपॉइंटमेंट"
     },
     "refreshNow": "अभी ताज़ा करें",
     "loadingAppointments": "अपॉइंटमेंट लोड हो रहे हैं...",
@@ -2621,7 +2621,7 @@
       "completed": "पूर्ण",
       "scheduled": "शेड्यूल किया गया",
       "cancelled": "रद्द",
-      "preAppointment": "पूर्व-अपॉइंटमेंट",
+      "preAppointment": "ऑनलाइन अपॉइंटमेंट",
       "default": "{{status}}"
     },
     "sync": {
