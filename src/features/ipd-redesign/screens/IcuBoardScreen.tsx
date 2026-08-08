@@ -2,13 +2,29 @@ import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Loader2, RefreshCw, AlertCircle, HeartPulse, Activity, Wind, BedDouble, Info, LayoutGrid, Package2, Siren, ShieldAlert, ArrowLeft
+    Loader2, RefreshCw, AlertCircle, HeartPulse, Activity, Wind, BedDouble, Info, LayoutGrid, Package2, Siren, ShieldAlert, ArrowLeft, UserRound, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { icuApi, type IcuBoardCase } from '../services/icuApi';
 import { cn } from '@/lib/utils';
 import { BoardInventoryPanel } from '../components/BoardInventoryPanel';
+
+const BOARD_POLL_MS = 30000;
+const ICU_VITAL_STALE_HOURS = 1;
+
+const formatVitalAge = (iso?: string | null) => {
+    if (!iso) return 'No vitals recorded';
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    return `${hrs}h ago`;
+};
+
+const isVitalStale = (iso?: string | null) => {
+    if (!iso) return true;
+    return Date.now() - new Date(iso).getTime() > ICU_VITAL_STALE_HOURS * 3600 * 1000;
+};
 
 export const IcuBoardScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -17,21 +33,28 @@ export const IcuBoardScreen: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [tab, setTab] = useState<'patients' | 'inventory'>('patients');
 
-    const fetchBoard = useCallback(async () => {
+    const fetchBoard = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setError(null);
             const data = await icuApi.getBoard();
             setBoard(data);
         } catch (err: any) {
-            setError(err.message || 'Failed to load ICU board');
+            if (!silent) setError(err.message || 'Failed to load ICU board');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
         fetchBoard();
+    }, [fetchBoard]);
+
+    // Silent background refresh — ICU patients are higher-acuity than a general ward, so this
+    // polls tighter than the Nursing Station's 60s interval.
+    useEffect(() => {
+        const id = setInterval(() => fetchBoard(true), BOARD_POLL_MS);
+        return () => clearInterval(id);
     }, [fetchBoard]);
 
     const groupedCases = useMemo(() => {
@@ -66,7 +89,7 @@ export const IcuBoardScreen: React.FC = () => {
                     <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
                     <p className="text-slate-800 font-medium mb-2">Error Loading Board</p>
                     <p className="text-sm mb-6 text-center max-w-md">{error}</p>
-                    <Button onClick={fetchBoard} variant="outline" className="rounded-xl"><RefreshCw className="h-4 w-4 mr-2" /> Retry</Button>
+                    <Button onClick={() => fetchBoard()} variant="outline" className="rounded-xl"><RefreshCw className="h-4 w-4 mr-2" /> Retry</Button>
                 </div>
             );
         }
@@ -119,9 +142,20 @@ export const IcuBoardScreen: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 mb-3">
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 mb-1.5">
                                                     <BedDouble className="h-3.5 w-3.5 text-slate-400" />
                                                     <span className="truncate font-medium">{c.wardCode || 'No Ward'} • {c.bedCode || 'No Bed'}</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 mb-1.5">
+                                                    <UserRound className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                                    <span className="truncate font-medium">{c.nurseNames.length > 0 ? `Rostered: ${c.nurseNames.join(', ')}` : 'Not rostered'}</span>
+                                                </div>
+
+                                                <div className={cn('flex items-center gap-2 text-[11px] mb-3 font-semibold', isVitalStale(c.lastVitalAt) ? 'text-amber-600 dark:text-amber-450' : 'text-slate-500 dark:text-zinc-400')}>
+                                                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                                                    <span className="truncate">Vitals: {formatVitalAge(c.lastVitalAt)}</span>
+                                                    {c.lastSpO2 != null && <span className="shrink-0">· SpO2 {c.lastSpO2}%</span>}
                                                 </div>
 
                                                 {c.primaryDiagnosis && (
@@ -214,7 +248,7 @@ export const IcuBoardScreen: React.FC = () => {
                             <Package2 className="h-3.5 w-3.5" /> ICU Stock / Inventory
                         </button>
                     </div>
-                    <Button onClick={fetchBoard} variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold shrink-0">
+                    <Button onClick={() => fetchBoard()} variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold shrink-0">
                         <RefreshCw className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")} />
                         Refresh
                     </Button>

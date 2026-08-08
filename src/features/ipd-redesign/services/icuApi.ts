@@ -113,6 +113,13 @@ export interface IcuBoardCase {
     hasOpenRapidResponse: boolean;
     activeDeviceCount: number;
     hasOverdueBundleCheck: boolean;
+    nurseNames: string[];
+    lastVitalAt?: string | null;
+    lastPulse?: number | null;
+    lastSystolicBP?: number | null;
+    lastDiastolicBP?: number | null;
+    lastTemperature?: number | null;
+    lastSpO2?: number | null;
 }
 
 export const icuApi = {
