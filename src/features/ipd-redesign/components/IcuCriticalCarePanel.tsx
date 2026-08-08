@@ -15,6 +15,7 @@ import {
 import { formatIstDateTime, formatIstTime } from '../utils/istDate';
 import { DevicesPanel } from './DevicesPanel';
 import { InfectionEventsPanel } from './InfectionEventsPanel';
+import { RoundNotePanel } from './RoundNotePanel';
 
 interface Props {
     admissionId: string;
@@ -431,6 +432,12 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
                 <InfectionEventsPanel admissionId={admissionId} isActive={isActive} />
+            </div>
+
+            {/* Doctor's Notes — same RoundNote feature used elsewhere in IPD, surfaced here so a
+                clinician doesn't have to leave the critical-care view to read or write one. */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <RoundNotePanel admissionId={admissionId} isActive={isActive} />
             </div>
         </div>
     );
