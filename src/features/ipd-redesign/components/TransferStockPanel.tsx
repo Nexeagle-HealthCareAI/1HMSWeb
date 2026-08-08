@@ -12,20 +12,25 @@ import { Textarea } from '@/components/ui/textarea';
 interface Props {
     stockByStore: StockOverviewRow[];
     onSuccess: () => void;
+    // Board-scoped usage (OT/ICU Inventory tab): restrict the "From Store" choices to just the
+    // board's own store(s) instead of every hospital store. When there's exactly one, lock it as a
+    // static label instead of a dropdown — the common case, since most boards have a single store.
+    restrictFromStores?: StoreItem[];
+    lockedFromStoreId?: string;
 }
 
-export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess }) => {
+export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess, restrictFromStores, lockedFromStoreId }) => {
     const { toast } = useToast();
     const [stores, setStores] = useState<StoreItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [fromStoreId, setFromStoreId] = useState('');
+    const [fromStoreId, setFromStoreId] = useState(lockedFromStoreId ?? '');
     const [toStoreId, setToStoreId] = useState('');
     const [inventoryItemId, setInventoryItemId] = useState('');
     const [batchId, setBatchId] = useState('');
     const [qty, setQty] = useState('');
     const [notes, setNotes] = useState('');
-    
+
     const [batches, setBatches] = useState<BatchItem[]>([]);
     const [loadingBatches, setLoadingBatches] = useState(false);
     const [transferring, setTransferring] = useState(false);
@@ -33,6 +38,11 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess })
     useEffect(() => {
         storeService.getStores().then(setStores).finally(() => setLoading(false));
     }, []);
+
+    const fromStoreOptions = restrictFromStores ?? stores;
+    const lockedFromStoreName = lockedFromStoreId
+        ? (restrictFromStores?.find(s => s.storeId === lockedFromStoreId) ?? stores.find(s => s.storeId === lockedFromStoreId))?.storeName
+        : undefined;
 
     // Filter available items based on selected Source Store
     const availableItems = useMemo(() => {
@@ -93,7 +103,7 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess })
                 notes: notes.trim()
             });
             toast({ title: 'Stock Transferred Successfully' });
-            setFromStoreId('');
+            setFromStoreId(lockedFromStoreId ?? '');
             setToStoreId('');
             setInventoryItemId('');
             setBatchId('');
@@ -128,16 +138,22 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess })
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-1.5 block">From Store</Label>
-                        <Select value={fromStoreId} onValueChange={(val) => { setFromStoreId(val); setInventoryItemId(''); }}>
-                            <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
-                                <SelectValue placeholder="Select source store" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                {stores.filter(s => s.isActive).map(s => (
-                                    <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {lockedFromStoreId ? (
+                            <div className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/30 flex items-center px-3 text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                                {lockedFromStoreName ?? 'This store'}
+                            </div>
+                        ) : (
+                            <Select value={fromStoreId} onValueChange={(val) => { setFromStoreId(val); setInventoryItemId(''); }}>
+                                <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
+                                    <SelectValue placeholder="Select source store" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {fromStoreOptions.filter(s => s.isActive).map(s => (
+                                        <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
 
                     <div>
