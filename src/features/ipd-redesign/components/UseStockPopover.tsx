@@ -3,19 +3,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, MinusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { inventoryApi, type StockOverviewRow } from '../services/inventoryApi';
 
+export interface BoardPatientOption {
+    encounterId: string;
+    patientId: string;
+    patientName?: string | null;
+}
+
 interface Props {
     item: StockOverviewRow;
     onSuccess: () => void;
+    // When provided (ICU board today), lets staff optionally attribute this usage to a patient so
+    // it gets billed, not just deducted from stock. Omit to keep today's plain-deduct behavior
+    // (e.g. OT board, whose patient list isn't wired up here yet).
+    patients?: BoardPatientOption[];
 }
 
-export const UseStockPopover: React.FC<Props> = ({ item, onSuccess }) => {
+export const UseStockPopover: React.FC<Props> = ({ item, onSuccess, patients }) => {
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [qty, setQty] = useState('1');
+    const [encounterId, setEncounterId] = useState('');
     const [busy, setBusy] = useState(false);
 
     const submit = async () => {
@@ -28,17 +40,33 @@ export const UseStockPopover: React.FC<Props> = ({ item, onSuccess }) => {
             toast({ title: `Only ${item.qtyOnHand} ${item.unit} available`, variant: 'destructive' });
             return;
         }
+        const patient = patients?.find(p => p.encounterId === encounterId);
         setBusy(true);
         try {
-            await inventoryApi.recordMovement({
-                movementType: 'ISSUE',
-                storeId: item.storeId,
-                inventoryItemId: item.inventoryItemId,
-                qty: useQty,
-            });
-            toast({ title: `Used ${useQty} ${item.unit} of ${item.itemName}` });
+            if (patient) {
+                const result = await inventoryApi.useAndBillStock({
+                    storeId: item.storeId,
+                    inventoryItemId: item.inventoryItemId,
+                    qty: useQty,
+                    encounterId: patient.encounterId,
+                    patientId: patient.patientId,
+                });
+                toast({
+                    title: `Used ${useQty} ${item.unit} of ${item.itemName}`,
+                    description: result.noChargeConfigured ? 'No charge is configured for this item, so nothing was billed.' : `Billed to ${patient.patientName ?? 'patient'}.`,
+                });
+            } else {
+                await inventoryApi.recordMovement({
+                    movementType: 'ISSUE',
+                    storeId: item.storeId,
+                    inventoryItemId: item.inventoryItemId,
+                    qty: useQty,
+                });
+                toast({ title: `Used ${useQty} ${item.unit} of ${item.itemName}` });
+            }
             setOpen(false);
             setQty('1');
+            setEncounterId('');
             onSuccess();
         } catch (e: any) {
             toast({ title: 'Could not record usage', description: e.response?.data?.Message ?? e.response?.data?.message ?? e.message, variant: 'destructive' });
@@ -65,6 +93,21 @@ export const UseStockPopover: React.FC<Props> = ({ item, onSuccess }) => {
                         {item.qtyOnHand.toLocaleString()} {item.unit} available at {item.storeName}
                     </p>
                 </div>
+                {patients && patients.length > 0 && (
+                    <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Bill to patient</Label>
+                        <Select value={encounterId} onValueChange={setEncounterId}>
+                            <SelectTrigger className="w-full h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs">
+                                <SelectValue placeholder="General use — no billing" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-48 overflow-y-auto rounded-xl">
+                                {patients.map(p => (
+                                    <SelectItem key={p.encounterId} value={p.encounterId}>{p.patientName ?? 'Unknown patient'}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
                 <div className="space-y-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Quantity used</Label>
                     <Input

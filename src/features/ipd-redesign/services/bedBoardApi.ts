@@ -14,6 +14,19 @@ const hospitalIdOrThrow = (override?: string) => {
 const messageFrom = (err: unknown, fallback: string): string =>
     (axios.isAxiosError(err) && (err.response?.data as { message?: string } | undefined)?.message) || fallback;
 
+// Billing fields are informational only -- discharge has already succeeded by the time these
+// are set, they're surfaced so the front desk can follow up on collection afterward.
+export interface DischargeResult {
+    success: boolean;
+    message?: string;
+    admissionId?: string;
+    dischargedAt?: string;
+    bedReleased: boolean;
+    hasOutstandingBalance: boolean;
+    outstandingAmount: number;
+    hasUnfinalizedInvoice: boolean;
+}
+
 export interface BedBoardItem {
     bedId: string;
     wardCode?: string | null;
@@ -82,9 +95,9 @@ export const bedBoardApi = {
         }
     },
 
-    dischargeAdmission: async (admissionId: string, dischargeNotes?: string, hospitalId?: string) => {
+    dischargeAdmission: async (admissionId: string, dischargeNotes?: string, hospitalId?: string): Promise<DischargeResult> => {
         try {
-            return await ipdApiClient.post('/admission/discharge', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, dischargeNotes });
+            return await ipdApiClient.post<DischargeResult>('/admission/discharge', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, dischargeNotes });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not discharge the patient.'));
         }

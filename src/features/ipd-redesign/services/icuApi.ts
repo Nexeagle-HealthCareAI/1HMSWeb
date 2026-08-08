@@ -144,6 +144,7 @@ export interface WeaningAssessmentEntry {
 export interface IcuBoardCase {
     admissionId: string;
     encounterId: string;
+    patientId?: string | null;
     patientName?: string | null;
     bedCode?: string | null;
     wardCode?: string | null;

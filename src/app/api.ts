@@ -231,7 +231,7 @@ export const IPD_API_ENDPOINTS = {
     CREATE_ENCOUNTER: 'charge/encounter',
     ADD_EVENT: 'charge/add-event',
     UPDATE_EVENT: 'charge/update-event',
-    CANCEL_EVENT: 'charge/cancel-event',
+    CANCEL_ENCOUNTER_CHARGES: 'charge/cancel-encounter-charges',
     GET_RATE_CARD: (hospitalId: string) => `charge/rate-card?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_PAYER_RATE: 'charge/rate-card/payer-rate',
     UPSERT_ROOM_MULTIPLIER: 'charge/rate-card/room-multiplier',

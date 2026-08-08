@@ -5,11 +5,11 @@ import { inventoryApi, type StockOverviewRow } from '../services/inventoryApi';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { UseStockPopover } from './UseStockPopover';
+import { UseStockPopover, type BoardPatientOption } from './UseStockPopover';
 import { ReceiveStockDialog } from './ReceiveStockDialog';
 import { TransferStockDialog } from './TransferStockDialog';
 
-export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType }) => {
+export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: BoardPatientOption[] }> = ({ boardType, patients }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [stockRows, setStockRows] = useState<StockOverviewRow[]>([]);
@@ -135,7 +135,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                                         </span>
                                     </div>
                                     <div className="flex justify-end pt-1">
-                                        <UseStockPopover item={row} onSuccess={() => load(true)} />
+                                        <UseStockPopover item={row} patients={patients} onSuccess={() => load(true)} />
                                     </div>
                                 </div>
                             ))}
@@ -163,7 +163,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end">
-                                                <UseStockPopover item={row} onSuccess={() => load(true)} />
+                                                <UseStockPopover item={row} patients={patients} onSuccess={() => load(true)} />
                                             </div>
                                         </td>
                                     </tr>

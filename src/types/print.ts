@@ -21,6 +21,11 @@ export interface PrintItem {
     discount: number;
     total: number;
     isExtraCharge?: boolean;
+    hsnSacCode?: string;
+    taxableAmount?: number;
+    cgstAmount?: number;
+    sgstAmount?: number;
+    igstAmount?: number;
 }
 
 export interface InvoicePrintData {
@@ -37,6 +42,10 @@ export interface InvoicePrintData {
     subTotal: number;
     discountTotal: number;
     taxTotal: number;
+    taxableTotal?: number;
+    cgstTotal?: number;
+    sgstTotal?: number;
+    igstTotal?: number;
     grandTotal: number;
     amountPaid: number;
     balanceDue: number;

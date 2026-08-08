@@ -161,6 +161,24 @@ export interface TransferStockInput {
     notes?: string;
 }
 
+export interface UseAndBillStockInput {
+    storeId: string;
+    inventoryItemId: string;
+    qty: number;
+    encounterId: string;
+    patientId: string;
+    attributedDoctorId?: string;
+    notes?: string;
+}
+
+export interface UseAndBillStockResult {
+    success: boolean;
+    message?: string;
+    inventoryMovementId?: string;
+    chargeEventId?: string;
+    noChargeConfigured: boolean;
+}
+
 export interface QuickReceiveStockInput {
     storeId: string;
     inventoryItemId: string;
@@ -213,6 +231,9 @@ export const inventoryApi = {
 
     quickReceive: (input: QuickReceiveStockInput, hospitalId?: string): Promise<QuickReceiveStockResult> =>
         ipdApiClient.post<QuickReceiveStockResult>('/inventory/receive', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
+    useAndBillStock: (input: UseAndBillStockInput, hospitalId?: string): Promise<UseAndBillStockResult> =>
+        ipdApiClient.post<UseAndBillStockResult>('/inventory/use-and-bill', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
     getBoard: (hospitalId?: string): Promise<InventoryBoard> =>
         ipdApiClient

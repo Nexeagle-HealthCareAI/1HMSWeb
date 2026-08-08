@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { icuApi, type IcuBoardCase } from '../services/icuApi';
 import { cn } from '@/lib/utils';
 import { BoardInventoryPanel } from '../components/BoardInventoryPanel';
+import type { BoardPatientOption } from '../components/UseStockPopover';
 
 const BOARD_POLL_MS = 30000;
 const ICU_VITAL_STALE_HOURS = 1;
@@ -32,6 +33,11 @@ export const IcuBoardScreen: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [tab, setTab] = useState<'patients' | 'inventory'>('patients');
+
+    const boardPatients: BoardPatientOption[] = useMemo(
+        () => board.filter(c => c.patientId).map(c => ({ encounterId: c.encounterId, patientId: c.patientId!, patientName: c.patientName })),
+        [board],
+    );
 
     const fetchBoard = useCallback(async (silent = false) => {
         try {
@@ -259,7 +265,7 @@ export const IcuBoardScreen: React.FC = () => {
             <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden relative">
                 {tab === 'patients' ? renderPatients() : (
                     <div className="p-4 md:p-6 h-full overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        <BoardInventoryPanel boardType="ICU" />
+                        <BoardInventoryPanel boardType="ICU" patients={boardPatients} />
                     </div>
                 )}
             </div>
