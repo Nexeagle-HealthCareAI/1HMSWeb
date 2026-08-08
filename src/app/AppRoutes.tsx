@@ -22,9 +22,10 @@ const RoleBasedRedirect = () => {
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
     const isMobile = window.innerWidth < 1024;
     return <Navigate to={isMobile ? "/appointment-dashboard" : "/dashboard"} replace />;
-  } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
-    // Receptionist and Nurse should go to appointment dashboard
+  } else if (userRole === 'Receptionist') {
     return <Navigate to="/appointment-dashboard" replace />;
+  } else if (userRole === 'Nurse') {
+    return <Navigate to="/nursing-station" replace />;
   } else if (userRole === 'Accountant') {
     return <Navigate to="/billing" replace />;
   } else {
@@ -56,6 +57,7 @@ const IpdPatientWorkspacePage = lazy(() => import('@/features/ipd-redesign/pages
 const InventoryManagementPage = lazy(() => import('@/features/ipd-redesign/pages/InventoryManagementPage').then(module => ({ default: module.default })));
 const OtBoardPage = lazy(() => import('@/features/ipd-redesign/pages/OtBoardPage').then(module => ({ default: module.default })));
 const IcuBoardPage = lazy(() => import('@/features/ipd-redesign/pages/IcuBoardPage').then(module => ({ default: module.default })));
+const NursingStationPage = lazy(() => import('@/features/ipd-redesign/pages/NursingStationPage').then(module => ({ default: module.default })));
 const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
 // DEV-ONLY: unauthenticated mobile-UI preview harness for the Doc Board (see route below).
 const DocBoardPreview = lazy(() => import('@/features/doctor/pages/DocBoardPreview').then(module => ({ default: module.default })));
@@ -434,6 +436,17 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
                   <MainLayout>
                     <IcuBoardPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/nursing-station"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <NursingStationPage />
                   </MainLayout>
                 </RouteGuard>
               }
