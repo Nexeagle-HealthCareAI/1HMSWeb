@@ -2,10 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, Settings, Package2, ArrowLeft } from 'lucide-react';
+import { LayoutGrid, Settings, Package2, ClipboardList, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OtBoardScreen } from '../screens/OtBoardScreen';
 import { OtMaster } from '@/features/hospital/components/masters/OtMaster';
+import { OrderSetMaster } from '@/features/hospital/components/masters/OrderSetMaster';
 import { BoardInventoryPanel } from '../components/BoardInventoryPanel';
 
 const OtBoardPage: React.FC = () => {
@@ -25,7 +26,7 @@ const OtBoardPage: React.FC = () => {
                         <p className="text-xs text-white/80 mt-0.5">Manage Plan Board and Theatre Configurations.</p>
                     </div>
                 </div>
-                <TabsList className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full sm:w-80 md:w-96 border-0 shadow-none shrink-0">
+                <TabsList className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full sm:w-96 md:w-[28rem] border-0 shadow-none shrink-0">
                     <TabsTrigger 
                         value="board" 
                         className="flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white px-1 select-none whitespace-normal flex-1"
@@ -46,6 +47,13 @@ const OtBoardPage: React.FC = () => {
                     >
                         <Package2 className="h-5 w-5 mb-1 shrink-0" />
                         <span className="text-[9px] font-bold tracking-wide leading-tight">Inventory</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="order-sets"
+                        className="flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white px-1 select-none whitespace-normal flex-1"
+                    >
+                        <ClipboardList className="h-5 w-5 mb-1 shrink-0" />
+                        <span className="text-[9px] font-bold tracking-wide leading-tight">Order Sets</span>
                     </TabsTrigger>
                 </TabsList>
             </div>
@@ -84,6 +92,18 @@ const OtBoardPage: React.FC = () => {
                         className="h-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800 overflow-hidden shadow-md"
                     >
                         <BoardInventoryPanel boardType="OT" />
+                    </motion.div>
+                </TabsContent>
+
+                <TabsContent value="order-sets" className="absolute inset-0 mt-0 overflow-hidden border-none focus-visible:ring-0">
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="h-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800 overflow-hidden shadow-md"
+                    >
+                        <OrderSetMaster />
                     </motion.div>
                 </TabsContent>
             </div>

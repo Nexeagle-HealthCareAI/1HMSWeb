@@ -80,7 +80,8 @@ import {
   HeartPulse,
   Wifi,
   LayoutGrid,
-  GitBranch
+  GitBranch,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -250,9 +251,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'patients', name: t('header.patients') || 'Patients', icon: Users, path: '/patients' },
     { id: 'ipd-workspace', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
+    { id: 'abdm', name: 'ABHA / ABDM', icon: FileBadge2, path: '/abdm' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
+    { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
   ];
 
   // Filter navigation items based on user role
@@ -278,7 +281,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (item.id === 'billing') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
     }
-    if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board') {
+    if (item.id === 'abdm') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist');
+    }
+    if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board' || item.id === 'nursing-station') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
     }
     return true;
@@ -566,6 +572,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             return { bg: "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400" };
                           case 'icu-board':
                             return { bg: "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400" };
+                          case 'nursing-station':
+                            return { bg: "bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400" };
                           default:
                             return { bg: "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" };
                         }

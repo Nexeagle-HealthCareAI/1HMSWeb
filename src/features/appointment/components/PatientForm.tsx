@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft, Link2 } from 'lucide-react';
+import { LinkExistingAbhaWizard } from '@/features/abdm/components/LinkExistingAbhaWizard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse, type AppointmentDetail } from '../services/appointmentApi';
@@ -71,6 +72,7 @@ type PatientFormState = {
   // Guardian / relative (permanent patient-level, separate from medical referrer)
   guardianName: string;
   guardianRelation: string;
+  abhaId: string;
 };
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown'];
@@ -112,6 +114,7 @@ const createInitialFormState = (): PatientFormState => ({
   insuranceType: '',
   guardianName: '',
   guardianRelation: 'C/O',
+  abhaId: '',
 });
 
 const formatPhoneNumber = (value: string) => value.replace(/\D/g, '').slice(0, 10);
@@ -193,6 +196,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [linkAbhaOpen, setLinkAbhaOpen] = useState(false);
   const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   // Fuzzy duplicate detection (only while entering a brand-new patient).
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
@@ -435,6 +439,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       insuranceType: '',
       guardianName: (patient as any).guardianName || '',
       guardianRelation: (patient as any).guardianRelation || 'C/O',
+      abhaId: (patient as any).abhaId || '',
     });
     setSelectedReferrer(null);
     setShowSearchResults(false);
@@ -615,6 +620,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           emergencyContactPhone: formData.emergencyContactPhone || undefined,
           guardianName: formData.guardianName || undefined,
           guardianRelation: formData.guardianName ? formData.guardianRelation : undefined,
+          abhaId: formData.abhaId || undefined,
         },
         doctorId: doctor.id,
         apptDate: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
@@ -870,6 +876,40 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           {/* Main Form */}
           <div className="w-full">
             <form id="patient-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5 items-start">
+              {/* ABHA link banner — first thing staff see, highlighted so it isn't missed */}
+              <div className="xl:col-span-12 rounded-2xl border-2 border-dashed border-brand-300 dark:border-brand-800 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-transparent px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-8 w-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0 shadow-md shadow-brand-600/20">
+                    <CreditCard className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-brand-900 dark:text-brand-300">ABHA (Ayushman Bharat Health Account)</p>
+                    {formData.abhaId ? (
+                      <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 truncate">{formData.abhaId}</p>
+                    ) : (
+                      <p className="text-[11px] text-brand-600/80 dark:text-brand-400/70 truncate">Not linked yet</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {formData.abhaId && (
+                    <Badge variant="outline" className="hidden sm:flex text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-400 gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Linked
+                    </Badge>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={formData.abhaId ? 'outline' : 'default'}
+                    className={`h-8 rounded-full text-xs font-bold ${!formData.abhaId ? 'bg-brand-600 hover:bg-brand-700 text-white' : ''}`}
+                    onClick={() => setLinkAbhaOpen(true)}
+                    disabled={!hospitalId}
+                  >
+                    <Link2 className="h-3.5 w-3.5 mr-1.5" /> {formData.abhaId ? 'Change' : 'Link ABHA'}
+                  </Button>
+                </div>
+              </div>
+
               {/* Duplicate-patient warning (new patient only) */}
               {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (
                 <div className={`xl:col-span-12 rounded-xl border shadow-sm overflow-hidden ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
@@ -1565,6 +1605,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {hospitalId && (
+        <LinkExistingAbhaWizard
+          hospitalId={hospitalId}
+          open={linkAbhaOpen}
+          onOpenChange={setLinkAbhaOpen}
+          onDone={() => { /* accounts list refresh not needed inline here */ }}
+          onLinked={(profile) => setFormData(prev => ({ ...prev, abhaId: profile.abhaNumber || prev.abhaId }))}
+        />
+      )}
     </Dialog>
   );
 };

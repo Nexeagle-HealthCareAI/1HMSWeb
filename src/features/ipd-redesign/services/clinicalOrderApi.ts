@@ -84,6 +84,9 @@ export const clinicalOrderApi = {
         notes?: string,
         orderedByDoctorId?: string,
         hospitalId?: string,
+        surgeryCaseId?: string,
+        sourceOrderSetId?: string,
+        sourceOrderSetNameSnapshot?: string,
     ) => {
         try {
             return await ipdApiClient.post('/clinical-order', {
@@ -92,6 +95,9 @@ export const clinicalOrderApi = {
                 orderType,
                 orderedByDoctorId,
                 notes,
+                surgeryCaseId,
+                sourceOrderSetId,
+                sourceOrderSetNameSnapshot,
                 lines,
             });
         } catch (err) {

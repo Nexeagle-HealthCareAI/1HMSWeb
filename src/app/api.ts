@@ -6,18 +6,17 @@ const trimStart = (s: string) => s.replace(/^\/+/, '');
 const join = (base: string, path: string) => `${trimEnd(base)}/${trimStart(path)}`;
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL
-  || 'http://151.185.45.77:5001';
+  || 'https://1hms-dev-api.nexeagle.com';
 
 export const API_BASE_URL = ensureProtocol(rawApiUrl);
 
 // Use this (not API_BASE_URL) anywhere the browser itself makes a request — axiosClient,
-// ipdApiClient, the offline connectivity health-check, etc. The dev server serves the page
-// over HTTPS (basicSsl plugin, needed elsewhere for camera/geolocation) while API_BASE_URL
-// in dev is plain HTTP, so a direct browser request to it gets mixed-content blocked.
-// /dev-api (vite.config.ts) proxies same-origin HTTPS requests server-side to the real
-// host, sidestepping that entirely. Production already serves the API over HTTPS, so it
-// uses API_BASE_URL directly, unchanged. Keep API_BASE_URL itself as the real absolute host
-// for anything that needs a genuinely absolute URL — e.g. an externally-shared link.
+// ipdApiClient, the offline connectivity health-check, etc. /dev-api (vite.config.ts) proxies
+// same-origin requests server-side to the real dev API host, avoiding cross-origin/cert issues
+// between the dev server (basicSsl, self-signed) and the real API host. Production serves the
+// API over HTTPS with a trusted cert, so it uses API_BASE_URL directly, unchanged. Keep
+// API_BASE_URL itself as the real absolute host for anything that needs a genuinely absolute
+// URL — e.g. an externally-shared link.
 export const API_REQUEST_BASE_URL = import.meta.env.DEV ? '/dev-api' : API_BASE_URL;
 
 // API Endpoints
@@ -64,6 +63,7 @@ export const API_ENDPOINTS = {
       `/e-prescription/configuration/personalized-medicine/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     MEDICINE_SEARCH: (hospitalId: string, doctorId: string, searchText: string) =>
       `/medicines/search?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&searchText=${encodeURIComponent(searchText)}`,
+    MEDICINE_INFO: (medicineId: number) => `/medicines/${medicineId}/info`,
     SAVE_DRAFT: (actionType: string = 'draft') => `/e-prescription/details/actionType=${actionType}`,
     GET_DRAFT: (appointmentId: string, patientId: string, doctorId: string, hospitalId: string) =>
       `/e-prescription/details/appointmentId=${encodeURIComponent(appointmentId)}&patientId=${encodeURIComponent(patientId)}&doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
@@ -127,6 +127,7 @@ export const API_ENDPOINTS = {
     CREATE_PRESCRIPTION: 'doctors/prescriptions',
     GET_DASHBOARD: 'doctors/dashboard',
     UPDATE_AVAILABILITY: 'doctors/availability',
+    UPDATE_ONLINE_STATUS_SELF: 'doctors/online-status/self',
     GET_AVAILABLE_SLOTS: (date: string) => `doctors/available-slots/${date}`,
     UPDATE_PRESCRIPTION_SETTINGS: () => `prescription/prescription-settings`,
     GET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings?doctorId=${id}`,
@@ -171,6 +172,9 @@ export const API_ENDPOINTS = {
     GET_DOCTOR_CONFIG: (doctorId: string, hospitalId: string, startDate: string, days: number) => `calendar/doctor/config?doctorId=${doctorId}&hospitalId=${hospitalId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
     CREATE_DOCTOR_OVERRIDE: 'calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `calendar/doctor/override/${overrideId}`,
+    GET_HOSPITAL_DOCTORS: (hospitalId: string) => `doctors/hospital?hospitalId=${hospitalId}`,
+    GET_AVAILABILITY_ROSTER: (hospitalId: string, date: string) => `calendar/roster?hospitalId=${hospitalId}&date=${encodeURIComponent(date)}`,
+    UPDATE_ONLINE_STATUS: (hospitalId: string) => `doctors/online-status?hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   PRESCRIPTION: {
     UPLOAD_ASSET: 'prescription/assets/upload',
@@ -227,7 +231,7 @@ export const IPD_API_ENDPOINTS = {
     CREATE_ENCOUNTER: 'charge/encounter',
     ADD_EVENT: 'charge/add-event',
     UPDATE_EVENT: 'charge/update-event',
-    CANCEL_EVENT: 'charge/cancel-event',
+    CANCEL_ENCOUNTER_CHARGES: 'charge/cancel-encounter-charges',
     GET_RATE_CARD: (hospitalId: string) => `charge/rate-card?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_PAYER_RATE: 'charge/rate-card/payer-rate',
     UPSERT_ROOM_MULTIPLIER: 'charge/rate-card/room-multiplier',
@@ -244,6 +248,7 @@ export const IPD_API_ENDPOINTS = {
     DASHBOARD: (hospitalId: string) => `billing/dashboard?hospitalId=${encodeURIComponent(hospitalId)}`,
     CREATE_INVOICE: 'billing/invoice',
     FINALIZE: (type: string) => `billing/finalize?type=${encodeURIComponent(type)}`,
+    DELETE_INVOICE: 'billing/delete-invoice',
     PRINT: (patientId: string, hospitalId: string, encounterId: string) =>
       `billing/print?patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
     // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
@@ -272,6 +277,7 @@ export const IPD_API_ENDPOINTS = {
       return `admission-referral/list?${parts.join('&')}`;
     },
     UPDATE_STATUS: 'admission-referral/status',
+    UPDATE_DETAILS: 'admission-referral/details',
     ADD_COMMENT: 'admission-referral/comment',
     COMMENTS: (hospitalId: string, referralId: string) =>
       `admission-referral/comments?hospitalId=${encodeURIComponent(hospitalId)}&referralId=${encodeURIComponent(referralId)}`,
@@ -314,6 +320,15 @@ export const IPD_API_ENDPOINTS = {
       return `package-type/list?${parts.join('&')}`;
     },
     UPSERT: 'package-type/upsert',
+  },
+  ORDER_SET: {
+    LIST: (hospitalId: string, opts?: { category?: string; includeInactive?: boolean }) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (opts?.category) parts.push(`category=${encodeURIComponent(opts.category)}`);
+      if (opts?.includeInactive) parts.push(`includeInactive=true`);
+      return `order-set/list?${parts.join('&')}`;
+    },
+    UPSERT: 'order-set/upsert',
   },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {

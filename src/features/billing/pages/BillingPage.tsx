@@ -37,7 +37,6 @@ import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
 import { EditChargeDialog } from '../components/dialogs/EditChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
-import { CreditApprovalsCard } from '../components/CreditApprovalsCard';
 import { VISIT_TYPES, visitTypeLabel } from '../utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
@@ -92,6 +91,8 @@ export const BillingPage: React.FC = () => {
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
     const [reopenOpen, setReopenOpen] = useState(false);
     const [reopenReason, setReopenReason] = useState('');
+    const [deleteInvoiceOpen, setDeleteInvoiceOpen] = useState(false);
+    const [deleteInvoiceReason, setDeleteInvoiceReason] = useState('');
     const [discountInput, setDiscountInput] = useState('');
     const [discountMode, setDiscountMode] = useState<'amount' | 'percent'>('amount');
     const [showDiscount, setShowDiscount] = useState(false);
@@ -327,6 +328,27 @@ export const BillingPage: React.FC = () => {
             loadEvents();
         } catch (e: any) {
             toast({ title: 'Could not reopen', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setInvoicing(false);
+        }
+    };
+
+    // Manually deletes (soft-cancels) the invoice regardless of status -- draft or finalized.
+    // Every charge on it is voided too, not just unlinked from the bill.
+    const handleDeleteInvoice = async () => {
+        if (!selectedPatient || !selectedEncounterId || !deleteInvoiceReason.trim() || invoicing) return;
+        if (isSubscriptionReadOnly) { blockAction('Deleting the invoice'); return; }
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Deleting an invoice requires an internet connection.', variant: 'destructive' }); return; }
+        setInvoicing(true);
+        try {
+            const res = await ipdBillingService.deleteInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, reason: deleteInvoiceReason.trim() });
+            if (res?.success === false) throw new Error(res?.message ?? 'Could not delete invoice');
+            toast({ title: 'Invoice deleted', description: `${res.chargesVoided} charge(s) voided.` });
+            setDeleteInvoiceOpen(false);
+            setDeleteInvoiceReason('');
+            loadEvents();
+        } catch (e: any) {
+            toast({ title: 'Could not delete invoice', description: e?.message ?? '', variant: 'destructive' });
         } finally {
             setInvoicing(false);
         }
@@ -1124,6 +1146,12 @@ export const BillingPage: React.FC = () => {
                                     <Unlock className="h-4 w-4 mr-1" /> Unlock Bill
                                 </Button>
                             )}
+                            {/* Manual delete — works on draft or finalized invoices, voids every charge too. */}
+                            {selectedEncounterId && eventsData?.currentInvoice && (eventsData.currentInvoice.statusCode ?? '').toUpperCase() !== 'CANCELLED' && (
+                                <Button onClick={() => isSubscriptionReadOnly ? blockAction('Deleting the invoice') : setDeleteInvoiceOpen(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
+                                    <Trash2 className="h-4 w-4 mr-1" /> Delete Invoice
+                                </Button>
+                            )}
 
                             {/* One obvious action: print the bill (bill-cum-receipt once anything is paid,
                                 otherwise the invoice). Other document types tuck away under "More". */}
@@ -1166,11 +1194,6 @@ export const BillingPage: React.FC = () => {
                                 <p className="font-bold">VISIT CANCELLED</p>
                                 {selectedEncounter.cancelReason && <p className="mt-1">{selectedEncounter.cancelReason}</p>}
                             </div>
-                        )}
-
-                        {/* Credit approvals (only renders if any approvals exist for this encounter) */}
-                        {selectedEncounterId && (
-                            <CreditApprovalsCard encounterId={selectedEncounterId} pendingOnly={false} />
                         )}
                     </CardContent>
                 </Card>
@@ -1473,6 +1496,46 @@ export const BillingPage: React.FC = () => {
                             className="rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20"
                         >
                             {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Reopening…</> : <><Unlock className="h-4 w-4 mr-1.5" /> Reopen</>}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete invoice confirm — works on draft or finalized invoices. Every charge on it
+                gets voided too, not just unlinked. Requires a reason for audit. */}
+            <AlertDialog open={deleteInvoiceOpen} onOpenChange={(o) => { if (!o) { setDeleteInvoiceOpen(false); setDeleteInvoiceReason(''); } }}>
+                <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-rose-600 to-red-600">
+                        <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Trash2 className="h-5 w-5 text-white" />
+                        </div>
+                        <AlertDialogTitle className="text-white text-base font-bold">Delete this invoice?</AlertDialogTitle>
+                    </div>
+                    <div className="px-5 py-4 space-y-3">
+                        <AlertDialogDescription className="text-sm text-slate-600">
+                            This cancels invoice <span className="font-semibold text-slate-800">{eventsData?.currentInvoice?.invoiceNo ?? ''}</span>{' '}
+                            and voids every charge on it, whether or not it's finalized. Any money already collected against it becomes
+                            unallocated and available for a future invoice on this visit. This cannot be undone. A reason is required for audit.
+                        </AlertDialogDescription>
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Reason for deleting <span className="text-rose-500">*</span></Label>
+                            <Textarea
+                                placeholder="e.g. Billed the wrong patient…"
+                                value={deleteInvoiceReason}
+                                onChange={(e) => setDeleteInvoiceReason(e.target.value)}
+                                rows={3}
+                                className="text-sm mt-1.5 rounded-xl"
+                            />
+                        </div>
+                    </div>
+                    <AlertDialogFooter className="px-5 pb-5 pt-0">
+                        <AlertDialogCancel disabled={invoicing} className="rounded-xl">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => { e.preventDefault(); handleDeleteInvoice(); }}
+                            disabled={!deleteInvoiceReason.trim() || invoicing}
+                            className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20"
+                        >
+                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting…</> : <><Trash2 className="h-4 w-4 mr-1.5" /> Delete invoice</>}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

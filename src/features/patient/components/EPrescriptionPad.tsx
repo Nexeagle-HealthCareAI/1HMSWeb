@@ -34,7 +34,9 @@ import {
   User,
   Settings,
   TestTube,
-  PenTool
+  PenTool,
+  Info,
+  Loader2
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
@@ -57,7 +59,7 @@ import { patientProfileApi, PatientProfileData } from '../services/patientProfil
 import { LookupItem } from './LookupMultiSelect';
 
 import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
-import { eprescriptionApi, LookupData, EPrescriptionDraftReq, MedicineSearchItem } from '../services/eprescriptionApi';
+import { eprescriptionApi, LookupData, EPrescriptionDraftReq, MedicineSearchItem, MedicineInfoResponse } from '../services/eprescriptionApi';
 import { buildPreviewFromRequest } from '@/components/shared/prescription-preview/services/prescriptionPreviewService';
 import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
@@ -575,6 +577,62 @@ interface EPrescriptionPadProps {
   prescriptionFieldPreferences?: any;
   appointmentId?: string;
 }
+
+// Ingredient-level enrichment (RxNorm/RxNav cross-reference) for a selected master-catalog
+// medicine - US-naming synonym + available strengths/forms, when NLM has a match.
+const MedicineInfoPanel: React.FC<{ entry: MedicineInfoResponse | 'loading' | 'error' | undefined }> = ({ entry }) => {
+  if (!entry || entry === 'loading') {
+    return (
+      <div className="flex items-center gap-2 text-gray-500">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span>Looking up ingredient info...</span>
+      </div>
+    );
+  }
+  if (entry === 'error') {
+    return <div className="text-gray-500">Couldn't load medicine info right now.</div>;
+  }
+  if (!entry.ingredients || entry.ingredients.length === 0) {
+    return <div className="text-gray-500">No composition data available for this medicine.</div>;
+  }
+  return (
+    <div className="space-y-3">
+      {entry.ingredients.map((ing, i) => (
+        <div key={i}>
+          <div className="font-medium text-gray-800">{ing.ingredientName}</div>
+          {!ing.found ? (
+            <div className="text-xs text-gray-500">Not found in RxNorm (may be an India-specific ingredient/formulation).</div>
+          ) : (
+            <>
+              {ing.displayName && ing.displayName.toLowerCase() !== ing.ingredientName.toLowerCase() && (
+                <div className="text-xs text-gray-500">Also known as: {ing.displayName} (US)</div>
+              )}
+              {ing.availableForms.length > 0 ? (
+                <ul className="mt-1 list-disc pl-4 text-xs text-gray-600 space-y-0.5">
+                  {ing.availableForms.slice(0, 8).map((form, fIdx) => (
+                    <li key={fIdx}>{form}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-xs text-gray-500">No prescribable-form data available.</div>
+              )}
+            </>
+          )}
+          {ing.usage && (
+            <div className="mt-1.5 text-xs text-gray-600">
+              <span className="font-semibold text-gray-700">Usage: </span>{ing.usage}
+            </div>
+          )}
+          {ing.sideEffects && (
+            <div className="mt-1 text-xs text-gray-600">
+              <span className="font-semibold text-gray-700">Side effects: </span>{ing.sideEffects}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(({ prescriptionFieldPreferences, appointmentId: propAppointmentId }, ref) => {
   const { patientId } = useParams<{ patientId: string }>();
@@ -1564,6 +1622,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const [medicationOpenForId, setMedicationOpenForId] = useState<string | null>(null);
   const [medicationActiveIndex, setMedicationActiveIndex] = useState(0);
   const [activeMedicationId, setActiveMedicationId] = useState<string | null>(null);
+  const [medicineInfoCache, setMedicineInfoCache] = useState<Record<number, MedicineInfoResponse | 'loading' | 'error'>>({});
+  // Which master-catalog medicine (if any) is currently selected for each medication row,
+  // so the right-side info panel knows what to show (price, RxNorm ingredient info). Keyed
+  // by medication.id, not persisted as part of the medication itself - purely local UI state.
+  const [selectedMasterMedicine, setSelectedMasterMedicine] = useState<Record<string, MedicineSearchItem>>({});
+
+  const loadMedicineInfo = (medicineId: number) => {
+    if (medicineInfoCache[medicineId]) return;
+    setMedicineInfoCache(prev => ({ ...prev, [medicineId]: 'loading' }));
+    eprescriptionApi.getMedicineInfo(medicineId)
+      .then(res => setMedicineInfoCache(prev => ({ ...prev, [medicineId]: res })))
+      .catch(() => setMedicineInfoCache(prev => ({ ...prev, [medicineId]: 'error' })));
+  };
 
   // Collapsible sections state
   const [collapsedSections, setCollapsedSections] = useState<{ [key: string]: boolean }>({
@@ -2222,6 +2293,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     }
 
     // saveMedicineToDrPreference(trimmed, itemData);
+
+    if (itemData?.medicineId != null) {
+      const medicineId = itemData.medicineId;
+      setSelectedMasterMedicine(prev => ({ ...prev, [id]: itemData }));
+      loadMedicineInfo(medicineId);
+    } else {
+      setSelectedMasterMedicine(prev => {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
 
     setMedicationOpenForId(null);
   };
@@ -4410,6 +4494,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             }`}
                           onClick={() => setActiveMedicationId(medication.id)}
                         >
+                        <div className="flex gap-4 items-start">
+                        <div className="flex-1 min-w-0 space-y-3">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -4443,6 +4529,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                   const val = e.target.value;
                                   updateMedication(medication.id, 'name', val);
                                   setMedicationQuery(val);
+                                  setSelectedMasterMedicine(prev => {
+                                    if (!(medication.id in prev)) return prev;
+                                    const next = { ...prev };
+                                    delete next[medication.id];
+                                    return next;
+                                  });
 
                                   if (val && val.length > 2) {
                                     try {
@@ -4460,7 +4552,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                                       const masterItems = (results.masterMedicine || []).map(item => ({
                                         id: item.id || `temp-${Math.random()}`,
-                                        name: item.medicineName || item.brandName || item.genericName,
+                                        name: item.prescriptionFormat || item.medicineName || item.brandName || item.genericName,
                                         source: 'general' as const,
                                         shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
                                         original: item
@@ -4498,7 +4590,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                                         const masterItems = (results.masterMedicine || []).map(item => ({
                                           id: item.id || `temp-${Math.random()}`,
-                                          name: item.medicineName || item.brandName || item.genericName,
+                                          name: item.prescriptionFormat || item.medicineName || item.brandName || item.genericName,
                                           source: 'general' as const,
                                           shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
                                           original: item
@@ -4804,6 +4896,28 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               </Button>
                             </div>
                           </div>
+                        </div>
+                        {(() => {
+                          const selected = selectedMasterMedicine[medication.id];
+                          if (!selected || selected.medicineId == null) return null;
+                          return (
+                            <div className="hidden lg:block w-72 shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 text-sm space-y-3">
+                              <div>
+                                <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase text-gray-500">
+                                  <Info className="h-3.5 w-3.5" />
+                                  Medicine info
+                                </div>
+                                {typeof selected.price === 'number' && selected.price > 0 && (
+                                  <div className="text-gray-700 dark:text-gray-200">
+                                    Approx. price: <span className="font-medium">₹{selected.price.toFixed(2)}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <MedicineInfoPanel entry={medicineInfoCache[selected.medicineId]} />
+                            </div>
+                          );
+                        })()}
+                        </div>
                         </div>
                       );
                     })}

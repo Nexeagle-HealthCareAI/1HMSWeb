@@ -16,7 +16,7 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
     const rows = regularItems.map((item, idx) => `
         <tr style="background:${idx % 2 ? '#f8fafc' : '#ffffff'};">
             <td style="text-align:center; color:#94a3b8;">${idx + 1}</td>
-            <td style="font-weight:600; color:#0f172a;">${item.description}${item.period ? `<div style="font-size:8pt; font-weight:400; color:#64748b; margin-top:2px;">📅 ${item.period}</div>` : ''}</td>
+            <td style="font-weight:600; color:#0f172a;">${item.description}${item.period ? `<div style="font-size:8pt; font-weight:400; color:#64748b; margin-top:2px;">📅 ${item.period}</div>` : ''}${item.hsnSacCode ? `<div style="font-size:7.5pt; font-weight:400; color:#94a3b8; margin-top:2px;">HSN/SAC: ${item.hsnSacCode}</div>` : ''}</td>
             <td style="text-align:right;">${inr(item.rate)}</td>
             <td style="text-align:center;">${item.qty}</td>
             <td style="text-align:right; color:#b91c1c;">${item.discount > 0 ? '- ' + inr(item.discount) : '—'}</td>
@@ -154,7 +154,11 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
             <table>
                 <tr><td class="k">Sub Total</td><td class="v">${inr(data.subTotal)}</td></tr>
                 ${data.discountTotal > 0 ? `<tr><td class="k">Discount</td><td class="v" style="color:#b91c1c;">- ${inr(data.discountTotal)}</td></tr>` : ''}
-                ${data.taxTotal > 0 ? `<tr><td class="k">GST</td><td class="v">${inr(data.taxTotal)}</td></tr>` : ''}
+                ${data.taxableTotal ? `<tr><td class="k">Taxable Amount</td><td class="v">${inr(data.taxableTotal)}</td></tr>` : ''}
+                ${data.igstTotal ? `<tr><td class="k">IGST</td><td class="v">${inr(data.igstTotal)}</td></tr>` : ''}
+                ${!data.igstTotal && data.cgstTotal ? `<tr><td class="k">CGST</td><td class="v">${inr(data.cgstTotal)}</td></tr>` : ''}
+                ${!data.igstTotal && data.sgstTotal ? `<tr><td class="k">SGST</td><td class="v">${inr(data.sgstTotal)}</td></tr>` : ''}
+                ${!data.taxableTotal && !data.igstTotal && !data.cgstTotal && !data.sgstTotal && data.taxTotal > 0 ? `<tr><td class="k">GST</td><td class="v">${inr(data.taxTotal)}</td></tr>` : ''}
                 <tr class="grand"><td>Grand Total</td><td style="text-align:right;">${inr(data.grandTotal)}</td></tr>
             </table>
         </div>

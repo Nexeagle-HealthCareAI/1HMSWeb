@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { expenseService, type ExpenseItem, type UpsertExpenseRequest } from '../../services/expenseService';
+import { BulkAddExpenseDialog } from '../BulkAddExpenseDialog';
 import { debounce } from 'lodash';
 import { KpiStat } from '../KpiStat';
 import { LoadingState, EmptyState, ErrorState } from '../StatePanel';
@@ -91,6 +92,7 @@ export const ExpenseTab: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [bulkOpen, setBulkOpen] = useState(false);
 
     const load = useCallback(async (silent = false, overrideSearch?: string, overrideFrom?: string, overrideTo?: string) => {
         if (silent) setRefreshing(true); else setLoading(true);
@@ -200,6 +202,10 @@ export const ExpenseTab: React.FC = () => {
         if (isSubscriptionReadOnly) { blockAction('Adding an expense'); return; }
         setForm(emptyForm());
         setDialogOpen(true);
+    };
+    const openBulk = () => {
+        if (isSubscriptionReadOnly) { blockAction('Adding expenses'); return; }
+        setBulkOpen(true);
     };
     const openEdit = (e: ExpenseItem) => {
         if (isSubscriptionReadOnly) { blockAction('Editing expenses'); return; }
@@ -323,6 +329,9 @@ export const ExpenseTab: React.FC = () => {
                         <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0" onClick={() => load(true)} disabled={refreshing || loading}>
                             <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
                         </Button>
+                        <Button size="sm" variant="outline" className="h-10 sm:h-9 gap-1.5 text-xs rounded-xl px-3 shrink-0" onClick={openBulk} disabled={isSubscriptionReadOnly}>
+                            <Plus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add </span>Multiple
+                        </Button>
                         <Button size="sm" className="h-10 sm:h-9 gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white text-xs shadow-md shadow-rose-500/20 flex-1 xl:flex-none" onClick={openAdd} disabled={isSubscriptionReadOnly}>
                             <Plus className="h-3.5 w-3.5" /> Add Expense
                         </Button>
@@ -350,6 +359,7 @@ export const ExpenseTab: React.FC = () => {
                                     <div className="mt-1.5">
                                         <p className="font-semibold text-slate-800 text-sm">{e.vendor || '—'}</p>
                                         {e.description && <p className="text-[11px] text-slate-500">{e.description}</p>}
+                                        {e.notes && <p className="text-[11px] text-slate-500"><span className="font-semibold text-slate-600">Reason:</span> {e.notes}</p>}
                                     </div>
                                     <div className="flex items-center justify-between gap-2 mt-2">
                                         <div className="flex items-center gap-2 text-[11px] text-slate-500">
@@ -386,6 +396,7 @@ export const ExpenseTab: React.FC = () => {
                                         <TableCell>
                                             <div className="font-semibold text-slate-800">{e.vendor || '—'}</div>
                                             {e.description && <div className="text-[10px] text-slate-500">{e.description}</div>}
+                                            {e.notes && <div className="text-[10px] text-slate-500"><span className="font-semibold text-slate-600">Reason:</span> {e.notes}</div>}
                                         </TableCell>
                                         <TableCell className="text-xs font-mono uppercase text-slate-500">{e.paymentMode || '—'}</TableCell>
                                         <TableCell><Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', e.statusCode === 'PAID' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200')}>{e.statusCode}</Badge></TableCell>
@@ -482,6 +493,8 @@ export const ExpenseTab: React.FC = () => {
                     </div>
                 </SheetContent>
             </Sheet>
+
+            <BulkAddExpenseDialog open={bulkOpen} onOpenChange={setBulkOpen} categories={CATEGORIES} categoryLabel={CAT_LABEL} paymentModes={MODES} onSaved={() => load(true)} />
 
             {/* Delete confirm */}
             <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>

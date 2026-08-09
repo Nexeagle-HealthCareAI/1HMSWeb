@@ -33,11 +33,15 @@ const LoginPage = () => {
         navigate(intendedPath);
       } else if (userRole === 'Admin' || userRole === 'AdminDoctor') {
         navigate('/admin');
-      } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
+      } else if (userRole === 'Receptionist') {
         navigate('/appointment-dashboard');
+      } else if (userRole === 'Nurse') {
+        navigate('/nursing-station');
       } else if (userRole === 'Doctor') {
         const isMobile = window.innerWidth < 1024;
         navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
+      } else if (userRole === 'Accountant') {
+        navigate('/billing');
       } else {
         // Default fallback
         navigate('/appointment-dashboard');
@@ -63,13 +67,19 @@ const LoginPage = () => {
     } else if (currentUserRole === 'Admin' || currentUserRole === 'AdminDoctor') {
       console.log('[LOGIN-DEBUG] handleLogin: navigating to /admin');
       navigate('/admin');
-    } else if (currentUserRole === 'Receptionist' || currentUserRole === 'Nurse') {
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (Receptionist/Nurse branch)');
+    } else if (currentUserRole === 'Receptionist') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (Receptionist branch)');
       navigate('/appointment-dashboard');
+    } else if (currentUserRole === 'Nurse') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /nursing-station (Nurse branch)');
+      navigate('/nursing-station');
     } else if (currentUserRole === 'Doctor') {
       const isMobile = window.innerWidth < 1024;
       console.log('[LOGIN-DEBUG] handleLogin: navigating to', isMobile ? '/appointment-dashboard' : '/dashboard', '(Doctor branch)');
       navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
+    } else if (currentUserRole === 'Accountant') {
+      console.log('[LOGIN-DEBUG] handleLogin: navigating to /billing (Accountant branch)');
+      navigate('/billing');
     } else {
       // Default fallback
       console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (default fallback branch) — currentUserRole was', JSON.stringify(currentUserRole));
@@ -91,8 +101,10 @@ const LoginPage = () => {
       navigate('/admin');
     } else if (userRole === 'AdminDoctor') {
       navigate('/admin');
-    } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
+    } else if (userRole === 'Receptionist') {
       navigate('/appointment-dashboard');
+    } else if (userRole === 'Nurse') {
+      navigate('/nursing-station');
     } else if (userRole === 'Doctor') {
       const isMobile = window.innerWidth < 1024;
       navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
@@ -101,8 +113,10 @@ const LoginPage = () => {
       const storedRole = authStore.getUserRole();
       if (storedRole === 'Admin') {
         navigate('/admin');
-      } else if (storedRole === 'Receptionist' || storedRole === 'Nurse') {
+      } else if (storedRole === 'Receptionist') {
         navigate('/appointment-dashboard');
+      } else if (storedRole === 'Nurse') {
+        navigate('/nursing-station');
       } else {
         const isMobile = window.innerWidth < 1024;
         navigate(isMobile ? '/appointment-dashboard' : '/dashboard');

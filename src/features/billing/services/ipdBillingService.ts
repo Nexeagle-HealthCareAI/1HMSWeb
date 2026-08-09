@@ -233,13 +233,16 @@ export interface UpdateChargeEventResponse {
     };
 }
 
-export interface CancelChargeEventRequest {
+// Cancels the patient's entire latest encounter and voids every charge on it -- NOT a
+// single-charge cancel. Renamed from CancelChargeEventRequest/Response, which had no
+// chargeEventId field at all and was a misleading name for what this actually does.
+export interface CancelEncounterChargesRequest {
     hospitalId?: string;
     patientId: string;
     cancelReason?: string;
 }
 
-export interface CancelChargeEventResponse {
+export interface CancelEncounterChargesResponse {
     success: boolean;
     message?: string;
 }
@@ -289,6 +292,19 @@ export interface FinalizeBillingRequest {
 export interface FinalizeBillingResponse {
     success: boolean;
     message?: string;
+}
+
+export interface DeleteInvoiceRequest {
+    hospitalId?: string;
+    patientId: string;
+    encounterId: string;
+    reason: string;
+}
+
+export interface DeleteInvoiceResponse {
+    success: boolean;
+    message?: string;
+    chargesVoided: number;
 }
 
 // ─── Payments ────────────────────────────────────────────────────────────────
@@ -562,8 +578,8 @@ export const ipdBillingService = {
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),
 
-    cancelChargeEvent: (req: CancelChargeEventRequest): Promise<CancelChargeEventResponse> =>
-        ipdApiClient.patch(IPD_API_ENDPOINTS.CHARGE.CANCEL_EVENT, {
+    cancelEncounterCharges: (req: CancelEncounterChargesRequest): Promise<CancelEncounterChargesResponse> =>
+        ipdApiClient.patch(IPD_API_ENDPOINTS.CHARGE.CANCEL_ENCOUNTER_CHARGES, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),
@@ -577,6 +593,14 @@ export const ipdBillingService = {
 
     finalize: (action: FinalizeAction, req: FinalizeBillingRequest): Promise<FinalizeBillingResponse> =>
         ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.FINALIZE(action), {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
+    // Manually deletes (soft-cancels) an invoice regardless of status -- draft or finalized.
+    // Every charge on it is voided, not just unlinked.
+    deleteInvoice: (req: DeleteInvoiceRequest): Promise<DeleteInvoiceResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.DELETE_INVOICE, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),

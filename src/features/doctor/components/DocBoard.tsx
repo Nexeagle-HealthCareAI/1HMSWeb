@@ -113,7 +113,8 @@ import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
 import { useDoctorAppointmentDetails } from '../hooks/useDoctorAppointmentDetails';
-import { DoctorAppointmentDetail } from '../services/doctorApi';
+import { DoctorAppointmentDetail, doctorApi } from '../services/doctorApi';
+import { Switch } from '@/components/ui/switch';
 import {
   PrescriptionPreviewModal,
   type GeneratePrescriptionDetailsRequest,
@@ -254,6 +255,29 @@ export const ClinicalDashboard: React.FC = () => {
   const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
   const canBypassDoctorRestriction = (userRole === 'AdminDoctor' || userRole === 'Doctor') && Boolean(hospitalId);
   const isDoctorExperienceLocked = doctorProfileRestricted && !canBypassDoctorRestriction;
+
+  // Self-service "Online now" toggle — seeded from the profile fetch, flipped independently via
+  // its own optimistic-update local state (mirrors AvailabilityRosterPage's staff-facing switch).
+  const [isOnlineNowOverride, setIsOnlineNowOverride] = useState<boolean | null>(null);
+  const [isSavingOnlineStatus, setIsSavingOnlineStatus] = useState(false);
+  const isOnlineNow = isOnlineNowOverride ?? doctorProfileResponse?.isOnlineNow ?? false;
+
+  const handleToggleOnlineNow = async (next: boolean) => {
+    setIsOnlineNowOverride(next);
+    setIsSavingOnlineStatus(true);
+    try {
+      const response = await doctorApi.updateOwnOnlineStatus(next);
+      if (!response.success) {
+        setIsOnlineNowOverride(!next);
+        toast({ variant: 'destructive', title: t('docBoard.header.onlineStatusSaveFailed', 'Could not save'), description: response.message ?? '' });
+      }
+    } catch (e: any) {
+      setIsOnlineNowOverride(!next);
+      toast({ variant: 'destructive', title: t('docBoard.header.onlineStatusSaveFailed', 'Could not save'), description: e?.message ?? '' });
+    } finally {
+      setIsSavingOnlineStatus(false);
+    }
+  };
 
   const doctorDisplayName = doctorProfileResponse?.userId || t('docBoard.header.defaultDoctorName');
 
@@ -1037,6 +1061,18 @@ export const ClinicalDashboard: React.FC = () => {
                     </div>
                     <p className="text-[11px] text-brand-100 mt-0.5 leading-tight">Practice oversight, calendar and clinical records.</p>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={cn('inline-block h-1.5 w-1.5 rounded-full', isOnlineNow ? 'bg-emerald-400 animate-pulse' : 'bg-white/40')} />
+                  <span className="text-xs font-medium text-white">
+                    {isOnlineNow ? t('docBoard.header.onlineNow', 'Online now') : t('docBoard.header.offline', 'Offline')}
+                  </span>
+                  <Switch
+                    checked={isOnlineNow}
+                    disabled={isSavingOnlineStatus}
+                    onCheckedChange={handleToggleOnlineNow}
+                  />
                 </div>
               </div>
 

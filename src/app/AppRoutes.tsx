@@ -22,9 +22,10 @@ const RoleBasedRedirect = () => {
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
     const isMobile = window.innerWidth < 1024;
     return <Navigate to={isMobile ? "/appointment-dashboard" : "/dashboard"} replace />;
-  } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
-    // Receptionist and Nurse should go to appointment dashboard
+  } else if (userRole === 'Receptionist') {
     return <Navigate to="/appointment-dashboard" replace />;
+  } else if (userRole === 'Nurse') {
+    return <Navigate to="/nursing-station" replace />;
   } else if (userRole === 'Accountant') {
     return <Navigate to="/billing" replace />;
   } else {
@@ -56,6 +57,7 @@ const IpdPatientWorkspacePage = lazy(() => import('@/features/ipd-redesign/pages
 const InventoryManagementPage = lazy(() => import('@/features/ipd-redesign/pages/InventoryManagementPage').then(module => ({ default: module.default })));
 const OtBoardPage = lazy(() => import('@/features/ipd-redesign/pages/OtBoardPage').then(module => ({ default: module.default })));
 const IcuBoardPage = lazy(() => import('@/features/ipd-redesign/pages/IcuBoardPage').then(module => ({ default: module.default })));
+const NursingStationPage = lazy(() => import('@/features/ipd-redesign/pages/NursingStationPage').then(module => ({ default: module.default })));
 const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
 // DEV-ONLY: unauthenticated mobile-UI preview harness for the Doc Board (see route below).
 const DocBoardPreview = lazy(() => import('@/features/doctor/pages/DocBoardPreview').then(module => ({ default: module.default })));
@@ -76,6 +78,7 @@ const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage')
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
 const ChainManagement = lazy(() => import('@/features/hospital/components/ChainManagement').then(module => ({ default: module.ChainManagement })));
+const AbdmDashboard = lazy(() => import('@/features/abdm/components/AbdmDashboard').then(module => ({ default: module.AbdmDashboard })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
@@ -374,6 +377,16 @@ export const AppRoutes: React.FC = () => {
               }
             />
             <Route
+              path="/abdm"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist']}>
+                  <MainLayout>
+                    <AbdmDashboard />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
               path="/ipd-workspace"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
@@ -428,6 +441,17 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
+            <Route
+              path="/nursing-station"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <NursingStationPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
             {/* Clinical Dashboard Route - Restricted to Doctor and AdminDoctor roles */}
             <Route
               path="/dashboard"
@@ -440,11 +464,11 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
-            {/* Doctor Calendar Route - Restricted to Doctor and AdminDoctor roles */}
+            {/* Doctor Calendar Route - Doctor manages their own; Admin/AdminDoctor/Receptionist can manage any doctor's availability */}
             <Route
               path="/calendar"
               element={
-                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor', 'Admin', 'Receptionist']}>
                   <MainLayout>
                     <DoctorCalendar />
                   </MainLayout>
@@ -554,7 +578,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Accountant']}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>
@@ -564,7 +588,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/ledger"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -574,7 +598,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/:appointmentId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Accountant']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Accountant']}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>

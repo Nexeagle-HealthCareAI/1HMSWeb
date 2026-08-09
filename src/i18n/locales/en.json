@@ -586,7 +586,7 @@
       "awaitingReconsult": "Awaiting Reconsult",
       "completed": "Completed",
       "cancelled": "Cancelled",
-      "preAppointment": "Pre-Appointment"
+      "preAppointment": "Online Appointment"
     },
     "statusLabels": {
       "vitalsRequired": "Vitals",
@@ -597,7 +597,7 @@
       "completed": "Done",
       "scheduled": "Scheduled",
       "cancelled": "Cancelled",
-      "preAppointment": "Pre-Appointment"
+      "preAppointment": "Online Appointment"
     },
     "refreshNow": "Refresh Now",
     "loadingAppointments": "Loading appointments...",
@@ -3163,7 +3163,7 @@
       "completed": "Completed",
       "scheduled": "Scheduled",
       "cancelled": "Cancelled",
-      "preAppointment": "Pre-Appointment",
+      "preAppointment": "Online Appointment",
       "default": "{{status}}"
     },
     "sync": {

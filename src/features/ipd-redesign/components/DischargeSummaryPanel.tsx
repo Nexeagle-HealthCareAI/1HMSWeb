@@ -286,8 +286,17 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const confirmDischarge = async () => {
         setDischargeBusy(true);
         try {
-            await bedBoardApi.dischargeAdmission(admission.admissionId, dischargeNotes || undefined);
+            const result = await bedBoardApi.dischargeAdmission(admission.admissionId, dischargeNotes || undefined);
             toast({ title: 'Patient discharged.' });
+            if (result.hasOutstandingBalance || result.hasUnfinalizedInvoice) {
+                toast({
+                    title: 'Billing not settled',
+                    description: result.hasOutstandingBalance
+                        ? `₹${result.outstandingAmount.toLocaleString('en-IN')} still outstanding on this encounter.`
+                        : 'This encounter still has an unfinalized invoice.',
+                    variant: 'destructive',
+                });
+            }
             setDischargeOpen(false);
             onDischarged();
         } catch (err) {

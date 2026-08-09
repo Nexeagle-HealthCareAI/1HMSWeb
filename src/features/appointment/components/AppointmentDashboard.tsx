@@ -107,6 +107,8 @@ import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
 import { getOpdDocHtml, buildPrintSettingsFromHospital, type OpdDocKind } from '@/features/billing/utils/opdDocuments';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { useAvailabilityRoster } from '@/features/doctor-calendar/hooks/useCalendar';
+import { DoctorCalendarPage } from '@/features/doctor-calendar/DoctorCalendarPage';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -123,6 +125,7 @@ export const AppointmentDashboard = () => {
   const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('all');
+  const [showAvailabilityDialog, setShowAvailabilityDialog] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -288,7 +291,7 @@ export const AppointmentDashboard = () => {
       COMPLETED: t('appointmentDashboard.statusLabels.completed'),
       SCHEDULED: t('appointmentDashboard.statusLabels.scheduled'),
       CANCELLED: t('appointmentDashboard.statusLabels.cancelled'),
-      PRE_APPOINTMENT: t('appointmentDashboard.statusLabels.preAppointment', { defaultValue: 'Pre-Appointment' }),
+      PRE_APPOINTMENT: t('appointmentDashboard.statusLabels.preAppointment', { defaultValue: 'Online Appointment' }),
     } as Record<string, string>;
 
     switch (status) {
@@ -663,6 +666,16 @@ export const AppointmentDashboard = () => {
     });
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [appointments]);
+
+  // Today's availability status per doctor, for the small dot next to each name in the doctor
+  // filter below — same batched TimeOff > Override > Template resolution as the "Manage
+  // Availability" roster, so the two stay consistent.
+  const todayIso = dateFnsFormat(new Date(), 'yyyy-MM-dd');
+  const { data: availabilityRoster = [] } = useAvailabilityRoster(hospitalId ?? '', todayIso);
+  const availabilityByDoctorId = useMemo(
+    () => new Map(availabilityRoster.map((d) => [d.doctorId, d.isAvailable])),
+    [availabilityRoster]
+  );
 
   const departmentOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -1315,7 +1328,7 @@ export const AppointmentDashboard = () => {
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
           </div>
 
-          {/* Pre-Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
+          {/* Online Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
           {kpiStats.preAppointment > 0 && (
             <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
@@ -1326,7 +1339,7 @@ export const AppointmentDashboard = () => {
                 <div className="p-2.5 bg-amber-100 dark:bg-amber-500/20 rounded-xl shadow-inner ring-1 ring-amber-500/30 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 text-amber-600 dark:text-amber-400">
                   <CalendarClock className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' })}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' })}</span>
               </div>
               <div className="text-4xl font-mono font-black text-amber-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all">{kpiStats.preAppointment}</div>
             </div>
@@ -1425,12 +1438,28 @@ export const AppointmentDashboard = () => {
                       <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">{t('appointmentDashboard.allDoctors')}</SelectItem>
                       {doctorOptions.map((doctor) => (
                         <SelectItem key={doctor.value} value={doctor.value} className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">
-                          {doctor.label}
+                          <span className="inline-flex items-center gap-1.5">
+                            {availabilityByDoctorId.has(doctor.value) && (
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
+                            )}
+                            {doctor.label}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Manage Availability - opens the availability roster/scheduler inline, pre-selecting the filtered doctor if one is chosen */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAvailabilityDialog(true)}
+                  className="h-10 gap-2 rounded-xl border-brand-100/50 dark:border-zinc-800/80 font-medium shrink-0"
+                >
+                  <CalendarClock className="h-4 w-4" />
+                  {t('appointmentDashboard.manageAvailability', 'Manage Availability')}
+                </Button>
 
                 {/* Department Filter Dropdown */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1533,7 +1562,12 @@ export const AppointmentDashboard = () => {
                         <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
                         {doctorOptions.map((doctor) => (
                           <SelectItem key={doctor.value} value={doctor.value}>
-                            {doctor.label}
+                            <span className="inline-flex items-center gap-1.5">
+                              {availabilityByDoctorId.has(doctor.value) && (
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
+                              )}
+                              {doctor.label}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1608,7 +1642,7 @@ export const AppointmentDashboard = () => {
                     { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200/50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 hover:bg-yellow-200' },
                     { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-200' },
                     { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300/50 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 hover:bg-gray-200' },
-                    { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Pre-Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
+                    { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
                       const appointmentStartDate = new Date(a.startAt);
@@ -2769,6 +2803,20 @@ export const AppointmentDashboard = () => {
         open={showQuickGuide}
         onOpenChange={setShowQuickGuide}
       />
+
+      {/* Manage Availability - shown inline over the board instead of navigating to /calendar */}
+      <Dialog open={showAvailabilityDialog} onOpenChange={setShowAvailabilityDialog}>
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 overflow-hidden [&>button]:hidden">
+          <DoctorCalendarPage
+            initialDoctorId={
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedDoctor)
+                ? selectedDoctor
+                : undefined
+            }
+            onRequestClose={() => setShowAvailabilityDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Floating Action Button Constraints Area (Mobile Only) */}
       <div className="md:hidden fixed inset-0 pointer-events-none z-40" ref={fabConstraintsRef} />

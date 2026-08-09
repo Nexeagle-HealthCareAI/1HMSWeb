@@ -118,6 +118,22 @@ export interface UpdateReferralStatusResponse {
     message?: string;
 }
 
+export interface UpdateAdmissionReferralDetailsRequest {
+    hospitalId?: string;
+    referralId: string;
+    otPlanId?: string;
+    packageTypeId?: string;
+    procedureName?: string;
+    probableAdmissionDate?: string;
+    caseType: CaseType;
+    notes?: string;
+}
+
+export interface UpdateAdmissionReferralDetailsResponse {
+    success: boolean;
+    message?: string;
+}
+
 const hospitalIdOrThrow = (override?: string) => {
     const id = override ?? useAuthStore.getState().getHospitalId();
     if (!id) throw new Error('Hospital ID is not available on the current user session.');
@@ -169,6 +185,17 @@ export const admissionReferralApi = {
             });
         }
         return ipdApiClient.get(IPD_API_ENDPOINTS.ADMISSION_REFERRAL.LIST(id, filters));
+    },
+
+    updateDetails: (req: UpdateAdmissionReferralDetailsRequest): Promise<UpdateAdmissionReferralDetailsResponse> => {
+        const id = hospitalIdOrThrow(req.hospitalId);
+        if (id === 'PREVIEW-HOSPITAL') {
+            return Promise.resolve({ success: true });
+        }
+        return ipdApiClient.put(IPD_API_ENDPOINTS.ADMISSION_REFERRAL.UPDATE_DETAILS, {
+            ...req,
+            hospitalId: id,
+        });
     },
 
     updateStatus: (req: UpdateReferralStatusRequest): Promise<UpdateReferralStatusResponse> => {

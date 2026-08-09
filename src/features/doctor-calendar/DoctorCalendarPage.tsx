@@ -1,9 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft, X } from 'lucide-react';
 import {
   GamifiedHeader,
   EditShiftModal,
@@ -12,10 +16,13 @@ import {
   CancelOverrideDialog,
   OverrideActionDialog,
   ShiftDetailsCard,
-  CalendarEventContent
+  CalendarEventContent,
+  CalendarSidebar,
+  AvailabilityRosterPage
 } from './components';
-import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useTimeOff } from './hooks/useCalendar';
-import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, CreateTimeOffRequest } from './api/types';
+import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useTimeOff, useHospitalDoctors } from './hooks/useCalendar';
+import { HospitalDoctorItem } from './api/doctorListApi';
+import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, ShiftDetail, CreateTimeOffRequest } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -27,11 +34,27 @@ import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
-export const DoctorCalendarPage: React.FC = () => {
+// Roles that manage OTHER doctors' calendars via a picker, rather than only their own.
+const STAFF_SCHEDULER_ROLES = ['Admin', 'AdminDoctor', 'Receptionist'];
+
+interface DoctorCalendarPageProps {
+  // Pre-select a doctor without relying on the URL — used when this page is embedded inline
+  // (e.g. in a dialog on the Appointment Board) rather than reached via the /calendar route.
+  // Falls back to ?doctorId= when unset, so the routed usage is unaffected.
+  initialDoctorId?: string;
+  // Also for embedded usage: lets the host close/hide the dialog around this page instead of
+  // (or in addition to) the internal "Back to Availability" control.
+  onRequestClose?: () => void;
+}
+
+export const DoctorCalendarPage: React.FC<DoctorCalendarPageProps> = ({ initialDoctorId, onRequestClose }) => {
   const { t } = useTranslation();
   const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
+  // Month is the natural default for "which days is this doctor off" — day/week views (hour
+  // grids) suit fine-tuning shift hours, a secondary task most staff never touch.
+  const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('dayGridMonth');
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isTimeOffWarningClosed, setIsTimeOffWarningClosed] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
@@ -107,12 +130,60 @@ export const DoctorCalendarPage: React.FC = () => {
   });
 
   const { toast } = useToast();
-  const { getUserId } = useAuthStore();
+  const { getUserId, getUserRoles } = useAuthStore();
   const userId = getUserId() || '';
   const isLowBandwidthMode = useAppStore((state) => state.isLowBandwidthMode);
+  const authStore = useAuthStore();
+  const hospitalId = authStore.getHospitalId();
 
-  // Direct doctor API call for lazy loading - independent of dashboard
-  const { data: doctorProfile, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
+  // Admin/AdminDoctor/Receptionist manage ANY doctor's calendar via a picker;
+  // Doctor role keeps the original self-service behavior (own profile, no picker).
+  const userRoles = getUserRoles();
+  const isStaffScheduler = userRoles.some(role => STAFF_SCHEDULER_ROLES.includes(role));
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  // initialDoctorId (embedded usage) is only honored until the user explicitly backs out to the
+  // roster — otherwise "Back to Availability" would immediately re-resolve to the same doctor,
+  // since the prop itself doesn't change when the user navigates away from it internally.
+  const [initialDoctorIdDismissed, setInitialDoctorIdDismissed] = useState(false);
+  const doctorIdFromUrl = searchParams.get('doctorId') || (initialDoctorIdDismissed ? undefined : initialDoctorId) || undefined;
+
+  const { data: hospitalDoctors = [], isLoading: hospitalDoctorsLoading } = useHospitalDoctors(isStaffScheduler ? (hospitalId || '') : '');
+  const [selectedStaffDoctor, setSelectedStaffDoctor] = useState<HospitalDoctorItem | undefined>(undefined);
+
+  // Pre-select ONLY from ?doctorId= (arriving from the Appointment Board with a doctor already
+  // chosen there) — never auto-pick "the first doctor". With no explicit doctorId, staff land on
+  // the availability roster instead (see showRoster below): checking who's out today is the
+  // common task, picking a doctor blind to find out is not.
+  React.useEffect(() => {
+    if (!isStaffScheduler || selectedStaffDoctor || hospitalDoctors.length === 0 || !doctorIdFromUrl) return;
+    const preselect = hospitalDoctors.find(d => d.doctorId === doctorIdFromUrl);
+    if (preselect) setSelectedStaffDoctor(preselect);
+  }, [isStaffScheduler, hospitalDoctors, doctorIdFromUrl, selectedStaffDoctor]);
+
+  // Staff with no doctor chosen yet (no ?doctorId=, nothing picked from the switcher) see the
+  // roster instead of a calendar. Doctor role never sees this — they always go straight to their
+  // own calendar.
+  const showRoster = isStaffScheduler && !doctorIdFromUrl && !selectedStaffDoctor;
+
+  const handleSelectDoctorFromRoster = useCallback((id: string, name?: string) => {
+    const found = hospitalDoctors.find(d => d.doctorId === id);
+    setSelectedStaffDoctor(found || { doctorId: id, fullName: name, departmentName: undefined });
+  }, [hospitalDoctors]);
+
+  const handleBackToRoster = useCallback(() => {
+    setSelectedStaffDoctor(undefined);
+    setInitialDoctorIdDismissed(true);
+    if (searchParams.get('doctorId')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('doctorId');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Direct doctor API call for lazy loading - independent of dashboard. Disabled for staff
+  // schedulers, who resolve the target doctor from the picker above instead of their own profile.
+  const { data: doctorProfile, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(isStaffScheduler ? undefined : userId);
 
   // Log detailed error information and auth state
   React.useEffect(() => {
@@ -127,12 +198,12 @@ export const DoctorCalendarPage: React.FC = () => {
   }, [doctorProfileError, userId]);
   const { data: userDetailsResponse } = useUserDetails(userId);
 
-  const doctorId = doctorProfile?.doctorId;
-  const authStore = useAuthStore();
-  const hospitalId = authStore.getHospitalId();
+  const doctorId = isStaffScheduler ? selectedStaffDoctor?.doctorId : doctorProfile?.doctorId;
 
-  // Get doctor name - prioritize from doctor profile, fallback to user details
-  const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || t('doctorCalendar.doctorFallback');
+  // Get doctor name - staff schedulers see the selected doctor's name; self-service uses the logged-in user's own name
+  const doctorName = isStaffScheduler
+    ? (selectedStaffDoctor?.fullName || t('doctorCalendar.switcher.placeholder', 'Select a doctor'))
+    : (userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || t('doctorCalendar.doctorFallback'));
 
   // Get date range for API calls
   const getDateRange = useCallback(() => {
@@ -576,26 +647,92 @@ export const DoctorCalendarPage: React.FC = () => {
     });
   }, [events, toast]);
 
+  // Drag-move/resize have no dedicated update endpoint on the backend — persisted as
+  // delete-old + create-new against the existing override/time-off create+delete endpoints.
+  const persistEventTimeChange = useCallback(async (changeInfo: any, newStart: Date, newEnd: Date) => {
+    const event = changeInfo.event;
+    const props = event.extendedProps || {};
+    const isTimeOff = props.type === 'timeoff' || props.isTimeOff;
+    const isShiftLike = props.type === 'shift';
+
+    if (!doctorId || !hospitalId || (!isTimeOff && !isShiftLike)) {
+      changeInfo.revert();
+      return;
+    }
+
+    const toLocalDateStr = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    try {
+      if (isTimeOff) {
+        const timeOffId = props.timeOffId;
+        if (!timeOffId) {
+          changeInfo.revert();
+          return;
+        }
+        // FullCalendar's allDay end is exclusive; subtract a day for the inclusive "toDate"
+        const inclusiveEnd = new Date(newEnd.getTime() - 24 * 60 * 60 * 1000);
+        await deleteTimeOffMutation.mutateAsync({ doctorId, hospitalId, timeOffId });
+        await createTimeOffMutation.mutateAsync({
+          doctorId,
+          hospitalId,
+          fromDate: toLocalDateStr(newStart),
+          toDate: toLocalDateStr(inclusiveEnd),
+          reason: props.reason || event.title,
+        });
+      } else {
+        const overrideId = props.overrideId;
+        const shiftDate = format(newStart, 'yyyy-MM-dd');
+        const shiftDetails: ShiftDetail[] = [{
+          shiftName: props.shiftName,
+          startTime: format(newStart, 'HH:mm:ss'),
+          endTime: format(newEnd, 'HH:mm:ss'),
+          slotDurationInMinutes: props.slotDuration || 15,
+          recurringDays: [],
+        }];
+        if (overrideId) {
+          await deleteOverrideMutation.mutateAsync(overrideId);
+        }
+        const payload: CreateOverridePayload = {
+          doctorId,
+          hospitalId,
+          overrideDate: shiftDate,
+          startDate: shiftDate,
+          endDate: shiftDate,
+          shiftDetails,
+        };
+        await createOverrideMutation.mutateAsync(payload);
+      }
+
+      toast({
+        title: t('doctorCalendar.eventMoved'),
+        description: t('doctorCalendar.eventMovedDescription', {
+          title: event.title,
+          date: format(newStart, 'MMM dd, yyyy')
+        }),
+      });
+      await Promise.allSettled([refetchCalendarConfig(), refetchCalendarEvents()]);
+    } catch (error) {
+      changeInfo.revert();
+      toast({
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.errors.failedToCreateOverride'),
+        variant: 'destructive',
+      });
+    }
+  }, [doctorId, hospitalId, deleteTimeOffMutation, createTimeOffMutation, deleteOverrideMutation, createOverrideMutation, refetchCalendarConfig, refetchCalendarEvents, toast, t]);
+
   const handleEventDrop = useCallback((dropInfo: any) => {
-    // Handle event drag and drop
-    toast({
-      title: t('doctorCalendar.eventMoved'),
-      description: t('doctorCalendar.eventMovedDescription', {
-        title: dropInfo.event.title,
-        date: format(dropInfo.event.start!, 'MMM dd, yyyy')
-      }),
-    });
-  }, [toast]);
+    persistEventTimeChange(dropInfo, dropInfo.event.start, dropInfo.event.end);
+  }, [persistEventTimeChange]);
 
   const handleEventResize = useCallback((resizeInfo: any) => {
-    // Handle event resize
-    toast({
-      title: t('doctorCalendar.eventResized'),
-      description: t('doctorCalendar.eventResizedDescription', {
-        title: resizeInfo.event.title
-      }),
-    });
-  }, [toast]);
+    persistEventTimeChange(resizeInfo, resizeInfo.event.start, resizeInfo.event.end);
+  }, [persistEventTimeChange]);
 
   // Override events are now clickable and handled by the main eventClick handler
   // No global event prevention needed
@@ -608,6 +745,9 @@ export const DoctorCalendarPage: React.FC = () => {
     headerToolbar: false as const, // We're using our custom header
     height: 'auto', // Let content determine height
     contentHeight: 'auto', // Disable internal height constraints
+    editable: true, // Enables eventDrop/eventResize (drag-to-reschedule) - persisted via persistEventTimeChange
+    eventStartEditable: true,
+    eventDurationEditable: true,
     selectable: true,
     selectMirror: true,
     dayMaxEvents: true,
@@ -1134,6 +1274,37 @@ export const DoctorCalendarPage: React.FC = () => {
     });
   };
 
+  if (showRoster) {
+    return (
+      <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto p-6">
+        <div className="max-w-4xl w-full mx-auto flex items-start justify-between gap-4 mb-4">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('doctorCalendar.roster.pageTitle', 'Doctor Availability')}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {t('doctorCalendar.roster.pageSubtitle', "See who's available, and mark doctors unavailable when they're not.")}
+            </p>
+          </div>
+          {onRequestClose && (
+            <Button variant="ghost" size="icon" onClick={onRequestClose} className="shrink-0 rounded-full">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <div className="max-w-4xl w-full mx-auto">
+          {hospitalId ? (
+            <AvailabilityRosterPage hospitalId={hospitalId} onSelectDoctor={handleSelectDoctorFromRoster} />
+          ) : (
+            <div className="flex items-center justify-center py-16">
+              <LoadingSpinner size="lg" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!userId) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1149,17 +1320,36 @@ export const DoctorCalendarPage: React.FC = () => {
     );
   }
 
-  if (!doctorId || doctorProfileLoading || isInitialLoading || configLoading) {
+  if (isStaffScheduler && !hospitalDoctorsLoading && hospitalDoctors.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900">
-            {isInitialLoading ? t('doctorCalendar.initializingCalendar') : doctorProfileLoading ? t('doctorCalendar.loadingDoctorProfile') : configLoading ? t('doctorCalendar.loadingCalendarConfig') : t('doctorCalendar.doctorProfileRequired')}
+            {t('doctorCalendar.switcher.noDoctors', 'No doctors found')}
           </h3>
           <p className="text-gray-600">
-            {isInitialLoading ? t('doctorCalendar.initializingMessage') : doctorProfileLoading ? t('doctorCalendar.loadingProfileMessage') : configLoading ? t('doctorCalendar.loadingConfigMessage') : t('doctorCalendar.profileLoadError')}
+            {t('doctorCalendar.switcher.noDoctorsMessage', 'This hospital has no doctors on record yet.')}
           </p>
-          {doctorProfileError && (
+        </div>
+      </div>
+    );
+  }
+
+  // For staff schedulers, "loading the doctor" means resolving the roster + selection;
+  // for the self-service Doctor role it means resolving their own profile.
+  const doctorResolutionLoading = isStaffScheduler ? (hospitalDoctorsLoading || !doctorId) : doctorProfileLoading;
+
+  if (!doctorId || doctorResolutionLoading || isInitialLoading || configLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {isInitialLoading ? t('doctorCalendar.initializingCalendar') : doctorResolutionLoading ? t('doctorCalendar.loadingDoctorProfile') : configLoading ? t('doctorCalendar.loadingCalendarConfig') : t('doctorCalendar.doctorProfileRequired')}
+          </h3>
+          <p className="text-gray-600">
+            {isInitialLoading ? t('doctorCalendar.initializingMessage') : doctorResolutionLoading ? t('doctorCalendar.loadingProfileMessage') : configLoading ? t('doctorCalendar.loadingConfigMessage') : t('doctorCalendar.profileLoadError')}
+          </p>
+          {!isStaffScheduler && doctorProfileError && (
             <div className="text-red-600 text-sm mt-2">
               <p className="font-medium">{t('errors.doctorProfileError')}:</p>
               <p>{doctorProfileError.message || 'Failed to load doctor profile'}</p>
@@ -1171,7 +1361,7 @@ export const DoctorCalendarPage: React.FC = () => {
               </button>
             </div>
           )}
-          {(isInitialLoading || doctorProfileLoading || configLoading) && (
+          {(isInitialLoading || doctorResolutionLoading || configLoading) && (
             <div className="mt-4">
               <LoadingSpinner size="lg" />
             </div>
@@ -1183,6 +1373,27 @@ export const DoctorCalendarPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 transition-all duration-300 overflow-hidden">
+      {(isStaffScheduler || onRequestClose) && (
+        <div className="pt-6 px-6 flex items-center justify-between">
+          {isStaffScheduler ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBackToRoster}
+              className="h-7 px-2 -ml-2 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white gap-1"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              {t('doctorCalendar.roster.backToRoster', 'Back to Availability')}
+            </Button>
+          ) : <span />}
+          {onRequestClose && (
+            <Button variant="ghost" size="icon" onClick={onRequestClose} className="h-7 w-7 rounded-full">
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Premium Gamified Header */}
       <div className="pt-6 px-6">
         <GamifiedHeader
@@ -1197,36 +1408,65 @@ export const DoctorCalendarPage: React.FC = () => {
 
 
 
-      {/* Main Content Area with Calendar and Gamification Sidebar */}
+      {/* Main Content Area: Sidebar (mini-calendar + doctor switcher + legend), Calendar, Gamification panel */}
       <SubscriptionReadOnlyOverlay featureLabel="Managing your calendar" className="flex-1 px-6 pb-6 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-          {/* Calendar Column */}
-          <div className="lg:col-span-9 h-full flex flex-col">
-            {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
-              <div className="flex-1 flex items-center justify-center glass-card rounded-3xl">
-                <div className="text-center p-8">
-                  <LoadingSpinner size="lg" />
-                  <h3 className="mt-6 text-xl font-black text-gray-900 dark:text-white">
-                    {isInitialLoading ? t('doctorCalendar.preparingCalendar') :
-                      doctorProfileLoading ? t('doctorCalendar.loadingProfile') :
-                        configLoading ? t('doctorCalendar.loadingScheduleConfig') : t('doctorCalendar.loading')}
-                  </h3>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 glass-card rounded-3xl overflow-hidden shadow-2xl relative p-1 bg-white/50 dark:bg-gray-900/50">
-                <div className="h-full overflow-y-auto custom-scrollbar rounded-2xl bg-white dark:bg-gray-900">
-                  <FullCalendar
-                    key="doctor-calendar-instance"
-                    ref={calendarRef}
-                    {...calendarOptions}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Left Sidebar */}
+          <div className="lg:col-span-3 h-full overflow-y-auto pb-6 custom-scrollbar">
+            <CalendarSidebar
+              currentDate={currentDate}
+              onDateChange={setCurrentDate}
+              showDoctorSwitcher={isStaffScheduler}
+              doctors={hospitalDoctors}
+              selectedDoctorId={selectedStaffDoctor?.doctorId}
+              onSelectDoctor={setSelectedStaffDoctor}
+              doctorsLoading={hospitalDoctorsLoading}
+            />
           </div>
 
-          <div className="lg:col-span-3 space-y-6 h-full overflow-y-auto pb-6 custom-scrollbar pr-2">
+          {/* Calendar Column */}
+          <div className="lg:col-span-7 h-full flex flex-col">
+            <AnimatePresence mode="wait">
+              {eventsLoading || doctorResolutionLoading || isInitialLoading || configLoading ? (
+                <motion.div
+                  key="calendar-loading"
+                  initial={prefersReducedMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+                  className="flex-1 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                >
+                  <div className="text-center p-8">
+                    <LoadingSpinner size="lg" />
+                    <h3 className="mt-6 text-base font-medium text-gray-700 dark:text-gray-300">
+                      {isInitialLoading ? t('doctorCalendar.preparingCalendar') :
+                        doctorResolutionLoading ? t('doctorCalendar.loadingProfile') :
+                          configLoading ? t('doctorCalendar.loadingScheduleConfig') : t('doctorCalendar.loading')}
+                    </h3>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="calendar-ready"
+                  initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.25, ease: 'easeOut' }}
+                  className="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden relative bg-white dark:bg-gray-900"
+                >
+                  <div className="h-full overflow-y-auto custom-scrollbar bg-white dark:bg-gray-900">
+                    <FullCalendar
+                      key="doctor-calendar-instance"
+                      ref={calendarRef}
+                      {...calendarOptions}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6 h-full overflow-y-auto pb-6 custom-scrollbar pr-2">
 
             <ShiftDetailsCard
               events={allEvents}
@@ -1241,18 +1481,13 @@ export const DoctorCalendarPage: React.FC = () => {
         </div>
       </SubscriptionReadOnlyOverlay>
 
-      {/* Enhanced CSS for modern calendar styling */}
+      {/* Flat, minimal Google-Calendar-style theme for the FullCalendar grid */}
       <style>{`
           /* Smooth scrolling for the calendar content */
           .calendar-container {
             scroll-behavior: smooth;
           }
-          
-          /* Calendar Container Enhancements */
-          .calendar-container {
-            transition: all 0.3s ease;
-          }
-          
+
           /* Responsive grid adjustments */
           @media (max-width: 1024px) {
             .lg\\:grid-cols-4 {
@@ -1265,384 +1500,165 @@ export const DoctorCalendarPage: React.FC = () => {
               grid-column: span 1;
             }
           }
-          
+
           /* Calendar column height and scroll */
           .lg\\:col-span-3 {
             max-height: calc(100vh - 200px);
             overflow-y: auto;
           }
-          
-          .calendar-container:hover {
-            transform: translateY(-2px);
-          }
-          
+
           /* Single scrollable container - disable FullCalendar's internal scrolling */
           .fc {
             height: auto !important;
             overflow: visible !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
           }
-          
+
           .fc-view-harness {
             height: auto !important;
             overflow: visible !important;
           }
-          
+
           /* Disable FullCalendar's internal scrolling */
           .fc-timegrid-body {
             overflow: visible !important;
             max-height: none !important;
           }
-          
+
           .fc-daygrid-body {
             overflow: visible !important;
           }
-          
+
           .fc-scroller {
             overflow: visible !important;
           }
-          
+
           .fc-scroller-liquid {
             overflow: visible !important;
           }
-          
-          /* Enhanced calendar view styling */
+
           .fc-view {
             min-height: 500px;
-            padding: 12px;
+            padding: 8px;
           }
-          
-          /* Modern day headers */
+
+          /* Flat day headers — thin border, no gradient */
           .fc-col-header {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-            border-bottom: 2px solid #e2e8f0 !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e5e7eb !important;
           }
-          
+
           .fc-col-header-cell {
             padding: 8px 6px !important;
-            font-weight: 600 !important;
-            color: #475569 !important;
-            text-transform: uppercase !important;
-            font-size: 0.7rem !important;
-            letter-spacing: 0.05em !important;
+            font-weight: 500 !important;
+            color: #6b7280 !important;
+            text-transform: none !important;
+            font-size: 0.72rem !important;
+            letter-spacing: normal !important;
           }
-          
-          /* Enhanced time axis styling */
+
           .fc-timegrid-axis {
-            background: #fafafa !important;
-            border-right: 2px solid #e2e8f0 !important;
+            background: #ffffff !important;
+            border-right: 1px solid #e5e7eb !important;
           }
-          
+
           .fc-timegrid-slot-label {
             font-size: 0.7rem !important;
-            color: #64748b !important;
-            font-weight: 500 !important;
+            color: #9ca3af !important;
+            font-weight: 400 !important;
           }
-          
-          /* Grid lines enhancement */
+
           .fc-timegrid-slot {
             border-top: 1px solid #f1f5f9 !important;
           }
-          
+
           .fc-timegrid-slot:nth-child(4n) {
-            border-top: 1px solid #e2e8f0 !important;
+            border-top: 1px solid #e5e7eb !important;
           }
-          
-          /* Current time indicator */
+
+          /* Current time indicator — a thin flat line, no glow */
           .fc-timegrid-now-indicator-line {
-            border-color: #ef4444 !important;
-            border-width: 2px !important;
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.3) !important;
+            border-color: #ea4335 !important;
+            border-width: 1.5px !important;
           }
-          
+
           .fc-timegrid-now-indicator-arrow {
-            border-left-color: #ef4444 !important;
-            border-width: 8px !important;
+            border-left-color: #ea4335 !important;
+            border-width: 5px !important;
           }
-          
-          /* Today's date highlighting */
+
+          /* Today's date highlighting — flat tint, matches Google Calendar's own today color */
           .fc-day-today {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%) !important;
+            background: #e8f0fe !important;
           }
-          
+
           .fc-col-header-cell.fc-day-today {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-            color: #1d4ed8 !important;
+            background: #ffffff !important;
+            color: #1a73e8 !important;
+            font-weight: 700 !important;
           }
-          
-          .shift-event {
-            background-color: rgba(59, 130, 246, 0.2) !important;
-            border: 1px solid #3b82f6 !important;
-            color: #1e40af !important;
+
+          /* ── Event color system (flat fill + left accent bar, no gradients/glow) ── */
+
+          .shift-event-default,
+          .fc-bg-event.shift-background,
+          .fc-bg-event[data-event-type="shift"] {
+            background-color: #e8f0fe !important;
+            border: none !important;
+            border-left: 3px solid #1a73e8 !important;
+            color: #1a4d99 !important;
+          }
+
+          .shift-event-override,
+          .fc-event[data-override="true"] {
+            background-color: #e6f4ea !important;
+            border: none !important;
+            border-left: 3px solid #188038 !important;
+            color: #0f5c26 !important;
+          }
+
+          .block-event,
+          .timeoff-event,
+          .api-timeoff-event,
+          .fc-event[data-event-type="timeoff"] {
+            background-color: #fce8e6 !important;
+            border: none !important;
+            border-left: 3px solid #d93025 !important;
+            color: #a50e0e !important;
+            font-weight: 600 !important;
+          }
+
+          .appointment-event {
+            background-color: #e8f0fe !important;
+            border: none !important;
+            border-left: 3px solid #1a73e8 !important;
+            color: #1a4d99 !important;
             font-weight: 500 !important;
           }
-          
-          .shift-morning {
-            background-color: #ccfbf1 !important;
-            border-color: #5eead4 !important;
-          }
-          
-          .shift-afternoon {
-            background-color: #fef3c7 !important;
-            border-color: #fbbf24 !important;
-            color: #92400e !important;
-          }
-          .shift-evening {
-            background-color: #f3e8ff !important;
-            border-color: #a78bfa !important;
-            color: #581c87 !important;
+
+          .fc-bg-event {
+            opacity: 1 !important;
+            pointer-events: none !important;
           }
 
-
-          .fc-event.shift-event,
-          .fc-event.shift-event * {
-            color: #0b1526 !important;
-          }
-
-          .fc-event.shift-event-override,
-          .fc-event.shift-event-override * {
-            color: #064e3b !important;
-          }
-          
-                     .block-event {
-             background-color: #ef4444 !important;
-             border-color: #dc2626 !important;
-             color: white !important;
-             font-weight: 600 !important;
-           }
-           
-                       /* Time Off events styling */
-            .timeoff-event {
-              background-color: #ea580c !important; /* More vivid orange */
-              border-color: #c2410c !important;
-              color: white !important;
-              font-weight: 700 !important;
-            }
-            
-            /* API Time Off events styling - full width blocks */
-             .api-timeoff-event {
-               background-color: rgba(220, 38, 38, 0.9) !important; 
-               border-color: #dc2626 !important;
-               color: white !important;
-               font-weight: 800 !important;
-               border-width: 2px !important;
-               width: 100% !important;
-               margin: 0 !important;
-               z-index: 50 !important; /* Ensure it stays on top */
-             }
-
-            /* Shift background events styling - light blue */
-            .fc-bg-event.shift-background {
-              background-color: rgba(59, 130, 246, 0.3) !important; /* Light blue background */
-              border-left: 4px solid #3b82f6 !important;
-              opacity: 1 !important;
-              z-index: 1 !important;
-            }
-
-            /* Ensure background events are visible in all views */
-            .fc-timegrid-col-bg .fc-bg-event.shift-background {
-              background-color: rgba(59, 130, 246, 0.3) !important;
-              opacity: 1 !important;
-            }
-
-            .fc-daygrid-day-bg .fc-bg-event.shift-background {
-              background-color: rgba(59, 130, 246, 0.3) !important;
-              opacity: 1 !important;
-            }
-
-            /* Force background events to be visible */
-            .fc-bg-event {
-              opacity: 1 !important;
-              pointer-events: none !important;
-            }
-
-            /* Specific styling for shift background events */
-            .fc-bg-event[data-event-type="shift"] {
-              background-color: rgba(59, 130, 246, 0.3) !important;
-              border-left: 4px solid #3b82f6 !important;
-            }
-
-            /* Working shift events (Consolidated) */
-            .shift-event-default {
-              background-color: #dbeafe !important;
-              border-color: #3b82f6 !important;
-              color: #1e40af !important;
-              width: 100% !important;
-              margin: 0 !important;
-            }
-
-          .shift-event-override {
-            background-color: #bbf7d0 !important;
-            border-color: #15803d !important;
-            color: #064e3b !important;
-            width: 100% !important;
-            margin: 0 !important;
-            z-index: 10 !important;
-          }
-            
-                     /* Enhanced Shift block events */
-           .shift-block-event {
-             background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(29, 78, 216, 0.95) 100%) !important;
-             border: 2px solid #2563eb !important;
-             color: white !important;
-             font-weight: 700 !important;
-             z-index: 15 !important;
-             position: relative !important;
-             opacity: 1 !important;
-             visibility: visible !important;
-             display: block !important;
-             width: 100% !important;
-             border-radius: 8px !important;
-             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
-             backdrop-filter: blur(8px) !important;
-           }
-           
-           .shift-block-event:hover {
-             transform: translateY(-1px) !important;
-             box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4) !important;
-           }
-           
-           /* Enhanced Override shift blocks - Light Green */
-           .shift-block-event[data-override="true"] {
-             background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(22, 163, 74, 0.95) 100%) !important;
-             border: 3px solid #16a34a !important;
-             box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3) !important;
-           }
-           
-           .shift-block-event[data-override="true"]:hover {
-             box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4) !important;
-           }
-            
-            
-          
-          /* Time-off event content styling */
-          .timeoff-event-content {
-            display: flex !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-            width: 100% !important;
-          }
-          
-          /* Cancel button styling */
-          .cancel-timeoff-btn {
-            background: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid #dc2626 !important;
-            border-radius: 50% !important;
-            width: 16px !important;
-            height: 16px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            cursor: pointer !important;
-            color: #dc2626 !important;
-            font-size: 8px !important;
-            transition: all 0.2s ease !important;
-            flex-shrink: 0 !important;
-          }
-          
-          .cancel-timeoff-btn:hover {
-            background: #dc2626 !important;
-            color: white !important;
-            transform: scale(1.1) !important;
-          }
-          
-          .appointment-event {
-            background-color: #3b82f6 !important;
-            border-color: #2563eb !important;
-            color: white !important;
-            font-weight: 600 !important;
-          }
-          
-          /* Enhanced Event Styling */
-          .fc-event {
-            cursor: pointer;
-            border-radius: 4px !important; /* Slightly sharper but still modern */
-            margin: 0 !important; /* Fill the whole width */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            backdrop-filter: blur(4px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.4) !important;
-            width: calc(100% - 1px) !important; /* Micro-gap for vertical lines */
-          }
-          
-          .fc-event:hover {
-            opacity: 0.95 !important;
-            transform: translateY(-2px) scale(1.02) !important;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-            z-index: 100 !important;
-          }
-          
-          /* Modern event text styling */
-          .fc-event-main {
-            padding: 2px 6px !important;
-          }
-          
-          .fc-event-title {
-            font-weight: 600 !important;
-            font-size: 0.7rem !important;
-            line-height: 1.2 !important;
-          }
-          
-          /* Make shift events more prominent in month view */
-          .fc-daygrid-event {
-            font-size: 0.65rem !important;
-            padding: 1px 3px !important;
-          }
-          
-          /* Style for time grid events (week/day view) */
-          .fc-timegrid-event {
-            font-size: 0.65rem !important;
-            padding: 1px 3px !important;
-          }
-          
-          /* Style for override shifts - now clickable for action dialog */
-          .fc-event[data-override="true"] {
-            position: relative !important;
-            cursor: pointer !important;
-            border: 3px solid #16a34a !important; /* Greener/Stronger for overrides */
-            z-index: 10 !important;
-            pointer-events: auto !important; 
-          }
-          
-          /* Harness level overrides to force full width */
           .full-width-harness {
             left: 0 !important;
             right: 0 !important;
             margin: 0 !important;
             z-index: 5 !important;
           }
-          
+
           .full-width-harness .fc-event {
             width: 100% !important;
             margin: 0 !important;
-            border-radius: 0 !important; /* Sharp edges for "block" look */
           }
-          
-          /* Ensure block events are visible above override events */
+
+          /* Layering so time-off/override blocks always render above default shifts */
           .fc-event.block-event,
           .fc-event.timeoff-event,
-          .fc-event.api-timeoff-event {
-            z-index: 20 !important;
-            position: relative !important;
-          }
-          
-          /* Override events should not interfere with block events */
-          .fc-event[data-override="true"] .cancel-override-btn {
-            z-index: 30 !important;
-          }
-          
-          /* Ensure block events are always visible and properly styled */
-          .block-event-visible {
-            z-index: 20 !important;
-            position: relative !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-          }
-          
-          /* Force block events to be visible even when override events are present */
-          .fc-event.block-event,
-          .fc-event.timeoff-event,
-          .fc-event.api-timeoff-event {
+          .fc-event.api-timeoff-event,
+          .fc-event[data-event-type="block"],
+          .fc-event[data-event-type="timeoff"] {
             z-index: 20 !important;
             position: relative !important;
             opacity: 1 !important;
@@ -1652,59 +1668,54 @@ export const DoctorCalendarPage: React.FC = () => {
             width: 100% !important;
             margin: 1px 0 !important;
           }
-          
-          /* Ensure block events are not hidden by other events */
-          .fc-event[data-event-type="block"] {
-            z-index: 20 !important;
-            position: relative !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-          }
-          
-          /* Override events should not hide block events */
+
           .fc-event[data-override="true"] {
             z-index: 10 !important;
-          }
-          
-          /* Time-off events styling */
-          .fc-event[data-event-type="timeoff"] {
-            background-color: #ef4444 !important;
-            border-color: #dc2626 !important;
-            color: white !important;
+            position: relative !important;
             cursor: pointer !important;
-            z-index: 15 !important;
-            border-width: 2px !important;
-            font-weight: 600 !important;
-            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+            pointer-events: auto !important;
           }
-          
-          .fc-event[data-event-type="timeoff"]:hover {
-            background-color: #dc2626 !important;
-            transform: scale(1.05) !important;
-            transition: all 0.2s ease !important;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
-            z-index: 25 !important;
-          }
-          
-          /* Test time-off event styling */
-          .fc-event[data-event-id="test-timeoff-event"] {
-            background-color: #dc2626 !important;
-            border-color: #b91c1c !important;
-            color: white !important;
-            font-weight: bold !important;
-            cursor: pointer !important;
-            border-width: 3px !important;
-            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3) !important;
-            animation: pulse 2s infinite !important;
+
+          .fc-event[data-override="true"] .cancel-override-btn {
             z-index: 30 !important;
           }
-          
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+
+          /* Flat event chip — small radius, no shadow/blur at rest */
+          .fc-event {
+            cursor: pointer;
+            border-radius: 4px !important;
+            margin: 1px 0 !important;
+            box-shadow: none !important;
+            transition: background-color 0.15s ease, box-shadow 0.15s ease !important;
           }
-          
-          /* Time-off event content styling */
+
+          /* Subtle hover — a light shadow only, no lift/scale */
+          .fc-event:hover {
+            box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
+            z-index: 100 !important;
+          }
+
+          .fc-event-main {
+            padding: 2px 6px !important;
+          }
+
+          .fc-event-title {
+            font-weight: 500 !important;
+            font-size: 0.72rem !important;
+            line-height: 1.3 !important;
+          }
+
+          .fc-daygrid-event {
+            font-size: 0.68rem !important;
+            padding: 1px 4px !important;
+          }
+
+          .fc-timegrid-event {
+            font-size: 0.68rem !important;
+            padding: 1px 4px !important;
+          }
+
+          /* Time-off event content layout */
           .timeoff-event-content {
             display: flex !important;
             flex-direction: column !important;
@@ -1713,8 +1724,7 @@ export const DoctorCalendarPage: React.FC = () => {
             text-align: center !important;
             padding: 4px !important;
           }
-          
-          /* Style for override event content */
+
           .override-event-content {
             position: relative !important;
             display: flex !important;
@@ -1722,36 +1732,56 @@ export const DoctorCalendarPage: React.FC = () => {
             justify-content: space-between !important;
             width: 100% !important;
           }
-          
+
+          /* Flat cancel buttons — subtle darken on hover, no scale/shadow pop */
+          .cancel-timeoff-btn {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #d93025 !important;
+            border-radius: 50% !important;
+            width: 16px !important;
+            height: 16px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            color: #d93025 !important;
+            font-size: 8px !important;
+            transition: background-color 0.15s ease !important;
+            flex-shrink: 0 !important;
+          }
+
+          .cancel-timeoff-btn:hover {
+            background: #d93025 !important;
+            color: white !important;
+          }
+
           .cancel-override-btn {
             position: absolute !important;
             top: -8px !important;
             right: -8px !important;
-            background: #dc2626 !important;
+            background: #d93025 !important;
             color: white !important;
             border-radius: 50% !important;
-            width: 20px !important;
-            height: 20px !important;
+            width: 18px !important;
+            height: 18px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             cursor: pointer !important;
             z-index: 1000 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-            transition: all 0.2s ease !important;
+            transition: background-color 0.15s ease !important;
             border: none !important;
             padding: 0 !important;
             outline: none !important;
             pointer-events: auto !important;
           }
-          
+
           .cancel-override-btn:hover {
-            background: #b91c1c !important;
-            transform: scale(1.1) !important;
+            background: #a50e0e !important;
           }
-          
+
           .cancel-override-btn:focus {
-            outline: 2px solid #dc2626 !important;
+            outline: 2px solid #d93025 !important;
             outline-offset: 2px !important;
           }
         `}</style>

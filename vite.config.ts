@@ -7,7 +7,7 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const defaultApiHost = 'http://151.185.45.77:5001';
+  const defaultApiHost = 'https://1hms-dev-api.nexeagle.com';
   const rawApiBaseUrl = env.VITE_API_BASE_URL || defaultApiHost;
   const apiBaseUrl = rawApiBaseUrl.startsWith('http://') || rawApiBaseUrl.startsWith('https://')
     ? rawApiBaseUrl

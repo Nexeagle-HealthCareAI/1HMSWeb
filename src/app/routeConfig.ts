@@ -94,7 +94,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: ROUTES.CALENDAR,
     component: 'DoctorCalendar',
-    allowedRoles: ['doctor', 'admin'],
+    allowedRoles: ['doctor', 'admindoctor', 'admin', 'receptionist'],
     requiresAuth: true,
     layout: 'MainLayout',
   },

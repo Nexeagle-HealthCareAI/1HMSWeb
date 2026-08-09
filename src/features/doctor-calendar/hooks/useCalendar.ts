@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timeOffApi } from '../api/timeOffApi';
 import { overrideApi } from '../api/overrideApi';
+import { doctorListApi, HospitalDoctorItem } from '../api/doctorListApi';
+import { availabilityRosterApi, DoctorAvailabilityRosterItem } from '../api/availabilityRosterApi';
 import {
   CalendarEvent,
   GetTimeOffResponse,
@@ -22,6 +24,25 @@ export const calendarKeys = {
   config: (doctorId: string, hospitalId: string, startDate: string, days: number) =>
     [...calendarKeys.all, 'config', doctorId, hospitalId, startDate, days] as const,
 };
+
+// Hospital doctor roster (for the staff-facing doctor switcher)
+export function useHospitalDoctors(hospitalId: string) {
+  return useQuery<HospitalDoctorItem[]>({
+    queryKey: [...calendarKeys.all, 'hospital-doctors', hospitalId],
+    queryFn: () => doctorListApi.getHospitalDoctors(hospitalId),
+    enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Staff-facing "who's available today" roster, resolved for a given date (yyyy-MM-dd)
+export function useAvailabilityRoster(hospitalId: string, dateIso: string) {
+  return useQuery<DoctorAvailabilityRosterItem[]>({
+    queryKey: [...calendarKeys.all, 'availability-roster', hospitalId, dateIso],
+    queryFn: () => availabilityRosterApi.getRoster(hospitalId, dateIso),
+    enabled: !!hospitalId && !!dateIso,
+  });
+}
 
 // Time-off hooks
 export function useTimeOff(doctorId: string, hospitalId: string) {

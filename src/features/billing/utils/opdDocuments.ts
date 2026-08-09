@@ -73,6 +73,11 @@ const computeChargeItems = (data: EventsData) => {
             discount: c.discountAmount ?? 0,
             total: c.netAmount ?? 0,
             isExtraCharge: (c.categoryCode ?? '').toUpperCase() === 'EXTRA_CHARGE',
+            hsnSacCode: c.hsnSacCode,
+            taxableAmount: c.taxableAmount,
+            cgstAmount: c.cgstAmount,
+            sgstAmount: c.sgstAmount,
+            igstAmount: c.igstAmount,
         };
     });
     const subTotal = charges.reduce((s, c) => s + (c.grossAmount ?? 0), 0);
@@ -86,12 +91,16 @@ const computeChargeItems = (data: EventsData) => {
     const overallDiscount = Math.max(0, (inv?.discountAmount ?? 0) - linkedLineDiscount);
     const discountTotal = lineDiscountTotal + overallDiscount;
     const taxTotal = inv?.taxAmount ?? charges.reduce((s, c) => s + (c.taxAmount ?? 0), 0);
-    return { items, subTotal, discountTotal, taxTotal };
+    const taxableTotal = inv?.taxableAmount ?? charges.reduce((s, c) => s + (c.taxableAmount ?? 0), 0);
+    const cgstTotal = inv?.cgstAmount ?? charges.reduce((s, c) => s + (c.cgstAmount ?? 0), 0);
+    const sgstTotal = inv?.sgstAmount ?? charges.reduce((s, c) => s + (c.sgstAmount ?? 0), 0);
+    const igstTotal = inv?.igstAmount ?? charges.reduce((s, c) => s + (c.igstAmount ?? 0), 0);
+    return { items, subTotal, discountTotal, taxTotal, taxableTotal, cgstTotal, sgstTotal, igstTotal };
 };
 
 export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): InvoicePrintData => {
     const inv = data.currentInvoice;
-    const { items, subTotal, discountTotal, taxTotal } = computeChargeItems(data);
+    const { items, subTotal, discountTotal, taxTotal, taxableTotal, cgstTotal, sgstTotal, igstTotal } = computeChargeItems(data);
     return {
         invoiceNo: inv?.invoiceNo ?? '—',
         date: inv?.invoiceDate ?? new Date().toISOString(),
@@ -106,6 +115,10 @@ export const mapEventsToInvoiceData = (data: EventsData, ctx: OpdDocContext): In
         subTotal,
         discountTotal,
         taxTotal,
+        taxableTotal,
+        cgstTotal,
+        sgstTotal,
+        igstTotal,
         // The invoice's real net amount already accounts for the overall discount — prefer it
         // over totalBilledAmount (pre-discount), which was always defined and silently masked
         // any overall discount from ever appearing on the printed grand total.

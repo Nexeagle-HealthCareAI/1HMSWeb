@@ -1,49 +1,51 @@
-import React, { useEffect, useState } from 'react';
-import { Loader2, Package2, ShieldAlert } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert } from 'lucide-react';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
 import { inventoryApi, type StockOverviewRow } from '../services/inventoryApi';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { UseStockPopover, type BoardPatientOption } from './UseStockPopover';
+import { ReceiveStockDialog } from './ReceiveStockDialog';
+import { TransferStockDialog } from './TransferStockDialog';
 
-export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType }) => {
+export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: BoardPatientOption[] }> = ({ boardType, patients }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [stockRows, setStockRows] = useState<StockOverviewRow[]>([]);
     const [stores, setStores] = useState<StoreItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [receiveOpen, setReceiveOpen] = useState(false);
+    const [transferOpen, setTransferOpen] = useState(false);
+
+    const load = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
+        try {
+            const allStores = await storeService.getStores();
+            const assignedStores = allStores.filter(s => s.assignedBoard === boardType);
+
+            setStores(assignedStores);
+
+            if (assignedStores.length > 0) {
+                const board = await inventoryApi.getBoard();
+                const assignedStoreIds = new Set(assignedStores.map(s => s.storeId));
+                const filteredStock = board.stockByStore.filter(row => assignedStoreIds.has(row.storeId));
+                setStockRows(filteredStock);
+            } else {
+                setStockRows([]);
+            }
+        } catch (e: any) {
+            toast({ title: 'Error loading inventory', description: e.message, variant: 'destructive' });
+        } finally {
+            setLoading(false);
+        }
+    }, [boardType, toast]);
 
     useEffect(() => {
-        let mounted = true;
-        const load = async () => {
-            setLoading(true);
-            try {
-                const allStores = await storeService.getStores();
-                const assignedStores = allStores.filter(s => s.assignedBoard === boardType);
-                
-                if (mounted) setStores(assignedStores);
-
-                if (assignedStores.length > 0) {
-                    const board = await inventoryApi.getBoard();
-                    const assignedStoreIds = new Set(assignedStores.map(s => s.storeId));
-                    const filteredStock = board.stockByStore.filter(row => assignedStoreIds.has(row.storeId));
-                    if (mounted) setStockRows(filteredStock);
-                } else {
-                    if (mounted) setStockRows([]);
-                }
-            } catch (e: any) {
-                toast({ title: 'Error loading inventory', description: e.message, variant: 'destructive' });
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
         load();
-        
-        // Polling
-        const interval = setInterval(() => {
-            load();
-        }, 15000);
-        return () => { mounted = false; clearInterval(interval); };
-    }, [boardType, toast]);
+        const interval = setInterval(() => load(true), 15000);
+        return () => clearInterval(interval);
+    }, [load]);
 
     const filteredRows = stockRows.filter(r => 
         r.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -63,15 +65,37 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                         Showing stock for {stores.length} store(s) assigned to {boardType}
                     </p>
                 </div>
-                <input 
-                    type="text" 
-                    placeholder="Search items..." 
-                    className="w-full sm:w-64 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 px-3 py-2 text-sm bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+                    <input
+                        type="text"
+                        placeholder="Search items..."
+                        className="w-full sm:w-56 h-10 rounded-xl border border-slate-205 dark:border-zinc-800 px-3 py-2 text-sm bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    {stores.length > 0 && (
+                        <div className="flex gap-2 shrink-0">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setReceiveOpen(true)}
+                                className="h-10 rounded-xl border-slate-205 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 active:scale-[0.98] transition-all"
+                            >
+                                <PackagePlus className="h-3.5 w-3.5 mr-1.5" /> Receive
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setTransferOpen(true)}
+                                className="h-10 rounded-xl border-slate-205 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 active:scale-[0.98] transition-all"
+                            >
+                                <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
-            
+
             <div className="flex-1 overflow-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {loading && stockRows.length === 0 ? (
                     <div className="flex justify-center p-8 text-slate-400">
@@ -110,6 +134,9 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                                             {row.qtyOnHand.toLocaleString()} <span className="text-slate-400 dark:text-zinc-500 text-xs font-normal ml-0.5">{row.unit}</span>
                                         </span>
                                     </div>
+                                    <div className="flex justify-end pt-1">
+                                        <UseStockPopover item={row} patients={patients} onSuccess={() => load(true)} />
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -122,6 +149,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                                     <th className="px-4 py-3">Item Name</th>
                                     <th className="px-4 py-3">Category</th>
                                     <th className="px-4 py-3 text-right">Stock on Hand</th>
+                                    <th className="px-4 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
@@ -133,6 +161,11 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                                         <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-zinc-200">
                                             {row.qtyOnHand.toLocaleString()} <span className="text-slate-450 dark:text-zinc-500 text-xs ml-1 font-normal">{row.unit}</span>
                                         </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex justify-end">
+                                                <UseStockPopover item={row} patients={patients} onSuccess={() => load(true)} />
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -140,6 +173,9 @@ export const BoardInventoryPanel: React.FC<{ boardType: string }> = ({ boardType
                     </>
                 )}
             </div>
+
+            <ReceiveStockDialog open={receiveOpen} onOpenChange={setReceiveOpen} boardStores={stores} onSuccess={() => load(true)} />
+            <TransferStockDialog open={transferOpen} onOpenChange={setTransferOpen} boardStores={stores} stockByStore={stockRows} onSuccess={() => load(true)} />
         </div>
     );
 };

@@ -205,6 +205,7 @@ export interface RegisterAppointmentRequest {
     emergencyContactPhone?: string;
     guardianName?: string;
     guardianRelation?: string;
+    abhaId?: string;
   };
   doctorId: string;
   apptDate: string;

@@ -287,19 +287,22 @@ export class RoleService {
     return true;
   }
 
-  // Get redirect path based on user role
+  // Get redirect path based on user role. Keyed on the real PascalCase role strings the
+  // backend/auth store actually use (e.g. "Accountant") and real existing routes from
+  // AppRoutes.tsx — the previous version keyed on this.ROLES' lowercase constants (e.g.
+  // "accountant") against fictional paths like "/nurse/dashboard" that don't exist as routes,
+  // so this always fell through to "/" for every role: a real role landing on a route their
+  // RouteGuard denies would get silently bounced to "/" instead of somewhere that actually works.
   static getRedirectPath(userRole: string | null): string {
     if (!userRole) return '/';
 
     const roleRedirects: { [key: string]: string } = {
-      [this.ROLES.ADMIN]: '/admin/dashboard',
-      [this.ROLES.DOCTOR]: '/doctor/dashboard',
-      [this.ROLES.NURSE]: '/nurse/dashboard',
-      [this.ROLES.RECEPTIONIST]: '/receptionist/dashboard',
-      [this.ROLES.LAB_TECHNICIAN]: '/lab/dashboard',
-      [this.ROLES.PHARMACIST]: '/pharmacy/dashboard',
-      [this.ROLES.PATIENT]: '/patient/dashboard',
-      [this.ROLES.ACCOUNTANT]: '/billing'
+      Admin: '/admin',
+      AdminDoctor: '/admin',
+      Doctor: '/dashboard',
+      Nurse: '/appointment-dashboard',
+      Receptionist: '/appointment-dashboard',
+      Accountant: '/billing',
     };
 
     return roleRedirects[userRole] || '/';
