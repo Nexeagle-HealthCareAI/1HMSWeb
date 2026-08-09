@@ -248,6 +248,7 @@ export const IPD_API_ENDPOINTS = {
     DASHBOARD: (hospitalId: string) => `billing/dashboard?hospitalId=${encodeURIComponent(hospitalId)}`,
     CREATE_INVOICE: 'billing/invoice',
     FINALIZE: (type: string) => `billing/finalize?type=${encodeURIComponent(type)}`,
+    DELETE_INVOICE: 'billing/delete-invoice',
     PRINT: (patientId: string, hospitalId: string, encounterId: string) =>
       `billing/print?patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
     // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)

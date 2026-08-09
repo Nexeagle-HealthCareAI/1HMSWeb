@@ -294,6 +294,19 @@ export interface FinalizeBillingResponse {
     message?: string;
 }
 
+export interface DeleteInvoiceRequest {
+    hospitalId?: string;
+    patientId: string;
+    encounterId: string;
+    reason: string;
+}
+
+export interface DeleteInvoiceResponse {
+    success: boolean;
+    message?: string;
+    chargesVoided: number;
+}
+
 // ─── Payments ────────────────────────────────────────────────────────────────
 
 export type PaymentType = 'PAYMENT' | 'ADVANCE' | 'REFUND';
@@ -580,6 +593,14 @@ export const ipdBillingService = {
 
     finalize: (action: FinalizeAction, req: FinalizeBillingRequest): Promise<FinalizeBillingResponse> =>
         ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.FINALIZE(action), {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
+    // Manually deletes (soft-cancels) an invoice regardless of status -- draft or finalized.
+    // Every charge on it is voided, not just unlinked.
+    deleteInvoice: (req: DeleteInvoiceRequest): Promise<DeleteInvoiceResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.DELETE_INVOICE, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),
