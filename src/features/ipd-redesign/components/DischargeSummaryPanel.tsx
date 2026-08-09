@@ -34,6 +34,7 @@ import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 import { InkDischargePad } from './InkDischargePad';
 import { PenTool } from 'lucide-react';
+import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -173,12 +174,41 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
     const setField = (patch: Partial<SaveDischargeSummaryFields>) => setForm(f => ({ ...f, ...patch }));
 
+    // Mirrors EPrescriptionPad.tsx's saveMedicineToDrPreference — a freehand-typed medicine (not
+    // picked from Medicine Master) should still show up under "Personal" the next time anyone
+    // searches for it here or in a prescription, same as it already does for prescriptions.
+    // Fire-and-forget per medicine: never blocks the save/sign flow, and a failure here shouldn't
+    // surface as a discharge-summary error.
+    const syncMedicationsToPersonalList = (meds: SaveDischargeSummaryFields['medications']) => {
+        if (!hospitalId || !medicationSearchDoctorId || !meds?.length) return;
+        meds.forEach(med => {
+            const name = med.medicineName?.trim();
+            if (!name) return;
+            eprescriptionApi.saveDoctorPreference({
+                preferrredId: null,
+                doctorId: medicationSearchDoctorId,
+                hospitalId,
+                source: 'discharge',
+                medicine: {
+                    medicineName: name,
+                    manufacturer: '',
+                    genericName: med.saltName || '',
+                    brandName: '',
+                    dosageForm: '',
+                    strength: med.dosage || '',
+                    price: 0,
+                },
+            }).catch(() => { /* best-effort, non-blocking */ });
+        });
+    };
+
     const save = async () => {
         setSaving(true);
         try {
             await dischargeSummaryApi.save(admission.admissionId, form);
             lastSavedRef.current = JSON.stringify(form);
             setAutoSaveStatus('saved');
+            syncMedicationsToPersonalList(form.medications);
             toast({ title: 'Discharge summary saved.' });
         } catch (err) {
             toast({ title: 'Could not save', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
@@ -215,6 +245,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         try {
             await dischargeSummaryApi.save(admission.admissionId, form);
             await dischargeSummaryApi.sign(admission.admissionId);
+            syncMedicationsToPersonalList(form.medications);
             toast({ title: 'Discharge summary signed.' });
             setSignOpen(false);
             load();
@@ -571,7 +602,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             case 'admittingDiagnosis':
                 return <LookupAutosuggestField label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosis':
-                return <LookupAutosuggestField label={`${label} *`} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
+                return <LookupAutosuggestField label={label} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosisIcd10':
                 return (
                     <Icd10CodePicker
@@ -590,7 +621,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             case 'conditionAtDischarge':
                 return (
                     <div>
-                        <Label className="text-[11px] font-semibold text-slate-600">{label} *</Label>
+                        <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
                         {isSigned ? (
                             <p className="text-base mt-1.5 text-slate-800">{form.conditionAtDischarge ?? '—'}</p>
                         ) : (
@@ -955,7 +986,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
                         <DialogTitle>Sign discharge summary?</DialogTitle>
-                        <DialogDescription>This locks the summary from further edits. Final diagnosis and condition at discharge are required.</DialogDescription>
+                        <DialogDescription>This locks the summary from further edits.</DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="ghost" className="h-11 sm:h-10" onClick={() => setSignOpen(false)}>Cancel</Button>
