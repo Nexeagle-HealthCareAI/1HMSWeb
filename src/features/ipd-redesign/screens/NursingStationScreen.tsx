@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ClipboardList, ThermometerSun, HeartPulse, Pill, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Loader2, ClipboardList, ThermometerSun, HeartPulse, Pill, AlertTriangle, ChevronRight, UserRound } from 'lucide-react';
 import { nursingStationApi, type NursingStationPatientItem } from '../services/nursingStationApi';
+import { AssignPatientNursePopover } from '../components/AssignPatientNursePopover';
 import { useAuthStore } from '@/store/authStore';
 
 const SUMMARY_POLL_MS = 60000;
@@ -149,11 +150,14 @@ export const NursingStationScreen: React.FC = () => {
                     {visibleItems.map(item => {
                         const stale = isStale(item.lastVitalAt);
                         return (
-                            <motion.button
+                            <motion.div
                                 key={item.admissionId}
                                 layout
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => navigate(`/ipd-workspace/patient/${item.admissionId}`)}
-                                className="w-full text-left rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm hover:shadow-md transition-all active:scale-[0.99] flex items-center justify-between gap-3"
+                                onKeyDown={e => { if (e.key === 'Enter') navigate(`/ipd-workspace/patient/${item.admissionId}`); }}
+                                className="w-full text-left rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm hover:shadow-md transition-all active:scale-[0.99] flex items-center justify-between gap-3 cursor-pointer"
                             >
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -175,6 +179,13 @@ export const NursingStationScreen: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
+                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                        <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-zinc-400 truncate">
+                                            <UserRound className="h-3.5 w-3.5 shrink-0" />
+                                            {item.assignedNurseNames.length > 0 ? item.assignedNurseNames.join(', ') : 'Unassigned'}
+                                        </span>
+                                        <AssignPatientNursePopover admissionId={item.admissionId} onChanged={() => load(true)} />
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     {item.medsOverdueCount > 0 && (
@@ -189,7 +200,7 @@ export const NursingStationScreen: React.FC = () => {
                                     )}
                                     <ChevronRight className="h-4 w-4 text-slate-350" />
                                 </div>
-                            </motion.button>
+                            </motion.div>
                         );
                     })}
                 </div>

@@ -159,6 +159,7 @@ export interface IcuBoardCase {
     activeDeviceCount: number;
     hasOverdueBundleCheck: boolean;
     nurseNames: string[];
+    assignedNurseNames: string[];
     lastVitalAt?: string | null;
     lastPulse?: number | null;
     lastSystolicBP?: number | null;

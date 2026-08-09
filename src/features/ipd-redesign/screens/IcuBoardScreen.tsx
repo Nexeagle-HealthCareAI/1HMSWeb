@@ -155,7 +155,11 @@ export const IcuBoardScreen: React.FC = () => {
 
                                                 <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 mb-1.5">
                                                     <UserRound className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                                    <span className="truncate font-medium">{c.nurseNames.length > 0 ? `Rostered: ${c.nurseNames.join(', ')}` : 'Not rostered'}</span>
+                                                    <span className="truncate font-medium">
+                                                        {c.assignedNurseNames.length > 0
+                                                            ? c.assignedNurseNames.join(', ')
+                                                            : c.nurseNames.length > 0 ? `Rostered: ${c.nurseNames.join(', ')}` : 'Not rostered'}
+                                                    </span>
                                                 </div>
 
                                                 <div className={cn('flex items-center gap-2 text-[11px] mb-3 font-semibold', isVitalStale(c.lastVitalAt) ? 'text-amber-600 dark:text-amber-450' : 'text-slate-500 dark:text-zinc-400')}>

@@ -82,6 +82,34 @@ export interface NursingStationPatientItem {
     medsDueCount: number;
     medsOverdueCount: number;
     nextDoseAtUtc?: string | null;
+    assignedNurseNames: string[];
+}
+
+export interface PatientNurseAssignmentItem {
+    patientNurseAssignmentId: string;
+    nurseUserId: string;
+    nurseName?: string | null;
+    admissionId: string;
+    shiftCode: string;
+    shiftDate?: string | null;
+    statusCode: string;
+    assignedAt: string;
+    assignedBy?: string | null;
+    unassignedAt?: string | null;
+    unassignedBy?: string | null;
+    notes?: string | null;
+}
+
+export interface AssignPatientNurseInput {
+    nurseUserId: string;
+    admissionId: string;
+    shiftCode: string;
+    shiftDate?: string | null;
+    notes?: string;
+}
+
+interface GetPatientNurseAssignmentsResponse {
+    items?: PatientNurseAssignmentItem[];
 }
 
 export interface NursingStationSummary {
@@ -161,6 +189,33 @@ export const nursingStationApi = {
             return await ipdApiClient.post('/nursing-station/assignment/release', {
                 hospitalId: hospitalIdOrThrow(hospitalId),
                 nurseShiftAssignmentId,
+            });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not release the nurse.'));
+        }
+    },
+
+    // Per-patient assignment -- independent of the ward roster above.
+    getPatientAssignments: (admissionId: string, hospitalId?: string): Promise<PatientNurseAssignmentItem[]> =>
+        ipdApiClient
+            .get<GetPatientNurseAssignmentsResponse>('/nursing-station/patient-assignments', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId },
+            })
+            .then(r => r.items ?? []),
+
+    assignPatient: async (input: AssignPatientNurseInput, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/nursing-station/patient-assignment', { hospitalId: hospitalIdOrThrow(hospitalId), ...input });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not assign the nurse.'));
+        }
+    },
+
+    releasePatientAssignment: async (patientNurseAssignmentId: string, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/nursing-station/patient-assignment/release', {
+                hospitalId: hospitalIdOrThrow(hospitalId),
+                patientNurseAssignmentId,
             });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not release the nurse.'));
