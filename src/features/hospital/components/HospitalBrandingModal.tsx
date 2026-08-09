@@ -29,7 +29,8 @@ import {
   Loader2,
   ArrowRight,
   Crown,
-  CheckCircle
+  CheckCircle,
+  Gift
 } from 'lucide-react';
 import { HospitalBranding } from './HospitalBrandingConfig';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
@@ -97,6 +98,9 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
   const totalSteps = 4;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [planCycle, setPlanCycle] = useState<BillingCycle>('Monthly');
+  // Not part of HospitalBranding -- that type is shared with the existing-hospital edit form
+  // (HospitalBrandingConfig.tsx), where a referral code has no meaning.
+  const [referralCode, setReferralCode] = useState('');
   const { getPlans } = useSubscriptionApi();
   const { data: onboardingPlans = [] } = getPlans();
   const visibleOnboardingPlans = onboardingPlans.filter(p => p.billingCycle === planCycle);
@@ -341,7 +345,8 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
         timeZone: branding.timeZone || 'Asia/Kolkata',
         gstin: branding.gstin,
         pan: branding.pan,
-        nabhNumber: branding.nabhNumber
+        nabhNumber: branding.nabhNumber,
+        referralCode: referralCode.trim() || undefined
       });
 
       if (response.success) {
@@ -375,6 +380,20 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
           title: t('hospitalBranding.toast.successTitle'),
           description: t('hospitalBranding.toast.successDescription')
         });
+
+        // Soft feedback only -- an invalid/expired/already-used referral code never blocks
+        // registration, which has already succeeded by this point.
+        if (referralCode.trim()) {
+          if (response.referralCodeApplied) {
+            toast({ title: 'Referral Code Applied', description: response.referralCodeMessage || 'Referral code applied.' });
+          } else {
+            toast({
+              title: 'Referral Code Not Applied',
+              description: response.referralCodeMessage || 'This referral code could not be recognized.',
+              variant: 'destructive'
+            });
+          }
+        }
 
         onComplete();
       }
@@ -784,6 +803,21 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                       value={branding.nabhNumber || ''}
                       onChange={(e) => updateBranding('nabhNumber', e.target.value)}
                       placeholder={t('hospitalBranding.placeholders.nabhNumber')}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="referralCode" className="flex items-center gap-2">
+                      <Gift className="h-4 w-4" />
+                      Referral Code (optional)
+                    </Label>
+                    <Input
+                      id="referralCode"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. WELCOME5"
                     />
                   </div>
                 </div>

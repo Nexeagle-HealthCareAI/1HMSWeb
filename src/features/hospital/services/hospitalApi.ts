@@ -23,6 +23,9 @@ export interface HospitalRegistrationRequest {
   gstin?: string;
   pan?: string;
   nabhNumber?: string;
+  // Optional referral code entered at registration. Validated by CMSAPI's referral code catalog --
+  // an invalid/expired/already-used code never blocks registration, see referralCodeApplied below.
+  referralCode?: string;
 }
 
 export interface HospitalRegistrationResponse {
@@ -30,6 +33,8 @@ export interface HospitalRegistrationResponse {
   message: string;
   hospitalId: string;
   hospitalUserId: string;
+  referralCodeApplied?: boolean;
+  referralCodeMessage?: string | null;
 }
 
 export interface HospitalUpdateRequest {
