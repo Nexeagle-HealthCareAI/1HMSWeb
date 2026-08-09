@@ -15,6 +15,13 @@ export interface SubscriptionStatusResponse {
   // Exact cutoff timestamp — used for a live countdown as it nears expiry, not just the
   // whole-days daysLeft above.
   subscriptionEndDate?: string | null;
+  // Snapshotted at hospital registration if a valid referral code was entered. Both reward kinds
+  // only ever apply to a Yearly plan; redeemedAt is set once the reward has actually landed
+  // (CMS approving a Yearly plan) -- a non-null redeemedAt means there's nothing left to apply.
+  referralCode?: string | null;
+  referralCodeRewardKind?: 'PercentageOff' | 'ExtraMonths' | null;
+  referralCodeRewardValue?: number | null;
+  referralCodeRedeemedAt?: string | null;
 }
 
 export const PAYMENT_MODES = ['UPI', 'Bank Transfer', 'Cheque', 'Card', 'Cash'] as const;
@@ -115,6 +122,9 @@ export interface SwitchQuote {
   creditAmount: number;
   newPlanPrice: number;
   amountDue: number;
+  // Referral %-off already folded into newPlanPrice/amountDue below, if any — kept separately so
+  // the UI can show *why* the price is lower. Undefined when no referral discount applies.
+  appliedReferralDiscount?: number;
 }
 
 // Mid-cycle plan switch pricing: the hospital is only charged for the new plan minus a credit for
@@ -124,12 +134,29 @@ export interface SwitchQuote {
 // never exceed what was actually paid, and amountDue never goes below ₹0 (no refunds are issued
 // anywhere in this manual-payment system, so any leftover credit beyond the new plan's price is
 // forfeited rather than carried forward).
+//
+// Referral PercentageOff reward: applies only to a Yearly plan (confirmed product decision — extra
+// months/percent-off both land "in annual only"), and only until the reward has actually been
+// redeemed (status.referralCodeRedeemedAt set, by CMS approving a prior Yearly plan). It reduces
+// newPlanPrice itself, before proration, so both a fresh purchase and a mid-cycle switch to Yearly
+// benefit from it identically.
 export const computeSwitchQuote = (
   status: SubscriptionStatusResponse | undefined,
   previousPlan: SubscriptionPlan | undefined | null,
   newPlan: SubscriptionPlan
 ): SwitchQuote => {
-  const newPlanPrice = newPlan.discountedPrice;
+  const appliedReferralDiscount =
+    newPlan.billingCycle === 'Yearly' &&
+    status?.referralCodeRewardKind === 'PercentageOff' &&
+    !status?.referralCodeRedeemedAt &&
+    status?.referralCodeRewardValue
+      ? status.referralCodeRewardValue
+      : undefined;
+
+  const newPlanPrice = appliedReferralDiscount
+    ? Math.round(newPlan.discountedPrice * (1 - appliedReferralDiscount / 100))
+    : newPlan.discountedPrice;
+
   const flatQuote: SwitchQuote = {
     isProrated: false,
     previousPlanId: null,
@@ -139,6 +166,7 @@ export const computeSwitchQuote = (
     creditAmount: 0,
     newPlanPrice,
     amountDue: newPlanPrice,
+    appliedReferralDiscount,
   };
 
   if (!status || status.status !== 'Active' || !previousPlan || previousPlan.id === newPlan.id) {
@@ -163,6 +191,7 @@ export const computeSwitchQuote = (
     creditAmount,
     newPlanPrice,
     amountDue,
+    appliedReferralDiscount,
   };
 };
 

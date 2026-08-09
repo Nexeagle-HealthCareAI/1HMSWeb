@@ -49,6 +49,15 @@ export const SubscriptionPlanDrawer: React.FC<Props> = ({ hospitalId, plan, open
         [plan, previousPlan, subscriptionStatus]
     );
     const isUpgrade = !!previousPlan && !!plan && plan.discountedPrice >= previousPlan.discountedPrice;
+    // ExtraMonths has no price effect (unlike PercentageOff, which computeSwitchQuote already
+    // folds into quote.amountDue) -- it's purely informational until CMS approves this Yearly plan.
+    const extraMonthsReward =
+        plan?.billingCycle === 'Yearly' &&
+        subscriptionStatus?.referralCodeRewardKind === 'ExtraMonths' &&
+        !subscriptionStatus?.referralCodeRedeemedAt &&
+        subscriptionStatus?.referralCodeRewardValue
+            ? subscriptionStatus.referralCodeRewardValue
+            : null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -130,6 +139,16 @@ export const SubscriptionPlanDrawer: React.FC<Props> = ({ hospitalId, plan, open
                             <span className="text-sm text-muted-foreground line-through ml-1">₹{plan.basePrice}</span>
                         )}
                     </div>
+                    {!!quote?.appliedReferralDiscount && (
+                        <div className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            <Tag className="w-3 h-3" /> Referral code: {quote.appliedReferralDiscount}% off applied
+                        </div>
+                    )}
+                    {!!extraMonthsReward && (
+                        <div className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            <Tag className="w-3 h-3" /> Referral code: +{extraMonthsReward} free month{extraMonthsReward === 1 ? '' : 's'} once approved
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-6 flex-1">
