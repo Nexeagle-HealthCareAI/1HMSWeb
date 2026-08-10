@@ -196,7 +196,6 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     brandName: '',
                     dosageForm: '',
                     strength: med.dosage || '',
-                    price: 0,
                 },
             }).catch(() => { /* best-effort, non-blocking */ });
         });
