@@ -365,15 +365,36 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         setToken(response.accessToken!);
         console.log('[LOGIN-DEBUG] 2. token set');
 
+        // fetchAndStoreUserPermissions never actually throws (it catches its own API errors and
+        // resolves { success: false, ... }), so the try/catch below was never the thing that could
+        // fail here -- the real gap was that a `success: false` result (or no role in the store
+        // afterward) was only logged, never acted on. isAuthenticated then still flipped true a few
+        // lines down via setUser(), and RouteGuard's hasAnyRole(requiredRoles) check fails for a
+        // role-less user, bouncing them straight back -- "login succeeded, never reached the
+        // dashboard". Every authenticated user in this app needs a role for anything to work (unlike
+        // hospital mapping below, where "not_registered" is a legitimate, expected state), so this
+        // is a hard stop rather than a soft-continue.
+        let permResult: { success?: boolean } | null = null;
         if (response.userId && response.accessToken) {
           try {
-            const permResult = await fetchAndStoreUserPermissions(response.userId, response.accessToken);
+            permResult = await fetchAndStoreUserPermissions(response.userId, response.accessToken);
             console.log('[LOGIN-DEBUG] 3. permissions fetched, result=', permResult, 'storedRole=', useAuthStore.getState().userRole, 'storedRoles=', useAuthStore.getState().userRoles);
           } catch (error) {
             console.warn('[LOGIN-DEBUG] 3. permissions fetch THREW (caught):', error);
           }
         } else {
           console.log('[LOGIN-DEBUG] 3. SKIPPED permissions fetch — missing userId or accessToken', { userId: response.userId, hasToken: !!response.accessToken });
+        }
+
+        if (!permResult?.success || !useAuthStore.getState().userRole) {
+          console.warn('[LOGIN-DEBUG] 3b. No role after permissions fetch — aborting login instead of continuing role-less.', permResult);
+          useAuthStore.getState().clearSession();
+          toast({
+            title: "Couldn't finish signing you in",
+            description: "We couldn't load your account details. Please try again in a moment.",
+            variant: "destructive",
+          });
+          return;
         }
 
         let hospitalResult: 'found' | 'not_registered' | 'error' = 'error';
@@ -558,12 +579,27 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           authStore.setToken(tokenToUse);
           authStore.setUserId(storedUserId);
 
+          // Same hard-stop as handlePasswordLogin: every authenticated user needs a role for
+          // RouteGuard's hasAnyRole check to ever pass, so a failed/empty permissions fetch must
+          // abort the login rather than continuing into a role-less "authenticated" state that
+          // just gets bounced straight back out.
+          let otpPermResult: { success?: boolean } | null = null;
           if (response.accessToken) {
             try {
-              await fetchAndStoreUserPermissions(storedUserId, response.accessToken);
+              otpPermResult = await fetchAndStoreUserPermissions(storedUserId, response.accessToken);
             } catch (error) {
               console.warn('Failed to fetch permissions:', error);
             }
+          }
+
+          if (!otpPermResult?.success || !useAuthStore.getState().userRole) {
+            authStore.clearSession();
+            toast({
+              title: "Couldn't finish signing you in",
+              description: "We couldn't load your account details. Please try again in a moment.",
+              variant: "destructive",
+            });
+            return;
           }
 
           const hospitalResult = await fetchAndStoreHospitalMapping(storedUserId);
