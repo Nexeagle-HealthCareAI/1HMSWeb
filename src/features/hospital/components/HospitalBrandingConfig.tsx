@@ -16,6 +16,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  QrCode,
   Save,
   Type
 } from 'lucide-react';
@@ -28,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
+import { hospitalApi } from '../services/hospitalApi';
 import { useAuthStore } from '@/store/authStore';
 
 export interface HospitalBranding {
@@ -98,6 +100,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [previousBranding, setPreviousBranding] = useState<HospitalBranding | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [saveSuccessTick, setSaveSuccessTick] = useState(false);
+  const [isDownloadingQr, setIsDownloadingQr] = useState(false);
 
   const fieldLabels: Record<StringFieldKey, string> = useMemo(
     () => ({
@@ -545,6 +548,24 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   }
 
   const isExistingHospital = !!(hospitalId && hospitalData && hospitalData.hospitalId);
+
+  const handleDownloadQrCode = async () => {
+    if (!hospitalId) return;
+    setIsDownloadingQr(true);
+    try {
+      // Idempotent -- safe to always call, whether or not this hospital already has a code.
+      await hospitalApi.generateHospitalCode(hospitalId);
+      await hospitalApi.downloadHospitalQrCode(hospitalId);
+    } catch (error) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.toast.qrCodeFailed', 'Could not generate the QR code. Please try again.'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDownloadingQr(false);
+    }
+  };
 
   const handleStartEdit = () => {
     setSnapshotBeforeEdit({ ...branding });
@@ -1100,6 +1121,42 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             </CardContent>
           </Card>
         </motion.div>
+
+        {isExistingHospital && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+            <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
+              <CardHeader className="max-sm:pb-2 max-sm:px-4">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                  <QrCode className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  {translate('hospitalBranding.sections.qrCode.title', 'OPD Check-in QR Code')}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {translate(
+                    'hospitalBranding.sections.qrCode.subtitle',
+                    'Print this at reception -- patients scan it to check in on WhatsApp and join the live queue.'
+                  )}
+                </p>
+              </CardHeader>
+              <CardContent className="max-sm:px-4 max-sm:pb-6">
+                <Button
+                  onClick={handleDownloadQrCode}
+                  disabled={isDownloadingQr}
+                  variant="outline"
+                  className="h-10 rounded-xl font-semibold"
+                >
+                  {isDownloadingQr ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
+                      <QrCode className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <QrCode className="h-4 w-4 mr-2" />
+                  )}
+                  {translate('hospitalBranding.buttons.downloadQrCode', 'Download QR Code')}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Mobile Sticky Footer Buttons */}

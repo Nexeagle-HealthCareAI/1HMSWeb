@@ -97,6 +97,8 @@ export const API_ENDPOINTS = {
     MINE: 'hospitals/mine',
     GET_ANALYSIS: (hospitalId: string) => `hospitals/analysis/hospitalId=${hospitalId}`,
     DEACTIVATE: (id: string) => `hospitals/${id}/deactivate`,
+    GENERATE_CODE: (id: string) => `hospitals/${id}/generate-code`,
+    QR_CODE: (id: string) => `hospitals/${id}/qr-code`,
   },
   CHAINS: {
     CREATE: 'chains',
