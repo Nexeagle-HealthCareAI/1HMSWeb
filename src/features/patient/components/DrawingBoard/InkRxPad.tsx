@@ -16,6 +16,14 @@ import './InkRxPad.css';
 const CANVAS_W = 794;
 const CANVAS_H = 1123;
 
+// jsPDF's addImage wants a data URL, not raw bytes -- the QR endpoints return ArrayBuffer.
+const arrayBufferToDataUrl = (buffer: ArrayBuffer, mimeType = 'image/png'): string => {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return `data:${mimeType};base64,${btoa(binary)}`;
+};
+
 // Curated ink colors for medical writing
 const INK_COLORS = [
     { label: 'Ink Black', value: '#0f172a' },
@@ -469,6 +477,21 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
             const { jsPDF } = await import('jspdf');
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
             pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 595.28, 841.89);
+
+            // Generated BEFORE the upload call below (which doesn't exist as a row yet) so the
+            // QR embedded into the PDF and the id the row ends up with are the same one — see
+            // labApi.uploadAttachment's attachmentId param.
+            const attachmentId = crypto.randomUUID();
+            try {
+                const qrBytes = await labApi.getQrCode(attachmentId);
+                const qrDataUrl = arrayBufferToDataUrl(qrBytes);
+                const qrSize = 70;
+                pdf.addImage(qrDataUrl, 'PNG', 595.28 - qrSize - 24, 841.89 - qrSize - 24, qrSize, qrSize);
+            } catch {
+                // Non-fatal — the prescription still saves and still gets the WhatsApp push,
+                // just without a scannable code printed on this particular page.
+            }
+
             const dateStr = new Date().toISOString().slice(0, 10);
             const safeName = (patientName || patientId || 'patient').replace(/[^\w-]+/g, '_');
             const pdfFile = new File([pdf.output('blob')], `InkRx-${safeName}-${dateStr}.pdf`, { type: 'application/pdf' });
@@ -489,6 +512,7 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                     reportType: 'Prescription',
                     notes: 'InkRx handwritten prescription',
                     hospitalId, doctorId, patientId, appointmentId,
+                    attachmentId,
                 }, pdfFile),
             ]);
 

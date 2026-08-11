@@ -1,5 +1,4 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb, RGB } from 'pdf-lib';
-import QRCode from 'qrcode';
 import { MarginConfig, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { GeneratePrescriptionDetailsPayload, PrescriptionPatientDetail, PrescriptionVitals } from './generatePrescriptionDetailsService';
 
@@ -356,13 +355,11 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   // QR Code (Inline with Name)
   const qrSize = 50;
   const qrPadding = 12;
-  const nameX = payload.qrCodeData ? leftPad + qrSize + qrPadding : leftPad;
+  const nameX = payload.qrImageBytes ? leftPad + qrSize + qrPadding : leftPad;
 
-  if (payload.qrCodeData) {
+  if (payload.qrImageBytes) {
     try {
-      const qrDataUrl = await QRCode.toDataURL(payload.qrCodeData, { margin: 0 });
-      const qrImageBytes = await fetch(qrDataUrl).then(res => res.arrayBuffer());
-      const qrImage = await outputDoc.embedPng(qrImageBytes);
+      const qrImage = await outputDoc.embedPng(payload.qrImageBytes);
 
       page.drawImage(qrImage, {
         x: leftPad,

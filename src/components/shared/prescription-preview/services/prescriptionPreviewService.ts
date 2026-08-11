@@ -10,6 +10,7 @@ import {
 import { mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
 import { prescriptionFieldLayoutApi, mergeFieldsWithDefaults } from '@/features/prescription/services/prescriptionFieldLayoutApi';
 import { drawingApi } from '@/features/patient/services/drawingApi';
+import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
 
 export interface PrescriptionPreviewPayload {
   layout: TemplateBoundLayoutConfig;
@@ -67,7 +68,9 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
     typography: templateConfig.typography,
     payload: {
       ...payload,
-      qrCodeData: `${import.meta.env.VITE_APP_URL || window.location.origin}/verify/${response.appointmentId}`,
+      // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link --
+      // never fatal to the rest of the preview if it fails (matches discharge's own posture).
+      qrImageBytes: await eprescriptionApi.getVisitSummaryQrCode(response.appointmentId).catch(() => undefined),
       validUptoDate: response.validUptoDate,
       drawings,
     },

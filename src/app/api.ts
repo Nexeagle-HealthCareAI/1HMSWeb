@@ -72,6 +72,11 @@ export const API_ENDPOINTS = {
     LOOKUP_DETAILS: (hospitalId: string, doctorId: string) =>
       `/e-prescription/lookup/details?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}`,
     UPLOAD_VISIT_SUMMARY: 'e-prescription/visit-summary/upload',
+    // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link for the
+    // structured e-prescription flow (Appointment.PdfUrl) -- distinct from ATTACHMENTS.QR_CODE
+    // below, which backs InkRx/manual uploads instead.
+    QR_CODE_VISIT_SUMMARY: (appointmentId: string) =>
+      `e-prescription/qr-code/visit-summary?appointmentId=${encodeURIComponent(appointmentId)}`,
   },
   AUTH: {
     LOGIN: 'auth/user/login',
@@ -204,6 +209,10 @@ export const API_ENDPOINTS = {
     LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
       `e-prescription/attachments/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
     DELETE: (attachmentId: string) => `e-prescription/attachments/delete?AttachmentId=${encodeURIComponent(attachmentId)}`,
+    // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link for a
+    // PrescriptionAttachment id generated client-side BEFORE upload (see InkRxPad.tsx) --
+    // there's no row to look up yet at the point this is called.
+    QR_CODE: (attachmentId: string) => `e-prescription/qr-code?attachmentId=${encodeURIComponent(attachmentId)}`,
   },
   DRAWINGS: {
     UPLOAD: 'e-prescription/drawings/upload',

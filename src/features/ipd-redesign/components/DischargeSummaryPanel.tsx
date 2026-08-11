@@ -416,19 +416,20 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         };
     };
 
-    // Mints (or refreshes) the same public "view on mobile" link the Share dialog uses, and
-    // returns its URL for embedding as a QR directly on the letterhead — always re-uploads so the
-    // link reflects the current signed content, not a stale earlier snapshot. Only ever called
-    // once signed (see the qrUrl line below), so an unsigned draft never gets a shareable QR baked
-    // into it.
-    const ensureShareUrl = async (): Promise<string | undefined> => {
+    // Mints (or refreshes) the AccessToken the Share dialog also uses, then fetches the
+    // backend-rendered QR (NexEagle logo centered, encoding the WhatsApp-delivery link — see
+    // GetDischargeSummaryQrCodeHandler) for embedding directly on the letterhead. Always
+    // re-uploads so the link reflects the current signed content, not a stale earlier snapshot.
+    // Only ever called once signed (see the qrImageBytes line below), so an unsigned draft never
+    // gets a shareable QR baked into it.
+    const ensureQrImageBytes = async (): Promise<ArrayBuffer | undefined> => {
         try {
             const settings = buildPrintSettingsFromHospital(hospitalData);
             const html = buildDischargeSummaryA4(buildPrintData(), settings);
             const blob = await htmlToPdfBlob(html);
             const token = await dischargeSummaryApi.uploadPdf(admission.admissionId, blob);
             setShareToken(token);
-            return `${API_BASE_URL}/public-discharge/${token}`;
+            return await dischargeSummaryApi.getQrCode(admission.admissionId, hospitalId);
         } catch {
             return undefined;
         }
@@ -482,7 +483,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 conditionAtDischarge: data.conditionAtDischarge,
                 signedByDoctorName: data.signedByDoctorName,
                 signedAt: data.signedAt,
-                qrUrl: isSigned ? await ensureShareUrl() : undefined,
+                qrImageBytes: isSigned ? await ensureQrImageBytes() : undefined,
                 fields: {
                     admittingDiagnosis: data.admittingDiagnosis,
                     finalDiagnosis: data.finalDiagnosis,

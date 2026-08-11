@@ -219,6 +219,15 @@ export const eprescriptionApi = {
         );
         return response;
     },
+    // Ready-to-embed PNG bytes (NexEagle logo centered) encoding the WhatsApp-delivery link for
+    // this appointment's structured e-prescription. AppointmentId is known upfront (unlike
+    // InkRx/manual uploads), so this is a plain, immediate fetch.
+    getVisitSummaryQrCode: async (appointmentId: string): Promise<ArrayBuffer> => {
+        return apiClient.get<ArrayBuffer>(
+            API_ENDPOINTS.E_PRESCRIPTION.QR_CODE_VISIT_SUMMARY(appointmentId),
+            { responseType: 'arraybuffer' } as any
+        );
+    },
     getLookupDetails: async (
         hospitalId: string,
         doctorId: string

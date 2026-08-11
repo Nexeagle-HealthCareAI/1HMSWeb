@@ -253,4 +253,28 @@ export const hospitalApi = {
   downloadHospitalQrCode: async (hospitalId: string): Promise<void> => {
     return apiClient.download(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), 'opd-checkin-qr-code.png');
   },
+
+  /**
+   * Gets the OPD check-in QR code as a base64 string for embedding in generated HTML.
+   */
+  getHospitalQrCodeBase64: async (hospitalId: string): Promise<string> => {
+    const response = await apiClient.get(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), {
+      responseType: 'blob',
+    });
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(response as unknown as Blob);
+    });
+  },
+
+  /**
+   * Fetches the OPD check-in QR as a Blob so it can be embedded dynamically.
+   */
+  getHospitalQrCodeBlob: async (hospitalId: string): Promise<Blob> => {
+    return apiClient.get<Blob>(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), { responseType: 'blob' });
+  },
 };
