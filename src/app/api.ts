@@ -105,6 +105,25 @@ export const API_ENDPOINTS = {
     GENERATE_CODE: (id: string) => `hospitals/${id}/generate-code`,
     QR_CODE: (id: string) => `hospitals/${id}/qr-code`,
   },
+  LEADS: {
+    // Route shape mirrors HOSPITALS.GET_ANALYSIS ("resource/analysis/hospitalId={id}") --
+    // hospitalId is a literal path segment matching LeadsController's route template, extra
+    // filters are normal query-string params appended after it.
+    GET_LEADS: (
+      hospitalId: string,
+      params?: { page?: number; pageSize?: number; source?: string; leadType?: string; dateFrom?: string; dateTo?: string }
+    ) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+      if (params?.source) query.set('source', params.source);
+      if (params?.leadType) query.set('leadType', params.leadType);
+      if (params?.dateFrom) query.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) query.set('dateTo', params.dateTo);
+      const qs = query.toString();
+      return `leads/hospitalId=${encodeURIComponent(hospitalId)}${qs ? `?${qs}` : ''}`;
+    },
+  },
   CHAINS: {
     CREATE: 'chains',
     MINE: 'chains/mine',

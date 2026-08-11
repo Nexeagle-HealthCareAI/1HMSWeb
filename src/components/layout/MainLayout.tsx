@@ -75,6 +75,7 @@ import {
   FileCheck2,
   AlertTriangle,
   FileBadge2,
+  Megaphone,
   CheckSquare,
   XSquare,
   HeartPulse,
@@ -256,6 +257,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
     { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
+    { id: 'leads', name: 'Lead Generation', icon: Megaphone, path: '/leads' },
   ];
 
   // Filter navigation items based on user role
@@ -283,6 +285,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
     if (item.id === 'abdm') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist');
+    }
+    if (item.id === 'leads') {
+      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
     }
     if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board' || item.id === 'nursing-station') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
