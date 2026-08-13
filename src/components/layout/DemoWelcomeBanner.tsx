@@ -81,17 +81,21 @@ export const DemoWelcomeBanner: React.FC = () => {
             <div className="mt-3 flex flex-col sm:flex-row gap-2">
               <Input
                 placeholder="Your name"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-10 rounded-lg max-w-[200px]"
+                className="h-10 rounded-lg w-full sm:max-w-[200px]"
               />
               <Input
                 placeholder="Mobile number"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                className="h-10 rounded-lg max-w-[200px]"
+                className="h-10 rounded-lg w-full sm:max-w-[200px]"
               />
-              <Button size="sm" className="h-10 rounded-lg font-semibold" onClick={submitCallbackRequest}>
+              <Button size="sm" className="h-10 rounded-lg font-semibold w-full sm:w-auto" onClick={submitCallbackRequest}>
                 Submit
               </Button>
             </div>
