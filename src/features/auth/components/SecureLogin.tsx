@@ -22,6 +22,16 @@ import { HospitalBrandingModal } from '@/features/hospital/components/HospitalBr
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { API_ENDPOINTS } from '@/app/api';
 import { axiosInstance } from '@/services/axiosClient';
+import { recordDemoLoginLead } from '@/features/auth/services/demoLeadApi';
+
+// "Scan a QR, land straight in a live demo" -- see the Marketing tab in CMS. The credential
+// itself is never in the QR/URL (only ?demo=true is); these come from a build-time env var set
+// ONLY in the dev CI/CD build step, so a bundle built without them (e.g. Prod) simply can't
+// auto-login regardless of what URL it's served at. The hostname check below is a second,
+// independent gate on top of that, not a replacement for it.
+const DEMO_LOGIN_EMAIL = import.meta.env.VITE_DEMO_LOGIN_EMAIL as string | undefined;
+const DEMO_LOGIN_PASSWORD = import.meta.env.VITE_DEMO_LOGIN_PASSWORD as string | undefined;
+const DEMO_LOGIN_HOSTNAME = '1hms-dev.nexeagle.com';
 
 interface LoginProps {
   onLogin: () => void;
@@ -436,6 +446,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         invalidateAuth();
         console.log('[LOGIN-DEBUG] 8. invalidateAuth() done');
 
+        if (DEMO_LOGIN_EMAIL && sanitizedUserid.toLowerCase() === DEMO_LOGIN_EMAIL.toLowerCase()) {
+          recordDemoLoginLead();
+        }
+
         toast({
           title: "Login Successful",
           description: hospitalResult === 'found'
@@ -461,6 +475,21 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       handleFailedLogin();
     }
   };
+
+  // Auto-login for the "scan a QR, land in a live demo" flow (see the Marketing tab in CMS).
+  // Runs once on mount; a no-op (returns immediately) unless ALL THREE hold: the URL carries
+  // ?demo=true, the build actually has demo credentials baked in (only true for the dev build),
+  // and this is genuinely the dev host. Deliberately not memoizing handlePasswordLogin into the
+  // dependency array — it's stable enough at mount time for this one-shot call, and adding it
+  // would re-fire the effect on every re-render instead of exactly once.
+  useEffect(() => {
+    if (!DEMO_LOGIN_EMAIL || !DEMO_LOGIN_PASSWORD) return;
+    if (window.location.hostname !== DEMO_LOGIN_HOSTNAME) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') !== 'true') return;
+    handlePasswordLogin(DEMO_LOGIN_EMAIL, DEMO_LOGIN_PASSWORD);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Deliberately throws (rather than swallowing) on every path where no OTP was actually
   // generated, and only resolves normally when one was — OTPLoginForm's handleSendOTP awaits

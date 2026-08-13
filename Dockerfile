@@ -12,6 +12,13 @@ RUN npm ci
 COPY . .
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Only ever set on the Dev build (see deploy-web.yml) — powers the "scan a QR, land in a live
+# demo" auto-login. Unset (Prod, or Dev before the secrets are configured) means these are
+# empty strings, and SecureLogin.tsx's auto-login effect no-ops harmlessly.
+ARG VITE_DEMO_LOGIN_EMAIL
+ARG VITE_DEMO_LOGIN_PASSWORD
+ENV VITE_DEMO_LOGIN_EMAIL=$VITE_DEMO_LOGIN_EMAIL
+ENV VITE_DEMO_LOGIN_PASSWORD=$VITE_DEMO_LOGIN_PASSWORD
 RUN npm run build:prod
 
 # ───────────────────────── Serve stage ─────────────────────────

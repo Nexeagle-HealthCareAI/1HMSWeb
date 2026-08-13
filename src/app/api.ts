@@ -123,6 +123,9 @@ export const API_ENDPOINTS = {
       const qs = query.toString();
       return `leads/hospitalId=${encodeURIComponent(hospitalId)}${qs ? `?${qs}` : ''}`;
     },
+    // Public/anonymous write side (RecordLeadHandler) -- same endpoint Doctor Dekho and the
+    // WhatsApp bot already post to, used here for the "1HMSDemo" source/"DemoLogin" type.
+    RECORD: 'public/leads',
   },
   CHAINS: {
     CREATE: 'chains',

@@ -97,6 +97,7 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HospitalSwitcher } from './HospitalSwitcher';
 import { PWAInstallBanner } from './PWAInstallBanner';
+import { DemoWelcomeBanner } from './DemoWelcomeBanner';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
 import { AlertBell } from '@/features/alerts/components/AlertBell';
 import { cn } from '@/lib/utils';
@@ -518,6 +519,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           "flex-1 relative overflow-x-hidden overflow-y-auto hide-scrollbar transition-all duration-300 bg-gray-50 dark:bg-gray-950",
           "p-6"
         )}>
+          <DemoWelcomeBanner />
           {children}
           
           {/* Floating Navigation Card Menu (Sitting above the bottom navigation bar) */}
