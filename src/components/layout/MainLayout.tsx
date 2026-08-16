@@ -250,7 +250,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
     { id: 'configuration', name: t('header.configuration') || 'Hospital Info', icon: Building2, path: '/configuration' },
-   // { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
+    { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
     { id: 'appointment-dashboard', name: t('header.appointments') || 'Appointments', icon: Calendar, path: '/appointment-dashboard' },
     { id: 'patients', name: t('header.patients') || 'Patients', icon: Users, path: '/patients' },
