@@ -16,130 +16,6 @@ export class RoleService {
     ACCOUNTANT: 'accountant'
   };
 
-  // Permission definitions
-  private static PERMISSIONS = {
-    // Patient Management
-    VIEW_PATIENTS: 'view_patients',
-    CREATE_PATIENTS: 'create_patients',
-    EDIT_PATIENTS: 'edit_patients',
-    DELETE_PATIENTS: 'delete_patients',
-    
-    // Appointment Management
-    VIEW_APPOINTMENTS: 'view_appointments',
-    CREATE_APPOINTMENTS: 'create_appointments',
-    EDIT_APPOINTMENTS: 'edit_appointments',
-    DELETE_APPOINTMENTS: 'delete_appointments',
-    
-    // Prescription Management
-    VIEW_PRESCRIPTIONS: 'view_prescriptions',
-    CREATE_PRESCRIPTIONS: 'create_prescriptions',
-    EDIT_PRESCRIPTIONS: 'edit_prescriptions',
-    DELETE_PRESCRIPTIONS: 'delete_prescriptions',
-    
-    // Billing Management
-    VIEW_BILLS: 'view_bills',
-    CREATE_BILLS: 'create_bills',
-    EDIT_BILLS: 'edit_bills',
-    DELETE_BILLS: 'delete_bills',
-    
-    // User Management
-    VIEW_USERS: 'view_users',
-    CREATE_USERS: 'create_users',
-    EDIT_USERS: 'edit_users',
-    DELETE_USERS: 'delete_users',
-    
-    // System Management
-    VIEW_REPORTS: 'view_reports',
-    MANAGE_SETTINGS: 'manage_settings',
-    MANAGE_ROLES: 'manage_roles'
-  };
-
-  // Role-Permission mapping
-  private static ROLE_PERMISSIONS = {
-    [this.ROLES.ADMIN]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.CREATE_PATIENTS,
-      this.PERMISSIONS.EDIT_PATIENTS,
-      this.PERMISSIONS.DELETE_PATIENTS,
-      this.PERMISSIONS.VIEW_APPOINTMENTS,
-      this.PERMISSIONS.CREATE_APPOINTMENTS,
-      this.PERMISSIONS.EDIT_APPOINTMENTS,
-      this.PERMISSIONS.DELETE_APPOINTMENTS,
-      this.PERMISSIONS.VIEW_PRESCRIPTIONS,
-      this.PERMISSIONS.CREATE_PRESCRIPTIONS,
-      this.PERMISSIONS.EDIT_PRESCRIPTIONS,
-      this.PERMISSIONS.DELETE_PRESCRIPTIONS,
-      this.PERMISSIONS.VIEW_BILLS,
-      this.PERMISSIONS.CREATE_BILLS,
-      this.PERMISSIONS.EDIT_BILLS,
-      this.PERMISSIONS.DELETE_BILLS,
-      this.PERMISSIONS.VIEW_USERS,
-      this.PERMISSIONS.CREATE_USERS,
-      this.PERMISSIONS.EDIT_USERS,
-      this.PERMISSIONS.DELETE_USERS,
-      this.PERMISSIONS.VIEW_REPORTS,
-      this.PERMISSIONS.MANAGE_SETTINGS,
-      this.PERMISSIONS.MANAGE_ROLES
-    ],
-    [this.ROLES.DOCTOR]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.CREATE_PATIENTS,
-      this.PERMISSIONS.EDIT_PATIENTS,
-      this.PERMISSIONS.VIEW_APPOINTMENTS,
-      this.PERMISSIONS.CREATE_APPOINTMENTS,
-      this.PERMISSIONS.EDIT_APPOINTMENTS,
-      this.PERMISSIONS.VIEW_PRESCRIPTIONS,
-      this.PERMISSIONS.CREATE_PRESCRIPTIONS,
-      this.PERMISSIONS.EDIT_PRESCRIPTIONS,
-      this.PERMISSIONS.VIEW_BILLS,
-      this.PERMISSIONS.VIEW_REPORTS
-    ],
-    [this.ROLES.NURSE]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.EDIT_PATIENTS,
-      this.PERMISSIONS.VIEW_APPOINTMENTS,
-      this.PERMISSIONS.EDIT_APPOINTMENTS,
-      this.PERMISSIONS.VIEW_PRESCRIPTIONS
-    ],
-    [this.ROLES.RECEPTIONIST]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.CREATE_PATIENTS,
-      this.PERMISSIONS.EDIT_PATIENTS,
-      this.PERMISSIONS.VIEW_APPOINTMENTS,
-      this.PERMISSIONS.CREATE_APPOINTMENTS,
-      this.PERMISSIONS.EDIT_APPOINTMENTS,
-      this.PERMISSIONS.VIEW_BILLS,
-      this.PERMISSIONS.CREATE_BILLS,
-      this.PERMISSIONS.EDIT_BILLS
-    ],
-    [this.ROLES.LAB_TECHNICIAN]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.VIEW_APPOINTMENTS,
-      this.PERMISSIONS.VIEW_PRESCRIPTIONS
-    ],
-    [this.ROLES.PHARMACIST]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.VIEW_PRESCRIPTIONS,
-      this.PERMISSIONS.VIEW_BILLS,
-      this.PERMISSIONS.CREATE_BILLS,
-      this.PERMISSIONS.EDIT_BILLS
-    ],
-    [this.ROLES.PATIENT]: [
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.VIEW_APPOINTMENTS,
-      this.PERMISSIONS.VIEW_PRESCRIPTIONS,
-      this.PERMISSIONS.VIEW_BILLS
-    ],
-    [this.ROLES.ACCOUNTANT]: [
-      this.PERMISSIONS.VIEW_BILLS,
-      this.PERMISSIONS.CREATE_BILLS,
-      this.PERMISSIONS.EDIT_BILLS,
-      this.PERMISSIONS.DELETE_BILLS,
-      this.PERMISSIONS.VIEW_PATIENTS,
-      this.PERMISSIONS.VIEW_REPORTS
-    ]
-  };
-
   // Set user role (kept for backward compatibility, sets single role)
   static setRole(role: string): void {
     const authStore = useAuthStore.getState();
@@ -187,11 +63,6 @@ export class RoleService {
     return targetRoles.some(r => currentRoles.includes(r));
   }
 
-  // Get permissions for a role
-  static getRolePermissions(role: string): string[] {
-    return this.ROLE_PERMISSIONS[role] || [];
-  }
-
   // Set user permissions
   static setUserPermissions(permissions: string[]): void {
     const authStore = useAuthStore.getState();
@@ -201,29 +72,20 @@ export class RoleService {
     }
   }
 
-  // Get user permissions
+  // Get user permissions. Reads authStore's real, correctly-populated `permissions` field
+  // (set by fetchAndStoreUserPermissions() from GET /user/permissions) -- this used to read
+  // authStore.user?.permissions, a different field the login flow never populates, which
+  // silently made every permission check return false regardless of the caller's real
+  // backend-granted permissions.
   static getUserPermissions(): string[] {
     const authStore = useAuthStore.getState();
-    return authStore.user?.permissions || [];
+    return authStore.getPermissions();
   }
 
-  // Check if user has a specific permission
+  // Check if user has a specific permission (real backend-granted PermissionKey, e.g. "ipd")
   static hasPermission(permission: string): boolean {
-    const userPermissions = this.getUserPermissions();
-    const userRoles = this.getRoles();
-    
-    if (userRoles.length === 0) return false;
-    
-    // Check if permission is in user's direct permissions
-    if (userPermissions.includes(permission)) {
-      return true;
-    }
-    
-    // Check if permission is in any of the user's role's permissions
-    return userRoles.some(role => {
-      const rolePermissions = this.getRolePermissions(role.toLowerCase());
-      return rolePermissions.includes(permission);
-    });
+    if (this.getRoles().length === 0) return false;
+    return this.getUserPermissions().includes(permission);
   }
 
   // Check if user has all specified permissions
@@ -248,11 +110,6 @@ export class RoleService {
   // Get all available roles
   static getAvailableRoles(): string[] {
     return Object.values(this.ROLES);
-  }
-
-  // Get all available permissions
-  static getAvailablePermissions(): string[] {
-    return Object.values(this.PERMISSIONS);
   }
 
   // Get role display name

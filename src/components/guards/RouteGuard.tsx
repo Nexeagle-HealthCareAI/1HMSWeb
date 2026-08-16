@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useRouteGuard, usePermissions } from '@/hooks/useRouteGuard';
-import { useIsAuthenticated, useAuthLoading, useHasRole, useHasPermission, useHasAnyRole, useHasAllPermissions } from '@/store';
+import { useIsAuthenticated, useAuthLoading } from '@/store';
 import { RoleService } from '@/features/auth/services/roleService';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 

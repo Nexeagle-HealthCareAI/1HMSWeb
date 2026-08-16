@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut, ClipboardList } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut, ClipboardList, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';
@@ -14,6 +14,8 @@ import { EquipmentMaster } from '@/features/hospital/components/masters/Equipmen
 import { VendorMaster } from '@/features/hospital/components/masters/VendorMaster';
 import { DischargeLetterheadConfig } from '@/features/ipd-redesign/components/DischargeLetterheadConfig';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
+import { PathologySettingsTab } from '@/features/pathology/components/PathologySettingsTab';
+import { ReportLetterheadConfig } from '@/features/pathology/components/ReportLetterheadConfig';
 
 export const AdminConfigModule = () => {
     const [activeTab, setActiveTab] = useState('billing');
@@ -38,6 +40,12 @@ export const AdminConfigModule = () => {
             label: 'Discharge Letterhead',
             description: 'Design the discharge summary letterhead and print layout',
             icon: LogOut,
+        },
+        {
+            id: 'report-letterhead',
+            label: 'Report Letterhead',
+            description: 'Design the lab report letterhead and print layout',
+            icon: FileText,
         },
         {
             id: 'charge-master',
@@ -86,6 +94,12 @@ export const AdminConfigModule = () => {
             label: 'Vendor Master',
             description: 'Set up suppliers/distributors for procurement',
             icon: Truck,
+        },
+        {
+            id: 'pathology-settings',
+            label: 'Pathology Settings',
+            description: 'Manage lab catalog, report templates, and auto-billing',
+            icon: FlaskConical,
         },
     ];
 
@@ -195,6 +209,16 @@ export const AdminConfigModule = () => {
                     {activeTab === 'item-master' && <ItemMaster />}
                     {activeTab === 'equipment-master' && <EquipmentMaster />}
                     {activeTab === 'vendor-master' && <VendorMaster />}
+                    {activeTab === 'report-letterhead' && (
+                        <div className="p-4 lg:p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl overflow-y-auto">
+                            <ReportLetterheadConfig />
+                        </div>
+                    )}
+                    {activeTab === 'pathology-settings' && (
+                        <div className="p-4 lg:p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl overflow-y-auto">
+                            <PathologySettingsTab />
+                        </div>
+                    )}
                 </SubscriptionReadOnlyOverlay>
             </main>
         </div>

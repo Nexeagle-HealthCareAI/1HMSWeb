@@ -1931,31 +1931,44 @@ export const AppointmentDashboard = () => {
                               </div>
                             </TableCell>
 
-
-
                             {/* Actions — always shown, even for past appointments (document upload should stay available for historical visits too). */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                 <div className="flex items-center gap-1.5">
-                                  {/* Bill stays outside the dropdown — the one action front desk needs at a glance. */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={appointment.finalStatusCode === 'CANCELLED' || (isSubscriptionReadOnly && !appointment.consultPaid)}
-                                    title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
-                                    className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${appointment.finalStatusCode === 'CANCELLED'
-                                      ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
-                                      : appointment.consultPaid
-                                        ? 'text-emerald-700 border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 shadow-sm hover:shadow-md'
-                                        : 'text-amber-600 border-amber-200 dark:border-amber-800/50 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-amber-300 dark:hover:border-amber-700'
-                                      }`}
-                                    onClick={() => handleAddBillClick(appointment)}
-                                  >
-                                    {appointment.consultPaid ? (
-                                      <><CheckCircle2 className="h-3 w-3 mr-1.5" /> {t('appointmentDashboard.addBill.statusPaid')}</>
-                                    ) : (
-                                      <><IndianRupee className="h-3 w-3 mr-1.5 opacity-80" /> {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Bill' })}</>
-                                    )}
-                                  </Button>
+                                  {/* Confirm button — shown inline only for online (PRE_APPOINTMENT) bookings, as the primary CTA. */}
+                                  {appointment.finalStatusCode === 'PRE_APPOINTMENT' ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={isSubscriptionReadOnly}
+                                      onClick={() => handleConfirmPreAppointmentClick(appointment)}
+                                      className="h-7 px-2.5 text-xs font-bold text-amber-700 border-amber-300 dark:border-amber-700/60 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/50 dark:hover:to-orange-900/40 hover:border-amber-400 dark:hover:border-amber-600 shadow-sm hover:shadow-amber-200 dark:hover:shadow-amber-900/30 hover:scale-105 transition-all duration-200"
+                                      title={t('appointmentDashboard.actionButtons.confirmAppointment', { defaultValue: 'Confirm appointment' })}
+                                    >
+                                      <CheckCircle2 className="h-3 w-3 mr-1.5" />
+                                      {t('appointmentDashboard.actionButtons.confirm', { defaultValue: 'Confirm' })}
+                                    </Button>
+                                  ) : (
+                                    /* Bill stays outside the dropdown — the one action front desk needs at a glance. */
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={appointment.finalStatusCode === 'CANCELLED' || (isSubscriptionReadOnly && !appointment.consultPaid)}
+                                      title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
+                                      className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${appointment.finalStatusCode === 'CANCELLED'
+                                        ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
+                                        : appointment.consultPaid
+                                          ? 'text-emerald-700 border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 shadow-sm hover:shadow-md'
+                                          : 'text-amber-600 border-amber-200 dark:border-amber-800/50 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-amber-300 dark:hover:border-amber-700'
+                                        }`}
+                                      onClick={() => handleAddBillClick(appointment)}
+                                    >
+                                      {appointment.consultPaid ? (
+                                        <><CheckCircle2 className="h-3 w-3 mr-1.5" /> {t('appointmentDashboard.addBill.statusPaid')}</>
+                                      ) : (
+                                        <><IndianRupee className="h-3 w-3 mr-1.5 opacity-80" /> {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Bill' })}</>
+                                      )}
+                                    </Button>
+                                  )}
 
                                   {/* Everything else lives in one premium dropdown. */}
                                   <DropdownMenu>

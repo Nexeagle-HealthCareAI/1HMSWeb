@@ -83,8 +83,6 @@ export const useUserState = () => useUserStore((state) => ({
   preferences: state.preferences,
   lastActivity: state.lastActivity,
   sessionDuration: state.sessionDuration,
-  roles: state.roles,
-  permissions: state.permissions,
   settings: state.settings,
   statistics: state.statistics,
 }));
@@ -99,12 +97,6 @@ export const useUserActions = () => useUserStore((state) => ({
   toggleNotification: state.toggleNotification,
   updateLastActivity: state.updateLastActivity,
   setSessionDuration: state.setSessionDuration,
-  setRoles: state.setRoles,
-  setPermissions: state.setPermissions,
-  hasRole: state.hasRole,
-  hasPermission: state.hasPermission,
-  hasAnyRole: state.hasAnyRole,
-  hasAllPermissions: state.hasAllPermissions,
   updateSettings: state.updateSettings,
   setAutoLogout: state.setAutoLogout,
   setAutoLogoutMinutes: state.setAutoLogoutMinutes,
@@ -156,19 +148,11 @@ export const useBreadcrumbs = () => useAppStore((state) => state.breadcrumbs);
 
 export const useUserProfile = () => useUserStore((state) => state.profile);
 export const useUserPreferences = () => useUserStore((state) => state.preferences);
-export const useUserRoles = () => useUserStore((state) => state.roles);
-export const useUserPermissions = () => useUserStore((state) => state.permissions);
 
 export const useThemeMode = () => useThemeStore((state) => state.mode);
 export const useColorScheme = () => useThemeStore((state) => state.colorScheme);
 export const useThemeColors = () => useThemeStore((state) => state.colors);
 export const useThemeSettings = () => useThemeStore((state) => state.settings);
-
-// Permission and role checking hooks
-export const useHasRole = (role: string) => useUserStore((state) => state.hasRole(role));
-export const useHasPermission = (permission: string) => useUserStore((state) => state.hasPermission(permission));
-export const useHasAnyRole = (roles: string[]) => useUserStore((state) => state.hasAnyRole(roles));
-export const useHasAllPermissions = (permissions: string[]) => useUserStore((state) => state.hasAllPermissions(permissions));
 
 // Loading state hooks
 export const useIsLoading = (key: string) => useAppStore((state) => state.loadingStates[key] || false);

@@ -20,11 +20,12 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
             * { box-sizing: border-box; }
             body { 
                 font-family: 'Outfit', 'Segoe UI', sans-serif; 
-                margin: 0; 
+                margin: 0 auto; 
                 padding: 0; 
                 background: #f8fafc; 
                 color: #0f172a; 
-                height: 100vh;
+                width: 210mm;
+                height: 297mm;
                 display: flex;
                 flex-direction: column;
                 position: relative;
@@ -80,43 +81,31 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
                 background: linear-gradient(90deg, #14b8a6, #0ea5e9);
             }
 
-            .brand-container {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 15px;
+            .hospital-name-header {
+                font-size: 18pt;
+                color: #94a3b8;
+                margin-bottom: 5px;
+                font-weight: 500;
+                letter-spacing: 1px;
+                text-transform: uppercase;
             }
 
-            .brand-logo {
-                width: 50px;
-                height: 50px;
-                background: white;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #0f172a;
-                font-weight: 900;
-                font-size: 28px;
-            }
-
-            .brand {
-                font-size: 32pt;
+            .dr-name-header {
+                font-size: 38pt;
                 font-weight: 900;
                 letter-spacing: -0.5px;
                 margin: 0;
                 background: linear-gradient(to right, #ffffff, #cbd5e1);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
+                line-height: 1.1;
             }
 
-            .brand-sub {
+            .dr-spec-header {
                 font-size: 16pt;
-                color: #94a3b8;
+                color: #14b8a6;
                 margin-top: 10px;
-                font-weight: 300;
-                letter-spacing: 2px;
-                text-transform: uppercase;
+                font-weight: 500;
             }
 
             .main-content {
@@ -129,45 +118,9 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
                 text-align: center;
             }
 
-            .dr-title {
-                font-size: 14pt;
-                color: #64748b;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-                font-weight: 600;
-                margin-bottom: 10px;
-            }
-
-            .dr-name {
-                font-size: 42pt;
-                font-weight: 800;
-                color: #0f172a;
-                margin: 0;
-                line-height: 1.1;
-                letter-spacing: -1px;
-            }
-
-            .dr-spec {
-                font-size: 20pt;
-                font-weight: 600;
-                color: #14b8a6;
-                margin-top: 15px;
-                padding: 8px 24px;
-                background: rgba(20, 184, 166, 0.1);
-                border-radius: 100px;
-                display: inline-block;
-            }
-
-            .dr-qual {
-                font-size: 16pt;
-                color: #64748b;
-                margin-top: 15px;
-                font-weight: 400;
-            }
-
             .qr-wrapper {
                 position: relative;
-                margin: 60px 0;
+                margin: 20px 0 40px 0;
             }
 
             .qr-container {
@@ -177,6 +130,9 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
                 box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
                 position: relative;
                 z-index: 2;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
 
             .qr-accent {
@@ -194,6 +150,24 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
                 height: 400px;
                 display: block;
                 border-radius: 16px;
+            }
+
+            .qr-logo-overlay {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 8px;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+            .brand-logo-small {
+                width: 50px;
+                height: 50px;
+                object-fit: contain;
+                border-radius: 4px;
             }
 
             .cta-box {
@@ -226,34 +200,15 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
                 background: white;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: center;
                 border-top: 1px solid #e2e8f0;
-            }
-            
-            .hospital-info {
-                text-align: left;
-            }
-
-            .hospital-sub {
-                font-size: 11pt;
-                color: #94a3b8;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                font-weight: 600;
-                margin-bottom: 4px;
-            }
-            
-            .hospital-name {
-                font-size: 18pt;
-                font-weight: 700;
-                color: #0f172a;
             }
 
             .nexeagle-tag {
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                font-size: 12pt;
+                font-size: 14pt;
                 color: #64748b;
                 font-weight: 500;
             }
@@ -270,24 +225,20 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
         
         <div class="content-wrapper">
             <div class="header">
-                <div class="brand-container">
-                    <div class="brand-logo">N</div>
-                    <h1 class="brand">NexEagle</h1>
-                </div>
-                <div class="brand-sub">Doctor Dekho Platform</div>
+                <div class="hospital-name-header">${hospitalName}</div>
+                <h1 class="dr-name-header">${doctor.fullName || 'Doctor'}</h1>
+                ${doctor.departmentName ? `<div class="dr-spec-header">${doctor.departmentName}</div>` : ''}
+                ${doctor.qualification ? `<div class="dr-spec-header" style="font-size:12pt; color:#94a3b8; margin-top:4px;">${doctor.qualification}</div>` : ''}
             </div>
 
             <div class="main-content">
-                <div class="dr-title">Consultation With</div>
-                <h2 class="dr-name">${doctor.fullName || 'Doctor'}</h2>
-                
-                ${doctor.departmentName ? `<div class="dr-spec">${doctor.departmentName}</div>` : ''}
-                ${doctor.qualification ? `<div class="dr-qual">${doctor.qualification}</div>` : ''}
-
                 <div class="qr-wrapper">
                     <div class="qr-accent"></div>
                     <div class="qr-container">
                         <img class="qr-img" src="${qrUrl}" alt="QR Code to book appointment" />
+                        <div class="qr-logo-overlay">
+                            <img class="brand-logo-small" src="${window.location.origin}/Logo.png" alt="NexEagle Logo" />
+                        </div>
                     </div>
                 </div>
 
@@ -303,10 +254,6 @@ export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospita
             </div>
 
             <div class="footer">
-                <div class="hospital-info">
-                    <div class="hospital-sub">Practicing At</div>
-                    <div class="hospital-name">${hospitalName}</div>
-                </div>
                 <div class="nexeagle-tag">
                     Powered by <span>NexEagle</span>
                 </div>

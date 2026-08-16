@@ -23,6 +23,12 @@
 		},
 		{
 			"path": "../../../../CMSDatabase"
+		},
+		{
+			"path": "../../../../WHatspp Backened"
+		},
+		{
+			"path": "../../../../Vita/tera"
 		}
 	]
 }
