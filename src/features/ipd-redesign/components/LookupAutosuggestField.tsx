@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Loader2, Plus } from 'lucide-react';
 import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
 import { personalizedDataApi, type PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
+import { FieldTranslationTool } from '@/features/patient/components/FieldTranslationTool';
 
 interface Option {
     id: string;
@@ -107,11 +108,14 @@ export const LookupAutosuggestField: React.FC<Props> = ({ label, value, readOnly
                     onBlur={() => setTimeout(() => setOpen(false), 150)}
                     rows={multiline ? rows : undefined}
                     className={cn(
-                        'bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl',
-                        multiline ? 'text-base leading-relaxed' : 'h-12 text-base pr-9'
+                        'bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl pr-10',
+                        multiline ? 'text-base leading-relaxed' : 'h-12 text-base'
                     )}
                 />
-                {searching && <Loader2 className="absolute right-2.5 top-3.5 h-4 w-4 animate-spin text-slate-400" />}
+                <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+                    {searching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+                    <FieldTranslationTool text={value ?? ''} onTranslated={onChange} />
+                </div>
                 {open && (options.length > 0 || (trimmed.length >= 2 && !exactMatch)) && (
                     <div className="absolute z-30 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
                         {options.map(o => (

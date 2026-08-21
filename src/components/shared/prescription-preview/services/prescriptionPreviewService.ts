@@ -28,7 +28,10 @@ export interface BuildPreviewResult {
   templateUrl: string | null;
 }
 
-export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetailsRequest): Promise<BuildPreviewResult> => {
+export const buildPreviewFromRequest = async (
+  request: GeneratePrescriptionDetailsRequest,
+  targetLanguage?: string
+): Promise<BuildPreviewResult> => {
   const response = await generatePrescriptionDetailsService.fetch(request);
 
   if (!response.success || !response.data) {
@@ -37,8 +40,16 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
 
   const templateConfig = mapTemplateToPreviewConfig(response.data.template);
 
-  // We assume response.data IS the GeneratePrescriptionDetailsPayload structure
-  const payload = response.data;
+  let payload = response.data;
+  
+  if (targetLanguage) {
+    try {
+      const { translatePrescriptionPayload } = await import('@/features/prescription/services/translationApi');
+      payload = await translatePrescriptionPayload(payload, targetLanguage);
+    } catch (e) {
+      console.error('Translation failed', e);
+    }
+  }
 
   // The doctor's personalized field layout is the SOLE driver of print order / labels / visibility.
   // Always resolved against defaults (mergeFieldsWithDefaults) so it's never empty — even on a

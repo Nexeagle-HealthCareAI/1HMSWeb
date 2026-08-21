@@ -1,9 +1,11 @@
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDischargePreview } from '../hooks/useDischargePreview';
 import type { DischargeTemplateBoundOptions } from '../services/dischargePreviewRenderer';
+import { Globe } from 'lucide-react';
 
 export interface DischargePreviewModalProps {
     open: boolean;
@@ -13,13 +15,43 @@ export interface DischargePreviewModalProps {
 }
 
 const PreviewModalBody = ({ options, fileName }: { options: DischargeTemplateBoundOptions | null; fileName: string }) => {
-    const { previewUrl, isLoading, error } = useDischargePreview(options);
+    const [targetLanguage, setTargetLanguage] = useState<string | undefined>(undefined);
+    const { previewUrl, isLoading, error } = useDischargePreview(options, targetLanguage);
 
     return (
         <DialogContent className="max-w-[95vw] xl:max-w-[1100px] w-full h-[92vh] p-0 flex flex-col overflow-hidden">
             <div className="flex-shrink-0">
                 <DialogHeader className="px-6 pt-6 pb-4">
-                    <DialogTitle>Discharge Summary Preview</DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle>Discharge Summary Preview</DialogTitle>
+                        <div className="flex gap-2 items-center">
+                            <span className="text-sm text-gray-500 mr-2 flex items-center gap-1"><Globe className="w-4 h-4"/> Translate:</span>
+                            <Button 
+                                size="sm" 
+                                variant={targetLanguage === undefined ? "default" : "outline"} 
+                                onClick={() => setTargetLanguage(undefined)}
+                                disabled={isLoading}
+                            >
+                                English
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant={targetLanguage === 'Hindi' ? "default" : "outline"} 
+                                onClick={() => setTargetLanguage('Hindi')}
+                                disabled={isLoading}
+                            >
+                                Hindi
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant={targetLanguage === 'Bengali' ? "default" : "outline"} 
+                                onClick={() => setTargetLanguage('Bengali')}
+                                disabled={isLoading}
+                            >
+                                Bengali
+                            </Button>
+                        </div>
+                    </div>
                 </DialogHeader>
                 <Separator />
             </div>

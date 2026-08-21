@@ -35,6 +35,7 @@ import type { ActiveAdmissionItem } from '../services/admissionApi';
 import { InkDischargePad } from './InkDischargePad';
 import { PenTool } from 'lucide-react';
 import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
+import { FieldTranslationTool } from '@/features/patient/components/FieldTranslationTool';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -1108,12 +1109,17 @@ const TextField: React.FC<{ label: string; value?: string; readOnly: boolean; on
                 <p className={cn('text-base text-slate-800 whitespace-pre-wrap font-medium', !value && 'text-slate-400 italic')}>{value || '—'}</p>
             </div>
         ) : (
-            <Textarea
-                rows={rows}
-                value={value ?? ''}
-                onChange={e => onChange(e.target.value)}
-                className="text-base leading-relaxed bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl"
-            />
+            <div className="relative">
+                <div className="absolute top-2 right-2 z-10">
+                    <FieldTranslationTool text={value ?? ''} onTranslated={onChange} />
+                </div>
+                <Textarea
+                    rows={rows}
+                    value={value ?? ''}
+                    onChange={e => onChange(e.target.value)}
+                    className="text-base leading-relaxed bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl pr-8"
+                />
+            </div>
         )}
     </div>
 );
