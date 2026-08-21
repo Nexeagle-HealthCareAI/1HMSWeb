@@ -279,21 +279,25 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
           className="flex-1 border-none shadow-none focus-visible:ring-0 px-0 text-sm min-w-[120px]"
         />
 
-        {value.length > 0 && (
-          <div className="ml-auto flex items-center shrink-0 border-l border-gray-200 pl-2">
-            <FieldTranslationTool 
-              text={value.map(v => v.name).join(', ')} 
-              onTranslated={(translated) => {
+        <div className="ml-auto flex items-center shrink-0 border-l border-gray-200 pl-2">
+          <FieldTranslationTool 
+            text={q.trim() || value.map(v => v.name).join(', ')} 
+            onTranslated={(translated) => {
+              if (q.trim()) {
+                // If they were typing free text, replace the typed text
+                setQ(translated);
+              } else {
+                // Otherwise replace the existing chips
                 const newItems = translated.split(',').map(t => t.trim()).filter(Boolean).map(text => ({
                   id: `T:${text}`,
                   name: text,
                   source: 'personal' as const
                 }));
                 onChange(newItems);
-              }}
-            />
-          </div>
-        )}
+              }
+            }}
+          />
+        </div>
       </div>
 
       {(personalQuickPicks.length > 0 || onSave) && (
