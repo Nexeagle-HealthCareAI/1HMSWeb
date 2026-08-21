@@ -10,6 +10,7 @@ import { TestCatalogManager } from './TestCatalogManager';
 import { pathologyService, LabConfiguration } from '../services/pathologyService';
 import { useAuthStore } from '@/store';
 import { toast } from 'sonner';
+import { ReportLetterheadConfig } from './ReportLetterheadConfig';
 
 export const PathologySettingsTab: React.FC = () => {
   const hospitalId = useAuthStore(state => state.hospitalId);
@@ -98,38 +99,7 @@ export const PathologySettingsTab: React.FC = () => {
                 />
               </div>
 
-              {/* Default Report Header */}
-              <div className="space-y-2">
-                <Label htmlFor="defaultReportHeaderBlob">Default Report Header (Blob Path / URL)</Label>
-                <Input
-                  id="defaultReportHeaderBlob"
-                  value={config.defaultReportHeaderBlob ?? ''}
-                  onChange={(e) =>
-                    setConfig(prev => ({ ...prev, defaultReportHeaderBlob: e.target.value }))
-                  }
-                  placeholder="e.g. https://storage.blob.core.windows.net/.../header.png"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Path to the default letterhead header image used on pathology reports.
-                </p>
-              </div>
 
-              {/* Default Report Footer */}
-              <div className="space-y-2">
-                <Label htmlFor="defaultReportFooterText">Default Report Footer Text</Label>
-                <Textarea
-                  id="defaultReportFooterText"
-                  value={config.defaultReportFooterText ?? ''}
-                  onChange={(e) =>
-                    setConfig(prev => ({ ...prev, defaultReportFooterText: e.target.value }))
-                  }
-                  placeholder="e.g. This report is electronically generated and does not require a signature."
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Footer text printed at the bottom of pathology reports.
-                </p>
-              </div>
 
               {/* Save Button */}
               <div className="flex justify-end">
@@ -139,6 +109,19 @@ export const PathologySettingsTab: React.FC = () => {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Report Letterhead Designer */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Report Letterhead Designer</CardTitle>
+          <CardDescription>
+            Design and configure letterheads for your pathology reports. You can create multiple templates and set a default.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReportLetterheadConfig />
         </CardContent>
       </Card>
 
