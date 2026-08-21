@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PathologyBillingTab } from './PathologyBillingTab';
 import { PathologyWorkspace } from './PathologyWorkspace';
+import { PathologySettingsTab } from './PathologySettingsTab';
 
 export const PathologyDashboard: React.FC = () => {
   return (
@@ -27,6 +28,12 @@ export const PathologyDashboard: React.FC = () => {
           >
             Billing & Invoices
           </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none shadow-none bg-transparent"
+          >
+            Settings
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex-1 mt-4 overflow-auto">
@@ -35,6 +42,9 @@ export const PathologyDashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="billing" className="h-full m-0">
             <PathologyBillingTab />
+          </TabsContent>
+          <TabsContent value="settings" className="h-full m-0 pt-4">
+            <PathologySettingsTab />
           </TabsContent>
         </div>
       </Tabs>
