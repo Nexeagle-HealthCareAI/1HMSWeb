@@ -6,6 +6,7 @@ export interface GeneratePrescriptionDetailsRequest {
   patientId: string;
   hospitalId: string;
   doctorId: string;
+  appointmentDate?: string;
 }
 
 export interface PrescriptionTemplateDescriptor {

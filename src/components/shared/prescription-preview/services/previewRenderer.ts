@@ -161,9 +161,10 @@ export interface TemplateBoundPreviewOptions {
   payload: GeneratePrescriptionDetailsPayload;
   // Doctor's personalized field layout — controls which sections print and their labels.
   printFields?: PrintFieldConfig[];
+  appointmentDate?: string;
 }
 
-export const buildTemplateBoundPreview = async ({ templateFile, layout, typography, payload, printFields }: TemplateBoundPreviewOptions) => {
+export const buildTemplateBoundPreview = async ({ templateFile, layout, typography, payload, printFields, appointmentDate }: TemplateBoundPreviewOptions) => {
   const templateBytes = await templateFile.arrayBuffer();
   const templateDoc = await PDFDocument.load(templateBytes);
   const outputDoc = await PDFDocument.create();
@@ -185,7 +186,8 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       day: 'numeric', month: 'short', year: 'numeric'
     });
   };
-  const currentDateLabel = getFormattedDate(new Date());
+  const dateToUse = appointmentDate ? new Date(appointmentDate) : new Date();
+  const currentDateLabel = getFormattedDate(dateToUse);
 
   if (templateDoc.getPageCount() === 0) throw new Error('Template PDF has no pages.');
 

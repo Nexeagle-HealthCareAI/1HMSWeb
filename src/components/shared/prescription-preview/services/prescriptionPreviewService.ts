@@ -20,6 +20,7 @@ export interface PrescriptionPreviewPayload {
   templateUrl?: string | null;
   templateBackgroundDataUrl?: string | null;
   printFields?: PrintFieldConfig[];
+  appointmentDate?: string;
 }
 
 export interface BuildPreviewResult {
@@ -76,6 +77,7 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
     },
     templateUrl: templateConfig.templateUrl,
     printFields,
+    appointmentDate: request.appointmentDate,
   });
 
   return {
@@ -112,6 +114,7 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
       typography: request.typography,
       payload: request.payload,
       printFields: request.printFields,
+      appointmentDate: request.appointmentDate,
     });
   }
   throw new Error('Template file could not be loaded.');
