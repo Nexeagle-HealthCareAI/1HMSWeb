@@ -4789,8 +4789,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               </div>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 relative">
                               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructions</Label>
+                              <div className="absolute top-0 right-0 z-10">
+                                <FieldTranslationTool 
+                                  text={medication.instructions || ''} 
+                                  onTranslated={(newText) => updateMedication(medication.id, 'instructions', newText)} 
+                                />
+                              </div>
                               <Input
                                 placeholder="e.g., After food"
                                 value={medication.instructions}
