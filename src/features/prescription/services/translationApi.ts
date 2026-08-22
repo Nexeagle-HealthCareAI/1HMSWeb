@@ -17,16 +17,18 @@ export interface TranslateResponse {
     translatedText: string;
 }
 
-// Ensure the endpoint is defined in your API_ENDPOINTS or use string directly
+// Note: apiClient.post<T> already returns T (response.data is unwrapped internally)
 export const translationApi = {
     translateText: async (data: TranslateRequest): Promise<TranslateResponse> => {
-        const response = await apiClient.post<TranslateResponse>('/api/v1/translation/translate', data);
-        return response.data;
+        const result = await apiClient.post<TranslateResponse>('/api/v1/translation/translate', data);
+        console.log('[TranslationApi] translateText result:', result);
+        return result;
     },
 
     translateMultiple: async (data: TranslateMultipleRequest): Promise<Record<string, string>> => {
-        const response = await apiClient.post<Record<string, string>>('/api/v1/translation/translate-multiple', data);
-        return response.data;
+        const result = await apiClient.post<Record<string, string>>('/api/v1/translation/translate-multiple', data);
+        console.log('[TranslationApi] translateMultiple result:', result);
+        return result;
     }
 };
 
