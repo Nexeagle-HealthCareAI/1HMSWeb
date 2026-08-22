@@ -40,7 +40,7 @@ const TRANSLATABLE_DISCHARGE_FIELD_KEYS = [
  * a bare Record<string,string> response (no {success,translations} wrapper; see
  * TranslationController.cs's `return Ok(result)` where result is Dictionary<string,string>).
  */
-async function translateDischargeOptions(
+export async function translateDischargeOptions(
     options: DischargeTemplateBoundOptions,
     targetLanguage: string,
 ): Promise<DischargeTemplateBoundOptions> {
