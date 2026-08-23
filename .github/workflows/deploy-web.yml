@@ -24,6 +24,12 @@
 # OPTIONAL repo VARIABLES (Settings → Variables) to override the API URL the SPA calls:
 #   DEV_API_BASE_URL   default https://1hms-dev-api.nexeagle.com
 #   PROD_API_BASE_URL  default http://151.185.45.67:5001
+# OPTIONAL repo SECRETS (Settings → Secrets → Actions), Dev build only — power the
+# "scan a QR, land in a live demo" auto-login (see SecureLogin.tsx / the Marketing tab in CMS).
+# Baked into the Dev bundle only, at build time; simply unset (as of this commit, until added)
+# means the auto-login effect no-ops harmlessly — nothing breaks, it just doesn't activate yet:
+#   VITE_DEMO_LOGIN_EMAIL     e.g. info@nexeagle.com
+#   VITE_DEMO_LOGIN_PASSWORD  e.g. demo123
 # ═══════════════════════════════════════════════════════════════════════════════
 
 name: EasyHMS Web — CI/CD
@@ -88,6 +94,8 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=${{ vars.DEV_API_BASE_URL || 'https://1hms-dev-api.nexeagle.com' }}
+            VITE_DEMO_LOGIN_EMAIL=${{ secrets.VITE_DEMO_LOGIN_EMAIL }}
+            VITE_DEMO_LOGIN_PASSWORD=${{ secrets.VITE_DEMO_LOGIN_PASSWORD }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
             ${{ steps.vars.outputs.image }}:develop

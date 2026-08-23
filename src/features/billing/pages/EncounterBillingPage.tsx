@@ -509,7 +509,7 @@ export const EncounterBillingPage: React.FC = () => {
                                         return (
                                             <TableRow key={c.chargeEventId} className={cn(isVoid && 'opacity-60')}>
                                                 <TableCell className="py-2 text-xs text-slate-500">
-                                                    {format(new Date(c.createdDateTime), 'dd MMM HH:mm')}
+                                                    {format(new Date(c.serviceDate), 'dd MMM HH:mm')}
                                                 </TableCell>
                                                 <TableCell className="py-2">
                                                     <p className={cn('text-sm font-medium', isVoid ? 'line-through text-slate-400' : 'text-slate-800')}>

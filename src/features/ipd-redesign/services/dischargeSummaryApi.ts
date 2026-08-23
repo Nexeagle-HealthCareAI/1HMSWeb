@@ -134,6 +134,20 @@ export const dischargeSummaryApi = {
         }
     },
 
+    // Ready-to-embed PNG bytes (NexEagle logo centered) encoding the WhatsApp-delivery link --
+    // mints AccessToken on first call. Fetched at PDF-render time and drawn directly into the
+    // page via pdf-lib's embedPng, no client-side QR generation involved.
+    getQrCode: async (admissionId: string, hospitalId?: string): Promise<ArrayBuffer> => {
+        try {
+            return await ipdApiClient.get<ArrayBuffer>(
+                `/discharge-summary/qr-code?hospitalId=${hospitalIdOrThrow(hospitalId)}&admissionId=${admissionId}`,
+                { responseType: 'arraybuffer' } as any
+            );
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not generate the QR code.'));
+        }
+    },
+
     generateNarrative: async (admissionId: string, hospitalId?: string): Promise<string> => {
         try {
             const r = await ipdApiClient.post<GenerateDischargeNarrativeResponse>('/discharge-summary/narrate', {

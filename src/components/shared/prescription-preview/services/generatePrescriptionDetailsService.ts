@@ -6,6 +6,7 @@ export interface GeneratePrescriptionDetailsRequest {
   patientId: string;
   hospitalId: string;
   doctorId: string;
+  appointmentDate?: string;
 }
 
 export interface PrescriptionTemplateDescriptor {
@@ -147,7 +148,9 @@ export interface GeneratePrescriptionDetailsPayload {
   customFields?: { key: string; label?: string; value?: string }[];
   validUpto?: number; // Number of days the prescription is valid
   validUptoDate?: string; // Pre-calculated date from server
-  qrCodeData?: string;
+  // Backend-rendered QR (NexEagle logo centered) encoding the WhatsApp-delivery link -- no
+  // client-side QR generation involved, see prescriptionPreviewService.ts.
+  qrImageBytes?: ArrayBuffer;
   drawings?: { url: string; label?: string }[];
 }
 

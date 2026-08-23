@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FieldTranslationTool } from './FieldTranslationTool';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Activity,
@@ -3649,7 +3650,13 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               {renderCollapsibleSection(
                 'systemicExamination',
                 'Systemic Examination',
-                <div className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+                <div className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4 relative">
+                  <div className="absolute top-6 right-6">
+                    <FieldTranslationTool 
+                      text={prescriptionData.systemicExamination || ''} 
+                      onTranslated={(newText) => setPrescriptionData(prev => ({ ...prev, systemicExamination: newText }))} 
+                    />
+                  </div>
                   <textarea
                     value={prescriptionData.systemicExamination}
                     onChange={(e) => setPrescriptionData(prev => ({ ...prev, systemicExamination: e.target.value }))}
@@ -4354,20 +4361,32 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               </Button>
                             </div>
                           </div>
-                          <Input
-                            placeholder="e.g. Low salt diet, Walk 30 min daily"
-                            value={entry.advice || ''}
-                            onChange={e => {
-                              const next = [...prescriptionData.nonPharmacologicalAdvice];
-                              next[idx] = { ...entry, advice: e.target.value };
-                              setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                            }}
-                            className="h-10 text-base bg-white dark:bg-slate-900"
-                            id={`advice-input-${idx}`}
-                            style={{
-                              fontWeight: entry.isBold ? 'bold' : 'normal'
-                            }}
-                          />
+                          <div className="relative w-full">
+                            <Input
+                              placeholder="e.g. Low salt diet, Walk 30 min daily"
+                              value={entry.advice || ''}
+                              onChange={e => {
+                                const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                next[idx] = { ...entry, advice: e.target.value };
+                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                              }}
+                              className="h-10 text-base bg-white dark:bg-slate-900 pr-8"
+                              id={`advice-input-${idx}`}
+                              style={{
+                                fontWeight: entry.isBold ? 'bold' : 'normal'
+                              }}
+                            />
+                            <div className="absolute right-1 top-2">
+                              <FieldTranslationTool 
+                                text={entry.advice || ''} 
+                                onTranslated={(newText) => {
+                                  const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                  next[idx] = { ...entry, advice: newText };
+                                  setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                                }} 
+                              />
+                            </div>
+                          </div>
                         </div>
                         <div className="flex flex-col md:flex-row gap-2 items-center">
                           <div>
@@ -4770,8 +4789,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               </div>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 relative">
                               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructions</Label>
+                              <div className="absolute top-0 right-0 z-10">
+                                <FieldTranslationTool 
+                                  text={medication.instructions || ''} 
+                                  onTranslated={(newText) => updateMedication(medication.id, 'instructions', newText)} 
+                                />
+                              </div>
                               <Input
                                 placeholder="e.g., After food"
                                 value={medication.instructions}
@@ -4981,8 +5006,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     <Card key={idx} className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm p-2">
                       <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                         {/* Type field removed from private notes */}
-                        <div className="flex-1 min-w-[200px]">
+                        <div className="flex-1 min-w-[200px] relative">
                           <Label className="text-xs text-gray-600">Note (max 500 chars)</Label>
+                          <div className="absolute top-0 right-0 z-10">
+                            <FieldTranslationTool 
+                              text={note.content || ''} 
+                              onTranslated={(newText) => {
+                                const next = [...prescriptionData.privateNotes];
+                                next[idx] = { ...note, content: newText };
+                                setPrescriptionData(prev => ({ ...prev, privateNotes: next }));
+                              }} 
+                            />
+                          </div>
                           <Textarea
                             placeholder="Private note for doctor's reference..."
                             value={note.content || ''}
@@ -4992,9 +5027,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               next[idx] = { ...note, content: e.target.value };
                               setPrescriptionData(prev => ({ ...prev, privateNotes: next }));
                             }}
-                            className="min-h-[40px] text-xs bg-white dark:bg-slate-900"
+                            className="min-h-[40px] text-xs bg-white dark:bg-slate-900 mt-1"
                           />
-                          <div className="text-[10px] text-gray-500 text-right">{(note.content || '').length}/500</div>
+                          <div className="text-[10px] text-gray-500 text-right mt-1">{(note.content || '').length}/500</div>
                         </div>
                         {/* Share with staff, Doctor-only by default, Pin for next visit, and Pinned notes show first next time removed */}
                         {/* Timestamp and Author fields removed as requested */}
@@ -5199,7 +5234,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           {/* Right Column: Content */}
                           {selectedTemplate && (
                             <div className="flex flex-col h-full space-y-1">
-                              <Label className="text-xs text-gray-600">Content *</Label>
+                              <div className="relative w-full">
+                                <Label className="text-xs text-gray-600">Content *</Label>
+                                <div className="absolute top-0 right-0 z-10">
+                                  <FieldTranslationTool 
+                                    text={entry.content || ''} 
+                                    onTranslated={(newText) => {
+                                      const next = [...prescriptionData.certificates];
+                                      next[idx] = { ...entry, content: newText };
+                                      setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                    }} 
+                                  />
+                                </div>
+                              </div>
                               <Textarea
                                 placeholder="Certificate or note content..."
                                 value={entry.content || ''}
@@ -5392,8 +5439,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         className="h-8 text-sm"
                       />
                     </div>
-                    <div>
+                    <div className="relative">
                       <Label className="text-xs text-gray-600">Purpose / What to review *</Label>
+                      <div className="absolute top-0 right-0 z-10">
+                        <FieldTranslationTool 
+                          text={prescriptionData.followUp.reason || ''} 
+                          onTranslated={(newText) => setPrescriptionData(prev => ({ ...prev, followUp: { ...prev.followUp, reason: newText } }))} 
+                        />
+                      </div>
                       <Input
                         placeholder="e.g. BP check, Lab review, Wound dressing"
                         value={prescriptionData.followUp.reason}
@@ -5401,13 +5454,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           ...prev,
                           followUp: { ...prev.followUp, reason: e.target.value }
                         }))}
-                        className="h-8 text-sm"
+                        className="h-8 text-sm mt-1"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
-                    <div>
+                    <div className="relative">
                       <Label className="text-xs text-gray-600">Patient Instructions</Label>
+                      <div className="absolute top-0 right-0 z-10">
+                        <FieldTranslationTool 
+                          text={prescriptionData.followUp.patientInstructions || ''} 
+                          onTranslated={(newText) => setPrescriptionData(prev => ({ ...prev, followUp: { ...prev.followUp, patientInstructions: newText } }))} 
+                        />
+                      </div>
                       <Input
                         placeholder="e.g. Bring BP log, Come fasting, Carry reports"
                         value={prescriptionData.followUp.patientInstructions}
@@ -5415,7 +5474,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           ...prev,
                           followUp: { ...prev.followUp, patientInstructions: e.target.value }
                         }))}
-                        className="h-8 text-sm"
+                        className="h-8 text-sm mt-1"
                       />
                     </div>
                   </div>

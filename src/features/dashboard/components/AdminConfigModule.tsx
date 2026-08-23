@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut, ClipboardList } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope, Scissors, Warehouse, Pill, HardDrive, Truck, LogOut, ClipboardList, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';

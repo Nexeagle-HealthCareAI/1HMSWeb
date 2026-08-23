@@ -1,5 +1,4 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb, RGB } from 'pdf-lib';
-import QRCode from 'qrcode';
 import { MarginConfig, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { GeneratePrescriptionDetailsPayload, PrescriptionPatientDetail, PrescriptionVitals } from './generatePrescriptionDetailsService';
 
@@ -162,9 +161,10 @@ export interface TemplateBoundPreviewOptions {
   payload: GeneratePrescriptionDetailsPayload;
   // Doctor's personalized field layout — controls which sections print and their labels.
   printFields?: PrintFieldConfig[];
+  appointmentDate?: string;
 }
 
-export const buildTemplateBoundPreview = async ({ templateFile, layout, typography, payload, printFields }: TemplateBoundPreviewOptions) => {
+export const buildTemplateBoundPreview = async ({ templateFile, layout, typography, payload, printFields, appointmentDate }: TemplateBoundPreviewOptions) => {
   const templateBytes = await templateFile.arrayBuffer();
   const templateDoc = await PDFDocument.load(templateBytes);
   const outputDoc = await PDFDocument.create();
@@ -186,7 +186,8 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       day: 'numeric', month: 'short', year: 'numeric'
     });
   };
-  const currentDateLabel = getFormattedDate(new Date());
+  const dateToUse = appointmentDate ? new Date(appointmentDate) : new Date();
+  const currentDateLabel = getFormattedDate(dateToUse);
 
   if (templateDoc.getPageCount() === 0) throw new Error('Template PDF has no pages.');
 
@@ -356,13 +357,11 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   // QR Code (Inline with Name)
   const qrSize = 50;
   const qrPadding = 12;
-  const nameX = payload.qrCodeData ? leftPad + qrSize + qrPadding : leftPad;
+  const nameX = payload.qrImageBytes ? leftPad + qrSize + qrPadding : leftPad;
 
-  if (payload.qrCodeData) {
+  if (payload.qrImageBytes) {
     try {
-      const qrDataUrl = await QRCode.toDataURL(payload.qrCodeData, { margin: 0 });
-      const qrImageBytes = await fetch(qrDataUrl).then(res => res.arrayBuffer());
-      const qrImage = await outputDoc.embedPng(qrImageBytes);
+      const qrImage = await outputDoc.embedPng(payload.qrImageBytes);
 
       page.drawImage(qrImage, {
         x: leftPad,

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { FieldTranslationTool } from './FieldTranslationTool';
 
 export type LookupSource = 'personal' | 'general';
 
@@ -275,8 +276,28 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="flex-1 border-none shadow-none focus-visible:ring-0 px-0 text-sm"
+          className="flex-1 border-none shadow-none focus-visible:ring-0 px-0 text-sm min-w-[120px]"
         />
+
+        <div className="ml-auto flex items-center shrink-0 border-l border-gray-200 pl-2">
+          <FieldTranslationTool 
+            text={q.trim() || value.map(v => v.name).join(', ')} 
+            onTranslated={(translated) => {
+              if (q.trim()) {
+                // If they were typing free text, replace the typed text
+                setQ(translated);
+              } else {
+                // Otherwise replace the existing chips
+                const newItems = translated.split(',').map(t => t.trim()).filter(Boolean).map(text => ({
+                  id: `T:${text}`,
+                  name: text,
+                  source: 'personal' as const
+                }));
+                onChange(newItems);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {(personalQuickPicks.length > 0 || onSave) && (

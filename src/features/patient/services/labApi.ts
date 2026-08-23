@@ -11,6 +11,10 @@ export interface UploadAttachmentParams {
     doctorId: string;
     patientId: string;
     appointmentId: string;
+    // Optional -- lets a caller that already generated the id before this upload (e.g. InkRx,
+    // which has to embed a QR encoding this id into the PDF before the row exists) pin the new
+    // row to that same id. Omit for every other existing caller.
+    attachmentId?: string;
 }
 
 export interface GetAttachmentsParams {
@@ -61,6 +65,7 @@ export const labApi = {
             PatientId: params.patientId,
             AppointmentId: params.appointmentId,
             LoggedInUserId: params.doctorId, // Assuming doctor is logged in
+            ...(params.attachmentId ? { AttachmentId: params.attachmentId } : {}),
         }).toString();
 
         const endpoint = `${API_ENDPOINTS.ATTACHMENTS.UPLOAD}?${queryParams}`;
@@ -87,6 +92,13 @@ export const labApi = {
     deleteAttachment: async (attachmentId: string): Promise<{ success: boolean; message: string }> => {
         const endpoint = API_ENDPOINTS.ATTACHMENTS.DELETE(attachmentId);
         return apiClient.delete(endpoint);
+    },
+
+    // Ready-to-embed PNG bytes (NexEagle logo centered) encoding the given attachment id's
+    // WhatsApp-delivery link. No row needs to exist yet -- see UploadAttachmentParams.attachmentId.
+    getQrCode: async (attachmentId: string): Promise<ArrayBuffer> => {
+        const endpoint = API_ENDPOINTS.ATTACHMENTS.QR_CODE(attachmentId);
+        return apiClient.get<ArrayBuffer>(endpoint, { responseType: 'arraybuffer' } as any);
     },
     viewAttachment: async (url: string): Promise<string> => {
         try {

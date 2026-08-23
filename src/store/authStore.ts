@@ -350,6 +350,12 @@ export const useAuthStore = create<AuthStore>()(
           userId: state.userId,
           userRole: state.userRole,
           userRoles: state.userRoles,
+          // Persisted so permission-gated routes don't incorrectly deny access on every
+          // browser refresh -- previously excluded, so `permissions` silently reset to []
+          // on reload even though userRoles/isAuthenticated survived. App.tsx's bootstrap
+          // effect still re-fetches fresh permissions on mount; this is the fallback that
+          // covers the gap between rehydration and that fetch completing.
+          permissions: state.permissions,
           hospitalId: state.hospitalId,
           hospitals: state.hospitals,
           employeeId: state.employeeId,

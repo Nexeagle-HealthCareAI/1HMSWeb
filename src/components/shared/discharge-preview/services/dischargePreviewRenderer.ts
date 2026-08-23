@@ -1,5 +1,4 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb, RGB, PDFPage } from 'pdf-lib';
-import QRCode from 'qrcode';
 import type { MarginConfig, TypographySettings } from '@/features/ipd-redesign/hooks/useDischargeDesigner';
 
 // Simplified sibling of prescription-preview/services/previewRenderer.ts's buildTemplateBoundPreview
@@ -72,10 +71,10 @@ export interface DischargePrintPayload {
     conditionAtDischarge: string;
     signedByDoctorName?: string;
     signedAt?: string;
-    // "Scan to view the full discharge letter" link — only set once the summary is signed (see
-    // DischargeSummaryPanel.buildLetterheadPreviewOptions), so an unsigned draft never gets a
-    // shareable QR baked into it.
-    qrUrl?: string;
+    // Backend-rendered QR (NexEagle logo centered) encoding the WhatsApp-delivery link -- only
+    // set once the summary is signed (see DischargeSummaryPanel.ensureQrImageBytes), so an
+    // unsigned draft never gets a shareable QR baked into it.
+    qrImageBytes?: ArrayBuffer;
     fields: Record<string, string | undefined>;             // built-in values keyed by field key
     customFieldValues: Record<string, string | undefined>;  // custom (cf_*) values keyed by field key
     tpaSplit?: {
@@ -217,11 +216,9 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
     const headerStartY = cursorY;
     let contentLeftX = leftPad;
     const qrSize = 56;
-    if (payload.qrUrl) {
+    if (payload.qrImageBytes) {
         try {
-            const qrDataUrl = await QRCode.toDataURL(payload.qrUrl, { margin: 0 });
-            const qrImageBytes = await fetch(qrDataUrl).then(r => r.arrayBuffer());
-            const qrImage = await outputDoc.embedPng(qrImageBytes);
+            const qrImage = await outputDoc.embedPng(payload.qrImageBytes);
             page.drawImage(qrImage, { x: leftPad, y: headerStartY - qrSize + 4, width: qrSize, height: qrSize });
             const caption = 'Scan for full report';
             const captionSize = sizeBase - 4;
@@ -286,7 +283,7 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
 
     // Whichever is taller — the text column or the QR block — decides where the header ends, so
     // the divider/body content never overlaps either.
-    if (payload.qrUrl) cursorY = Math.min(cursorY, headerStartY - qrSize - 18);
+    if (payload.qrImageBytes) cursorY = Math.min(cursorY, headerStartY - qrSize - 18);
 
     cursorY -= lineHeight * 0.3;
     page.drawLine({ start: { x: leftPad, y: cursorY + 4 }, end: { x: pageWidth - rightPad, y: cursorY + 4 }, thickness: 1, color: hexToPdfRgb('#e2e8f0') });

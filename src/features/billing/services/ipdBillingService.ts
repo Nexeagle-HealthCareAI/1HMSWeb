@@ -124,6 +124,9 @@ export interface CreateEncounterRequest {
     encounterType: 'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY';
     // Specific appointment to bill against. When omitted, the patient's latest is used.
     appointmentId?: string;
+    // Optional visit-date override -- every charge/invoice on this visit silently uses this date
+    // instead of "now". Omit for today (unchanged behavior).
+    serviceDate?: string;
 }
 
 export interface CreateEncounterResponse {
@@ -298,6 +301,9 @@ export interface DeleteInvoiceRequest {
     hospitalId?: string;
     patientId: string;
     encounterId: string;
+    // Which invoice to delete -- an encounter can have more than one BillingInvoice row over its
+    // life (delete one, keep billing, a fresh draft appears later), so this must be explicit.
+    invoiceId: string;
     reason: string;
 }
 
@@ -352,6 +358,10 @@ export type InvoiceStatus = 'DRAFT' | 'FINALIZED' | 'CANCELLED';
 export interface BillingChargeRow {
     chargeEventId: string;
     createdDateTime: string;
+    // The visit's own date (Encounter.ServiceDate-derived) -- on a backdated visit this differs
+    // from createdDateTime (real audit time of when the row was actually keyed in). The ledger
+    // should display this, not createdDateTime.
+    serviceDate: string;
     displayName?: string;
     categoryCode?: string;
     sourceModule?: string;
@@ -410,6 +420,16 @@ export interface CurrentInvoiceInfo {
     reopenedReason?: string;
 }
 
+// Every invoice ever issued for the encounter (draft, finalized, cancelled), newest first --
+// lets the ledger show invoice history instead of only the single current one.
+export interface InvoiceSummary {
+    invoiceId: string;
+    invoiceNo?: string;
+    invoiceDate: string;
+    statusCode?: InvoiceStatus | string;
+    netAmount?: number;
+}
+
 export interface GetEncounterEventsResponse {
     success: boolean;
     message?: string;
@@ -418,8 +438,63 @@ export interface GetEncounterEventsResponse {
         amountReceived: number;
         netBalance: number;
         currentInvoice?: CurrentInvoiceInfo | null;
+        invoices?: InvoiceSummary[];
         charges: BillingChargeRow[];
         payments: BillingPaymentRow[];
+    };
+}
+
+// ─── Analytics ───────────────────────────────────────────────────────────────
+
+export interface CategoryBreakdownItem {
+    categoryCode: string;
+    amount: number;
+    count: number;
+}
+
+export interface DailyTrendPoint {
+    date: string;
+    revenue: number;
+    expense: number;
+}
+
+export interface BillingAnalyticsSummaryResponse {
+    success: boolean;
+    message?: string;
+    data?: {
+        totalRevenue: number;
+        totalExpense: number;
+        netAmount: number;
+        revenueByCategory: CategoryBreakdownItem[];
+        expenseByCategory: CategoryBreakdownItem[];
+        dailyTrend: DailyTrendPoint[];
+    };
+}
+
+export interface CategoryTrendItem {
+    categoryCode: string;
+    changePercent: number;
+    isLeak: boolean;
+}
+
+// Nexeagle AI Predictive Analysis -- all numeric fields are computed deterministically server-side
+// (see BillingTrendCalculator.cs); Groq only supplies `outlook`/`insights` narration around them.
+export interface BillingAiInsightsResponse {
+    success: boolean;
+    message?: string;
+    data?: {
+        predictedNext30DayRevenue: number;
+        predictedNext30DayExpense: number;
+        predictedNext30DayNet: number;
+        avg7DayRevenue: number;
+        avg30DayRevenue: number;
+        monthOverMonthRevenueChangePercent: number;
+        monthOverMonthExpenseChangePercent: number;
+        outlook: string;
+        categoryTrends: CategoryTrendItem[];
+        insights: string[];
+        historicalTrend: DailyTrendPoint[];
+        projectedTrend: DailyTrendPoint[];
     };
 }
 
@@ -625,6 +700,14 @@ export const ipdBillingService = {
 
     dashboard: (hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.DASHBOARD(hospitalIdOrThrow(hospitalId))),
+
+    // Analytics: category/date revenue-vs-expense summary. Omit both dates for all-time.
+    getAnalyticsSummary: (opts?: { startDate?: string; endDate?: string; hospitalId?: string }): Promise<BillingAnalyticsSummaryResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.ANALYTICS_SUMMARY(hospitalIdOrThrow(opts?.hospitalId), opts?.startDate, opts?.endDate)),
+
+    // Nexeagle AI Predictive Analysis: trend numbers are computed server-side; Groq only narrates them.
+    getAiInsights: (hospitalId?: string): Promise<BillingAiInsightsResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.ANALYTICS_AI_INSIGHTS(hospitalIdOrThrow(hospitalId))),
 
     print: (patientId: string, encounterId: string, hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.PRINT(patientId, hospitalIdOrThrow(hospitalId), encounterId)),

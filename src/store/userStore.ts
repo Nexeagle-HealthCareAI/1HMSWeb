@@ -45,11 +45,7 @@ export interface UserState {
   // User activity
   lastActivity: Date | null;
   sessionDuration: number;
-  
-  // User permissions and roles
-  roles: string[];
-  permissions: string[];
-  
+
   // User settings
   settings: {
     autoLogout: boolean;
@@ -82,15 +78,7 @@ export interface UserActions {
   // Activity actions
   updateLastActivity: () => void;
   setSessionDuration: (duration: number) => void;
-  
-  // Role and permission actions
-  setRoles: (roles: string[]) => void;
-  setPermissions: (permissions: string[]) => void;
-  hasRole: (role: string) => boolean;
-  hasPermission: (permission: string) => boolean;
-  hasAnyRole: (roles: string[]) => boolean;
-  hasAllPermissions: (permissions: string[]) => boolean;
-  
+
   // Settings actions
   updateSettings: (settings: Partial<UserState['settings']>) => void;
   setAutoLogout: (enabled: boolean) => void;
@@ -126,8 +114,6 @@ const initialState: UserState = {
   },
   lastActivity: null,
   sessionDuration: 0,
-  roles: [],
-  permissions: [],
   settings: {
     autoLogout: true,
     autoLogoutMinutes: 30,
@@ -153,8 +139,6 @@ export const useUserStore = create<UserStore>()(
           set({
             profile,
             isProfileLoaded: true,
-            roles: [profile.role],
-            permissions: profile.permissions,
           });
         },
 
@@ -171,8 +155,6 @@ export const useUserStore = create<UserStore>()(
           set({
             profile: null,
             isProfileLoaded: false,
-            roles: [],
-            permissions: [],
           });
         },
 
@@ -229,35 +211,6 @@ export const useUserStore = create<UserStore>()(
 
         setSessionDuration: (duration: number) => {
           set({ sessionDuration: duration });
-        },
-
-        // Role and permission actions
-        setRoles: (roles: string[]) => {
-          set({ roles });
-        },
-
-        setPermissions: (permissions: string[]) => {
-          set({ permissions });
-        },
-
-        hasRole: (role: string) => {
-          const { roles } = get();
-          return roles.includes(role);
-        },
-
-        hasPermission: (permission: string) => {
-          const { permissions } = get();
-          return permissions.includes(permission);
-        },
-
-        hasAnyRole: (roles: string[]) => {
-          const { roles: userRoles } = get();
-          return roles.some((role) => userRoles.includes(role));
-        },
-
-        hasAllPermissions: (permissions: string[]) => {
-          const { permissions: userPermissions } = get();
-          return permissions.every((permission) => userPermissions.includes(permission));
         },
 
         // Settings actions

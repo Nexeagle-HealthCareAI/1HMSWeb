@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -5,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { usePrescriptionPreview } from '../hooks/usePrescriptionPreview';
 import { type GeneratePrescriptionDetailsRequest } from '../services/generatePrescriptionDetailsService';
+import { Globe } from 'lucide-react';
 
 export interface PrescriptionPreviewModalProps {
   open: boolean;
@@ -23,8 +25,10 @@ const PreviewModalBody = ({
   onNavigateToSettings,
 }: Omit<PrescriptionPreviewModalProps, 'open'> & { onOpenChange: (open: boolean) => void }) => {
   const { t } = useTranslation();
+  const [targetLanguage, setTargetLanguage] = useState<string | undefined>(undefined);
   const { previewUrl, templateUrl, isLoading, error, regeneratePreview } = usePrescriptionPreview({
     request,
+    targetLanguage
   });
 
   const buildPdfEmbed = (url: string | null) => {
@@ -46,7 +50,36 @@ const PreviewModalBody = ({
       {/* Header Section - Fixed */}
       <div className="flex-shrink-0">
         <DialogHeader className="px-6 pt-6 pb-4">
-          {title ? <DialogTitle>{title}</DialogTitle> : <DialogTitle>{t('prescriptionPreview.title')}</DialogTitle>}
+          <div className="flex items-center justify-between">
+            {title ? <DialogTitle>{title}</DialogTitle> : <DialogTitle>{t('prescriptionPreview.title')}</DialogTitle>}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-gray-500 mr-2 flex items-center gap-1"><Globe className="w-4 h-4"/> Translate:</span>
+              <Button 
+                size="sm" 
+                variant={targetLanguage === undefined ? "default" : "outline"} 
+                onClick={() => setTargetLanguage(undefined)}
+                disabled={isLoading}
+              >
+                English
+              </Button>
+              <Button 
+                size="sm" 
+                variant={targetLanguage === 'Hindi' ? "default" : "outline"} 
+                onClick={() => setTargetLanguage('Hindi')}
+                disabled={isLoading}
+              >
+                Hindi
+              </Button>
+              <Button 
+                size="sm" 
+                variant={targetLanguage === 'Bengali' ? "default" : "outline"} 
+                onClick={() => setTargetLanguage('Bengali')}
+                disabled={isLoading}
+              >
+                Bengali
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
         <Separator />
       </div>

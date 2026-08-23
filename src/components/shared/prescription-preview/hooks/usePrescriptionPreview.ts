@@ -5,11 +5,13 @@ import { type GeneratePrescriptionDetailsRequest } from '../services/generatePre
 export interface UsePrescriptionPreviewOptions {
   request: GeneratePrescriptionDetailsRequest | null;
   auto?: boolean;
+  targetLanguage?: string;
 }
 
 export const usePrescriptionPreview = ({
   request,
   auto = true,
+  targetLanguage,
 }: UsePrescriptionPreviewOptions) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [templateUrl, setTemplateUrl] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const usePrescriptionPreview = ({
     setError(null);
     try {
       setTemplateUrl(null);
-      const { blob, templateUrl: sourceTemplateUrl } = await buildPreviewFromRequest(request);
+      const { blob, templateUrl: sourceTemplateUrl } = await buildPreviewFromRequest(request, targetLanguage);
       const nextUrl = URL.createObjectURL(blob);
       revokeUrl(lastObjectUrlRef.current);
       lastObjectUrlRef.current = nextUrl;
@@ -50,7 +52,7 @@ export const usePrescriptionPreview = ({
     } finally {
       setIsLoading(false);
     }
-  }, [request, revokeUrl]);
+  }, [request, targetLanguage, revokeUrl]);
 
   const resetPreview = useCallback(() => {
     revokeUrl(lastObjectUrlRef.current);
@@ -67,7 +69,7 @@ export const usePrescriptionPreview = ({
       return;
     }
     generatePreview();
-  }, [auto, request, generatePreview, resetPreview]);
+  }, [auto, request, targetLanguage, generatePreview, resetPreview]);
 
   return {
     previewUrl,

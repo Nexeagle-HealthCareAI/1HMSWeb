@@ -10,6 +10,7 @@ import {
 import { mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
 import { prescriptionFieldLayoutApi, mergeFieldsWithDefaults } from '@/features/prescription/services/prescriptionFieldLayoutApi';
 import { drawingApi } from '@/features/patient/services/drawingApi';
+import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
 
 export interface PrescriptionPreviewPayload {
   layout: TemplateBoundLayoutConfig;
@@ -19,6 +20,7 @@ export interface PrescriptionPreviewPayload {
   templateUrl?: string | null;
   templateBackgroundDataUrl?: string | null;
   printFields?: PrintFieldConfig[];
+  appointmentDate?: string;
 }
 
 export interface BuildPreviewResult {
@@ -26,7 +28,10 @@ export interface BuildPreviewResult {
   templateUrl: string | null;
 }
 
-export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetailsRequest): Promise<BuildPreviewResult> => {
+export const buildPreviewFromRequest = async (
+  request: GeneratePrescriptionDetailsRequest,
+  targetLanguage?: string
+): Promise<BuildPreviewResult> => {
   const response = await generatePrescriptionDetailsService.fetch(request);
 
   if (!response.success || !response.data) {
@@ -35,8 +40,16 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
 
   const templateConfig = mapTemplateToPreviewConfig(response.data.template);
 
-  // We assume response.data IS the GeneratePrescriptionDetailsPayload structure
-  const payload = response.data;
+  let payload = response.data;
+  
+  if (targetLanguage) {
+    try {
+      const { translatePrescriptionPayload } = await import('@/features/prescription/services/translationApi');
+      payload = await translatePrescriptionPayload(payload, targetLanguage);
+    } catch (e) {
+      console.error('Translation failed', e);
+    }
+  }
 
   // The doctor's personalized field layout is the SOLE driver of print order / labels / visibility.
   // Always resolved against defaults (mergeFieldsWithDefaults) so it's never empty — even on a
@@ -67,12 +80,15 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
     typography: templateConfig.typography,
     payload: {
       ...payload,
-      qrCodeData: `${import.meta.env.VITE_APP_URL || window.location.origin}/verify/${response.appointmentId}`,
+      // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link --
+      // never fatal to the rest of the preview if it fails (matches discharge's own posture).
+      qrImageBytes: await eprescriptionApi.getVisitSummaryQrCode(response.appointmentId).catch(() => undefined),
       validUptoDate: response.validUptoDate,
       drawings,
     },
     templateUrl: templateConfig.templateUrl,
     printFields,
+    appointmentDate: request.appointmentDate,
   });
 
   return {
@@ -109,6 +125,7 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
       typography: request.typography,
       payload: request.payload,
       printFields: request.printFields,
+      appointmentDate: request.appointmentDate,
     });
   }
   throw new Error('Template file could not be loaded.');

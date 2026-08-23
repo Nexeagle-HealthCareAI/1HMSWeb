@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert } from 'lucide-react';
+import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert, AlertTriangle, CircleDashed, ScanLine } from 'lucide-react';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
-import { inventoryApi, type StockOverviewRow } from '../services/inventoryApi';
+import { inventoryApi, type StockOverviewRow, type ExpiryAlertRow, type ReorderAlertRow } from '../services/inventoryApi';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,8 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [stockRows, setStockRows] = useState<StockOverviewRow[]>([]);
+    const [expiryAlerts, setExpiryAlerts] = useState<ExpiryAlertRow[]>([]);
+    const [reorderAlerts, setReorderAlerts] = useState<ReorderAlertRow[]>([]);
     const [stores, setStores] = useState<StoreItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [receiveOpen, setReceiveOpen] = useState(false);
@@ -31,8 +33,12 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                 const assignedStoreIds = new Set(assignedStores.map(s => s.storeId));
                 const filteredStock = board.stockByStore.filter(row => assignedStoreIds.has(row.storeId));
                 setStockRows(filteredStock);
+                setExpiryAlerts(board.expiryAlerts || []);
+                setReorderAlerts(board.reorderAlerts || []);
             } else {
                 setStockRows([]);
+                setExpiryAlerts([]);
+                setReorderAlerts([]);
             }
         } catch (e: any) {
             toast({ title: 'Error loading inventory', description: e.message, variant: 'destructive' });
@@ -75,6 +81,14 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                     />
                     {stores.length > 0 && (
                         <div className="flex gap-2 shrink-0">
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => toast({ title: 'Ready to Scan', description: 'Scanner listening...' })}
+                                className="h-10 rounded-xl text-xs font-bold shadow-sm transition-all bg-brand-600 hover:bg-brand-700 text-white border-0"
+                            >
+                                <ScanLine className="h-3.5 w-3.5 mr-1.5" /> Scan
+                            </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -123,7 +137,18 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                 <div key={`${row.storeId}-${row.inventoryItemId}-${i}`} className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800/80 p-4 rounded-2xl shadow-sm space-y-2.5">
                                     <div className="flex justify-between items-start gap-2">
                                         <div>
-                                            <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-200">{row.itemName}</h3>
+                                            <div className="flex items-center gap-1.5">
+                                                <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-200">{row.itemName}</h3>
+                                                {reorderAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
+                                                    <span className="relative flex h-2 w-2">
+                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                    </span>
+                                                )}
+                                                {expiryAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
+                                                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+                                                )}
+                                            </div>
                                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mt-1">{row.storeName}</p>
                                         </div>
                                         <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 bg-slate-50/50 dark:bg-zinc-950/20">{row.category}</Badge>
@@ -156,7 +181,20 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                 {filteredRows.map((row, i) => (
                                     <tr key={`${row.storeId}-${row.inventoryItemId}-${i}`} className="hover:bg-slate-50/50 dark:hover:bg-zinc-950/10">
                                         <td className="px-4 py-3 font-semibold text-slate-700 dark:text-zinc-350">{row.storeName}</td>
-                                        <td className="px-4 py-3 text-slate-800 dark:text-zinc-205">{row.itemName}</td>
+                                        <td className="px-4 py-3 text-slate-800 dark:text-zinc-205">
+                                            <div className="flex items-center gap-2">
+                                                <span>{row.itemName}</span>
+                                                {reorderAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
+                                                    <span className="relative flex h-2 w-2" title="Low Stock">
+                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                    </span>
+                                                )}
+                                                {expiryAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
+                                                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" title="Expiring Soon" />
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-3"><Badge variant="outline" className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400 bg-slate-50/50 dark:bg-zinc-950/20">{row.category}</Badge></td>
                                         <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-zinc-200">
                                             {row.qtyOnHand.toLocaleString()} <span className="text-slate-450 dark:text-zinc-500 text-xs ml-1 font-normal">{row.unit}</span>

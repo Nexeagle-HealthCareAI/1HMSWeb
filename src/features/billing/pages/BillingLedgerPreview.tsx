@@ -42,10 +42,10 @@ const EVENTS_RESPONSE: GetEncounterEventsResponse = {
         netBalance: 28500,
         currentInvoice: { invoiceId: 'inv-1', invoiceNo: 'INV-2026-0481', statusCode: 'DRAFT', invoiceDate: now(), discountAmount: 0 },
         charges: [
-            { chargeEventId: 'c1', createdDateTime: now(), displayName: 'ICU Room Charge — 16 Jul', categoryCode: 'ROOM', rate: 12000, qty: 1, grossAmount: 12000, discountAmount: 0, netAmount: 12000, statusCode: 'POSTED', isInvoiced: true },
-            { chargeEventId: 'c2', createdDateTime: now(), displayName: 'Coronary Angiography', categoryCode: 'PROCEDURE', rate: 25000, qty: 1, grossAmount: 25000, discountAmount: 2500, netAmount: 22500, statusCode: 'POSTED', isInvoiced: true },
-            { chargeEventId: 'c3', createdDateTime: now(), displayName: 'CBC, Lipid Profile', categoryCode: 'LAB', rate: 1500, qty: 1, grossAmount: 1500, discountAmount: 0, netAmount: 1500, statusCode: 'POSTED', isInvoiced: true },
-            { chargeEventId: 'c4', createdDateTime: now(), displayName: 'Cardiologist Consult', categoryCode: 'CONSULT', rate: 1500, qty: 1, grossAmount: 1500, discountAmount: 0, netAmount: 1500, statusCode: 'VOID', isInvoiced: false },
+            { chargeEventId: 'c1', createdDateTime: now(), serviceDate: now(), displayName: 'ICU Room Charge — 16 Jul', categoryCode: 'ROOM', rate: 12000, qty: 1, grossAmount: 12000, discountAmount: 0, netAmount: 12000, statusCode: 'POSTED', isInvoiced: true },
+            { chargeEventId: 'c2', createdDateTime: now(), serviceDate: now(), displayName: 'Coronary Angiography', categoryCode: 'PROCEDURE', rate: 25000, qty: 1, grossAmount: 25000, discountAmount: 2500, netAmount: 22500, statusCode: 'POSTED', isInvoiced: true },
+            { chargeEventId: 'c3', createdDateTime: now(), serviceDate: now(), displayName: 'CBC, Lipid Profile', categoryCode: 'LAB', rate: 1500, qty: 1, grossAmount: 1500, discountAmount: 0, netAmount: 1500, statusCode: 'POSTED', isInvoiced: true },
+            { chargeEventId: 'c4', createdDateTime: now(), serviceDate: now(), displayName: 'Cardiologist Consult', categoryCode: 'CONSULT', rate: 1500, qty: 1, grossAmount: 1500, discountAmount: 0, netAmount: 1500, statusCode: 'VOID', isInvoiced: false },
         ],
         payments: [
             { paymentId: 'p1', createdDateTime: now(), paymentType: 'PAYMENT', paymentMode: 'CASH', receiptNo: 'RCPT-1001', amount: 20000 },

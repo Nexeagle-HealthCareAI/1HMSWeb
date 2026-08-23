@@ -99,6 +99,8 @@ export interface HospitalData {
   isPubliclyListed: boolean;
   latitude?: number | null;
   longitude?: number | null;
+  // Short code used for the OPD QR check-in flow -- null until GenerateHospitalCode has run once.
+  hospitalCode?: string | null;
   createdAt: string;
   lastUpdatedAt: string;
   profileStatus: HospitalProfileStatus;
@@ -231,5 +233,48 @@ export const hospitalApi = {
   ): Promise<{ success: boolean; message?: string; hospitalId: string }> => {
     const response = await apiClient.patch(API_ENDPOINTS.HOSPITALS.DEACTIVATE(hospitalId), {});
     return response;
+  },
+
+  /**
+   * Idempotent -- issues a HospitalCode if this hospital doesn't have one yet, otherwise
+   * returns the existing one unchanged. Called before downloadHospitalQrCode so the QR
+   * button works in one click even for a hospital that's never generated a code before.
+   */
+  generateHospitalCode: async (
+    hospitalId: string
+  ): Promise<{ success: boolean; message?: string; hospitalCode?: string }> => {
+    return apiClient.post(API_ENDPOINTS.HOSPITALS.GENERATE_CODE(hospitalId), {});
+  },
+
+  /**
+   * Downloads the ready-to-print OPD check-in QR (NexEagle logo centered) as a PNG. The
+   * hospital must already have a HospitalCode -- call generateHospitalCode first if unsure.
+   */
+  downloadHospitalQrCode: async (hospitalId: string): Promise<void> => {
+    return apiClient.download(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), 'opd-checkin-qr-code.png');
+  },
+
+  /**
+   * Gets the OPD check-in QR code as a base64 string for embedding in generated HTML.
+   */
+  getHospitalQrCodeBase64: async (hospitalId: string): Promise<string> => {
+    const response = await apiClient.get(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), {
+      responseType: 'blob',
+    });
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(response as unknown as Blob);
+    });
+  },
+
+  /**
+   * Fetches the OPD check-in QR as a Blob so it can be embedded dynamically.
+   */
+  getHospitalQrCodeBlob: async (hospitalId: string): Promise<Blob> => {
+    return apiClient.get<Blob>(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), { responseType: 'blob' });
   },
 };

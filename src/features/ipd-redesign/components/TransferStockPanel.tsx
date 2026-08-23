@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeftRight, AlertCircle, Package2 } from 'lucide-react';
+import { Loader2, ArrowLeftRight, AlertCircle, Package2, ScanLine } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
-import { inventoryApi, type StockOverviewRow, type BatchItem } from '../services/inventoryApi';
+import { inventoryApi, type StockOverviewRow, type BatchItem, type InventoryItem } from '../services/inventoryApi';
 import { Textarea } from '@/components/ui/textarea';
 
 interface Props {
@@ -35,8 +35,11 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess, r
     const [loadingBatches, setLoadingBatches] = useState(false);
     const [transferring, setTransferring] = useState(false);
 
+    const [allItems, setAllItems] = useState<InventoryItem[]>([]);
+
     useEffect(() => {
         storeService.getStores().then(setStores).finally(() => setLoading(false));
+        inventoryApi.getItems({ activeOnly: true }).then(setAllItems);
     }, []);
 
     const fromStoreOptions = restrictFromStores ?? stores;
@@ -171,20 +174,48 @@ export const TransferStockPanel: React.FC<Props> = ({ stockByStore, onSuccess, r
                     </div>
                 </div>
 
-                <div className="space-y-1.5">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Item to Transfer</Label>
-                    <Select value={inventoryItemId} onValueChange={setInventoryItemId} disabled={!fromStoreId || availableItems.length === 0}>
-                        <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
-                            <SelectValue placeholder={!fromStoreId ? "Select source store first" : availableItems.length === 0 ? "Store has no stock" : "Select item"} />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                            {availableItems.map(i => (
-                                <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>
-                                    {i.itemName} <span className="text-slate-400 dark:text-zinc-500 font-mono text-[10px] ml-1">({i.qtyOnHand} {i.unit} available)</span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 flex items-center gap-1.5">
+                            <ScanLine className="h-3 w-3" /> Scan Barcode
+                        </Label>
+                        <Input
+                            placeholder="Click here & scan..."
+                            disabled={!fromStoreId}
+                            className="h-10 rounded-xl border-dashed border-2 border-brand-500/30 bg-brand-50/50 dark:bg-brand-950/10 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 font-mono text-brand-800 dark:text-brand-300"
+                            onChange={e => {
+                                const code = e.target.value.trim();
+                                const foundItemDef = allItems.find(i => i.itemCode.toLowerCase() === code.toLowerCase());
+                                if (foundItemDef) {
+                                    // Check if it's available in the source store
+                                    const available = availableItems.find(a => a.inventoryItemId === foundItemDef.inventoryItemId);
+                                    if (available) {
+                                        setInventoryItemId(available.inventoryItemId);
+                                        toast({ title: 'Item Found in Store', description: available.itemName });
+                                    } else {
+                                        toast({ title: 'Item Not in Store', description: `${foundItemDef.itemName} has no stock here.`, variant: 'destructive' });
+                                    }
+                                    e.target.value = ''; // clear
+                                }
+                            }}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Item to Transfer</Label>
+                        <Select value={inventoryItemId} onValueChange={setInventoryItemId} disabled={!fromStoreId || availableItems.length === 0}>
+                            <SelectTrigger className="w-full h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
+                                <SelectValue placeholder={!fromStoreId ? "Select source store first" : availableItems.length === 0 ? "Store has no stock" : "Select item"} />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                {availableItems.map(i => (
+                                    <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>
+                                        {i.itemName} <span className="text-slate-400 dark:text-zinc-500 font-mono text-[10px] ml-1">({i.qtyOnHand} {i.unit} available)</span>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 {inventoryItemId && (

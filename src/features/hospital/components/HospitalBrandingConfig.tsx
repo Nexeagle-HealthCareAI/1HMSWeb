@@ -16,6 +16,8 @@ import {
   Mail,
   MapPin,
   Phone,
+  Printer,
+  QrCode,
   Save,
   Type
 } from 'lucide-react';
@@ -28,7 +30,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
+import { hospitalApi, HospitalData } from '../services/hospitalApi';
 import { useAuthStore } from '@/store/authStore';
+import { buildHospitalQrPosterA4 } from '@/printTemplates/hospitalQrPosterA4';
 
 export interface HospitalBranding {
   name: string;
@@ -98,6 +102,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [previousBranding, setPreviousBranding] = useState<HospitalBranding | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [saveSuccessTick, setSaveSuccessTick] = useState(false);
+  const [isDownloadingQr, setIsDownloadingQr] = useState(false);
+  const [isPrintingPoster, setIsPrintingPoster] = useState(false);
+  const [isPrintingQr, setIsPrintingQr] = useState(false);
 
   const fieldLabels: Record<StringFieldKey, string> = useMemo(
     () => ({
@@ -271,8 +278,6 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  // const hospitalIdToUse = hospitalId || '';
-  // const { data: hospitalData, isLoading, error } = useHospitalApi.getHospitalById(hospitalIdToUse);
   const completionPercent = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
   const completionChecklist = [
     {
@@ -545,6 +550,58 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   }
 
   const isExistingHospital = !!(hospitalId && hospitalData && hospitalData.hospitalId);
+
+  const handleDownloadQrCode = async () => {
+    if (!hospitalId) return;
+    setIsDownloadingQr(true);
+    try {
+      // Idempotent -- safe to always call, whether or not this hospital already has a code.
+      await hospitalApi.generateHospitalCode(hospitalId);
+      await hospitalApi.downloadHospitalQrCode(hospitalId);
+    } catch (error) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.toast.qrCodeFailed', 'Could not generate the QR code. Please try again.'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDownloadingQr(false);
+    }
+  };
+
+  const handlePrintA4Qr = async () => {
+    if (!hospitalId || !hospitalData) return;
+    setIsPrintingQr(true);
+    try {
+      await hospitalApi.generateHospitalCode(hospitalId);
+      const blob = await hospitalApi.getHospitalQrCodeBlob(hospitalId);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const qrDataUrl = reader.result as string;
+        const html = buildHospitalQrPosterA4(hospitalData as HospitalData, qrDataUrl);
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+          };
+        } else {
+          toast({ variant: 'destructive', title: 'Pop-up blocked', description: 'Please allow pop-ups to print the QR poster.' });
+        }
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.toast.qrCodeFailed', 'Could not generate the QR code. Please try again.'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsPrintingQr(false);
+    }
+  };
 
   const handleStartEdit = () => {
     setSnapshotBeforeEdit({ ...branding });
@@ -1100,6 +1157,58 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             </CardContent>
           </Card>
         </motion.div>
+
+        {isExistingHospital && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+            <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
+              <CardHeader className="max-sm:pb-2 max-sm:px-4">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                  <QrCode className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  {translate('hospitalBranding.sections.qrCode.title', 'OPD Check-in QR Code')}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {translate(
+                    'hospitalBranding.sections.qrCode.subtitle',
+                    'Print this at reception -- patients scan it to check in on WhatsApp and join the live queue.'
+                  )}
+                </p>
+              </CardHeader>
+              <CardContent className="max-sm:px-4 max-sm:pb-6 flex gap-3 flex-wrap">
+                <Button
+                  onClick={handleDownloadQrCode}
+                  disabled={isDownloadingQr || isPrintingQr}
+                  variant="outline"
+                  className="h-10 rounded-xl font-semibold"
+                >
+                  {isDownloadingQr ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
+                      <QrCode className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <QrCode className="h-4 w-4 mr-2" />
+                  )}
+                  {translate('hospitalBranding.buttons.downloadQrCode', 'Download QR Code')}
+                </Button>
+
+                <Button
+                  onClick={handlePrintA4Qr}
+                  disabled={isDownloadingQr || isPrintingQr}
+                  variant="outline"
+                  className="h-10 rounded-xl font-semibold border-brand-200 dark:border-brand-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-brand-700 dark:text-brand-300 transition-colors"
+                >
+                  {isPrintingQr ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
+                      <Printer className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <Printer className="h-4 w-4 mr-2" />
+                  )}
+                  {translate('hospitalBranding.buttons.printA4', 'Print A4 Poster')}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Mobile Sticky Footer Buttons */}

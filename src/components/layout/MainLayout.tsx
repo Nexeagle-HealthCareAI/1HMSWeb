@@ -75,13 +75,15 @@ import {
   FileCheck2,
   AlertTriangle,
   FileBadge2,
+  Megaphone,
   CheckSquare,
   XSquare,
   HeartPulse,
   Wifi,
   LayoutGrid,
   GitBranch,
-  ClipboardList
+  ClipboardList,
+  Pill
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -96,10 +98,13 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HospitalSwitcher } from './HospitalSwitcher';
 import { PWAInstallBanner } from './PWAInstallBanner';
+import { DemoWelcomeBanner } from './DemoWelcomeBanner';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
 import { AlertBell } from '@/features/alerts/components/AlertBell';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BOARD_ACCESS } from '@/config/boardAccess';
+import { RoleService } from '@/features/auth/services/roleService';
 
 // --- Animated Gamified Clock Component ---
 const GamifiedClock = ({ currentTime }: { currentTime: Date }) => {
@@ -252,43 +257,34 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'ipd-workspace', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
     { id: 'abdm', name: 'ABHA / ABDM', icon: FileBadge2, path: '/abdm' },
+    { id: 'pathology', name: 'Pathology Lab', icon: FlaskConical, path: '/pathology' },
+    { id: 'pharmacy-retail', name: 'Pharmacy Retail', icon: Pill, path: '/pharmacy-retail' },
     { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
     { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
+    { id: 'leads', name: 'HCRM', icon: Megaphone, path: '/leads' },
   ];
 
-  // Filter navigation items based on user role
+  // Filter navigation items by real backend-granted PermissionKeys (boardAccess.ts is the
+  // single source of truth for role->board access, replacing this file's own previously
+  // hand-maintained per-id role checks, AppRoutes.tsx's inline requiredRoles arrays, and the
+  // dead routeConfig.ts, all three of which had drifted out of sync with each other). An id
+  // with no matching BOARD_ACCESS rule stays unrestricted, matching the old switch's default.
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin' || item.id === 'subscription') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
-    }
-    if (item.id === 'dashboard') {
-      return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor');
-    }
-    if (item.id === 'appointment-dashboard') {
-      return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor') || userRoles.includes('Admin') || userRoles.includes('Nurse') || userRoles.includes('Receptionist');
-    }
-    if (item.id === 'patients') {
-      return userRoles.includes('Doctor') || userRoles.includes('AdminDoctor') || userRoles.includes('Admin') || userRoles.includes('Nurse') || userRoles.includes('Receptionist');
-    }
-    if (item.id === 'ipd-workspace') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
-    }
-    if (item.id === 'configuration') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor');
-    }
-    if (item.id === 'billing') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Accountant');
-    }
-    if (item.id === 'abdm') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Receptionist');
-    }
-    if (item.id === 'inventory' || item.id === 'ot-board' || item.id === 'icu-board' || item.id === 'nursing-station') {
-      return userRoles.includes('Admin') || userRoles.includes('AdminDoctor') || userRoles.includes('Doctor') || userRoles.includes('Nurse');
-    }
-    return true;
+    const rule = BOARD_ACCESS.find(b => b.id === item.id);
+    if (!rule) return true;
+    return rule.permissionKeys.some(key => RoleService.hasPermission(key));
   });
+
+  // Same rule lookup, used to gate the mobile bottom nav's buttons (previously shown to
+  // every authenticated role with no check at all, regardless of whether tapping them would
+  // actually succeed).
+  const canAccessBoard = (boardId: string): boolean => {
+    const rule = BOARD_ACCESS.find(b => b.id === boardId);
+    if (!rule) return true;
+    return rule.permissionKeys.some(key => RoleService.hasPermission(key));
+  };
 
   // Get current page from location
   useEffect(() => {
@@ -513,6 +509,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           "flex-1 relative overflow-x-hidden overflow-y-auto hide-scrollbar transition-all duration-300 bg-gray-50 dark:bg-gray-950",
           "p-6"
         )}>
+          <DemoWelcomeBanner />
           {children}
           
           {/* Floating Navigation Card Menu (Sitting above the bottom navigation bar) */}
@@ -625,13 +622,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </div>
 
       {/* --- MOBILE BOTTOM NAVIGATION & TILE GRID --- */}
-      
+
       {/* Floating PWA Install Prompt for Mobile */}
       <PWAInstallBanner />
 
       {/* Fixed Bottom Bar */}
       <div className="flex lg:hidden fixed bottom-0 left-0 right-0 h-[68px] z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] justify-around items-center px-1 pb-[max(4px,env(safe-area-inset-bottom))] backdrop-blur-md bg-white/95 dark:bg-gray-900/95">
-        <button 
+        {canAccessBoard('appointment-dashboard') && (
+        <button
           onClick={() => {
             setIsTileMenuOpen(false);
             setTimeout(() => {
@@ -646,8 +644,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <Calendar className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/appointment-dashboard') && !isTileMenuOpen ? 2.5 : 2} />
           <span className="text-[9px] font-medium tracking-wide leading-tight text-center">OPD<br/>Appt</span>
         </button>
+        )}
 
-        <button 
+        {canAccessBoard('ipd-workspace') && (
+        <button
           onClick={() => {
             setIsTileMenuOpen(false);
             setTimeout(() => {
@@ -662,8 +662,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <Hotel className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/ipd-workspace') ? 2.5 : 2} />
           <span className="text-[9px] font-medium tracking-wide">IPD</span>
         </button>
+        )}
 
-        <button 
+        <button
           onClick={() => setIsTileMenuOpen(!isTileMenuOpen)}
           className="flex flex-col items-center justify-center h-full w-14 transition-colors"
         >
@@ -681,7 +682,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </span>
         </button>
 
-        <button 
+        {canAccessBoard('billing') && (
+        <button
           onClick={() => {
             setIsTileMenuOpen(false);
             setTimeout(() => {
@@ -696,8 +698,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <IndianRupee className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/billing') ? 2.5 : 2} />
           <span className="text-[9px] font-medium tracking-wide">Billing</span>
         </button>
+        )}
 
-        <button 
+        {canAccessBoard('settings') && (
+        <button
           onClick={() => {
             setIsTileMenuOpen(false);
             setTimeout(() => {
@@ -712,6 +716,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <Building2 className="h-5 w-5 mb-1" strokeWidth={location.pathname.includes('/settings') ? 2.5 : 2} />
           <span className="text-[9px] font-medium tracking-wide leading-tight text-center">Info</span>
         </button>
+        )}
       </div>
 
     </div>

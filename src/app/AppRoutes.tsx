@@ -4,6 +4,7 @@ import { useIsAuthenticated, useAuthLoading, useAuthStore } from '@/store';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RouteGuard } from '@/components/guards/RouteGuard';
+import { getRequiredPermissions } from '@/config/boardAccess';
 
 // Helper to break infinite redirect loops for invalid roles
 const InvalidRoleLogout = () => {
@@ -79,6 +80,7 @@ const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage')
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
 const ChainManagement = lazy(() => import('@/features/hospital/components/ChainManagement').then(module => ({ default: module.ChainManagement })));
 const AbdmDashboard = lazy(() => import('@/features/abdm/components/AbdmDashboard').then(module => ({ default: module.AbdmDashboard })));
+const LeadGenerationPage = lazy(() => import('@/features/leads/pages/LeadGenerationPage').then(module => ({ default: module.LeadGenerationPage })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
@@ -87,6 +89,8 @@ const BillingDashboardPreview = lazy(() => import('@/features/billing/pages/Bill
 const BillingLedgerPreview = lazy(() => import('@/features/billing/pages/BillingLedgerPreview').then(module => ({ default: module.default })));
 const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPreviewPage').then(module => ({ default: module.PrintPreviewPage })));
 const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
+const PathologyDashboard = lazy(() => import('@/features/pathology/components/PathologyDashboard').then(module => ({ default: module.PathologyDashboard })));
+const PharmacyRetailDashboard = lazy(() => import('@/features/pharmacy/components/PharmacyRetailDashboard').then(module => ({ default: module.PharmacyRetailDashboard })));
 
 
 // Loading component for lazy routes
@@ -291,7 +295,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/print-preview"
           element={
-            <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse', 'Accountant']}>
+            <RouteGuard requiredPermissions={getRequiredPermissions('/print-preview')}>
               <PrintPreviewPage />
             </RouteGuard>
           }
@@ -320,7 +324,16 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-
+          <Route
+            path="/pharmacy-retail"
+            element={
+              <MainLayout>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/pharmacy-retail')}>
+                  <PharmacyRetailDashboard />
+                </RouteGuard>
+              </MainLayout>
+            }
+          />
 
         {/* Protected Routes - Require Authentication */}
         {isActuallyAuthenticated ? (
@@ -329,7 +342,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/admin"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/admin')}>
                   <MainLayout>
                     <AdminDashboard />
                   </MainLayout>
@@ -339,7 +352,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/configuration"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/configuration')}>
                   <MainLayout>
                     <AdminConfigModule />
                   </MainLayout>
@@ -349,7 +362,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/settings"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/settings')}>
                   <MainLayout>
                     <SettingsPage />
                   </MainLayout>
@@ -359,7 +372,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/subscription"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/subscription')}>
                   <MainLayout>
                     <SubscriptionPage />
                   </MainLayout>
@@ -369,7 +382,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/chain"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/chain')}>
                   <MainLayout>
                     <ChainManagement />
                   </MainLayout>
@@ -379,7 +392,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/abdm"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/abdm')}>
                   <MainLayout>
                     <AbdmDashboard />
                   </MainLayout>
@@ -387,9 +400,19 @@ export const AppRoutes: React.FC = () => {
               }
             />
             <Route
+              path="/leads"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/leads')}>
+                  <MainLayout>
+                    <LeadGenerationPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
               path="/ipd-workspace"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/ipd-workspace')}>
                   <MainLayout>
                     <IpdWorkflowApp />
                   </MainLayout>
@@ -400,7 +423,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/ipd-workspace/patient/:id"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/ipd-workspace/patient/:id')}>
                   <MainLayout>
                     <IpdPatientWorkspacePage />
                   </MainLayout>
@@ -411,9 +434,20 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/inventory"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/inventory')}>
                   <MainLayout>
                     <InventoryManagementPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/pathology"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/pathology')}>
+                  <MainLayout>
+                    <PathologyDashboard />
                   </MainLayout>
                 </RouteGuard>
               }
@@ -422,7 +456,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/ot-board"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/ot-board')}>
                   <MainLayout>
                     <OtBoardPage />
                   </MainLayout>
@@ -433,7 +467,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/icu-board"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/icu-board')}>
                   <MainLayout>
                     <IcuBoardPage />
                   </MainLayout>
@@ -444,7 +478,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/nursing-station"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/nursing-station')}>
                   <MainLayout>
                     <NursingStationPage />
                   </MainLayout>
@@ -456,7 +490,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/dashboard"
               element={
-                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/dashboard')}>
                   <MainLayout>
                     <ClinicalDashboard />
                   </MainLayout>
@@ -468,7 +502,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/calendar"
               element={
-                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor', 'Admin', 'Receptionist']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/calendar')}>
                   <MainLayout>
                     <DoctorCalendar />
                   </MainLayout>
@@ -486,7 +520,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/appointment-dashboard"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/appointment-dashboard')}>
                   <MainLayout>
                     <AppointmentDashboard />
                   </MainLayout>
@@ -496,7 +530,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/appointment-booking"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/appointment-booking')}>
                   <MainLayout>
                     <AppointmentBooking />
                   </MainLayout>
@@ -506,7 +540,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/appointment-oversight"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/appointment-oversight')}>
                   <MainLayout>
                     <AppointmentOversight />
                   </MainLayout>
@@ -518,7 +552,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/doc-ai"
               element={
-                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/doc-ai')}>
                   <MainLayout>
                     <DocAI />
                   </MainLayout>
@@ -545,7 +579,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/patients"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/patients')}>
                   <MainLayout>
                     <PatientsPage />
                   </MainLayout>
@@ -555,7 +589,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/patient/:patientId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/patient/:patientId')}>
                   <MainLayout>
                     <PatientProfilePage />
                   </MainLayout>
@@ -565,7 +599,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/patient/new"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/patient/new')}>
                   <MainLayout>
                     <PatientProfilePage />
                   </MainLayout>
@@ -578,7 +612,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Accountant']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/billing')}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>
@@ -588,7 +622,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/ledger"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Accountant']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/billing/ledger')}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -598,7 +632,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/:appointmentId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Accountant']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/billing/:appointmentId')}>
                   <MainLayout>
                     <BillingPage />
                   </MainLayout>
@@ -608,7 +642,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing/encounter/:encounterId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Nurse', 'Accountant']}>
+                <RouteGuard requiredPermissions={getRequiredPermissions('/billing/encounter/:encounterId')}>
                   <MainLayout>
                     <EncounterBillingPage />
                   </MainLayout>

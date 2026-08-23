@@ -5,12 +5,14 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { BrowserRouter } from "react-router-dom";
 import { StoreProvider } from "@/store";
+import { useAuthStore } from "@/store/authStore";
 import { InactivityProvider } from "@/components/providers/InactivityProvider";
 import { AppRoutes } from "./AppRoutes";
 import { Toaster as SonnerToaster } from 'sonner';
 import { initOffline, offlinePersister, PERSIST_BUSTER, PERSIST_MAX_AGE } from "@/offline";
 import { OfflineBanner } from "@/components/offline/OfflineBanner";
 import { useAppStore } from "@/store/appStore";
+import { fetchAndStoreUserPermissions } from "@/features/auth/services/authApi";
 import '@/i18n'; // Initialize i18n
 
 const queryClient = new QueryClient({
@@ -30,6 +32,18 @@ const App = () => {
 
   // Boot the offline subsystem (connectivity heartbeat, sync engine, SW, persistent storage).
   useEffect(() => { initOffline(queryClient); }, []);
+
+  // Re-fetch permissions on app bootstrap whenever they're empty despite being authenticated
+  // -- covers a page refresh (isAuthenticated/userId/token rehydrate from localStorage, but
+  // permissions previously reset to [] every reload) and the narrower case where a user was
+  // authenticated before this fix shipped and never re-logged in. Permission-gated routes
+  // would otherwise deny access to every board until the next real login.
+  useEffect(() => {
+    const { isAuthenticated, userId, token, permissions } = useAuthStore.getState();
+    if (isAuthenticated && userId && token && permissions.length === 0) {
+      void fetchAndStoreUserPermissions(userId, token);
+    }
+  }, []);
 
   // Initialize and listen to low bandwidth mode from network API
   useEffect(() => {

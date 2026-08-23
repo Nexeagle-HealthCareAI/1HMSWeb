@@ -72,6 +72,11 @@ export const API_ENDPOINTS = {
     LOOKUP_DETAILS: (hospitalId: string, doctorId: string) =>
       `/e-prescription/lookup/details?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}`,
     UPLOAD_VISIT_SUMMARY: 'e-prescription/visit-summary/upload',
+    // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link for the
+    // structured e-prescription flow (Appointment.PdfUrl) -- distinct from ATTACHMENTS.QR_CODE
+    // below, which backs InkRx/manual uploads instead.
+    QR_CODE_VISIT_SUMMARY: (appointmentId: string) =>
+      `e-prescription/qr-code/visit-summary?appointmentId=${encodeURIComponent(appointmentId)}`,
   },
   AUTH: {
     LOGIN: 'auth/user/login',
@@ -97,6 +102,30 @@ export const API_ENDPOINTS = {
     MINE: 'hospitals/mine',
     GET_ANALYSIS: (hospitalId: string) => `hospitals/analysis/hospitalId=${hospitalId}`,
     DEACTIVATE: (id: string) => `hospitals/${id}/deactivate`,
+    GENERATE_CODE: (id: string) => `hospitals/${id}/generate-code`,
+    QR_CODE: (id: string) => `hospitals/${id}/qr-code`,
+  },
+  LEADS: {
+    // Route shape mirrors HOSPITALS.GET_ANALYSIS ("resource/analysis/hospitalId={id}") --
+    // hospitalId is a literal path segment matching LeadsController's route template, extra
+    // filters are normal query-string params appended after it.
+    GET_LEADS: (
+      hospitalId: string,
+      params?: { page?: number; pageSize?: number; source?: string; leadType?: string; dateFrom?: string; dateTo?: string }
+    ) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+      if (params?.source) query.set('source', params.source);
+      if (params?.leadType) query.set('leadType', params.leadType);
+      if (params?.dateFrom) query.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) query.set('dateTo', params.dateTo);
+      const qs = query.toString();
+      return `leads/hospitalId=${encodeURIComponent(hospitalId)}${qs ? `?${qs}` : ''}`;
+    },
+    // Public/anonymous write side (RecordLeadHandler) -- same endpoint Doctor Dekho and the
+    // WhatsApp bot already post to, used here for the "1HMSDemo" source/"DemoLogin" type.
+    RECORD: 'public/leads',
   },
   CHAINS: {
     CREATE: 'chains',
@@ -202,6 +231,10 @@ export const API_ENDPOINTS = {
     LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
       `e-prescription/attachments/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
     DELETE: (attachmentId: string) => `e-prescription/attachments/delete?AttachmentId=${encodeURIComponent(attachmentId)}`,
+    // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link for a
+    // PrescriptionAttachment id generated client-side BEFORE upload (see InkRxPad.tsx) --
+    // there's no row to look up yet at the point this is called.
+    QR_CODE: (attachmentId: string) => `e-prescription/qr-code?attachmentId=${encodeURIComponent(attachmentId)}`,
   },
   DRAWINGS: {
     UPLOAD: 'e-prescription/drawings/upload',
@@ -256,6 +289,9 @@ export const IPD_API_ENDPOINTS = {
       `billing/visit-day-bills?hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
     CLOSE_VISIT_DAY: 'billing/visit-day/close',
     REOPEN_VISIT_DAY: 'billing/visit-day/reopen',
+    ANALYTICS_SUMMARY: (hospitalId: string, startDate?: string, endDate?: string) =>
+      `billing/analytics/summary?hospitalId=${encodeURIComponent(hospitalId)}${startDate ? `&startDate=${encodeURIComponent(startDate)}` : ''}${endDate ? `&endDate=${encodeURIComponent(endDate)}` : ''}`,
+    ANALYTICS_AI_INSIGHTS: (hospitalId: string) => `billing/analytics/ai-insights?hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   ADMISSION: {
     GET_BY_ENCOUNTER: (hospitalId: string, encounterId: string) =>

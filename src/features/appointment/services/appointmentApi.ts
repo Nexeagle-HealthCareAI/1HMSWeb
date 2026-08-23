@@ -294,6 +294,9 @@ export interface AppointmentDetail {
   paymentMode: string;
   lastStatusAt: string;
   appointmentType: string | null;
+  // How this appointment was created (e.g. "NEXEAGLE_PUBLIC" for public self-booking) -- stamped
+  // once at creation and never touched again, so unlike finalStatusCode it survives confirmation.
+  bookingSource?: string | null;
   referrerId?: string | null;
   referrerName?: string | null;
   referrerType?: string | null;
