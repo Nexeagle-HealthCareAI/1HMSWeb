@@ -289,6 +289,9 @@ export const IPD_API_ENDPOINTS = {
       `billing/visit-day-bills?hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
     CLOSE_VISIT_DAY: 'billing/visit-day/close',
     REOPEN_VISIT_DAY: 'billing/visit-day/reopen',
+    ANALYTICS_SUMMARY: (hospitalId: string, startDate?: string, endDate?: string) =>
+      `billing/analytics/summary?hospitalId=${encodeURIComponent(hospitalId)}${startDate ? `&startDate=${encodeURIComponent(startDate)}` : ''}${endDate ? `&endDate=${encodeURIComponent(endDate)}` : ''}`,
+    ANALYTICS_AI_INSIGHTS: (hospitalId: string) => `billing/analytics/ai-insights?hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   ADMISSION: {
     GET_BY_ENCOUNTER: (hospitalId: string, encounterId: string) =>

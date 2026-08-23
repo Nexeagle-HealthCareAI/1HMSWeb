@@ -440,6 +440,60 @@ export interface GetEncounterEventsResponse {
     };
 }
 
+// ─── Analytics ───────────────────────────────────────────────────────────────
+
+export interface CategoryBreakdownItem {
+    categoryCode: string;
+    amount: number;
+    count: number;
+}
+
+export interface DailyTrendPoint {
+    date: string;
+    revenue: number;
+    expense: number;
+}
+
+export interface BillingAnalyticsSummaryResponse {
+    success: boolean;
+    message?: string;
+    data?: {
+        totalRevenue: number;
+        totalExpense: number;
+        netAmount: number;
+        revenueByCategory: CategoryBreakdownItem[];
+        expenseByCategory: CategoryBreakdownItem[];
+        dailyTrend: DailyTrendPoint[];
+    };
+}
+
+export interface CategoryTrendItem {
+    categoryCode: string;
+    changePercent: number;
+    isLeak: boolean;
+}
+
+// Nexeagle AI Predictive Analysis -- all numeric fields are computed deterministically server-side
+// (see BillingTrendCalculator.cs); Groq only supplies `outlook`/`insights` narration around them.
+export interface BillingAiInsightsResponse {
+    success: boolean;
+    message?: string;
+    data?: {
+        predictedNext30DayRevenue: number;
+        predictedNext30DayExpense: number;
+        predictedNext30DayNet: number;
+        avg7DayRevenue: number;
+        avg30DayRevenue: number;
+        monthOverMonthRevenueChangePercent: number;
+        monthOverMonthExpenseChangePercent: number;
+        outlook: string;
+        categoryTrends: CategoryTrendItem[];
+        insights: string[];
+        historicalTrend: DailyTrendPoint[];
+        projectedTrend: DailyTrendPoint[];
+    };
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 // ─── Admission day-wise interim billing ──────────────────────────────────────
@@ -642,6 +696,14 @@ export const ipdBillingService = {
 
     dashboard: (hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.DASHBOARD(hospitalIdOrThrow(hospitalId))),
+
+    // Analytics: category/date revenue-vs-expense summary. Omit both dates for all-time.
+    getAnalyticsSummary: (opts?: { startDate?: string; endDate?: string; hospitalId?: string }): Promise<BillingAnalyticsSummaryResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.ANALYTICS_SUMMARY(hospitalIdOrThrow(opts?.hospitalId), opts?.startDate, opts?.endDate)),
+
+    // Nexeagle AI Predictive Analysis: trend numbers are computed server-side; Groq only narrates them.
+    getAiInsights: (hospitalId?: string): Promise<BillingAiInsightsResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.ANALYTICS_AI_INSIGHTS(hospitalIdOrThrow(hospitalId))),
 
     print: (patientId: string, encounterId: string, hospitalId?: string) =>
         ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.PRINT(patientId, hospitalIdOrThrow(hospitalId), encounterId)),

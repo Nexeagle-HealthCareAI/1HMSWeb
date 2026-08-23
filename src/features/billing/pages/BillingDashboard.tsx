@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { IndianRupee, TrendingUp, TrendingDown, Gift } from 'lucide-react';
+import { IndianRupee, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { RevenueTab } from '../components/tabs/RevenueTab';
 import { ExpenseTab } from '../components/tabs/ExpenseTab';
-import { IncentiveTab } from '../components/tabs/IncentiveTab';
+import { AnalyticsTab } from '../components/tabs/AnalyticsTab';
 
 // Card-style nav matching the Admin / Appointment board: icon chip + label + description,
 // blue→indigo gradient when active.
 const TABS = [
     { id: 'revenue', label: 'Revenue', description: 'Bills & collections', icon: TrendingUp },
     { id: 'expense', label: 'Expense', description: 'Operational spend', icon: TrendingDown },
-    { id: 'incentive', label: 'Incentive', description: 'Referral payouts', icon: Gift },
+    { id: 'analytics', label: 'Analytics', description: 'Trends & AI insights', icon: BarChart3 },
 ] as const;
 
 const TAB_TRIGGER = cn(
@@ -43,27 +43,27 @@ export const BillingDashboard: React.FC = () => {
                     {/* Decorative flare */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-                    <div className="relative z-10 flex flex-col gap-5">
-                        {/* Header Row */}
-                        <div className="flex items-center gap-3">
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        {/* Left: Title */}
+                        <div className="flex items-center gap-3 min-w-0">
                             <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
                                 <IndianRupee className="h-5 w-5 text-white" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <h1 className="text-xl font-bold tracking-tight">Billing</h1>
-                                <p className="text-[11px] text-brand-100 mt-0.5">Revenue, expenses and referral incentives.</p>
+                                <p className="text-[11px] text-brand-100 mt-0.5">Revenue, expenses and analytics.</p>
                             </div>
                         </div>
 
-                        {/* Navigation Tab Capsule */}
-                        <TabsList className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full border-0 shadow-none">
+                        {/* Right: Navigation Tab Capsule */}
+                        <TabsList className="flex gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full sm:w-auto border-0 shadow-none">
                             {TABS.map((t) => (
                                 <TabsTrigger
                                     key={t.id}
                                     value={t.id}
                                     className={cn(
                                         "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white",
-                                        "px-1 select-none whitespace-normal flex-1"
+                                        "px-3 select-none whitespace-normal flex-1 sm:flex-none sm:min-w-[110px]"
                                     )}
                                     title={t.description}
                                 >
@@ -85,9 +85,9 @@ export const BillingDashboard: React.FC = () => {
                         <ExpenseTab />
                     </motion.div>
                 </TabsContent>
-                <TabsContent value="incentive" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
-                    <motion.div key="incentive" {...fadeIn} className="h-full">
-                        <IncentiveTab />
+                <TabsContent value="analytics" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
+                    <motion.div key="analytics" {...fadeIn} className="h-full">
+                        <AnalyticsTab />
                     </motion.div>
                 </TabsContent>
             </Tabs>
