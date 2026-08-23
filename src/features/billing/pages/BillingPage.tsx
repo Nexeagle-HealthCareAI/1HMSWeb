@@ -419,6 +419,7 @@ export const BillingPage: React.FC = () => {
             return {
                 chargeEventId: `optimistic-${now}-${i}`,
                 createdDateTime: now,
+                serviceDate: now,
                 displayName: r.displayName,
                 categoryCode: r.categoryCode,
                 qty: r.qty,
@@ -570,7 +571,7 @@ export const BillingPage: React.FC = () => {
 
     // Unified ledger: charges + payments interleaved in chronological order (oldest first).
     const ledgerRows = useMemo(() => {
-        const charges = (eventsData?.charges ?? []).map(c => ({ kind: 'charge' as const, ts: c.createdDateTime, c }));
+        const charges = (eventsData?.charges ?? []).map(c => ({ kind: 'charge' as const, ts: c.serviceDate, c }));
         const payments = (eventsData?.payments ?? []).map(p => ({ kind: 'payment' as const, ts: p.createdDateTime, p }));
         return [...charges, ...payments].sort((a, b) => (a.ts ?? '').localeCompare(b.ts ?? ''));
     }, [eventsData]);
@@ -922,7 +923,7 @@ export const BillingPage: React.FC = () => {
                                                             <div className={cn('text-[10px] text-slate-500', row.c.statusCode === 'VOID' && 'line-through opacity-70')}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
                                                         )}
                                                         <div className="text-[11px] text-slate-500 mt-0.5">
-                                                            {formatIst(row.c.createdDateTime)} · {row.c.categoryCode ?? '—'} · {row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}
+                                                            {formatIst(row.c.serviceDate)} · {row.c.categoryCode ?? '—'} · {row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}
                                                             {Number(row.c.discountAmount) > 0 && <span className="text-rose-600"> · − ₹{Number(row.c.discountAmount).toFixed(2)}</span>}
                                                         </div>
                                                     </div>
@@ -994,7 +995,7 @@ export const BillingPage: React.FC = () => {
                                     <tbody>
                                         {ledgerRows.map((row) => row.kind === 'charge' ? (
                                             <tr key={`c-${row.c.chargeEventId}`} className={cn("border-b border-slate-100 border-l-2 transition-colors", row.c.statusCode === 'VOID' ? "border-l-transparent bg-slate-50/50 opacity-75" : "border-l-transparent hover:border-l-brand-300 hover:bg-slate-50")}>
-                                                <td className={cn("px-3 py-2 whitespace-nowrap text-slate-600", row.c.statusCode === 'VOID' && "line-through opacity-70")}>{formatIst(row.c.createdDateTime)}</td>
+                                                <td className={cn("px-3 py-2 whitespace-nowrap text-slate-600", row.c.statusCode === 'VOID' && "line-through opacity-70")}>{formatIst(row.c.serviceDate)}</td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
                                                         <span className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0", row.c.statusCode === 'VOID' ? "bg-slate-100 text-slate-400" : "bg-brand-50 text-brand-500")}><IndianRupee className="h-3.5 w-3.5" /></span>

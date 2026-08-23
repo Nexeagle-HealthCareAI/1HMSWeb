@@ -358,6 +358,10 @@ export type InvoiceStatus = 'DRAFT' | 'FINALIZED' | 'CANCELLED';
 export interface BillingChargeRow {
     chargeEventId: string;
     createdDateTime: string;
+    // The visit's own date (Encounter.ServiceDate-derived) -- on a backdated visit this differs
+    // from createdDateTime (real audit time of when the row was actually keyed in). The ledger
+    // should display this, not createdDateTime.
+    serviceDate: string;
     displayName?: string;
     categoryCode?: string;
     sourceModule?: string;
