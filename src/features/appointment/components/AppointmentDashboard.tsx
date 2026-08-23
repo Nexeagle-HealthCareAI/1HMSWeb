@@ -32,7 +32,6 @@ import {
   ArrowUpDown,
   Minimize2,
   Maximize2,
-  HelpCircle,
   WifiOff,
   IndianRupee,
   Download,
@@ -43,6 +42,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,6 @@ import {
 } from '@/components/ui/pagination';
 import { AppointmentBooking } from './AppointmentBooking';
 import { TokenPrintModal } from './TokenPrintModal';
-import { DashboardQuickGuide } from './DashboardQuickGuide';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
 import { ConfirmPreAppointmentDialog } from './ConfirmPreAppointmentDialog';
@@ -180,7 +179,7 @@ export const AppointmentDashboard = () => {
   const [appointmentToConfirm, setAppointmentToConfirm] = useState<AppointmentDetail | null>(null);
   const [showEditAppointment, setShowEditAppointment] = useState(false);
   const [appointmentToEdit, setAppointmentToEdit] = useState<AppointmentDetail | null>(null);
-  const [showQuickGuide, setShowQuickGuide] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
   // Token Print State
   const [tokenPrintOpen, setTokenPrintOpen] = useState(false);
@@ -611,6 +610,13 @@ export const AppointmentDashboard = () => {
   );
 
   const appointments = appointmentData?.items || [];
+
+  // Every time fresh data actually lands -- whether from the 30s background poll
+  // (useAppointmentDetails.ts) or a manual refresh -- stamp when it happened, so the "live" feel
+  // is honest about when data last changed rather than just decorative.
+  useEffect(() => {
+    if (appointmentData) setLastUpdateTime(new Date());
+  }, [appointmentData]);
 
   const getDoctorFilterValue = (doctorId?: string, doctorName?: string | null) => {
     if (doctorId) {
@@ -1047,6 +1053,7 @@ export const AppointmentDashboard = () => {
       vitalsRequired: 0,
       completed: 0,
       preAppointment: 0,
+      totalOnlineToday: 0,
       doctorStats: [] as { name: string; count: number; noShowCount: number }[]
     };
 
@@ -1080,6 +1087,10 @@ export const AppointmentDashboard = () => {
       vitalsRequired: currentViewAppointments.filter(apt => apt.finalStatusCode === 'VITALS_REQUIRED').length,
       completed: currentViewAppointments.filter(apt => apt.finalStatusCode === 'COMPLETED').length,
       preAppointment: currentViewAppointments.filter(apt => apt.finalStatusCode === 'PRE_APPOINTMENT').length,
+      // Booked online today, regardless of current status -- bookingSource is stamped once at
+      // creation and never touched again, so unlike finalStatusCode this doesn't drop once
+      // front desk confirms a pending online booking.
+      totalOnlineToday: currentViewAppointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
       doctorStats
     };
   }, [appointments]);
@@ -1267,18 +1278,6 @@ export const AppointmentDashboard = () => {
                 </div>
                 <span className="font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
               </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowQuickGuide(true)}
-                className="hidden md:flex bg-white/5 hover:bg-white/10 text-brand-100 border border-white/10 rounded-full h-8 sm:h-10 px-3 sm:px-4 ml-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4" />
-                  <span className="font-medium">{t('appointmentDashboard.quickGuide', 'Dashboard Help')}</span>
-                </div>
-              </Button>
             </div>
 
           </div>
@@ -1312,6 +1311,30 @@ export const AppointmentDashboard = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 w-full relative z-10 flex flex-col gap-6">
+        {/* Live indicator -- the current tab's data already auto-refreshes every 30s
+            (useAppointmentDetails.ts); this makes that visible instead of silent. Only shown on
+            the current tab, since "live" doesn't mean anything for past/future appointments. */}
+        {activeTab === 'current' && (
+          <div className="flex items-center gap-2 -mb-2 px-1 text-xs text-slate-500 dark:text-slate-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>Live</span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span>Last synced {lastUpdateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isLoading}
+              className="ml-1 inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        )}
+
         {/* KPI Section */}
         <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
           {/* Total Appointments */}
@@ -1343,6 +1366,25 @@ export const AppointmentDashboard = () => {
                 <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' })}</span>
               </div>
               <div className="text-4xl font-mono font-black text-amber-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all">{kpiStats.preAppointment}</div>
+            </div>
+          )}
+
+          {/* Online Bookings Today: total booked via public/online channels, regardless of
+              current status -- unlike the card above, this doesn't drop once front desk confirms
+              a pending online booking, so it answers "how much of today's volume is online." */}
+          {kpiStats.totalOnlineToday > 0 && (
+            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-sky-500/20 hover:-translate-y-1 transition-all duration-300 group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                <Globe className="h-20 w-20 text-sky-500 -rotate-12" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-4 mb-3 relative z-10">
+                <div className="p-2.5 bg-sky-100 dark:bg-sky-500/20 rounded-xl shadow-inner ring-1 ring-sky-500/30 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white transition-all duration-300 text-sky-600 dark:text-sky-400">
+                  <Globe className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-sky-900/70 dark:text-sky-300/80">{t('appointmentDashboard.statusFilters.totalOnlineToday', { defaultValue: 'Online Bookings Today' })}</span>
+              </div>
+              <div className="text-4xl font-mono font-black text-sky-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sky-600 group-hover:to-cyan-500 dark:group-hover:from-sky-400 dark:group-hover:to-cyan-400 transition-all">{kpiStats.totalOnlineToday}</div>
             </div>
           )}
 
@@ -2813,10 +2855,6 @@ export const AppointmentDashboard = () => {
           />
         )
       }
-      <DashboardQuickGuide
-        open={showQuickGuide}
-        onOpenChange={setShowQuickGuide}
-      />
 
       {/* Manage Availability - shown inline over the board instead of navigating to /calendar */}
       <Dialog open={showAvailabilityDialog} onOpenChange={setShowAvailabilityDialog}>
