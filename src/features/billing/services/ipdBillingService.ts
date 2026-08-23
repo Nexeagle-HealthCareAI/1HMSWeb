@@ -151,6 +151,11 @@ export interface AddChargeEventRequest {
     placeOfSupplyStateCode?: string;
     buyerGstin?: string;
 
+    // Backdated billing: applies to the whole batch. Omit to post at "now" (unchanged behavior).
+    // A past date requires backdateReason.
+    serviceDate?: string;
+    backdateReason?: string;
+
     charges: Array<{
         // Optional link to ChargeMaster — when set, HSN/GST snapshot is taken from there.
         chargeId?: string;
@@ -199,6 +204,8 @@ export interface AddChargeEventResponse {
             taxAmount?: number;
             isTaxInclusive?: boolean;
             isInterState?: boolean;
+            serviceDate?: string;
+            isBackdated?: boolean;
         }>;
     };
 }
@@ -254,6 +261,12 @@ export interface CreateDraftInvoiceRequest {
     patientId: string;
     encounterId: string;
     invoiceDiscountAmount?: number;
+
+    // Backdated billing: only applied when a NEW draft is created (reusing an existing draft never
+    // touches its original invoiceDate). Omit for "now" (unchanged behavior). A past date requires
+    // backdateReason.
+    invoiceDate?: string;
+    backdateReason?: string;
 }
 
 export interface CreateDraftInvoiceResponse {
@@ -273,6 +286,10 @@ export interface CreateDraftInvoiceResponse {
         igstAmount?: number;
         taxAmount?: number;
         wasReused: boolean;
+        isBackdated?: boolean;
+        // Set only when a backdated invoice date crosses into a different financial year than
+        // today -- invoice numbering isn't reset per financial year, so show this as a warning.
+        numberingCaveat?: string;
     };
     // True when an explicit discount request would have reduced NetAmount below what's already
     // been collected — held as a PENDING CreditApproval instead of applied.
@@ -298,6 +315,9 @@ export interface DeleteInvoiceRequest {
     hospitalId?: string;
     patientId: string;
     encounterId: string;
+    // Which invoice to delete -- an encounter can have more than one BillingInvoice row over its
+    // life (delete one, keep billing, a fresh draft appears later), so this must be explicit.
+    invoiceId: string;
     reason: string;
 }
 
@@ -372,6 +392,9 @@ export interface BillingChargeRow {
     isTaxInclusive?: boolean;
     isInterState?: boolean;
 
+    isBackdated?: boolean;
+    backdateReason?: string;
+
     statusCode?: ChargeEventStatus | string;
     isInvoiced: boolean;
 }
@@ -408,6 +431,20 @@ export interface CurrentInvoiceInfo {
 
     isReopened?: boolean;
     reopenedReason?: string;
+
+    isBackdated?: boolean;
+    backdateReason?: string;
+}
+
+// Every invoice ever issued for the encounter (draft, finalized, cancelled), newest first --
+// lets the ledger show invoice history instead of only the single current one.
+export interface InvoiceSummary {
+    invoiceId: string;
+    invoiceNo?: string;
+    invoiceDate: string;
+    statusCode?: InvoiceStatus | string;
+    netAmount?: number;
+    isBackdated?: boolean;
 }
 
 export interface GetEncounterEventsResponse {
@@ -418,6 +455,7 @@ export interface GetEncounterEventsResponse {
         amountReceived: number;
         netBalance: number;
         currentInvoice?: CurrentInvoiceInfo | null;
+        invoices?: InvoiceSummary[];
         charges: BillingChargeRow[];
         payments: BillingPaymentRow[];
     };

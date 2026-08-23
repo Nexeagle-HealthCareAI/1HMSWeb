@@ -93,6 +93,10 @@ export const BillingPage: React.FC = () => {
     const [reopenReason, setReopenReason] = useState('');
     const [deleteInvoiceOpen, setDeleteInvoiceOpen] = useState(false);
     const [deleteInvoiceReason, setDeleteInvoiceReason] = useState('');
+    // Which invoice the confirm dialog targets -- defaults to the current one when opened from the
+    // top-level button, or a specific past invoice when opened from the invoice-history list.
+    const [deleteInvoiceTargetId, setDeleteInvoiceTargetId] = useState<string | null>(null);
+    const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
     const [discountInput, setDiscountInput] = useState('');
     const [discountMode, setDiscountMode] = useState<'amount' | 'percent'>('amount');
     const [showDiscount, setShowDiscount] = useState(false);
@@ -333,19 +337,23 @@ export const BillingPage: React.FC = () => {
         }
     };
 
-    // Manually deletes (soft-cancels) the invoice regardless of status -- draft or finalized.
-    // Every charge on it is voided too, not just unlinked from the bill.
+    // Manually deletes (soft-cancels) a specific invoice regardless of status -- draft or
+    // finalized. Every charge on it is voided too, not just unlinked from the bill. Targets
+    // deleteInvoiceTargetId (set when the confirm dialog is opened) rather than always "the"
+    // invoice for the encounter -- an encounter can have more than one BillingInvoice row over
+    // its life (delete one, keep billing, a fresh draft appears later).
     const handleDeleteInvoice = async () => {
-        if (!selectedPatient || !selectedEncounterId || !deleteInvoiceReason.trim() || invoicing) return;
+        if (!selectedPatient || !selectedEncounterId || !deleteInvoiceTargetId || !deleteInvoiceReason.trim() || invoicing) return;
         if (isSubscriptionReadOnly) { blockAction('Deleting the invoice'); return; }
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Deleting an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setInvoicing(true);
         try {
-            const res = await ipdBillingService.deleteInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, reason: deleteInvoiceReason.trim() });
+            const res = await ipdBillingService.deleteInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, invoiceId: deleteInvoiceTargetId, reason: deleteInvoiceReason.trim() });
             if (res?.success === false) throw new Error(res?.message ?? 'Could not delete invoice');
             toast({ title: 'Invoice deleted', description: `${res.chargesVoided} charge(s) voided.` });
             setDeleteInvoiceOpen(false);
             setDeleteInvoiceReason('');
+            setDeleteInvoiceTargetId(null);
             loadEvents();
         } catch (e: any) {
             toast({ title: 'Could not delete invoice', description: e?.message ?? '', variant: 'destructive' });
@@ -847,6 +855,35 @@ export const BillingPage: React.FC = () => {
                         ) : null}
                     </CardHeader>
 
+                    {/* Invoice history — every invoice this encounter has ever had (draft,
+                        finalized, cancelled), not just the current one. Only shown when there's
+                        more than one, and each row can be deleted independently by its own ID. */}
+                    {showInvoiceHistory && (eventsData?.invoices?.length ?? 0) > 0 && (
+                        <div className="border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/50 p-3 space-y-1.5">
+                            {eventsData!.invoices!.map(inv => {
+                                const status = (inv.statusCode ?? '').toUpperCase();
+                                return (
+                                    <div key={inv.invoiceId} className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 px-3 py-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="text-xs font-bold text-slate-700 tabular-nums whitespace-nowrap">{inv.invoiceNo ?? '—'}</span>
+                                            <span className="text-[10px] text-slate-400 whitespace-nowrap">{formatIst(inv.invoiceDate)}</span>
+                                            <Badge variant="outline" className={cn('text-[9px] h-5 px-1.5 font-bold uppercase', status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-300' : status === 'FINALIZED' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-300')}>{inv.statusCode ?? '—'}</Badge>
+                                            {inv.isBackdated && <Badge variant="outline" className="text-[9px] h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">BACKDATED</Badge>}
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-xs font-bold tabular-nums text-slate-700">₹{Number(inv.netAmount ?? 0).toFixed(2)}</span>
+                                            {status !== 'CANCELLED' && (
+                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Delete this invoice" onClick={() => { if (isSubscriptionReadOnly) { blockAction('Deleting the invoice'); return; } setDeleteInvoiceTargetId(inv.invoiceId); setDeleteInvoiceOpen(true); }}>
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
                     {/* Ledger */}
                     <CardContent className="p-0 flex-1 overflow-auto">
                         {!selectedEncounterId ? (
@@ -875,6 +912,7 @@ export const BillingPage: React.FC = () => {
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className={cn('font-semibold text-slate-800', row.c.statusCode === 'VOID' && 'line-through text-slate-500')}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</span>
                                                             {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
+                                                            {row.c.isBackdated && <Badge variant="outline" title={row.c.backdateReason} className="text-[9px] bg-amber-50 text-amber-700 border-amber-200">BACKDATED</Badge>}
                                                         </div>
                                                         {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
                                                             <div className={cn('text-[10px] text-slate-500', row.c.statusCode === 'VOID' && 'line-through opacity-70')}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
@@ -960,6 +998,7 @@ export const BillingPage: React.FC = () => {
                                                             <div className="flex items-center gap-2">
                                                                 <div className={cn("font-semibold text-slate-800 truncate max-w-[260px]", row.c.statusCode === 'VOID' && "line-through text-slate-500")}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
                                                                 {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
+                                                                {row.c.isBackdated && <Badge variant="outline" title={row.c.backdateReason} className="text-[9px] bg-amber-50 text-amber-700 border-amber-200">BACKDATED</Badge>}
                                                             </div>
                                                             {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
                                                                 <div className={cn("text-[10px] text-slate-500 whitespace-nowrap", row.c.statusCode === 'VOID' && "line-through opacity-70")}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
@@ -1148,8 +1187,16 @@ export const BillingPage: React.FC = () => {
                             )}
                             {/* Manual delete — works on draft or finalized invoices, voids every charge too. */}
                             {selectedEncounterId && eventsData?.currentInvoice && (eventsData.currentInvoice.statusCode ?? '').toUpperCase() !== 'CANCELLED' && (
-                                <Button onClick={() => isSubscriptionReadOnly ? blockAction('Deleting the invoice') : setDeleteInvoiceOpen(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
+                                <Button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Deleting the invoice'); return; } setDeleteInvoiceTargetId(eventsData.currentInvoice!.invoiceId); setDeleteInvoiceOpen(true); }} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
                                     <Trash2 className="h-4 w-4 mr-1" /> Delete Invoice
+                                </Button>
+                            )}
+                            {/* Past invoices for this encounter (e.g. a previously deleted one, or
+                                one superseded by a fresh draft) -- most encounters only ever have
+                                one, so this stays tucked away unless there's more than one. */}
+                            {selectedEncounterId && (eventsData?.invoices?.length ?? 0) > 1 && (
+                                <Button onClick={() => setShowInvoiceHistory(v => !v)} variant="outline" className="h-10 rounded-xl">
+                                    <Receipt className="h-4 w-4 mr-1" /> Invoice History ({eventsData!.invoices!.length})
                                 </Button>
                             )}
 
@@ -1503,7 +1550,7 @@ export const BillingPage: React.FC = () => {
 
             {/* Delete invoice confirm — works on draft or finalized invoices. Every charge on it
                 gets voided too, not just unlinked. Requires a reason for audit. */}
-            <AlertDialog open={deleteInvoiceOpen} onOpenChange={(o) => { if (!o) { setDeleteInvoiceOpen(false); setDeleteInvoiceReason(''); } }}>
+            <AlertDialog open={deleteInvoiceOpen} onOpenChange={(o) => { if (!o) { setDeleteInvoiceOpen(false); setDeleteInvoiceReason(''); setDeleteInvoiceTargetId(null); } }}>
                 <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
                     <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-rose-600 to-red-600">
                         <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
@@ -1513,7 +1560,11 @@ export const BillingPage: React.FC = () => {
                     </div>
                     <div className="px-5 py-4 space-y-3">
                         <AlertDialogDescription className="text-sm text-slate-600">
-                            This cancels invoice <span className="font-semibold text-slate-800">{eventsData?.currentInvoice?.invoiceNo ?? ''}</span>{' '}
+                            This cancels invoice <span className="font-semibold text-slate-800">
+                                {eventsData?.invoices?.find(i => i.invoiceId === deleteInvoiceTargetId)?.invoiceNo
+                                    ?? (deleteInvoiceTargetId === eventsData?.currentInvoice?.invoiceId ? eventsData?.currentInvoice?.invoiceNo : '')
+                                    ?? ''}
+                            </span>{' '}
                             and voids every charge on it, whether or not it's finalized. Any money already collected against it becomes
                             unallocated and available for a future invoice on this visit. This cannot be undone. A reason is required for audit.
                         </AlertDialogDescription>

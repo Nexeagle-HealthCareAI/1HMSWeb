@@ -263,7 +263,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
     { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
-    { id: 'leads', name: 'Lead Generation', icon: Megaphone, path: '/leads' },
+    { id: 'leads', name: 'HCRM', icon: Megaphone, path: '/leads' },
   ];
 
   // Filter navigation items by real backend-granted PermissionKeys (boardAccess.ts is the

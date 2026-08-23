@@ -94,10 +94,13 @@ export const LeadGenerationPage: React.FC = () => {
                 <div>
                     <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2 md:gap-3">
                         <Megaphone className="h-6 w-6 md:h-8 md:w-8 text-brand-600" />
-                        {t('leads.title') || 'Lead Generation'}
+                        {t('leads.title') || 'HCRM'}
+                        <span className="text-xs md:text-sm font-semibold text-gray-400 dark:text-gray-500 tracking-wide">
+                            Hospital Customer Relationship Management
+                        </span>
                     </h2>
-                    <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1">
-                        {t('leads.description') || 'Doctor and hospital searches/views from Doctor Dekho and WhatsApp.'}
+                    <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
+                        {t('leads.description') || 'Turn every doctor search, WhatsApp enquiry, and social visit into a followed-up patient. HCRM tracks leads from Doctor Dekho and WhatsApp today, with Meta & Instagram campaign connections and AI-based lead scoring and follow-up tracking on the roadmap — so your team always knows who to call next, and what actually drives bookings.'}
                     </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={fetchLeads} disabled={isLoading} className="h-10 rounded-xl font-semibold self-start md:self-auto">

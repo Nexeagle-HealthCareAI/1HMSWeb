@@ -61,7 +61,7 @@ export const BOARD_ACCESS: BoardAccessRule[] = [
   { id: 'subscription', path: '/subscription', permissionKeys: ['admin_panel'], navLabel: 'Subscription', navIcon: Crown, showInSidebar: true },
   { id: 'chain', path: '/chain', permissionKeys: ['admin_panel'] },
   { id: 'abdm', path: '/abdm', permissionKeys: ['abdm'], navLabel: 'ABHA / ABDM', navIcon: FileBadge2, showInSidebar: true },
-  { id: 'leads', path: '/leads', permissionKeys: ['leads'], navLabel: 'Lead Generation', navIcon: Megaphone, showInSidebar: true },
+  { id: 'leads', path: '/leads', permissionKeys: ['leads'], navLabel: 'HCRM', navIcon: Megaphone, showInSidebar: true },
   { id: 'ipd-workspace', path: '/ipd-workspace', permissionKeys: ['ipd'], navLabel: 'IPD', navIcon: Hotel, showInSidebar: true, showInMobileNav: true },
   { id: 'ipd-workspace-patient', path: '/ipd-workspace/patient/:id', permissionKeys: ['ipd'] },
   { id: 'inventory', path: '/inventory', permissionKeys: ['inventory'], navLabel: 'Inventory', navIcon: Boxes, showInSidebar: true },

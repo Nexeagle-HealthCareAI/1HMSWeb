@@ -70,6 +70,12 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
     // in the form, in one API call, instead of needing a separate "add multiple" flow.
     const [stagedItems, setStagedItems] = useState<StagedItem[]>([]);
 
+    // Backdated billing: one date for the whole batch (it's one bill/transaction), not per item.
+    const todayIso = () => new Date().toISOString().slice(0, 10);
+    const [serviceDate, setServiceDate] = useState(todayIso());
+    const [backdateReason, setBackdateReason] = useState('');
+    const isBackdated = serviceDate < todayIso();
+
     // Reset + load catalog on open
     useEffect(() => {
         if (!open) return;
@@ -89,6 +95,8 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
         setDiscountKind('amount');
         setDiscountValue('');
         setStagedItems([]);
+        setServiceDate(todayIso());
+        setBackdateReason('');
         let cancelled = false;
         (async () => {
             setLoadingMasters(true);
@@ -263,6 +271,10 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
             toast({ title: 'Add at least one item', variant: 'destructive' });
             return;
         }
+        if (isBackdated && !backdateReason.trim()) {
+            toast({ title: 'Enter a reason for backdating', variant: 'destructive' });
+            return;
+        }
 
         setSubmitting(true);
         try {
@@ -271,6 +283,12 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
             const rollback = isReachable()
                 ? onOptimistic?.(charges.map(c => ({ displayName: c.displayName, qty: c.qty, rate: c.rate, discountPercent: c.discountPercent, categoryCode: c.categoryCode })))
                 : undefined;
+            // Omit serviceDate/backdateReason entirely for a same-day bill -- keeps the wire
+            // payload identical to pre-backdating behavior for the overwhelmingly common case.
+            const dateFields = isBackdated
+                ? { serviceDate: new Date(serviceDate).toISOString(), backdateReason: backdateReason.trim() }
+                : {};
+
             // Add-charge is safe to queue offline (it targets an existing, already-synced encounter
             // and the backend appends). Payments/finalize stay online-only.
             try {
@@ -280,10 +298,10 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                     client: 'ipd',
                     method: 'post',
                     url: 'charge/add-event',
-                    data: { patientId, encounterId, charges, hospitalId },
+                    data: { patientId, encounterId, charges, hospitalId, ...dateFields },
                     label: charges.length > 1 ? `${charges.length} charges` : `Charge · ${charges[0].displayName}`,
                     hospitalId,
-                    run: () => ipdBillingService.addChargeEvents({ patientId, encounterId, charges }),
+                    run: () => ipdBillingService.addChargeEvents({ patientId, encounterId, charges, ...dateFields }),
                     synthetic: () => ({ success: true, message: 'Queued offline' }),
                 });
                 if (queued) {
@@ -324,6 +342,21 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {/* Service date applies to the whole batch below — it's one bill/transaction. */}
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-brand-500" /> Service date</Label>
+                        <Input type="date" value={serviceDate} max={todayIso()} onChange={(e) => setServiceDate(e.target.value)} className="h-10 rounded-xl" />
+                        {isBackdated && (
+                            <div className="space-y-1.5">
+                                <div className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                    <span>⚠</span>
+                                    <span>This bill will be dated in the past. A reason is required.</span>
+                                </div>
+                                <Input value={backdateReason} onChange={(e) => setBackdateReason(e.target.value)} placeholder="Reason for backdating (e.g. missed billing this visit)" className="h-9 text-sm rounded-xl" />
+                            </div>
+                        )}
+                    </div>
+
                     {/* Catalog-first: catalog & bed are the real modes; a custom item is the rare fallback. */}
                     <div className="flex items-center justify-between gap-2">
                         <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden text-xs">
