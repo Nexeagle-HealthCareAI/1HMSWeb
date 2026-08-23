@@ -64,19 +64,11 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
     const [lines, setLines] = useState<DraftLine[]>([newLine()]);
     const [submitting, setSubmitting] = useState(false);
 
-    // Backdated billing: one date for the whole batch (it's one bill/transaction), not per line.
-    const todayIso = () => new Date().toISOString().slice(0, 10);
-    const [serviceDate, setServiceDate] = useState(todayIso());
-    const [backdateReason, setBackdateReason] = useState('');
-    const isBackdated = serviceDate < todayIso();
-
     // Reset on open
     useEffect(() => {
         if (open) {
             setLines([newLine()]);
             setSearch('');
-            setServiceDate(todayIso());
-            setBackdateReason('');
         }
     }, [open]);
 
@@ -139,10 +131,6 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
     const handleSubmit = async () => {
         if (!canSubmit) return;
         if (isSubscriptionReadOnly) { blockAction('Adding charges'); return; }
-        if (isBackdated && !backdateReason.trim()) {
-            toast({ title: 'Enter a reason for backdating', variant: 'destructive' });
-            return;
-        }
         setSubmitting(true);
         try {
             const charges = validLines.map(l => ({
@@ -153,11 +141,6 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                 categoryCode: l.categoryCode || 'OTHER',
             }));
             const hospitalId = useAuthStore.getState().getHospitalId() ?? undefined;
-            // Omit serviceDate/backdateReason entirely for a same-day bill -- keeps the wire
-            // payload identical to pre-backdating behavior for the overwhelmingly common case.
-            const dateFields = isBackdated
-                ? { serviceDate: new Date(serviceDate).toISOString(), backdateReason: backdateReason.trim() }
-                : {};
             // Safe to queue offline (appends to an existing encounter); payments/finalize stay online.
             const { queued, data: res } = await offlineMutation<any>({
                 entity: 'billing',
@@ -165,10 +148,10 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                 client: 'ipd',
                 method: 'post',
                 url: 'charge/add-event',
-                data: { encounterId, patientId, charges, hospitalId, ...dateFields },
+                data: { encounterId, patientId, charges, hospitalId },
                 label: `${charges.length} charge(s)`,
                 hospitalId,
-                run: () => ipdBillingService.addChargeEvents({ encounterId, patientId, charges, ...dateFields }),
+                run: () => ipdBillingService.addChargeEvents({ encounterId, patientId, charges }),
                 synthetic: () => ({ success: true, message: 'Queued offline' }),
             });
             if (queued) {
@@ -197,27 +180,10 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
                 <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-100">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <DialogTitle className="text-base font-bold">Add Charges</DialogTitle>
-                            <DialogDescription className="text-xs">
-                                Pick from your charge master, or type a one-off line. Charges post as <span className="font-semibold text-emerald-700">POSTED</span> and roll into the next invoice.
-                            </DialogDescription>
-                        </div>
-                        <div className="shrink-0">
-                            <Label className="text-[10px] text-slate-500">Service date</Label>
-                            <Input type="date" value={serviceDate} max={todayIso()} onChange={e => setServiceDate(e.target.value)} className="h-8 text-xs w-36" />
-                        </div>
-                    </div>
-                    {isBackdated && (
-                        <div className="space-y-1.5 pt-1">
-                            <div className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                                <span>⚠</span>
-                                <span>This bill will be dated in the past. A reason is required.</span>
-                            </div>
-                            <Input value={backdateReason} onChange={e => setBackdateReason(e.target.value)} placeholder="Reason for backdating (e.g. missed billing this visit)" className="h-8 text-xs" />
-                        </div>
-                    )}
+                    <DialogTitle className="text-base font-bold">Add Charges</DialogTitle>
+                    <DialogDescription className="text-xs">
+                        Pick from your charge master, or type a one-off line. Charges post as <span className="font-semibold text-emerald-700">POSTED</span> and roll into the next invoice.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 flex-1 overflow-hidden">

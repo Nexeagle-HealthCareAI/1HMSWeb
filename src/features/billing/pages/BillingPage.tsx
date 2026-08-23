@@ -127,6 +127,8 @@ export const BillingPage: React.FC = () => {
     const [addPaymentInitialType, setAddPaymentInitialType] = useState<PaymentType>('PAYMENT');
     const [showNewVisit, setShowNewVisit] = useState(false);
     const [newVisitType, setNewVisitType] = useState<'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'>('OPD');
+    // Every charge/invoice on this visit will silently use this date instead of "now".
+    const [newVisitDate, setNewVisitDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [creatingVisit, setCreatingVisit] = useState(false);
     const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
     const [voidReason, setVoidReason] = useState('');
@@ -248,9 +250,12 @@ export const BillingPage: React.FC = () => {
         if (!isReachable()) { toast({ title: 'Needs connection', description: 'Opening a new visit requires an internet connection.', variant: 'destructive' }); return; }
         setCreatingVisit(true);
         try {
+            const todayIso = new Date().toISOString().slice(0, 10);
             const res = await ipdBillingService.createEncounter({
                 patientId: selectedPatient.patientId,
                 encounterType: newVisitType,
+                // Omit for today -- keeps the wire payload identical to before this field existed.
+                serviceDate: newVisitDate !== todayIso ? new Date(newVisitDate).toISOString() : undefined,
             });
             if (!res?.success || !res.data?.encounterId) throw new Error(res?.message ?? 'Could not create visit');
             const newId = res.data.encounterId;
@@ -258,6 +263,7 @@ export const BillingPage: React.FC = () => {
             await loadEncounters(selectedPatient.patientId);
             setSelectedEncounterId(newId);
             setShowNewVisit(false);
+            setNewVisitDate(todayIso);
         } catch (e: any) {
             toast({ title: 'Could not create visit', description: e?.message ?? '', variant: 'destructive' });
         } finally {
@@ -868,7 +874,6 @@ export const BillingPage: React.FC = () => {
                                             <span className="text-xs font-bold text-slate-700 tabular-nums whitespace-nowrap">{inv.invoiceNo ?? '—'}</span>
                                             <span className="text-[10px] text-slate-400 whitespace-nowrap">{formatIst(inv.invoiceDate)}</span>
                                             <Badge variant="outline" className={cn('text-[9px] h-5 px-1.5 font-bold uppercase', status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-300' : status === 'FINALIZED' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-300')}>{inv.statusCode ?? '—'}</Badge>
-                                            {inv.isBackdated && <Badge variant="outline" className="text-[9px] h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">BACKDATED</Badge>}
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                             <span className="text-xs font-bold tabular-nums text-slate-700">₹{Number(inv.netAmount ?? 0).toFixed(2)}</span>
@@ -912,7 +917,6 @@ export const BillingPage: React.FC = () => {
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className={cn('font-semibold text-slate-800', row.c.statusCode === 'VOID' && 'line-through text-slate-500')}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</span>
                                                             {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
-                                                            {row.c.isBackdated && <Badge variant="outline" title={row.c.backdateReason} className="text-[9px] bg-amber-50 text-amber-700 border-amber-200">BACKDATED</Badge>}
                                                         </div>
                                                         {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
                                                             <div className={cn('text-[10px] text-slate-500', row.c.statusCode === 'VOID' && 'line-through opacity-70')}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
@@ -998,7 +1002,6 @@ export const BillingPage: React.FC = () => {
                                                             <div className="flex items-center gap-2">
                                                                 <div className={cn("font-semibold text-slate-800 truncate max-w-[260px]", row.c.statusCode === 'VOID' && "line-through text-slate-500")}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
                                                                 {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
-                                                                {row.c.isBackdated && <Badge variant="outline" title={row.c.backdateReason} className="text-[9px] bg-amber-50 text-amber-700 border-amber-200">BACKDATED</Badge>}
                                                             </div>
                                                             {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
                                                                 <div className={cn("text-[10px] text-slate-500 whitespace-nowrap", row.c.statusCode === 'VOID' && "line-through opacity-70")}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
@@ -1386,8 +1389,12 @@ export const BillingPage: React.FC = () => {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Visit date</Label>
+                        <Input type="date" value={newVisitDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setNewVisitDate(e.target.value)} className="h-9 mt-1" />
+                    </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowNewVisit(false)} disabled={creatingVisit}>Cancel</Button>
+                        <Button variant="outline" onClick={() => { setShowNewVisit(false); setNewVisitDate(new Date().toISOString().slice(0, 10)); }} disabled={creatingVisit}>Cancel</Button>
                         <Button onClick={handleCreateVisit} disabled={creatingVisit} className="bg-brand-600 hover:bg-brand-700">
                             {creatingVisit ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating…</> : 'Create Visit'}
                         </Button>
