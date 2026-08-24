@@ -338,6 +338,7 @@ export const ClinicalDashboard: React.FC = () => {
       patientId: appointment.patientId,
       hospitalId,
       doctorId,
+      doctorName: appointment.doctorName,
     };
   };
 

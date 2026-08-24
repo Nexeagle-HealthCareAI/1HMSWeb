@@ -1,4 +1,3 @@
-import { PDFDocument } from 'pdf-lib';
 import { TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { fetchTemplateAsFile } from '../utils/templateFile';
 import { buildTemplateBoundPreview, TemplateBoundLayoutConfig, type PrintFieldConfig } from './previewRenderer';
@@ -11,6 +10,9 @@ import { mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
 import { prescriptionFieldLayoutApi, mergeFieldsWithDefaults } from '@/features/prescription/services/prescriptionFieldLayoutApi';
 import { drawingApi } from '@/features/patient/services/drawingApi';
 import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
+import { generateDefaultLetterheadTemplate } from '../utils/defaultLetterhead';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 
 export interface PrescriptionPreviewPayload {
   layout: TemplateBoundLayoutConfig;
@@ -21,11 +23,29 @@ export interface PrescriptionPreviewPayload {
   templateBackgroundDataUrl?: string | null;
   printFields?: PrintFieldConfig[];
   appointmentDate?: string;
+  // Only used to build the default letterhead fallback below — not needed on the happy path
+  // where the doctor's own uploaded template loads fine.
+  hospitalId?: string | null;
+  doctorId?: string | null;
+  doctorName?: string | null;
+}
+
+// 'no-template' — the doctor simply hasn't uploaded one yet (expected/common).
+// 'template-fetch-failed' — a template WAS configured but couldn't be loaded (network/CORS/etc);
+// this is the case worth surfacing to the doctor, since their real letterhead silently didn't print.
+export type LetterheadFallbackReason = 'no-template' | 'template-fetch-failed';
+
+export interface BuildPreviewBlobResult {
+  blob: Blob;
+  usedFallbackLetterhead: boolean;
+  fallbackReason?: LetterheadFallbackReason;
 }
 
 export interface BuildPreviewResult {
   blob: Blob;
   templateUrl: string | null;
+  usedFallbackLetterhead: boolean;
+  fallbackReason?: LetterheadFallbackReason;
 }
 
 export const buildPreviewFromRequest = async (
@@ -75,7 +95,7 @@ export const buildPreviewFromRequest = async (
     showInPrint: f.showInPrint,
   }));
 
-  const blob = await buildPreviewBlob({
+  const { blob, usedFallbackLetterhead, fallbackReason } = await buildPreviewBlob({
     layout: templateConfig.layout,
     typography: templateConfig.typography,
     payload: {
@@ -89,37 +109,66 @@ export const buildPreviewFromRequest = async (
     templateUrl: templateConfig.templateUrl,
     printFields,
     appointmentDate: request.appointmentDate,
+    hospitalId: request.hospitalId,
+    doctorId: request.doctorId,
+    doctorName: request.doctorName,
   });
 
   return {
     blob,
     templateUrl: templateConfig.templateUrl ?? null,
+    usedFallbackLetterhead,
+    fallbackReason,
   };
 };
 
-export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Promise<Blob> => {
+export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Promise<BuildPreviewBlobResult> => {
   let templateFile = request.templateFile;
+  let usedFallbackLetterhead = false;
+  let fallbackReason: LetterheadFallbackReason | undefined;
 
   if (!templateFile) {
     if (request.templateUrl) {
       try {
         templateFile = await fetchTemplateAsFile(request.templateUrl);
       } catch (error) {
-        console.warn("Failed to fetch template, falling back to blank.", error);
+        console.warn("Failed to fetch the doctor's uploaded letterhead, falling back to the default.", error);
+        fallbackReason = 'template-fetch-failed';
       }
+    } else {
+      fallbackReason = 'no-template';
     }
 
-    // Fallback if no URL or fetch failed
+    // No template configured, or the configured one couldn't be loaded — use a branded default
+    // instead of a bare blank page (see defaultLetterhead.ts).
     if (!templateFile) {
-      const doc = await PDFDocument.create();
-      doc.addPage([595.28, 841.89]); // A4 Points
-      const pdfBytes = await doc.save();
-      templateFile = new File([pdfBytes as any], 'blank.pdf', { type: 'application/pdf' });
+      usedFallbackLetterhead = true;
+      const [hospital, doctorProfile] = await Promise.all([
+        request.hospitalId ? hospitalApi.getHospitalById(request.hospitalId).catch(() => null) : Promise.resolve(null),
+        request.doctorId ? doctorApi.getDoctorProfile(request.doctorId).catch(() => null) : Promise.resolve(null),
+      ]);
+
+      templateFile = await generateDefaultLetterheadTemplate({
+        layout: request.layout,
+        hospital: hospital && {
+          name: hospital.name,
+          location: hospital.location,
+          city: hospital.city,
+          state: hospital.state,
+          contact: hospital.contact,
+          registrationNumber: hospital.registrationNumber,
+        },
+        doctor: {
+          name: request.doctorName ?? null,
+          specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+          registration: doctorProfile?.licenseNumber ?? null,
+        },
+      });
     }
   }
 
   if (templateFile) {
-    return buildTemplateBoundPreview({
+    const blob = await buildTemplateBoundPreview({
       templateFile,
       layout: request.layout,
       typography: request.typography,
@@ -127,6 +176,7 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
       printFields: request.printFields,
       appointmentDate: request.appointmentDate,
     });
+    return { blob, usedFallbackLetterhead, fallbackReason };
   }
   throw new Error('Template file could not be loaded.');
 };

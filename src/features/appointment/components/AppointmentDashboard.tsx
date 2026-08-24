@@ -1218,6 +1218,7 @@ export const AppointmentDashboard = () => {
       hospitalId,
       doctorId: appointment.doctorId,
       appointmentDate: appointment.startAt,
+      doctorName: appointment.doctorName,
     });
     setPreviewModalOpen(true);
   };

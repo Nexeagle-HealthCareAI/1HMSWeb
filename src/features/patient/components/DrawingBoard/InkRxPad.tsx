@@ -10,6 +10,9 @@ import { rasterizePdfFirstPage } from './rasterizePdfFirstPage';
 import { useFullscreen } from './useFullscreen';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { useAuthStore } from '@/store/authStore';
+import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import './InkRxPad.css';
 
 // A4 canvas dimensions at 96dpi
@@ -119,6 +122,7 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
 }) => {
     const { toast } = useToast();
     const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
+    const { user } = useAuthStore();
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const bgImageRef = useRef<HTMLImageElement | null>(null);
@@ -257,17 +261,13 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
     // Load + rasterize the letterhead when the pad opens. The prescription letterhead is stored as
     // a PDF (usePrescriptionDesigner.ts uses pdf-lib to build/analyze it) — a PDF can't be loaded
     // into an <img>, so it's rasterized to a bitmap first (same approach as InkDischargePad).
+    // When no letterhead is set, a system-generated default (same as the print pipeline's
+    // buildPreviewBlob fallback, see defaultLetterhead.ts) is rasterized the same way, so the
+    // writing surface matches what actually prints instead of a plain white sheet.
     useEffect(() => {
         if (!open) return;
         let cancelled = false;
-
-        if (!templateUrl) {
-            // No letterhead — draw on a blank white A4 sheet; never carry over a previous
-            // doctor's letterhead bitmap.
-            bgImageRef.current = null;
-            setBgReady(false);
-            return;
-        }
+        let generatedObjectUrl: string | null = null;
 
         setTemplateLoading(true);
 
@@ -292,17 +292,52 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
             img.src = src;
         };
 
-        const isPdf = /\.pdf(\?|$)/i.test(templateUrl);
-        if (isPdf) {
-            rasterizePdfFirstPage(templateUrl)
-                .then(({ dataUrl }) => { if (!cancelled) useImage(dataUrl); })
-                .catch(() => { if (!cancelled) useImage(templateUrl); });
+        const loadDefaultLetterhead = async () => {
+            try {
+                const hospital = hospitalId ? await hospitalApi.getHospitalById(hospitalId).catch(() => null) : null;
+                const defaultFile = await generateDefaultLetterheadTemplate({
+                    hospital: hospital && {
+                        name: hospital.name,
+                        location: hospital.location,
+                        city: hospital.city,
+                        state: hospital.state,
+                        contact: hospital.contact,
+                        registrationNumber: hospital.registrationNumber,
+                    },
+                    doctor: { name: user?.name ?? null },
+                });
+                if (cancelled) return;
+                generatedObjectUrl = URL.createObjectURL(defaultFile);
+                const { dataUrl } = await rasterizePdfFirstPage(generatedObjectUrl);
+                if (!cancelled) useImage(dataUrl);
+            } catch {
+                // Last-resort — never blocks writing, just falls back to blank white like before.
+                if (!cancelled) {
+                    bgImageRef.current = null;
+                    setBgReady(false);
+                    setTemplateLoading(false);
+                    redrawAll();
+                }
+            } finally {
+                if (generatedObjectUrl) URL.revokeObjectURL(generatedObjectUrl);
+            }
+        };
+
+        if (!templateUrl) {
+            loadDefaultLetterhead();
         } else {
-            useImage(templateUrl);
+            const isPdf = /\.pdf(\?|$)/i.test(templateUrl);
+            if (isPdf) {
+                rasterizePdfFirstPage(templateUrl)
+                    .then(({ dataUrl }) => { if (!cancelled) useImage(dataUrl); })
+                    .catch(() => { if (!cancelled) useImage(templateUrl); });
+            } else {
+                useImage(templateUrl);
+            }
         }
 
         return () => { cancelled = true; };
-    }, [open, templateUrl]);
+    }, [open, templateUrl, hospitalId, user?.name]);
 
     // Initialize blank canvas on open
     useEffect(() => {
@@ -615,11 +650,12 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                 </button>
             </div>
 
-            {/* No-letterhead hint — writing still works on a blank A4 sheet. */}
+            {/* No custom letterhead hint — a system-generated default is used instead (see
+                loadDefaultLetterhead above), not a blank sheet. */}
             {!templateUrl && (
                 <div className="inkrx-blank-hint">
                     <FileImage size={13} />
-                    <span>No letterhead set — writing on a blank A4 sheet.</span>
+                    <span>Using the default system letterhead — upload your own for custom branding.</span>
                     {onGoToSettings && (
                         <button onClick={onGoToSettings} type="button">
                             <Settings size={12} /> Set letterhead
@@ -634,11 +670,12 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                     <div className="inkrx-paper-wrap" ref={paperWrapRef}>
                         <div className="inkrx-paper-shadow" />
 
-                        {/* Base layer drives the wrapper's height: the rasterized letterhead when
-                            set, otherwise a blank white A4 block (the canvas itself is absolutely
-                            positioned over whichever is rendered). Uses the rasterized bitmap
-                            (bgImageRef.src), not the raw templateUrl — that's the original PDF. */}
-                        {templateUrl && bgReady && bgImageRef.current ? (
+                        {/* Base layer drives the wrapper's height: the rasterized letterhead
+                            (custom or, when none is set, the system default — both loaded via the
+                            same effect above) once ready, otherwise a blank white A4 block while
+                            loading. Uses the rasterized bitmap (bgImageRef.src), not the raw
+                            templateUrl — that's the original PDF. */}
+                        {bgReady && bgImageRef.current ? (
                             <img
                                 className="inkrx-letterhead-bg"
                                 src={bgImageRef.current.src}

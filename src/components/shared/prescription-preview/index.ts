@@ -1,6 +1,13 @@
 export { PrescriptionPreviewModal, type PrescriptionPreviewModalProps } from './components/PrescriptionPreviewModal';
 export { usePrescriptionPreview, type UsePrescriptionPreviewOptions } from './hooks/usePrescriptionPreview';
-export { prescriptionPreviewService, buildPreviewFromRequest, buildPreviewBlob, type PrescriptionPreviewPayload } from './services/prescriptionPreviewService';
+export {
+	prescriptionPreviewService,
+	buildPreviewFromRequest,
+	buildPreviewBlob,
+	type PrescriptionPreviewPayload,
+	type LetterheadFallbackReason,
+} from './services/prescriptionPreviewService';
+export { generateDefaultLetterheadTemplate } from './utils/defaultLetterhead';
 export {
 	generatePrescriptionDetailsService,
 	type GeneratePrescriptionDetailsRequest,
