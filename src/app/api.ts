@@ -101,6 +101,8 @@ export const API_ENDPOINTS = {
     GET_BY_USER_ID: (userId: string) => `hospitals/users/${userId}`,
     MINE: 'hospitals/mine',
     GET_ANALYSIS: (hospitalId: string) => `hospitals/analysis/hospitalId=${hospitalId}`,
+    GET_PATIENT_VOLUME_FORECAST: (hospitalId: string) => `hospitals/analytics/patient-volume-forecast?hospitalId=${hospitalId}`,
+    GET_LAPSED_PATIENTS: (hospitalId: string, page = 1, limit = 20) => `hospitals/analytics/lapsed-patients?hospitalId=${hospitalId}&page=${page}&limit=${limit}`,
     DEACTIVATE: (id: string) => `hospitals/${id}/deactivate`,
     GENERATE_CODE: (id: string) => `hospitals/${id}/generate-code`,
     QR_CODE: (id: string) => `hospitals/${id}/qr-code`,

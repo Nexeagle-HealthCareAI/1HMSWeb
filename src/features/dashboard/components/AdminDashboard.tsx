@@ -60,6 +60,8 @@ import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
 // import { BillingDashboard } from '@/features/billing/pages/BillingDashboard';
 import { AnalyticsResponse, fetchAnalyticsData } from '../services/analyticsApi';
+import { PatientVolumeForecastPanel } from './PatientVolumeForecastPanel';
+import { LapsedPatientsPanel } from './LapsedPatientsPanel';
 
 
 
@@ -1163,6 +1165,12 @@ export const AdminDashboard = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* AI Patient Volume Forecast */}
+          <PatientVolumeForecastPanel hospitalId={hospitalId} />
+
+          {/* AI Lapsed Patients / Re-engagement */}
+          <LapsedPatientsPanel hospitalId={hospitalId} />
         </div>
       )
       }
