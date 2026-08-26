@@ -93,8 +93,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         manifest: {
-          name: '1HMS',
-          short_name: '1HMS',
+          name: '1HMS Flow',
+          short_name: '1HMS Flow',
           start_url: '/',
           display: 'standalone',
           background_color: '#ffffff',

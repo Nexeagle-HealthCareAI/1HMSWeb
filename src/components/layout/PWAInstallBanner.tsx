@@ -100,7 +100,7 @@ export const PWAInstallBanner: React.FC = () => {
 
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                Install 1HMS App
+                Install 1HMS Flow App
               </h4>
               <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate mt-0.5">
                 {hasNativePrompt
