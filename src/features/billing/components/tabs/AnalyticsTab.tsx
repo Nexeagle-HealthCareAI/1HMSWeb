@@ -237,7 +237,7 @@ const AiPredictivePanel: React.FC = () => {
     if (!data) return <EmptyState title="No AI insights available yet" hint="Bill a few visits first so there's history to learn from." />;
 
     return (
-        <div className="flex-1 overflow-auto flex flex-col gap-4">
+        <div className="h-full overflow-auto flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-600">
                     <Sparkles className="h-4 w-4" /> Nexeagle AI Predictive Analysis
