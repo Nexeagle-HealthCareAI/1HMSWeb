@@ -3068,8 +3068,8 @@
   },
   "loginLayout": {
     "companyName": "NexEagle 1HMS Flow",
-    "tagline": "Streamline your healthcare practice",
-    "description": "Complete patient management, appointments, billing and more. Experience the future of healthcare administration.",
+    "tagline": "AI Native Platform",
+    "description": "Complete patient management, appointments, IPD, pharmacy and billing — now with AI-powered predictive analytics for patient volume, staffing and revenue. Built for the future of healthcare administration.",
     "uptime": "Uptime",
     "doctors": "Doctors",
     "patients": "Patients",
@@ -3173,6 +3173,7 @@
     "loading": {
       "doctorProfile": "Loading Doctor Profile...",
       "appointments": "Refreshing Appointments...",
+      "calendar": "Loading calendar...",
       "helper": "Please wait while we fetch the latest data"
     },
     "error": {
@@ -3396,5 +3397,29 @@
       "create": "Create Block",
       "pending": "Creating..."
     }
+  },
+  "leads": {
+    "loadError": "Could not load leads. Please try again.",
+    "title": "HCRM",
+    "description": "Turn every doctor search, WhatsApp enquiry, and social visit into a followed-up patient. HCRM tracks leads from Doctor Dekho and WhatsApp today, with Meta & Instagram campaign connections and AI-based lead scoring and follow-up tracking on the roadmap — so your team always knows who to call next, and what actually drives bookings.",
+    "refresh": "Refresh",
+    "totalLeads": "Total Leads",
+    "whatsappLeads": "WhatsApp",
+    "doctorDekhoLeads": "Doctor Dekho",
+    "filterSource": "Source",
+    "allSources": "All sources",
+    "filterType": "Lead type",
+    "allTypes": "All types",
+    "emptyTitle": "No leads yet",
+    "emptyDescription": "Searches and views from Doctor Dekho and WhatsApp will show up here.",
+    "columnWhen": "When",
+    "columnSource": "Source",
+    "columnType": "Type",
+    "columnMatched": "Doctor / Query",
+    "columnContact": "Contact",
+    "columnLocation": "Location",
+    "hospitalPage": "Hospital page",
+    "anonymous": "Anonymous",
+    "pageOf": "Page {{page}} of {{totalPages}}"
   }
 }

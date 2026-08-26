@@ -1031,40 +1031,41 @@ export const ClinicalDashboard: React.FC = () => {
             {/* Decorative flare */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-            <div className="relative z-10 flex flex-col gap-5">
-              {/* Header Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
-                    <Stethoscope className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-xl font-bold tracking-tight text-white leading-tight">
-                        {t('docBoard.header.title')}
-                      </h1>
-                      {clampedProfileCompletion < 100 && (
-                        <button
-                          type="button"
-                          onClick={() => navigate('/profile?tab=professional')}
-                          className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
-                          title={t('docBoard.header.viewProfessionalProfile')}
-                        >
-                          <span>{clampedProfileCompletion}% Complete</span>
-                        </button>
-                      )}
-                      {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
-                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] font-bold shadow-sm">
-                          <UserCheck className="h-2.5 w-2.5 mr-1" />
-                          {t('docBoard.header.verified')}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-brand-100 mt-0.5 leading-tight">Practice oversight, calendar and clinical records.</p>
-                  </div>
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Left: icon + title + subtitle */}
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                  <Stethoscope className="h-5 w-5 text-white" />
                 </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-xl font-bold tracking-tight text-white leading-tight">
+                      {t('docBoard.header.title')}
+                    </h1>
+                    {clampedProfileCompletion < 100 && (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/profile?tab=professional')}
+                        className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+                        title={t('docBoard.header.viewProfessionalProfile')}
+                      >
+                        <span>{clampedProfileCompletion}% Complete</span>
+                      </button>
+                    )}
+                    {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
+                      <Badge className="bg-white/20 text-white border-white/30 text-[10px] font-bold shadow-sm">
+                        <UserCheck className="h-2.5 w-2.5 mr-1" />
+                        {t('docBoard.header.verified')}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-brand-100 mt-0.5 leading-tight">Practice oversight, calendar and clinical records.</p>
+                </div>
+              </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+              {/* Right: online status + navigation tab capsule, same row as the title */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 shrink-0">
+                <div className="flex items-center justify-center sm:justify-end gap-2">
                   <span className={cn('inline-block h-1.5 w-1.5 rounded-full', isOnlineNow ? 'bg-emerald-400 animate-pulse' : 'bg-white/40')} />
                   <span className="text-xs font-medium text-white">
                     {isOnlineNow ? t('docBoard.header.onlineNow', 'Online now') : t('docBoard.header.offline', 'Offline')}
@@ -1075,39 +1076,37 @@ export const ClinicalDashboard: React.FC = () => {
                     onCheckedChange={handleToggleOnlineNow}
                   />
                 </div>
-              </div>
 
-              {/* Navigation Tab Capsule */}
-              <nav className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
-                  const isActive = activeNavButton === key;
-                  const locked = requiresProfile && doctorProfileRestricted;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        if (!locked) setActiveNavButton(key);
-                      }}
-                      disabled={locked}
-                      aria-disabled={locked}
-                      aria-pressed={isActive}
-                      tabIndex={locked ? -1 : 0}
-                      title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
-                      className={cn(
-                        "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 px-1 select-none whitespace-normal flex-1",
-                        isActive
-                          ? "bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm"
-                          : "text-brand-100 hover:bg-white/10 hover:text-white",
-                        locked && "opacity-40 cursor-not-allowed"
-                      )}
-                    >
-                      <Icon className="h-5 w-5 mb-1 shrink-0" />
-                      <span className="text-[9px] font-bold tracking-wide leading-tight hidden sm:inline">{label}</span>
-                      <span className="text-[9px] font-bold tracking-wide leading-tight sm:hidden">{shortLabel}</span>
-                    </button>
-                  );
-                })}
-              </nav>
+                <nav className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm sm:min-w-[300px]">
+                  {navButtons.map(({ key, shortLabel, Icon, requiresProfile, description }) => {
+                    const isActive = activeNavButton === key;
+                    const locked = requiresProfile && doctorProfileRestricted;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          if (!locked) setActiveNavButton(key);
+                        }}
+                        disabled={locked}
+                        aria-disabled={locked}
+                        aria-pressed={isActive}
+                        tabIndex={locked ? -1 : 0}
+                        title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 px-1 select-none whitespace-normal flex-1",
+                          isActive
+                            ? "bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm"
+                            : "text-brand-100 hover:bg-white/10 hover:text-white",
+                          locked && "opacity-40 cursor-not-allowed"
+                        )}
+                      >
+                        <Icon className="h-5 w-5 mb-1 shrink-0" />
+                        <span className="text-[9px] font-bold tracking-wide leading-tight">{shortLabel}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
             </div>
           </div>
         </div>
@@ -2557,8 +2556,12 @@ export const ClinicalDashboard: React.FC = () => {
         {/* Doctor Calendar - embedded in DocBoard */}
         {activeNavButton === 'calendar' && (
           <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
-            <Suspense fallback={<div className="p-6 text-center">{t('docBoard.calendar.loading')}</div>}>
-              <DoctorCalendar />
+            <Suspense fallback={<div className="p-6 text-center">{t('docBoard.loading.calendar')}</div>}>
+              {/* AdminDoctor is a doctor first -- inside their own personalized Doctor Board,
+                  jump straight to their own calendar instead of the generic multi-doctor roster
+                  that role would otherwise see (that roster is still correct for a pure
+                  Admin/Receptionist, who have no calendar of their own to default to). */}
+              <DoctorCalendar initialDoctorId={userRole === 'AdminDoctor' && doctorId ? doctorId : undefined} />
             </Suspense>
           </div>
         )}
