@@ -3,17 +3,25 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart,
 } from 'recharts';
 import {
-    RefreshCw, Users, CalendarClock, Sparkles, TrendingUp, ArrowUpRight, ArrowDownRight, Flame, Stethoscope, AlertTriangle, CalendarDays,
+    RefreshCw, Users, CalendarClock, Sparkles, TrendingUp, ArrowUpRight, ArrowDownRight, Flame, Stethoscope, AlertTriangle, CalendarDays, UserCheck,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { fetchPatientVolumeForecast, type PatientVolumeForecastResponse } from '../services/patientVolumeForecastApi';
+import { fetchPatientVolumeForecast, type PatientVolumeForecastResponse, type DoctorLoadForecastItem } from '../services/patientVolumeForecastApi';
 import { KpiStat } from '@/features/billing/components/KpiStat';
 import { LoadingState, EmptyState, ErrorState } from '@/features/billing/components/StatePanel';
 
 const count = (n: number) => Math.round(n).toLocaleString();
+
+type Horizon = 'tomorrow' | 'week' | 'month';
+
+const HORIZONS: { key: Horizon; label: string }[] = [
+    { key: 'tomorrow', label: 'Tomorrow' },
+    { key: 'week', label: 'This Week' },
+    { key: 'month', label: 'This Month' },
+];
 
 interface Props {
     hospitalId: string;
@@ -24,6 +32,9 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Defaults to "week" -- the most useful horizon for a clinic planning the next few days,
+    // versus tomorrow (too narrow for staffing decisions) or the month (too far out to act on daily).
+    const [horizon, setHorizon] = useState<Horizon>('week');
 
     const load = useCallback(async (silent = false) => {
         if (!hospitalId) return;
@@ -64,13 +75,29 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
         return data.projectedTrend.reduce((a, b) => (b.totalAppointments > a.totalAppointments ? b : a));
     }, [data]);
 
+    // Sub-sums of the same day-by-day projection the chart already uses -- picking a horizon just
+    // changes which pre-computed number the tiles/doctor list read, nothing is recomputed client-side.
+    const horizonStats = useMemo(() => {
+        if (!data) return null;
+        if (horizon === 'tomorrow') {
+            return { appointments: data.predictedTomorrowAppointments, uniquePatients: data.predictedTomorrowUniquePatients, expectedAttending: data.expectedAttendingTomorrow };
+        }
+        if (horizon === 'week') {
+            return { appointments: data.predictedNext7DayAppointments, uniquePatients: data.predictedNext7DayUniquePatients, expectedAttending: data.expectedAttendingNext7Days };
+        }
+        return { appointments: data.predictedNext30DayAppointments, uniquePatients: data.predictedNext30DayUniquePatients, expectedAttending: data.expectedAttendingNext30Days };
+    }, [data, horizon]);
+
+    const doctorAppointmentsForHorizon = (d: DoctorLoadForecastItem) =>
+        horizon === 'tomorrow' ? d.predictedTomorrowAppointments : horizon === 'week' ? d.predictedNext7DayAppointments : d.predictedNext30DayAppointments;
+
     if (loading) return <LoadingState rows={5} />;
     if (error) return <ErrorState message={error} onRetry={() => load(true)} />;
-    if (!data) return <EmptyState title="No forecast available yet" hint="Book a few appointments first so there's history to learn from." />;
+    if (!data || !horizonStats) return <EmptyState title="No forecast available yet" hint="Book a few appointments first so there's history to learn from." />;
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-600">
                     <Sparkles className="h-4 w-4" /> Nexeagle AI Predictive Analysis — Patient Volume Forecast
                 </div>
@@ -79,31 +106,54 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
                 </Button>
             </div>
 
+            <div className="flex items-center gap-1.5 bg-slate-100 rounded-xl p-1 w-fit">
+                {HORIZONS.map((h) => (
+                    <button
+                        key={h.key}
+                        onClick={() => setHorizon(h.key)}
+                        className={cn(
+                            'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                            horizon === h.key ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                        )}
+                    >
+                        {h.label}
+                    </button>
+                ))}
+            </div>
+
             <Card className="border-0 ring-1 ring-violet-200 rounded-2xl p-4 bg-gradient-to-br from-violet-50 to-brand-50">
                 <p className="text-sm text-slate-700">{data.outlook}</p>
             </Card>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                 <KpiStat
-                    label="Predicted appointments (30 days)"
-                    amount={data.predictedNext30DayAppointments}
+                    label={`Predicted appointments (${HORIZONS.find(h => h.key === horizon)?.label.toLowerCase()})`}
+                    amount={horizonStats.appointments}
                     format={count}
                     hint={`${data.monthOverMonthAppointmentChangePercent >= 0 ? '+' : ''}${data.monthOverMonthAppointmentChangePercent}% vs prior 30 days`}
                     icon={<TrendingUp className="h-5 w-5 text-brand-600" />}
                     tone="from-brand-50 to-brand-100/50 text-brand-900"
                 />
                 <KpiStat
-                    label="Predicted unique patients (30 days)"
-                    amount={data.predictedNext30DayUniquePatients}
+                    label={`Predicted unique patients (${HORIZONS.find(h => h.key === horizon)?.label.toLowerCase()})`}
+                    amount={horizonStats.uniquePatients}
                     format={count}
                     hint={`${data.monthOverMonthUniquePatientChangePercent >= 0 ? '+' : ''}${data.monthOverMonthUniquePatientChangePercent}% vs prior 30 days`}
                     icon={<Users className="h-5 w-5 text-emerald-600" />}
                     tone="from-emerald-50 to-teal-100/50 text-emerald-900"
                 />
                 <KpiStat
+                    label="Expected attending"
+                    amount={horizonStats.expectedAttending}
+                    format={count}
+                    hint={`~${Math.round(data.noShowRate * 100)}% historical no-show rate`}
+                    icon={<UserCheck className="h-5 w-5 text-teal-600" />}
+                    tone="from-teal-50 to-cyan-100/50 text-teal-900"
+                />
+                <KpiStat
                     label="Busiest predicted day"
                     value={busiestDay ? format(new Date(busiestDay.date), 'EEE, dd MMM') : '--'}
-                    hint={busiestDay ? `${count(busiestDay.totalAppointments)} appointments expected` : undefined}
+                    hint={busiestDay ? `${count(busiestDay.totalAppointments)} appointments expected (next 30 days)` : undefined}
                     icon={<CalendarClock className="h-5 w-5 text-amber-600" />}
                     tone="from-amber-50 to-orange-100/50 text-amber-900"
                 />
@@ -164,7 +214,9 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
 
             {data.doctorLoadForecast.length > 0 && (
                 <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Doctor load forecast (next 30 days)</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                        Doctor load forecast ({HORIZONS.find(h => h.key === horizon)?.label.toLowerCase()})
+                    </p>
                     <div className="flex flex-col gap-1.5">
                         {data.doctorLoadForecast.map((d) => (
                             <div key={d.doctorId} className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-slate-50">
@@ -172,8 +224,12 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
                                     <Stethoscope className="h-3.5 w-3.5 text-slate-400" /> {d.doctorName}
                                 </span>
                                 <span className={cn('flex items-center gap-1 font-bold tabular-nums', d.isOverloaded ? 'text-amber-600' : 'text-slate-600')}>
-                                    {count(d.predictedNext30DayAppointments)} appointments
-                                    {d.isOverloaded && <Flame className="h-3.5 w-3.5 ml-1" />}
+                                    {count(doctorAppointmentsForHorizon(d))} appointments
+                                    {d.isOverloaded && (
+                                        <span title="Predicted next 30 days is well above this doctor's typical month">
+                                            <Flame className="h-3.5 w-3.5 ml-1" />
+                                        </span>
+                                    )}
                                 </span>
                             </div>
                         ))}

@@ -16,6 +16,8 @@ export interface SpecialtyTrendItem {
 export interface DoctorLoadForecastItem {
     doctorId: string;
     doctorName: string;
+    predictedTomorrowAppointments: number;
+    predictedNext7DayAppointments: number;
     predictedNext30DayAppointments: number;
     monthOverMonthChangePercent: number;
     isOverloaded: boolean;
@@ -41,6 +43,10 @@ export interface PatientVolumeForecastResponse {
     success: boolean;
     message: string;
     data: {
+        predictedTomorrowAppointments: number;
+        predictedTomorrowUniquePatients: number;
+        predictedNext7DayAppointments: number;
+        predictedNext7DayUniquePatients: number;
         predictedNext30DayAppointments: number;
         predictedNext30DayUniquePatients: number;
         avg7DayAppointments: number;
@@ -49,6 +55,10 @@ export interface PatientVolumeForecastResponse {
         avg30DayUniquePatients: number;
         monthOverMonthAppointmentChangePercent: number;
         monthOverMonthUniquePatientChangePercent: number;
+        noShowRate: number;
+        expectedAttendingTomorrow: number;
+        expectedAttendingNext7Days: number;
+        expectedAttendingNext30Days: number;
         outlook: string;
         specialtyTrends: SpecialtyTrendItem[];
         doctorLoadForecast: DoctorLoadForecastItem[];
