@@ -3,7 +3,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart,
 } from 'recharts';
 import {
-    RefreshCw, Users, CalendarClock, Sparkles, TrendingUp, ArrowUpRight, ArrowDownRight, Flame, Stethoscope, AlertTriangle,
+    RefreshCw, Users, CalendarClock, Sparkles, TrendingUp, ArrowUpRight, ArrowDownRight, Flame, Stethoscope, AlertTriangle, CalendarDays,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,16 +85,16 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 <KpiStat
-                    label="Predicted appointments (7 days)"
-                    amount={data.predictedNext7DayAppointments}
+                    label="Predicted appointments (30 days)"
+                    amount={data.predictedNext30DayAppointments}
                     format={count}
                     hint={`${data.monthOverMonthAppointmentChangePercent >= 0 ? '+' : ''}${data.monthOverMonthAppointmentChangePercent}% vs prior 30 days`}
                     icon={<TrendingUp className="h-5 w-5 text-brand-600" />}
                     tone="from-brand-50 to-brand-100/50 text-brand-900"
                 />
                 <KpiStat
-                    label="Predicted unique patients (7 days)"
-                    amount={data.predictedNext7DayUniquePatients}
+                    label="Predicted unique patients (30 days)"
+                    amount={data.predictedNext30DayUniquePatients}
                     format={count}
                     hint={`${data.monthOverMonthUniquePatientChangePercent >= 0 ? '+' : ''}${data.monthOverMonthUniquePatientChangePercent}% vs prior 30 days`}
                     icon={<Users className="h-5 w-5 text-emerald-600" />}
@@ -110,7 +110,7 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Appointments: last 30 days + next 7 days projected</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Appointments: last 30 days + next 30 days projected</p>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData}>
@@ -164,7 +164,7 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
 
             {data.doctorLoadForecast.length > 0 && (
                 <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Doctor load forecast (next 7 days)</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Doctor load forecast (next 30 days)</p>
                     <div className="flex flex-col gap-1.5">
                         {data.doctorLoadForecast.map((d) => (
                             <div key={d.doctorId} className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-slate-50">
@@ -172,7 +172,7 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
                                     <Stethoscope className="h-3.5 w-3.5 text-slate-400" /> {d.doctorName}
                                 </span>
                                 <span className={cn('flex items-center gap-1 font-bold tabular-nums', d.isOverloaded ? 'text-amber-600' : 'text-slate-600')}>
-                                    {count(d.predictedNext7DayAppointments)} appointments
+                                    {count(d.predictedNext30DayAppointments)} appointments
                                     {d.isOverloaded && <Flame className="h-3.5 w-3.5 ml-1" />}
                                 </span>
                             </div>
@@ -191,6 +191,25 @@ export const PatientVolumeForecastPanel: React.FC<Props> = ({ hospitalId }) => {
                                 <span className="text-slate-700">
                                     <span className="font-semibold">{a.metricName}</span> is {a.direction === 'UP' ? 'unusually high' : 'unusually low'} this
                                     week at <span className="font-bold tabular-nums">{a.recentValue}</span> vs. a typical <span className="font-bold tabular-nums">{a.baselineMean}</span> ({Math.abs(a.zScore)}σ from normal).
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            )}
+
+            {data.monthlySeasonalFactors.some(m => m.isNotable) && (
+                <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Seasonal pattern by month (from full history)</p>
+                    <div className="flex flex-col gap-1.5">
+                        {data.monthlySeasonalFactors.filter(m => m.isNotable).map((m) => (
+                            <div key={m.month} className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-slate-50">
+                                <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                                    <CalendarDays className="h-3.5 w-3.5 text-slate-400" /> {m.monthName}
+                                </span>
+                                <span className={cn('flex items-center gap-1 font-bold tabular-nums', m.index > 1 ? 'text-emerald-600' : 'text-rose-600')}>
+                                    {m.index > 1 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                                    {m.index > 1 ? '+' : ''}{Math.round((m.index - 1) * 100)}% vs. average
                                 </span>
                             </div>
                         ))}

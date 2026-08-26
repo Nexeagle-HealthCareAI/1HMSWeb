@@ -16,7 +16,7 @@ export interface SpecialtyTrendItem {
 export interface DoctorLoadForecastItem {
     doctorId: string;
     doctorName: string;
-    predictedNext7DayAppointments: number;
+    predictedNext30DayAppointments: number;
     monthOverMonthChangePercent: number;
     isOverloaded: boolean;
 }
@@ -30,12 +30,19 @@ export interface AnomalyFlagItem {
     direction: 'UP' | 'DOWN';
 }
 
+export interface MonthlySeasonalFactorItem {
+    month: number;
+    monthName: string;
+    index: number;
+    isNotable: boolean;
+}
+
 export interface PatientVolumeForecastResponse {
     success: boolean;
     message: string;
     data: {
-        predictedNext7DayAppointments: number;
-        predictedNext7DayUniquePatients: number;
+        predictedNext30DayAppointments: number;
+        predictedNext30DayUniquePatients: number;
         avg7DayAppointments: number;
         avg30DayAppointments: number;
         avg7DayUniquePatients: number;
@@ -46,6 +53,7 @@ export interface PatientVolumeForecastResponse {
         specialtyTrends: SpecialtyTrendItem[];
         doctorLoadForecast: DoctorLoadForecastItem[];
         anomalies: AnomalyFlagItem[];
+        monthlySeasonalFactors: MonthlySeasonalFactorItem[];
         insights: string[];
         historicalTrend: PatientVolumeTrendPoint[];
         projectedTrend: PatientVolumeTrendPoint[];
