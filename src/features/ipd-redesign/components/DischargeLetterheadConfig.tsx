@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useDepartmentApi, useDoctorApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
-import { Loader2, ClipboardList, FileText, Ruler, Eye } from 'lucide-react';
+import { Loader2, ClipboardList, FileText, Ruler, Eye, Sparkles } from 'lucide-react';
 import { useDischargeDesigner, type MarginConfig, type TypographySettings } from '../hooks/useDischargeDesigner';
 
 const clampMargin = (value: number) => (Number.isNaN(value) ? 10 : Math.min(Math.max(value, 0), 1000));
@@ -31,7 +31,12 @@ export const DischargeLetterheadConfig: React.FC = () => {
     const { data: doctorsData, isLoading: isLoadingDoctors } = useDoctorApi.getDoctorsByDepartment(selectedDepartmentId, hospitalId || '');
     const doctors = useMemo(() => doctorsData ?? [], [doctorsData]);
 
-    const designer = useDischargeDesigner(selectedDoctorId, hospitalId || undefined);
+    const selectedDoctorName = useMemo(
+        () => doctors.find((doc) => doc.userId === selectedDoctorId)?.fullName,
+        [doctors, selectedDoctorId]
+    );
+
+    const designer = useDischargeDesigner(selectedDoctorId, hospitalId || undefined, selectedDoctorName);
 
     const [successOpen, setSuccessOpen] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
@@ -113,25 +118,52 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                 <CardDescription>Upload your own pre-designed A4 PDF as the background for every printed discharge summary.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-center text-sm text-primary hover:bg-primary/10">
-                                    <span className="font-medium">Upload letterhead PDF</span>
-                                    <span className="text-xs text-primary/80">Ideally A4 — non-A4 files are auto-converted</span>
-                                    <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Choose file</span>
-                                    <Input type="file" accept="application/pdf" className="hidden" onChange={handleTemplateChange} disabled={designer.isAnalyzingTemplate} />
-                                </label>
-                                {designer.templateError && <p className="text-sm text-destructive">{designer.templateError}</p>}
-                                {designer.templateMeta && (
-                                    <div className="rounded-md border p-3 text-sm">
-                                        <p className="font-medium">{designer.templateMeta.fileName}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {designer.templateMeta.fileSizeKb} KB · {designer.templateMeta.orientationHint.toUpperCase()} · {designer.templateMeta.pageSize.width} × {designer.templateMeta.pageSize.height} mm
-                                        </p>
-                                        {designer.templateMeta.wasConverted && designer.templateMeta.originalPageSize && (
-                                            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                                Non-A4 upload converted from {designer.templateMeta.originalPageSize.width} × {designer.templateMeta.originalPageSize.height} mm to standard A4.
-                                            </p>
-                                        )}
+                                <RadioGroup
+                                    value={designer.useSystemDefault ? 'system-default' : 'upload'}
+                                    onValueChange={(v) => designer.setUseSystemDefault(v === 'system-default')}
+                                    className="space-y-3"
+                                >
+                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-left">
+                                        <RadioGroupItem value="upload" className="mt-1" />
+                                        <div><p className="font-medium text-foreground">Upload custom template</p><p className="text-xs text-muted-foreground">Use your own designed A4 PDF as the background.</p></div>
+                                    </label>
+                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-left">
+                                        <RadioGroupItem value="system-default" className="mt-1" />
+                                        <div className="flex items-center gap-1.5">
+                                            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                                            <div><p className="font-medium text-foreground">Use system-generated default</p><p className="text-xs text-muted-foreground">Built automatically from your hospital and doctor details — no upload needed.</p></div>
+                                        </div>
+                                    </label>
+                                </RadioGroup>
+
+                                {designer.useSystemDefault ? (
+                                    <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+                                        <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+                                        <p>Using the system-generated default letterhead: hospital name and doctor identity in the header, hospital address, contact and email in the footer — built from your Hospital and Doctor profiles.</p>
                                     </div>
+                                ) : (
+                                    <>
+                                        <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-center text-sm text-primary hover:bg-primary/10">
+                                            <span className="font-medium">Upload letterhead PDF</span>
+                                            <span className="text-xs text-primary/80">Ideally A4 — non-A4 files are auto-converted</span>
+                                            <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Choose file</span>
+                                            <Input type="file" accept="application/pdf" className="hidden" onChange={handleTemplateChange} disabled={designer.isAnalyzingTemplate} />
+                                        </label>
+                                        {designer.templateError && <p className="text-sm text-destructive">{designer.templateError}</p>}
+                                        {designer.templateMeta && (
+                                            <div className="rounded-md border p-3 text-sm">
+                                                <p className="font-medium">{designer.templateMeta.fileName}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {designer.templateMeta.fileSizeKb} KB · {designer.templateMeta.orientationHint.toUpperCase()} · {designer.templateMeta.pageSize.width} × {designer.templateMeta.pageSize.height} mm
+                                                </p>
+                                                {designer.templateMeta.wasConverted && designer.templateMeta.originalPageSize && (
+                                                    <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                                        Non-A4 upload converted from {designer.templateMeta.originalPageSize.width} × {designer.templateMeta.originalPageSize.height} mm to standard A4.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </CardContent>
                         </Card>

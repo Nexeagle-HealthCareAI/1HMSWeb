@@ -302,6 +302,7 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
                         city: hospital.city,
                         state: hospital.state,
                         contact: hospital.contact,
+                        email: hospital.email,
                         registrationNumber: hospital.registrationNumber,
                     },
                     doctor: { name: user?.name ?? null },

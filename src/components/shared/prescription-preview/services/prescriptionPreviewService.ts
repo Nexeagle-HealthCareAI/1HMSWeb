@@ -28,12 +28,17 @@ export interface PrescriptionPreviewPayload {
   hospitalId?: string | null;
   doctorId?: string | null;
   doctorName?: string | null;
+  // When true, always render the system-generated default regardless of templateFile/templateUrl
+  // — a deliberate choice made on the config page, not an accident of nothing being uploaded.
+  useSystemDefaultLetterhead?: boolean;
 }
 
 // 'no-template' — the doctor simply hasn't uploaded one yet (expected/common).
 // 'template-fetch-failed' — a template WAS configured but couldn't be loaded (network/CORS/etc);
 // this is the case worth surfacing to the doctor, since their real letterhead silently didn't print.
-export type LetterheadFallbackReason = 'no-template' | 'template-fetch-failed';
+// 'system-default-chosen' — the doctor deliberately picked the system default on the config page;
+// same rendering as 'no-template' but distinct so a caller can tell "chose it" from "forgot to upload".
+export type LetterheadFallbackReason = 'no-template' | 'template-fetch-failed' | 'system-default-chosen';
 
 export interface BuildPreviewBlobResult {
   blob: Blob;
@@ -98,6 +103,7 @@ export const buildPreviewFromRequest = async (
   const { blob, usedFallbackLetterhead, fallbackReason } = await buildPreviewBlob({
     layout: templateConfig.layout,
     typography: templateConfig.typography,
+    useSystemDefaultLetterhead: templateConfig.useSystemDefaultLetterhead,
     payload: {
       ...payload,
       // Backend-rendered QR (NexEagle logo centered), encoding the WhatsApp-delivery link --
@@ -123,12 +129,14 @@ export const buildPreviewFromRequest = async (
 };
 
 export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Promise<BuildPreviewBlobResult> => {
-  let templateFile = request.templateFile;
+  let templateFile = request.useSystemDefaultLetterhead ? null : request.templateFile;
   let usedFallbackLetterhead = false;
   let fallbackReason: LetterheadFallbackReason | undefined;
 
   if (!templateFile) {
-    if (request.templateUrl) {
+    if (request.useSystemDefaultLetterhead) {
+      fallbackReason = 'system-default-chosen';
+    } else if (request.templateUrl) {
       try {
         templateFile = await fetchTemplateAsFile(request.templateUrl);
       } catch (error) {
@@ -139,8 +147,8 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
       fallbackReason = 'no-template';
     }
 
-    // No template configured, or the configured one couldn't be loaded — use a branded default
-    // instead of a bare blank page (see defaultLetterhead.ts).
+    // No template configured, the configured one couldn't be loaded, or the system default was
+    // deliberately chosen — use a branded default instead of a bare blank page (defaultLetterhead.ts).
     if (!templateFile) {
       usedFallbackLetterhead = true;
       const [hospital, doctorProfile] = await Promise.all([
@@ -156,10 +164,12 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
           city: hospital.city,
           state: hospital.state,
           contact: hospital.contact,
+          email: hospital.email,
           registrationNumber: hospital.registrationNumber,
         },
         doctor: {
           name: request.doctorName ?? null,
+          qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
           specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
           registration: doctorProfile?.licenseNumber ?? null,
         },

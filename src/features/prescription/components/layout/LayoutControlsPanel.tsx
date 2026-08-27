@@ -1,6 +1,6 @@
 import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Ruler, Eye } from 'lucide-react';
+import { FileText, Ruler, Eye, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,8 @@ interface LayoutControlsPanelProps {
   onTemplateUpload: (file: File) => void;
   typography: TypographySettings;
   onTypographyChange: (next: Partial<TypographySettings>) => void;
-
+  useSystemDefault: boolean;
+  onUseSystemDefaultChange: (value: boolean) => void;
 
   validUpto: number;
   onValidUptoChange: (days: number) => void;
@@ -49,6 +50,8 @@ export const LayoutControlsPanel = ({
   onTemplateUpload,
   typography,
   onTypographyChange,
+  useSystemDefault,
+  onUseSystemDefaultChange,
   validUpto,
   onValidUptoChange,
   onSaveLayout,
@@ -101,27 +104,60 @@ export const LayoutControlsPanel = ({
           <CardDescription>{t('prescriptionDesigner.controls.uploadDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-center text-sm text-primary hover:bg-primary/10">
-            <span className="font-medium">{t('prescriptionDesigner.controls.uploadTitle')}</span>
-            <span className="text-xs text-primary/80">{t('prescriptionDesigner.controls.idealFor')}</span>
-            <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{t('prescriptionDesigner.controls.chooseFile')}</span>
-            <Input type="file" accept="application/pdf" className="hidden" onChange={handleTemplateChange} disabled={isAnalyzingTemplate} />
-          </label>
-          {templateError && <p className="text-sm text-destructive">{templateError}</p>}
-          {templateMeta && (
-            <div className="rounded-md border p-3 text-sm">
-              <p className="font-medium">{templateMeta.fileName}</p>
-              <p className="text-xs text-muted-foreground">
-                {templateMeta.fileSizeKb} KB · {templateMeta.orientationHint.toUpperCase()} layout · {templateMeta.pageSize.width} ×{' '}
-                {templateMeta.pageSize.height} {templateMeta.pageSize.unit}
-              </p>
-              {templateMeta.wasConverted && templateMeta.originalPageSize && (
-                <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Non-A4 upload converted from {templateMeta.originalPageSize.width} × {templateMeta.originalPageSize.height}{' '}
-                  {templateMeta.originalPageSize.unit} to standard A4 before previewing.
-                </p>
-              )}
+          <RadioGroup
+            value={useSystemDefault ? 'system-default' : 'upload'}
+            onValueChange={(value) => onUseSystemDefaultChange(value === 'system-default')}
+            className="space-y-3"
+          >
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-left">
+              <RadioGroupItem value="upload" className="mt-1" />
+              <div>
+                <p className="font-medium text-foreground">{t('prescriptionDesigner.controls.letterheadSource.upload')}</p>
+                <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.letterheadSource.uploadDescription')}</p>
+              </div>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-left">
+              <RadioGroupItem value="system-default" className="mt-1" />
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                <div>
+                  <p className="font-medium text-foreground">{t('prescriptionDesigner.controls.letterheadSource.systemDefault')}</p>
+                  <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.letterheadSource.systemDefaultDescription')}</p>
+                </div>
+              </div>
+            </label>
+          </RadioGroup>
+
+          {useSystemDefault ? (
+            <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+              <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>{t('prescriptionDesigner.controls.letterheadSource.usingDefaultNotice')}</p>
             </div>
+          ) : (
+            <>
+              <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-center text-sm text-primary hover:bg-primary/10">
+                <span className="font-medium">{t('prescriptionDesigner.controls.uploadTitle')}</span>
+                <span className="text-xs text-primary/80">{t('prescriptionDesigner.controls.idealFor')}</span>
+                <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{t('prescriptionDesigner.controls.chooseFile')}</span>
+                <Input type="file" accept="application/pdf" className="hidden" onChange={handleTemplateChange} disabled={isAnalyzingTemplate} />
+              </label>
+              {templateError && <p className="text-sm text-destructive">{templateError}</p>}
+              {templateMeta && (
+                <div className="rounded-md border p-3 text-sm">
+                  <p className="font-medium">{templateMeta.fileName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {templateMeta.fileSizeKb} KB · {templateMeta.orientationHint.toUpperCase()} layout · {templateMeta.pageSize.width} ×{' '}
+                    {templateMeta.pageSize.height} {templateMeta.pageSize.unit}
+                  </p>
+                  {templateMeta.wasConverted && templateMeta.originalPageSize && (
+                    <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Non-A4 upload converted from {templateMeta.originalPageSize.width} × {templateMeta.originalPageSize.height}{' '}
+                      {templateMeta.originalPageSize.unit} to standard A4 before previewing.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

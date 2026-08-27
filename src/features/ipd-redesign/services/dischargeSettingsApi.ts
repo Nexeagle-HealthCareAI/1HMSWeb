@@ -19,6 +19,7 @@ export interface DischargeSettings {
     fontWeight?: string;
     textColour?: string;
     uri?: string | null;
+    useSystemDefaultLetterhead?: boolean;
 }
 
 export interface UpdateDischargeSettingsInput extends Partial<Omit<DischargeSettings, 'hospitalId' | 'doctorId'>> {

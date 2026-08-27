@@ -33,11 +33,13 @@ export interface DefaultLetterheadHospitalInfo {
   city?: string | null;
   state?: string | null;
   contact?: string | null;
+  email?: string | null;
   registrationNumber?: string | null;
 }
 
 export interface DefaultLetterheadDoctorInfo {
   name?: string | null;
+  qualification?: string | null;
   specialization?: string | null;
   registration?: string | null;
 }
@@ -69,57 +71,67 @@ export const generateDefaultLetterheadTemplate = async ({
 
   const leftPad = mmToPt(layout.margins.left);
   const rightPad = mmToPt(layout.margins.right);
+  const rightEdge = A4_WIDTH_PT - rightPad;
   const maxTextWidth = A4_WIDTH_PT - leftPad - rightPad;
+  const columnWidth = maxTextWidth * 0.55; // leaves a gutter so the two header columns can't collide
   const headerBandBottomY = A4_HEIGHT_PT - mmToPt(layout.margins.top + layout.headerHeight);
   const footerBandTopY = mmToPt(layout.margins.bottom + layout.footerHeight);
 
-  const hospitalName = truncateToWidth((hospital?.name || 'Hospital / Clinic').toUpperCase(), boldFont, 15, maxTextWidth);
-  const addressLine = [hospital?.location, hospital?.city, hospital?.state].filter(Boolean).join(', ');
-  const contactLine = [
-    hospital?.contact ? `Ph: ${hospital.contact}` : null,
-    hospital?.registrationNumber ? `Reg. No: ${hospital.registrationNumber}` : null,
-  ].filter(Boolean).join('   |   ');
+  const drawRightAligned = (text: string, font: import('pdf-lib').PDFFont, size: number, y: number, color: ReturnType<typeof rgb>) => {
+    const clipped = truncateToWidth(text, font, size, columnWidth);
+    page.drawText(clipped, { x: rightEdge - font.widthOfTextAtSize(clipped, size), y, size, font, color });
+  };
+
+  // Header: doctor identity on the left, clinic identity on the right — two independent columns
+  // sharing the same top Y, since the two blocks rarely have the same number of lines.
+  let leftCursorY = A4_HEIGHT_PT - mmToPt(12);
   const doctorName = doctor?.name?.trim();
-  const doctorLine = doctorName
-    ? [doctorName, doctor?.specialization, doctor?.registration ? `Reg: ${doctor.registration}` : null].filter(Boolean).join('   |   ')
-    : null;
+  if (doctorName) {
+    page.drawText(truncateToWidth(doctorName, boldFont, 12, columnWidth), { x: leftPad, y: leftCursorY, size: 12, font: boldFont, color: TEXT_MAIN });
+    leftCursorY -= 14;
+  }
+  const qualificationLine = [doctor?.qualification, doctor?.specialization].filter(Boolean).join('   |   ');
+  if (qualificationLine) {
+    page.drawText(truncateToWidth(qualificationLine, regularFont, 9, columnWidth), { x: leftPad, y: leftCursorY, size: 9, font: regularFont, color: TEXT_LIGHT });
+    leftCursorY -= 12;
+  }
+  if (doctor?.registration) {
+    page.drawText(truncateToWidth(`Reg: ${doctor.registration}`, regularFont, 8.5, columnWidth), { x: leftPad, y: leftCursorY, size: 8.5, font: regularFont, color: TEXT_LIGHT });
+  }
 
-  let cursorY = A4_HEIGHT_PT - mmToPt(12);
-  page.drawText(hospitalName, { x: leftPad, y: cursorY, size: 15, font: boldFont, color: PRIMARY });
-  cursorY -= 16;
-
-  if (addressLine) {
-    page.drawText(truncateToWidth(addressLine, regularFont, 9, maxTextWidth), { x: leftPad, y: cursorY, size: 9, font: regularFont, color: TEXT_LIGHT });
-    cursorY -= 12;
-  }
-  if (contactLine) {
-    page.drawText(truncateToWidth(contactLine, regularFont, 9, maxTextWidth), { x: leftPad, y: cursorY, size: 9, font: regularFont, color: TEXT_LIGHT });
-    cursorY -= 12;
-  }
-  if (doctorLine) {
-    page.drawText(truncateToWidth(doctorLine, boldFont, 9.5, maxTextWidth), { x: leftPad, y: cursorY, size: 9.5, font: boldFont, color: TEXT_MAIN });
-  }
+  const hospitalName = (hospital?.name || 'Hospital / Clinic').toUpperCase();
+  drawRightAligned(hospitalName, boldFont, 14, A4_HEIGHT_PT - mmToPt(12), PRIMARY);
 
   page.drawLine({
     start: { x: leftPad, y: headerBandBottomY },
-    end: { x: A4_WIDTH_PT - rightPad, y: headerBandBottomY },
+    end: { x: rightEdge, y: headerBandBottomY },
     thickness: 0.75,
     color: BORDER,
   });
 
   page.drawLine({
     start: { x: leftPad, y: footerBandTopY },
-    end: { x: A4_WIDTH_PT - rightPad, y: footerBandTopY },
+    end: { x: rightEdge, y: footerBandTopY },
     thickness: 0.75,
     color: BORDER,
   });
-  page.drawText('System-generated default letterhead — no custom letterhead uploaded for this doctor.', {
-    x: leftPad,
-    y: Math.max(footerBandTopY - 10, mmToPt(6)),
-    size: 7,
-    font: regularFont,
-    color: TEXT_LIGHT,
-  });
+
+  // Footer: clinic address, then contact + email — sourced from the Hospital record, same fields
+  // the Hospital Branding Config page captures.
+  const addressLine = [hospital?.location, hospital?.city, hospital?.state].filter(Boolean).join(', ');
+  const contactEmailLine = [
+    hospital?.contact ? `Ph: ${hospital.contact}` : null,
+    hospital?.email || null,
+  ].filter(Boolean).join('   |   ');
+
+  let footerCursorY = Math.max(footerBandTopY - 11, mmToPt(6));
+  if (addressLine) {
+    page.drawText(truncateToWidth(addressLine, regularFont, 8, maxTextWidth), { x: leftPad, y: footerCursorY, size: 8, font: regularFont, color: TEXT_LIGHT });
+    footerCursorY -= 11;
+  }
+  if (contactEmailLine) {
+    page.drawText(truncateToWidth(contactEmailLine, regularFont, 8, maxTextWidth), { x: leftPad, y: footerCursorY, size: 8, font: regularFont, color: TEXT_LIGHT });
+  }
 
   const bytes = await doc.save();
   return new File([bytes as BlobPart], 'default-letterhead.pdf', { type: 'application/pdf' });

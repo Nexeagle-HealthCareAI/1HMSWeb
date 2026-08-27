@@ -92,6 +92,7 @@ export const mapTemplateToPreviewConfig = (template?: PrescriptionTemplateDescri
     layout,
     typography,
     templateUrl: template?.uri ?? null,
+    useSystemDefaultLetterhead: template?.useSystemDefaultLetterhead ?? false,
   };
 };
 

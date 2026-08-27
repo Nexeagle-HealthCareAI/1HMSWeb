@@ -1275,7 +1275,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     if (!docId || !hospId) return;
     prescriptionFieldConfigApi.getPrescriptionSettings(docId, hospId)
       .then((res) => {
-        const uri = res?.data?.uri;
+        // A deliberately-chosen system default means InkRxPad should draw the generated default
+        // (its own no-templateUrl branch already does this), not the uploaded template it's meant
+        // to be ignoring.
+        const uri = res?.data?.useSystemDefaultLetterhead ? null : res?.data?.uri;
         if (uri) setInkRxTemplateUrl(uri);
       })
       .catch(() => {}); // silently fail if not configured

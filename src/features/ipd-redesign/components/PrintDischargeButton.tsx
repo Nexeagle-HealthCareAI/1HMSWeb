@@ -15,6 +15,8 @@ import { DischargePreviewModal } from '@/components/shared/discharge-preview/com
 import type { DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
 import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import { useEffect } from 'react';
+import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -104,29 +106,61 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 } : undefined,
             };
 
-            // Check for custom letterhead
+            // Check for a custom or system-default letterhead
             let options: DischargeTemplateBoundOptions | null = null;
             if (layoutDoctorId && hospitalId) {
                 const settings = await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId);
-                if (settings?.uri) {
-                    const templateFile = await dischargeSettingsApi.fetchTemplateFile(settings.uri);
-                    if (templateFile) {
-                        const formatDateOnly = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined);
-                        
-                        options = {
-                            templateFile,
+                let templateFile: File | null = null;
+                if (settings?.useSystemDefaultLetterhead) {
+                    const doctorProfile = await doctorApi.getDoctorProfile(layoutDoctorId).catch(() => null);
+                    templateFile = await generateDefaultLetterheadTemplate({
+                        layout: {
                             margins: {
                                 top: settings.headerHeight ?? 20,
                                 bottom: settings.footerHeight ?? 20,
                                 left: settings.contentLeftMargin ?? 20,
                                 right: settings.contentRightMargin ?? 20,
                             },
-                            overflowStrategy: settings.overFlowPage === false ? 'blank' : 'reuse-template',
+                            headerHeight: 0,
+                            footerHeight: 0,
+                            overflowStrategy: 'reuse-template',
+                        },
+                        hospital: hospitalData && {
+                            name: hospitalData.name,
+                            location: hospitalData.location,
+                            city: hospitalData.city,
+                            state: hospitalData.state,
+                            contact: hospitalData.contact,
+                            email: hospitalData.email,
+                            registrationNumber: hospitalData.registrationNumber,
+                        },
+                        doctor: {
+                            name: admission.primaryDoctorName || null,
+                            qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
+                            specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+                            registration: doctorProfile?.licenseNumber ?? null,
+                        },
+                    });
+                } else if (settings?.uri) {
+                    templateFile = await dischargeSettingsApi.fetchTemplateFile(settings.uri);
+                }
+                if (templateFile) {
+                        const formatDateOnly = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined);
+
+                        options = {
+                            templateFile,
+                            margins: {
+                                top: settings?.headerHeight ?? 20,
+                                bottom: settings?.footerHeight ?? 20,
+                                left: settings?.contentLeftMargin ?? 20,
+                                right: settings?.contentRightMargin ?? 20,
+                            },
+                            overflowStrategy: settings?.overFlowPage === false ? 'blank' : 'reuse-template',
                             typography: {
-                                family: (settings.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
-                                size: settings.fontSize ?? 11,
-                                weight: (settings.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
-                                color: settings.textColour ?? '#111827',
+                                family: (settings?.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
+                                size: settings?.fontSize ?? 11,
+                                weight: (settings?.fontWeight as 'regular' | 'medium' | 'bold') ?? 'regular',
+                                color: settings?.textColour ?? '#111827',
                             },
                             payload: {
                                 admissionNo: printData.admissionNo,
@@ -165,7 +199,6 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                             },
                             printFields: layoutFields.map(f => ({ key: f.key, label: f.label, showInPrint: f.showInPrint })),
                         };
-                    }
                 }
             }
 

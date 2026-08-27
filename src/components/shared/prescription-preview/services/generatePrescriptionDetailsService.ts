@@ -29,6 +29,7 @@ export interface PrescriptionTemplateDescriptor {
   textColour: string | null;
   uri: string | null;
   validUpto?: number; // Number of days the prescription is valid
+  useSystemDefaultLetterhead?: boolean;
   createdBy: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
