@@ -15,6 +15,13 @@ test.describe('Default letterhead preview', () => {
     await page.goto('/configuration');
     await page.getByText('Prescriptions', { exact: true }).click();
 
+    // The editor is scoped to one doctor - pick the first department, then the first doctor in it.
+    const comboboxes = page.getByRole('combobox');
+    await comboboxes.nth(0).click();
+    await page.getByRole('option').first().click();
+    await comboboxes.nth(1).click();
+    await page.getByRole('option').first().click();
+
     await page.getByText('Use system-generated default', { exact: true }).click();
     await expect(page.getByText('Using the system-generated default letterhead', { exact: false })).toBeVisible();
 

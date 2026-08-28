@@ -12,7 +12,7 @@ test.describe('Doctor Fees - free follow-up window', () => {
     await page.goto('/configuration');
     await page.getByText('Doctor Fees', { exact: true }).click();
 
-    await expect(page.getByText('Free Follow-up (days)')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('columnheader', { name: 'Free Follow-up (days)' })).toBeVisible({ timeout: 10_000 });
 
     const firstRow = page.locator('table tbody tr').first();
     await expect(firstRow).toBeVisible();
