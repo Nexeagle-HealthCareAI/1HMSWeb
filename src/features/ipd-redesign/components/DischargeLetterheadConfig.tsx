@@ -145,7 +145,7 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                 {designer.useSystemDefault ? (
                                     <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
                                         <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
-                                        <p>Using the system-generated default letterhead: hospital name and doctor identity in the header, hospital address, contact and email in the footer — built from your Hospital and Doctor profiles.</p>
+                                        <p>Using the system-generated default letterhead: doctor name, qualifications, registration and experience alongside the clinic name and accreditation in the header, full clinic address, contact, email and website in the footer — built from your Hospital and Doctor profiles.</p>
                                     </div>
                                 ) : (
                                     <>

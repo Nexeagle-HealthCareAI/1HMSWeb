@@ -413,7 +413,7 @@
         "uploadDescription": "Use your own designed A4 PDF as the background.",
         "systemDefault": "Use system-generated default",
         "systemDefaultDescription": "Built automatically from your hospital and doctor details — no upload needed.",
-        "usingDefaultNotice": "Using the system-generated default letterhead: hospital name and doctor identity in the header, hospital address, contact and email in the footer — built from your Hospital and Doctor profiles."
+        "usingDefaultNotice": "Using the system-generated default letterhead: doctor name, qualifications, registration and experience alongside the clinic name and accreditation in the header, full clinic address, contact, email and website in the footer — built from your Hospital and Doctor profiles."
       },
       "layoutControls": "Layout controls",
       "layoutDescription": "Fine-tune margins, overflow behavior, and typography before saving.",

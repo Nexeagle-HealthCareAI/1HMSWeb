@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright e2e (real login state, screenshots/traces of a real environment — never commit)
+e2e/.auth
+e2e/report
+test-results
+playwright-report
+.env.e2e
