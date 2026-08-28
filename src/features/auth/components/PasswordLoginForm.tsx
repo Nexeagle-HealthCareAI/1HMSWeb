@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,11 @@ export const PasswordLoginForm: React.FC<PasswordLoginFormProps> = ({
   const [userid, setUserid] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // LoginLayout renders its children twice (separate mobile/desktop breakpoint trees), so a
+  // hardcoded id here would collide across both live instances - breaking the label/input
+  // association (and anything else relying on a unique id) at whichever breakpoint isn't active.
+  const useridFieldId = useId();
+  const passwordFieldId = useId();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +52,11 @@ export const PasswordLoginForm: React.FC<PasswordLoginFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="userid" className="text-sm font-medium">
+        <Label htmlFor={useridFieldId} className="text-sm font-medium">
           Mobile Number or Email
         </Label>
         <Input
-          id="userid"
+          id={useridFieldId}
           type="text"
           value={userid}
           onChange={(e) => setUserid(ValidationUtils.sanitizeInput(e.target.value))}
@@ -62,12 +67,12 @@ export const PasswordLoginForm: React.FC<PasswordLoginFormProps> = ({
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-sm font-medium">
+        <Label htmlFor={passwordFieldId} className="text-sm font-medium">
           Password
         </Label>
         <div className="relative">
           <Input
-            id="password"
+            id={passwordFieldId}
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(ValidationUtils.sanitizeInput(e.target.value))}

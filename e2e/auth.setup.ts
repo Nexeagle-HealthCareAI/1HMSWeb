@@ -12,9 +12,13 @@ setup('authenticate', async ({ page }) => {
   }
 
   await page.goto('/login');
-  await page.getByLabel('Mobile Number or Email').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Login' }).click();
+  // LoginLayout renders the form in both a mobile and a desktop breakpoint tree at once (only one
+  // of which is actually visible via CSS at any given viewport), so getByLabel/getByRole here can
+  // resolve two elements - `.and(':visible')` picks the one that's actually rendered.
+  const visible = page.locator(':visible');
+  await page.getByLabel('Mobile Number or Email').and(visible).fill(email);
+  await page.getByLabel('Password').and(visible).fill(password);
+  await page.getByRole('button', { name: 'Login' }).and(visible).click();
 
   // Any of these confirms a successful login - which one depends on the account's role
   // (admin / hospital staff / doctor). See PublicRoutes.tsx's role-based redirect.

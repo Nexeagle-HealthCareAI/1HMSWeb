@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useId, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +83,10 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   const { t } = useTranslation();
   const [errors, setErrors] = useState<{ mobile?: string; otp?: string }>({});
   const [hasAutoVerified, setHasAutoVerified] = useState(false);
+  // LoginLayout (and possibly other callers) renders this component's parent tree twice across
+  // responsive breakpoints, so hardcoded ids here would collide across both live instances.
+  const mobileFieldId = useId();
+  const otpFieldId = useId();
 
   const showHeader = Boolean(title || subtitle);
   const resolvedTitle = title ?? (showHeader ? getDefaultTitle() : undefined);
@@ -236,13 +240,13 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
 
       {/* Mobile Number Input */}
       <div className="space-y-2">
-        <Label htmlFor="mobile" className="text-sm font-medium">
+        <Label htmlFor={mobileFieldId} className="text-sm font-medium">
           {t('mobileVerification.labels.mobile')}
         </Label>
         <div className="relative">
           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            id="mobile"
+            id={mobileFieldId}
             type="tel"
             value={mobile}
             onChange={handleMobileChange}
@@ -289,11 +293,11 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
       {otpSent && (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="otp" className="text-sm font-medium">
+            <Label htmlFor={otpFieldId} className="text-sm font-medium">
               {t('mobileVerification.labels.otp')}
             </Label>
             <Input
-              id="otp"
+              id={otpFieldId}
               type="text"
               value={otp}
               onChange={handleOtpChange}
