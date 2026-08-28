@@ -6,6 +6,7 @@ import { Plus, X, Loader2, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { eprescriptionApi, type MedicineSearchItem } from '@/features/patient/services/eprescriptionApi';
 import type { DischargeMedicationItem } from '../services/dischargeSummaryApi';
+import { FieldTranslationTool } from '@/features/patient/components/FieldTranslationTool';
 
 interface Props {
     value: DischargeMedicationItem[];
@@ -167,9 +168,30 @@ export const DischargeMedicationsEditor: React.FC<Props> = ({ value, onChange, h
                                         </div>
                                     )}
                                 </div>
-                                <Input placeholder="Dosage" value={med.dosage ?? ''} disabled={disabled} onChange={e => updateRow(index, { dosage: e.target.value })} className={cn(inputCls, med.dosage && filledCls)} />
-                                <Input placeholder="Route" value={med.route ?? ''} disabled={disabled} onChange={e => updateRow(index, { route: e.target.value })} className={cn(inputCls, med.route && filledCls)} />
-                                <Input placeholder="Frequency" value={med.frequency ?? ''} disabled={disabled} onChange={e => updateRow(index, { frequency: e.target.value })} className={cn(inputCls, med.frequency && filledCls)} />
+                                <div className="relative">
+                                    {!disabled && (
+                                        <div className="absolute top-0.5 right-0.5 z-10">
+                                            <FieldTranslationTool text={med.dosage ?? ''} onTranslated={(newText) => updateRow(index, { dosage: newText })} />
+                                        </div>
+                                    )}
+                                    <Input placeholder="Dosage" value={med.dosage ?? ''} disabled={disabled} onChange={e => updateRow(index, { dosage: e.target.value })} className={cn(inputCls, 'pr-7', med.dosage && filledCls)} />
+                                </div>
+                                <div className="relative">
+                                    {!disabled && (
+                                        <div className="absolute top-0.5 right-0.5 z-10">
+                                            <FieldTranslationTool text={med.route ?? ''} onTranslated={(newText) => updateRow(index, { route: newText })} />
+                                        </div>
+                                    )}
+                                    <Input placeholder="Route" value={med.route ?? ''} disabled={disabled} onChange={e => updateRow(index, { route: e.target.value })} className={cn(inputCls, 'pr-7', med.route && filledCls)} />
+                                </div>
+                                <div className="relative">
+                                    {!disabled && (
+                                        <div className="absolute top-0.5 right-0.5 z-10">
+                                            <FieldTranslationTool text={med.frequency ?? ''} onTranslated={(newText) => updateRow(index, { frequency: newText })} />
+                                        </div>
+                                    )}
+                                    <Input placeholder="Frequency" value={med.frequency ?? ''} disabled={disabled} onChange={e => updateRow(index, { frequency: e.target.value })} className={cn(inputCls, 'pr-7', med.frequency && filledCls)} />
+                                </div>
                                 <div className="flex gap-1.5">
                                     <Input
                                         placeholder="e.g. 5" value={duration.value} disabled={disabled}
@@ -185,7 +207,14 @@ export const DischargeMedicationsEditor: React.FC<Props> = ({ value, onChange, h
                                     </select>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    <Input placeholder="Instructions" value={med.instructions ?? ''} disabled={disabled} onChange={e => updateRow(index, { instructions: e.target.value })} className={cn(inputCls, 'flex-1', med.instructions && filledCls)} />
+                                    <div className="relative flex-1">
+                                        {!disabled && (
+                                            <div className="absolute top-0.5 right-0.5 z-10">
+                                                <FieldTranslationTool text={med.instructions ?? ''} onTranslated={(newText) => updateRow(index, { instructions: newText })} />
+                                            </div>
+                                        )}
+                                        <Input placeholder="Instructions" value={med.instructions ?? ''} disabled={disabled} onChange={e => updateRow(index, { instructions: e.target.value })} className={cn(inputCls, 'w-full pr-7', med.instructions && filledCls)} />
+                                    </div>
                                     {!disabled && (
                                         <button type="button" onClick={() => removeRow(index)} className="shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
                                             <X className="h-3.5 w-3.5" />

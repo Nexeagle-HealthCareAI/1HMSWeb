@@ -1138,11 +1138,16 @@ const Field: React.FC<{ label: string; value?: string; readOnly: boolean; onChan
                 <p className="text-base text-slate-800 font-medium">{value || '—'}</p>
             </div>
         ) : (
-            <Input
-                value={value ?? ''}
-                onChange={e => onChange(e.target.value)}
-                className="h-12 text-base bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl"
-            />
+            <div className="relative">
+                <div className="absolute top-1.5 right-1.5 z-10">
+                    <FieldTranslationTool text={value ?? ''} onTranslated={onChange} />
+                </div>
+                <Input
+                    value={value ?? ''}
+                    onChange={e => onChange(e.target.value)}
+                    className="h-12 text-base bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl pr-8"
+                />
+            </div>
         )}
     </div>
 );

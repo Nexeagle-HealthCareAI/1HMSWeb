@@ -4425,8 +4425,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             </div>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-[180px]">
+                        <div className="flex-1 min-w-[180px] relative">
                           <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes / Customization</Label>
+                          <div className="absolute right-1 top-2">
+                            <FieldTranslationTool
+                              text={entry.notes || ''}
+                              onTranslated={(newText) => {
+                                const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                next[idx] = { ...entry, notes: newText };
+                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                              }}
+                            />
+                          </div>
                           <Input
                             placeholder="e.g. Avoid spicy food at night, Stop if dizziness"
                             value={entry.notes || ''}
@@ -4730,8 +4740,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               )}
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 relative">
                               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Dosage</Label>
+                              <div className="absolute top-0 right-0 z-10">
+                                <FieldTranslationTool
+                                  text={medication.dosage || ''}
+                                  onTranslated={(newText) => updateMedication(medication.id, 'dosage', newText)}
+                                />
+                              </div>
                               <Input
                                 placeholder="e.g., 500 mg"
                                 value={medication.dosage}
@@ -4743,8 +4759,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               {/* Dosage is optional */}
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 relative">
                               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Route</Label>
+                              <div className="absolute top-0 right-0 z-10">
+                                <FieldTranslationTool
+                                  text={medication.route || ''}
+                                  onTranslated={(newText) => updateMedication(medication.id, 'route', newText)}
+                                />
+                              </div>
                               <Input
                                 placeholder="e.g. Oral, IV, IM"
                                 value={medication.route}
@@ -4755,8 +4777,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               />
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 relative">
                               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</Label>
+                              <div className="absolute top-0 right-0 z-10">
+                                <FieldTranslationTool
+                                  text={medication.frequency || ''}
+                                  onTranslated={(newText) => updateMedication(medication.id, 'frequency', newText)}
+                                />
+                              </div>
                               <Input
                                 placeholder="e.g., BD, 1-0-1, 0-0-1"
                                 value={medication.frequency}
@@ -5184,8 +5212,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                             {/* Fitness Status */}
                             {selectedTemplate && selectedTemplate.showFields.fitnessStatus && (
-                              <div className="space-y-1">
+                              <div className="space-y-1 relative">
                                 <Label className="text-xs text-gray-600">Fitness status</Label>
+                                <div className="absolute top-0 right-0 z-10">
+                                  <FieldTranslationTool
+                                    text={entry.fitnessStatus || ''}
+                                    onTranslated={(newText) => {
+                                      const next = [...prescriptionData.certificates];
+                                      next[idx] = { ...entry, fitnessStatus: newText };
+                                      setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                    }}
+                                  />
+                                </div>
                                 <Input
                                   placeholder="e.g. Fit, Unfit, Restricted"
                                   value={entry.fitnessStatus || ''}
@@ -5201,8 +5239,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                             {/* Remarks */}
                             {selectedTemplate && selectedTemplate.showFields.remarks && (
-                              <div className="space-y-1">
+                              <div className="space-y-1 relative">
                                 <Label className="text-xs text-gray-600">Remarks/Restriction</Label>
+                                <div className="absolute top-0 right-0 z-10">
+                                  <FieldTranslationTool
+                                    text={entry.remarks || ''}
+                                    onTranslated={(newText) => {
+                                      const next = [...prescriptionData.certificates];
+                                      next[idx] = { ...entry, remarks: newText };
+                                      setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                    }}
+                                  />
+                                </div>
                                 <Input
                                   placeholder={selectedTemplate.defaultRemarksHint || "Remarks..."}
                                   value={entry.remarks || ''}
@@ -5539,8 +5587,17 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                          <div>
+                          <div className="relative">
                             <Label className="text-xs text-gray-600">Clinical Summary</Label>
+                            <div className="absolute top-0 right-0 z-10">
+                              <FieldTranslationTool
+                                text={prescriptionData.followUp.referral?.clinicalSummary || ''}
+                                onTranslated={(newText) => setPrescriptionData(prev => ({
+                                  ...prev,
+                                  followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, clinicalSummary: newText } }
+                                }))}
+                              />
+                            </div>
                             <Textarea
                               placeholder="Key symptoms, exam, diagnosis, meds, allergies..."
                               value={prescriptionData.followUp.referral?.clinicalSummary || ''}
@@ -5574,7 +5631,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               {customFields.map(field => renderCollapsibleSection(
                 field.key,
                 field.label,
-                <div className="px-1">{renderCustomFieldInput(field)}</div>
+                <div className="px-1 relative">
+                  {/* Number/date/boolean/select values aren't prose — nothing to translate */}
+                  {!['number', 'date', 'boolean', 'select'].includes(field.type || '') && (
+                    <div className="absolute top-0 right-1 z-10">
+                      <FieldTranslationTool
+                        text={customFieldValues[field.key] || ''}
+                        onTranslated={(newText) => setCustomFieldValue(field.key, newText)}
+                      />
+                    </div>
+                  )}
+                  {renderCustomFieldInput(field)}
+                </div>
               ))}
 
             </div>
