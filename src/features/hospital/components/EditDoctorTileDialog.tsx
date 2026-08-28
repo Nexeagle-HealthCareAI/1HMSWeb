@@ -67,6 +67,7 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
   // doesn't clobber them (the shared doctor-fees endpoint takes all three, non-nullable).
   const [ipdVisitFee, setIpdVisitFee] = useState(0);
   const [emergencyFee, setEmergencyFee] = useState(0);
+  const [freeFollowUpDays, setFreeFollowUpDays] = useState(0);
   const [qualification, setQualification] = useState<string[]>([]);
   const [departmentId, setDepartmentId] = useState('');
   const [specializations, setSpecializations] = useState<string[]>([]);
@@ -89,6 +90,7 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
       setOpdConsultFee(doctor.opdConsultFee != null ? String(doctor.opdConsultFee) : '');
       setIpdVisitFee(doctor.ipdVisitFee ?? 0);
       setEmergencyFee(doctor.emergencyFee ?? 0);
+      setFreeFollowUpDays(doctor.freeFollowUpDays ?? 0);
       setQualification(parseQualifications(doctor.qualification));
       setDepartmentId(doctor.departmentId || '');
       setSpecializations(doctor.specializations || []);
@@ -190,6 +192,7 @@ export const EditDoctorTileDialog: React.FC<EditDoctorTileDialogProps> = ({
             opdConsultFee: Number(opdConsultFee) || 0,
             ipdVisitFee,
             emergencyFee,
+            freeFollowUpDays,
           }, hospitalId);
         } catch (feeErr: any) {
           toast({
