@@ -13,6 +13,7 @@ import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscr
 import { useAuthStore } from '@/store/authStore';
 import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 import './InkRxPad.css';
 
 // A4 canvas dimensions at 96dpi
@@ -294,18 +295,34 @@ export const InkRxPad: React.FC<InkRxPadProps> = ({
 
         const loadDefaultLetterhead = async () => {
             try {
-                const hospital = hospitalId ? await hospitalApi.getHospitalById(hospitalId).catch(() => null) : null;
+                const [hospital, doctorProfile] = await Promise.all([
+                    hospitalId ? hospitalApi.getHospitalById(hospitalId).catch(() => null) : Promise.resolve(null),
+                    doctorId ? doctorApi.getDoctorProfile(doctorId).catch(() => null) : Promise.resolve(null),
+                ]);
                 const defaultFile = await generateDefaultLetterheadTemplate({
                     hospital: hospital && {
                         name: hospital.name,
                         location: hospital.location,
                         city: hospital.city,
                         state: hospital.state,
+                        pincode: hospital.pincode,
                         contact: hospital.contact,
+                        alternateContact: hospital.alternateContact,
                         email: hospital.email,
+                        website: hospital.website,
                         registrationNumber: hospital.registrationNumber,
+                        nabhNumber: hospital.nabhNumber,
                     },
-                    doctor: { name: user?.name ?? null },
+                    doctor: {
+                        name: user?.name ?? null,
+                        qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
+                        specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+                        department: doctorProfile?.primaryDepartmentName ?? null,
+                        registration: doctorProfile?.licenseNumber ?? null,
+                        medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+                        registrationYear: doctorProfile?.registrationYear ?? null,
+                        experienceYears: doctorProfile?.experienceYears ?? null,
+                    },
                 });
                 if (cancelled) return;
                 generatedObjectUrl = URL.createObjectURL(defaultFile);

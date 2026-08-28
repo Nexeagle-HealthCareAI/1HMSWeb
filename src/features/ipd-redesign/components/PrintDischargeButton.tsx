@@ -130,15 +130,23 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                             location: hospitalData.location,
                             city: hospitalData.city,
                             state: hospitalData.state,
+                            pincode: hospitalData.pincode,
                             contact: hospitalData.contact,
+                            alternateContact: hospitalData.alternateContact,
                             email: hospitalData.email,
+                            website: hospitalData.website,
                             registrationNumber: hospitalData.registrationNumber,
+                            nabhNumber: hospitalData.nabhNumber,
                         },
                         doctor: {
                             name: admission.primaryDoctorName || null,
                             qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
                             specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+                            department: doctorProfile?.primaryDepartmentName ?? null,
                             registration: doctorProfile?.licenseNumber ?? null,
+                            medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+                            registrationYear: doctorProfile?.registrationYear ?? null,
+                            experienceYears: doctorProfile?.experienceYears ?? null,
                         },
                     });
                 } else if (settings?.uri) {

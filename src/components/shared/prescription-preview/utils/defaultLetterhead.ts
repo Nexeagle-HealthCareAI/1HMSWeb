@@ -2,7 +2,7 @@
 // uploaded (or the uploaded one fails to load) — used as the fallback template fed into
 // buildTemplateBoundPreview, in place of the old bare-blank-page fallback. Same pdf-lib approach
 // as generateTemplateBoundPrescription.ts / usePrescriptionDesigner.ts's ensureA4Compatibility.
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
 import type { TemplateBoundLayoutConfig } from '../services/previewRenderer';
 
 const MM_TO_PT = 72 / 25.4;
@@ -32,16 +32,24 @@ export interface DefaultLetterheadHospitalInfo {
   location?: string | null;
   city?: string | null;
   state?: string | null;
+  pincode?: string | null;
   contact?: string | null;
+  alternateContact?: string | null;
   email?: string | null;
+  website?: string | null;
   registrationNumber?: string | null;
+  nabhNumber?: string | null;
 }
 
 export interface DefaultLetterheadDoctorInfo {
   name?: string | null;
   qualification?: string | null;
   specialization?: string | null;
+  department?: string | null;
   registration?: string | null;
+  medicalCouncil?: string | null;
+  registrationYear?: number | null;
+  experienceYears?: number | null;
 }
 
 export interface GenerateDefaultLetterheadOptions {
@@ -50,7 +58,7 @@ export interface GenerateDefaultLetterheadOptions {
   doctor?: DefaultLetterheadDoctorInfo | null;
 }
 
-const truncateToWidth = (text: string, font: import('pdf-lib').PDFFont, size: number, maxWidth: number) => {
+const truncateToWidth = (text: string, font: PDFFont, size: number, maxWidth: number) => {
   if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
   let clipped = text;
   while (clipped.length > 1 && font.widthOfTextAtSize(`${clipped}…`, size) > maxWidth) {
@@ -58,6 +66,14 @@ const truncateToWidth = (text: string, font: import('pdf-lib').PDFFont, size: nu
   }
   return `${clipped}…`;
 };
+
+interface StackedLine {
+  text: string;
+  font: PDFFont;
+  size: number;
+  color: ReturnType<typeof rgb>;
+  gap: number;
+}
 
 export const generateDefaultLetterheadTemplate = async ({
   layout = FALLBACK_LAYOUT,
@@ -77,30 +93,64 @@ export const generateDefaultLetterheadTemplate = async ({
   const headerBandBottomY = A4_HEIGHT_PT - mmToPt(layout.margins.top + layout.headerHeight);
   const footerBandTopY = mmToPt(layout.margins.bottom + layout.footerHeight);
 
-  const drawRightAligned = (text: string, font: import('pdf-lib').PDFFont, size: number, y: number, color: ReturnType<typeof rgb>) => {
-    const clipped = truncateToWidth(text, font, size, columnWidth);
-    page.drawText(clipped, { x: rightEdge - font.widthOfTextAtSize(clipped, size), y, size, font, color });
+  // Draws lines top-down from startY, stopping (rather than overflowing past floorY) once the
+  // reserved band runs out of room — a doctor with a small header/footer band configured still
+  // gets the most important lines instead of text spilling into the printable content area.
+  // null entries (a field with no data) are skipped without consuming space. The FIRST non-null
+  // line (the identity line - doctor/clinic name) always draws regardless of floorY: margins and
+  // header/footer height are user-configurable down to 0, and losing the name entirely to an
+  // aggressively small band is worse than letting it sit a little close to the divider.
+  const drawStackedLines = (
+    startY: number,
+    floorY: number,
+    align: 'left' | 'right',
+    maxWidth: number,
+    lines: Array<StackedLine | null>,
+  ) => {
+    let y = startY;
+    let drewIdentityLine = false;
+    for (const line of lines) {
+      if (!line) continue;
+      if (drewIdentityLine && y < floorY) break;
+      drewIdentityLine = true;
+      const clipped = truncateToWidth(line.text, line.font, line.size, maxWidth);
+      const x = align === 'right' ? rightEdge - line.font.widthOfTextAtSize(clipped, line.size) : leftPad;
+      page.drawText(clipped, { x, y, size: line.size, font: line.font, color: line.color });
+      y -= line.gap;
+    }
   };
 
   // Header: doctor identity on the left, clinic identity on the right — two independent columns
   // sharing the same top Y, since the two blocks rarely have the same number of lines.
-  let leftCursorY = A4_HEIGHT_PT - mmToPt(12);
+  const headerStartY = A4_HEIGHT_PT - mmToPt(12);
+  const headerFloorY = headerBandBottomY + 2;
+
   const doctorName = doctor?.name?.trim();
-  if (doctorName) {
-    page.drawText(truncateToWidth(doctorName, boldFont, 12, columnWidth), { x: leftPad, y: leftCursorY, size: 12, font: boldFont, color: TEXT_MAIN });
-    leftCursorY -= 14;
-  }
-  const qualificationLine = [doctor?.qualification, doctor?.specialization].filter(Boolean).join('   |   ');
-  if (qualificationLine) {
-    page.drawText(truncateToWidth(qualificationLine, regularFont, 9, columnWidth), { x: leftPad, y: leftCursorY, size: 9, font: regularFont, color: TEXT_LIGHT });
-    leftCursorY -= 12;
-  }
-  if (doctor?.registration) {
-    page.drawText(truncateToWidth(`Reg: ${doctor.registration}`, regularFont, 8.5, columnWidth), { x: leftPad, y: leftCursorY, size: 8.5, font: regularFont, color: TEXT_LIGHT });
-  }
+  const qualificationLine = [doctor?.qualification, doctor?.specialization || doctor?.department].filter(Boolean).join('   |   ');
+  const regParts = [
+    doctor?.registration ? `Reg: ${doctor.registration}` : null,
+    doctor?.medicalCouncil || null,
+  ].filter(Boolean).join(' — ');
+  const regLine = regParts + (doctor?.registrationYear ? ` (${doctor.registrationYear})` : '');
+  const experienceLine = doctor?.experienceYears ? `${doctor.experienceYears}+ years experience` : '';
+
+  drawStackedLines(headerStartY, headerFloorY, 'left', columnWidth, [
+    doctorName ? { text: doctorName, font: boldFont, size: 12, color: TEXT_MAIN, gap: 14 } : null,
+    qualificationLine ? { text: qualificationLine, font: regularFont, size: 9, color: TEXT_LIGHT, gap: 12 } : null,
+    regLine ? { text: regLine, font: regularFont, size: 8.5, color: TEXT_LIGHT, gap: 11 } : null,
+    experienceLine ? { text: experienceLine, font: regularFont, size: 8.5, color: TEXT_LIGHT, gap: 0 } : null,
+  ]);
 
   const hospitalName = (hospital?.name || 'Hospital / Clinic').toUpperCase();
-  drawRightAligned(hospitalName, boldFont, 14, A4_HEIGHT_PT - mmToPt(12), PRIMARY);
+  const accreditationLine = [
+    hospital?.registrationNumber ? `Reg No: ${hospital.registrationNumber}` : null,
+    hospital?.nabhNumber ? `NABH: ${hospital.nabhNumber}` : null,
+  ].filter(Boolean).join('   |   ');
+
+  drawStackedLines(headerStartY, headerFloorY, 'right', columnWidth, [
+    { text: hospitalName, font: boldFont, size: 14, color: PRIMARY, gap: 16 },
+    accreditationLine ? { text: accreditationLine, font: regularFont, size: 8.5, color: TEXT_LIGHT, gap: 0 } : null,
+  ]);
 
   page.drawLine({
     start: { x: leftPad, y: headerBandBottomY },
@@ -116,22 +166,25 @@ export const generateDefaultLetterheadTemplate = async ({
     color: BORDER,
   });
 
-  // Footer: clinic address, then contact + email — sourced from the Hospital record, same fields
-  // the Hospital Branding Config page captures.
-  const addressLine = [hospital?.location, hospital?.city, hospital?.state].filter(Boolean).join(', ');
-  const contactEmailLine = [
-    hospital?.contact ? `Ph: ${hospital.contact}` : null,
-    hospital?.email || null,
-  ].filter(Boolean).join('   |   ');
+  // Footer: clinic address, then contact, then email/website — sourced from the Hospital record,
+  // same fields the Hospital Branding Config page captures.
+  const addressLine = [
+    hospital?.location,
+    hospital?.city,
+    [hospital?.state, hospital?.pincode].filter(Boolean).join(' - '),
+  ].filter(Boolean).join(', ');
+  const phoneGroup = [hospital?.contact, hospital?.alternateContact].filter(Boolean).join(' / ');
+  const contactLine = phoneGroup ? `Ph: ${phoneGroup}` : '';
+  const emailWebLine = [hospital?.email, hospital?.website].filter(Boolean).join('   |   ');
 
-  let footerCursorY = Math.max(footerBandTopY - 11, mmToPt(6));
-  if (addressLine) {
-    page.drawText(truncateToWidth(addressLine, regularFont, 8, maxTextWidth), { x: leftPad, y: footerCursorY, size: 8, font: regularFont, color: TEXT_LIGHT });
-    footerCursorY -= 11;
-  }
-  if (contactEmailLine) {
-    page.drawText(truncateToWidth(contactEmailLine, regularFont, 8, maxTextWidth), { x: leftPad, y: footerCursorY, size: 8, font: regularFont, color: TEXT_LIGHT });
-  }
+  const footerStartY = Math.max(footerBandTopY - 11, mmToPt(6));
+  const footerFloorY = mmToPt(5);
+
+  drawStackedLines(footerStartY, footerFloorY, 'left', maxTextWidth, [
+    addressLine ? { text: addressLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 11 } : null,
+    contactLine ? { text: contactLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 11 } : null,
+    emailWebLine ? { text: emailWebLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 0 } : null,
+  ]);
 
   const bytes = await doc.save();
   return new File([bytes as BlobPart], 'default-letterhead.pdf', { type: 'application/pdf' });

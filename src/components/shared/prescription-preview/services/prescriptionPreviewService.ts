@@ -163,15 +163,23 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
           location: hospital.location,
           city: hospital.city,
           state: hospital.state,
+          pincode: hospital.pincode,
           contact: hospital.contact,
+          alternateContact: hospital.alternateContact,
           email: hospital.email,
+          website: hospital.website,
           registrationNumber: hospital.registrationNumber,
+          nabhNumber: hospital.nabhNumber,
         },
         doctor: {
           name: request.doctorName ?? null,
           qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
           specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+          department: doctorProfile?.primaryDepartmentName ?? null,
           registration: doctorProfile?.licenseNumber ?? null,
+          medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+          registrationYear: doctorProfile?.registrationYear ?? null,
+          experienceYears: doctorProfile?.experienceYears ?? null,
         },
       });
     }
