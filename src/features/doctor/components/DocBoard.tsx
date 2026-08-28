@@ -339,6 +339,9 @@ export const ClinicalDashboard: React.FC = () => {
       hospitalId,
       doctorId,
       doctorName: appointment.doctorName,
+      // Without this, previewRenderer.ts falls back to new Date() -- invisible on the Current tab
+      // (today's appointments), wrong on Past/Future (any date but today).
+      appointmentDate: appointment.startAt,
     };
   };
 
@@ -951,7 +954,10 @@ export const ClinicalDashboard: React.FC = () => {
     const encodedPatientId = encodeURIComponent(appointment.patientId);
     const encodedAppointmentId = appointment.appointmentId ? encodeURIComponent(appointment.appointmentId) : '';
     const appointmentParam = encodedAppointmentId ? `&appointmentId=${encodedAppointmentId}` : '';
-    navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}`);
+    // Carried through so PatientProfilePage's prescription preview shows this appointment's own
+    // date instead of falling back to today — only correct by accident on the Current tab.
+    const dateParam = appointment.startAt ? `&appointmentDate=${encodeURIComponent(appointment.startAt)}` : '';
+    navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}${dateParam}`);
   };
 
   // Deep-link straight into the full-screen InkRx handwriting pad on the patient workspace
@@ -960,7 +966,8 @@ export const ClinicalDashboard: React.FC = () => {
     const encodedPatientId = encodeURIComponent(appointment.patientId);
     const encodedAppointmentId = appointment.appointmentId ? encodeURIComponent(appointment.appointmentId) : '';
     const appointmentParam = encodedAppointmentId ? `&appointmentId=${encodedAppointmentId}` : '';
-    navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}&tab=inkrx`);
+    const dateParam = appointment.startAt ? `&appointmentDate=${encodeURIComponent(appointment.startAt)}` : '';
+    navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}${dateParam}&tab=inkrx`);
   };
 
   useLayoutEffect(() => {

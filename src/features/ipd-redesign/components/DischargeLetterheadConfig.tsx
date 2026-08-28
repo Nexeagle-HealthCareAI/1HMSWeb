@@ -16,6 +16,10 @@ import { useDischargeDesigner, type MarginConfig, type TypographySettings } from
 
 const clampMargin = (value: number) => (Number.isNaN(value) ? 10 : Math.min(Math.max(value, 0), 1000));
 
+// Mirrors the backend's CK_DischargeSettings_TextColour_Hex check (#RRGGBB or #RRGGBBAA) --
+// caught here before Save is even enabled, not just left for the server to reject.
+const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
+
 /**
  * Configuration tab: design a discharge-summary letterhead (upload a PDF background, reserve
  * header/footer margins over it, set typography) — per doctor+hospital. Mirrors
@@ -55,6 +59,8 @@ export const DischargeLetterheadConfig: React.FC = () => {
         const file = event.target.files?.[0];
         if (file) { designer.handleTemplateUpload(file); event.target.value = ''; }
     };
+
+    const isColorValid = HEX_COLOR_PATTERN.test(designer.typography.color);
 
     const save = async () => {
         await designer.saveLayoutSettings();
@@ -250,8 +256,14 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                         <Label htmlFor="font-color">Text color</Label>
                                         <div className="flex items-center gap-3">
                                             <Input id="font-color" type="color" className="h-10 w-16 cursor-pointer p-1" value={designer.typography.color} onChange={(e) => designer.updateTypography({ color: e.target.value })} />
-                                            <Input value={designer.typography.color} onChange={(e) => designer.updateTypography({ color: e.target.value })} />
+                                            <Input
+                                                value={designer.typography.color}
+                                                onChange={(e) => designer.updateTypography({ color: e.target.value })}
+                                                aria-invalid={!isColorValid}
+                                                className={!isColorValid ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                                            />
                                         </div>
+                                        {!isColorValid && <p className="text-xs text-destructive">Enter a valid hex color, like #111827.</p>}
                                     </div>
                                 </div>
 
@@ -259,7 +271,7 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                     <Button type="button" variant="outline" onClick={() => designer.generatePreview().then(() => designer.openPreviewInNewTab())}>
                                         <Eye className="h-4 w-4 mr-2" /> Preview
                                     </Button>
-                                    <Button type="button" onClick={save} disabled={designer.isSavingLayout}>
+                                    <Button type="button" onClick={save} disabled={designer.isSavingLayout || !isColorValid}>
                                         {designer.isSavingLayout ? 'Saving…' : 'Save'}
                                     </Button>
                                 </div>

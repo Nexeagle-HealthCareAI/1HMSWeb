@@ -440,6 +440,7 @@
         "size": "Font size",
         "weight": "Weight",
         "color": "Text color",
+        "colorInvalid": "Enter a valid hex color, like #111827.",
         "selectFont": "Select font",
         "selectWeight": "Select weight",
         "pt": "pt"

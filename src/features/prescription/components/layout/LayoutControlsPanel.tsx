@@ -37,6 +37,10 @@ const clampMargin = (value: number) => {
   return Math.min(Math.max(value, 0), 1000);
 };
 
+// Mirrors the backend's CK_PrescriptionSettings_TextColour_Hex check (#RRGGBB or #RRGGBBAA) --
+// caught here before Save is even enabled, not just left for the server to reject.
+const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
+
 // Labels moved into component to use t() function
 
 export const LayoutControlsPanel = ({
@@ -59,6 +63,7 @@ export const LayoutControlsPanel = ({
   onPreview,
 }: LayoutControlsPanelProps) => {
   const { t } = useTranslation();
+  const isColorValid = HEX_COLOR_PATTERN.test(typography.color);
 
   const marginLabels: Record<keyof MarginConfig, string> = {
     top: t('prescriptionDesigner.controls.margins.headerHeight'),
@@ -294,8 +299,16 @@ export const LayoutControlsPanel = ({
                   value={typography.color}
                   onChange={(event) => onTypographyChange({ color: event.target.value })}
                 />
-                <Input value={typography.color} onChange={(event) => onTypographyChange({ color: event.target.value })} />
+                <Input
+                  value={typography.color}
+                  onChange={(event) => onTypographyChange({ color: event.target.value })}
+                  aria-invalid={!isColorValid}
+                  className={!isColorValid ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                />
               </div>
+              {!isColorValid && (
+                <p className="text-xs text-destructive">{t('prescriptionDesigner.controls.typography.colorInvalid')}</p>
+              )}
             </div>
           </div>
 
@@ -343,7 +356,7 @@ export const LayoutControlsPanel = ({
               <Eye className="h-4 w-4 mr-2" />
               {t('prescriptionDesigner.controls.actions.preview')}
             </Button>
-            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout} className="w-full sm:w-auto">
+            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout || !isColorValid} className="w-full sm:w-auto">
               {isSavingLayout ? t('prescriptionDesigner.controls.actions.saving') : t('prescriptionDesigner.controls.actions.save')}
             </Button>
           </div>
