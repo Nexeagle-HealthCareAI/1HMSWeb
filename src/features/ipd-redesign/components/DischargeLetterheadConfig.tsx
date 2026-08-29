@@ -107,7 +107,7 @@ export const DischargeLetterheadConfig: React.FC = () => {
                             </Select>
                         </div>
                         <Button variant="outline" size="sm" className="h-10 px-4 gap-2 whitespace-nowrap"
-                            onClick={() => designer.generatePreview().then(() => designer.openPreviewInNewTab())} disabled={!selectedDoctorId}>
+                            onClick={() => designer.generatePreview().then((url) => { if (url) window.open(url, '_blank', 'noopener'); })} disabled={!selectedDoctorId}>
                             <Eye className="h-4 w-4" /> Live Preview
                         </Button>
                     </div>
@@ -268,7 +268,7 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                 </div>
 
                                 <div className="flex justify-end gap-3">
-                                    <Button type="button" variant="outline" onClick={() => designer.generatePreview().then(() => designer.openPreviewInNewTab())}>
+                                    <Button type="button" variant="outline" onClick={() => designer.generatePreview().then((url) => { if (url) window.open(url, '_blank', 'noopener'); })}>
                                         <Eye className="h-4 w-4 mr-2" /> Preview
                                     </Button>
                                     <Button type="button" onClick={save} disabled={designer.isSavingLayout || !isColorValid}>

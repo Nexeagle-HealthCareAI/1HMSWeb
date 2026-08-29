@@ -29,3 +29,8 @@ e2e/report
 test-results
 playwright-report
 .env.e2e
+.playwright-mcp
+
+# Claude Code project-scoped MCP config — machine-specific absolute paths (npm global install
+# location), personal dev-tool setup, not shared team config.
+.mcp.json

@@ -261,7 +261,10 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
         }
     }, [doctorId, hospitalId, ensureA4Compatibility, margins, revokePreviewUrl, refetchSettings, toast]);
 
-    const generatePreview = useCallback(async () => {
+    // Returns the freshly generated blob URL (or null on failure) so callers that need to act on it
+    // immediately - e.g. opening it in a new tab - don't read a stale previewUrl closure captured
+    // before this render's state update lands.
+    const generatePreview = useCallback(async (): Promise<string | null> => {
         setIsGeneratingPreview(true);
         try {
             // System default is a real generated letterhead, not the mock preview below — show the
@@ -300,7 +303,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
                 const nextUrl = URL.createObjectURL(defaultFile);
                 revokePreviewUrl(previewUrl);
                 setPreviewUrl(nextUrl);
-                return;
+                return nextUrl;
             }
 
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -340,9 +343,11 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
             const nextUrl = URL.createObjectURL(blob);
             revokePreviewUrl(previewUrl);
             setPreviewUrl(nextUrl);
+            return nextUrl;
         } catch (error) {
             console.error('Failed to generate discharge letterhead preview', error);
             toast({ title: 'Could not generate preview', variant: 'destructive' });
+            return null;
         } finally {
             setIsGeneratingPreview(false);
         }

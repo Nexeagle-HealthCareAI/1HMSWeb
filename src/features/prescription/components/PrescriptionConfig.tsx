@@ -139,7 +139,7 @@ export const PrescriptionConfig: React.FC = () => {
                                 onValidUptoChange={designer.setValidUpto}
                                 onSaveLayout={designer.saveLayoutSettings}
                                 isSavingLayout={designer.isSavingLayout}
-                                onPreview={() => designer.generatePreview().then(() => designer.openPreviewInNewTab())}
+                                onPreview={() => designer.generatePreview().then((url) => { if (url) window.open(url, '_blank', 'noopener'); })}
                             />
                         </div>
                         <div className="space-y-6">

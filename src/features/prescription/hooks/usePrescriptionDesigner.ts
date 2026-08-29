@@ -615,7 +615,10 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
     }
   }, [ensureA4Compatibility, layoutMargins, previewUrl, refetchLayoutSettings, revokePreviewUrl, toast, uploadTemplateToServer]);
 
-  const generatePreview = useCallback(async () => {
+  // Returns the freshly generated blob URL (or null on failure) so callers that need to act on it
+  // immediately - e.g. opening it in a new tab - don't read a stale previewUrl closure captured
+  // before this render's state update lands.
+  const generatePreview = useCallback(async (): Promise<string | null> => {
     setIsGeneratingPreview(true);
     try {
       // System default is a real generated letterhead, not the mock preview drawn below — show
@@ -658,7 +661,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
           title: t('prescriptionDesigner.messages.previewGenerated'),
           description: t('prescriptionDesigner.messages.previewGeneratedDesc'),
         });
-        return;
+        return nextUrl;
       }
 
       const doc = new jsPDF({
@@ -745,6 +748,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
         title: t('prescriptionDesigner.messages.previewGenerated'),
         description: t('prescriptionDesigner.messages.previewGeneratedDesc'),
       });
+      return nextUrl;
     } catch (error) {
       console.error('Failed to generate preview', error);
       toast({
@@ -752,6 +756,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
         description: t('prescriptionDesigner.errors.previewFailedDesc'),
         variant: 'destructive',
       });
+      return null;
     } finally {
       setIsGeneratingPreview(false);
     }
