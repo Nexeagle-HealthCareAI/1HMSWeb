@@ -144,34 +144,34 @@ export interface UpdateLabConfigRequest {
 }
 
 export const pathologyService = {
-  createOrder: async (request: CreatePathologyOrderRequest): Promise<CreatePathologyOrderResponse> => {
-    const response = await api.post<CreatePathologyOrderResponse>('/api/v1/pathology/order', request);
+  createOrder: async (hospitalId: string, request: CreatePathologyOrderRequest): Promise<CreatePathologyOrderResponse> => {
+    const response = await api.post<CreatePathologyOrderResponse>(`/api/v1/PathologyOrder/${hospitalId}`, request);
     return response.data;
   },
 
-  getOrders: async (status?: string): Promise<PathologyOrderDto[]> => {
-    const url = status ? `/api/v1/pathology/orders?status=${status}` : '/api/v1/pathology/orders';
+  getOrders: async (hospitalId: string, status?: string): Promise<PathologyOrderDto[]> => {
+    const url = status ? `/api/v1/PathologyOrder/${hospitalId}?status=${status}` : `/api/v1/PathologyOrder/${hospitalId}`;
     const response = await api.get<PathologyOrderDto[]>(url);
     return response.data;
   },
 
-  getOrderById: async (orderId: string): Promise<PathologyOrderDto> => {
-    const response = await api.get<PathologyOrderDto>(`/api/v1/pathology/orders/${orderId}`);
+  getOrderById: async (hospitalId: string, orderId: string): Promise<PathologyOrderDto> => {
+    const response = await api.get<PathologyOrderDto>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}`);
     return response.data;
   },
 
-  enterResult: async (orderId: string, orderLineId: string, request: EnterPathologyResultRequest): Promise<boolean> => {
-    const response = await api.post<{ success: boolean }>(`/api/v1/pathology/orders/${orderId}/lines/${orderLineId}/result`, request);
+  enterResult: async (hospitalId: string, orderId: string, orderLineId: string, request: EnterPathologyResultRequest): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/result`, request);
     return response.data.success;
   },
 
-  generateReport: async (orderId: string, request: GeneratePathologyReportRequest): Promise<GeneratePathologyReportResponse> => {
-    const response = await api.post<GeneratePathologyReportResponse>(`/api/v1/pathology/orders/${orderId}/report`, request);
+  generateReport: async (hospitalId: string, orderId: string, request: GeneratePathologyReportRequest): Promise<GeneratePathologyReportResponse> => {
+    const response = await api.post<GeneratePathologyReportResponse>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report`, request);
     return response.data;
   },
 
-  approveReport: async (orderId: string, reportId: string): Promise<boolean> => {
-    const response = await api.post<{ success: boolean }>(`/api/v1/pathology/orders/${orderId}/report/${reportId}/approve`, {});
+  approveReport: async (hospitalId: string, orderId: string, reportId: string): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report/${reportId}/approve`, {});
     return response.data.success;
   },
 

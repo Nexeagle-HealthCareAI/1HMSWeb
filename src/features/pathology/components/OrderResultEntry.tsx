@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface OrderResultEntryProps {
+  hospitalId: string;
   orderId: string;
   orderLine: PathologyOrderLineDto;
   onSuccess: () => void;
@@ -20,7 +21,7 @@ interface TestParam {
   max?: number;
 }
 
-export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({ orderId, orderLine, onSuccess }) => {
+export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({ hospitalId, orderId, orderLine, onSuccess }) => {
   const [params, setParams] = useState<TestParam[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [interpretation, setInterpretation] = useState('');
@@ -57,7 +58,7 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({ orderId, ord
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await pathologyService.enterResult(orderId, orderLine.orderLineId, {
+      await pathologyService.enterResult(hospitalId, orderId, orderLine.orderLineId, {
         resultValuesJson: JSON.stringify(values),
         interpretation
       });

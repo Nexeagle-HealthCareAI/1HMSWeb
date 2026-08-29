@@ -91,6 +91,7 @@ const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPrevie
 const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
 const PathologyDashboard = lazy(() => import('@/features/pathology/components/PathologyDashboard').then(module => ({ default: module.PathologyDashboard })));
 const PharmacyRetailDashboard = lazy(() => import('@/features/pharmacy/components/PharmacyRetailDashboard').then(module => ({ default: module.PharmacyRetailDashboard })));
+const HrDashboardPage = lazy(() => import('@/features/hr/pages/HrDashboardPage').then(module => ({ default: module.HrDashboardPage })));
 
 
 // Loading component for lazy routes
@@ -650,6 +651,18 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
+
+            {/* 1HR Suite — Hospital Workforce Management */}
+            <Route
+              path="/hr"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/hr')}>
+                  <MainLayout>
+                    <HrDashboardPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
 
           </>
         ) : null}

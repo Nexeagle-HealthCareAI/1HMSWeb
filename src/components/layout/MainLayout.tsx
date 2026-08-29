@@ -83,7 +83,8 @@ import {
   LayoutGrid,
   GitBranch,
   ClipboardList,
-  Pill
+  Pill,
+  Users2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -264,6 +265,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
     { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
     { id: 'leads', name: 'HCRM', icon: Megaphone, path: '/leads' },
+    { id: 'hr', name: '1HR Suite', icon: Users2, path: '/hr' },
   ];
 
   // Filter navigation items by real backend-granted PermissionKeys (boardAccess.ts is the

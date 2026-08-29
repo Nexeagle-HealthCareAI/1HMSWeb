@@ -416,6 +416,60 @@ export const IPD_API_ENDPOINTS = {
     },
     DECIDE: 'credit-approvals/decide',
   },
+
+  // ─── 1HR Suite — Hospital Workforce Management ────────────────────────────
+  HR: {
+    // Employee Vault
+    EMPLOYEES: (hospitalId: string, dept?: string, type?: string, page?: number) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`];
+      if (dept) parts.push(`dept=${encodeURIComponent(dept)}`);
+      if (type) parts.push(`type=${encodeURIComponent(type)}`);
+      if (page) parts.push(`page=${page}`);
+      return `hr/employees?${parts.join('&')}`;
+    },
+    EMPLOYEE_DETAIL: (id: string) => `hr/employees/${encodeURIComponent(id)}`,
+    CREATE_EMPLOYEE: 'hr/employees',
+    UPDATE_EMPLOYEE: (id: string) => `hr/employees/${encodeURIComponent(id)}`,
+
+    // Credentials
+    ADD_CREDENTIAL: 'hr/credentials',
+
+    // Shifts & Roster
+    SHIFTS: (hospitalId: string) => `hr/shifts?hospitalId=${encodeURIComponent(hospitalId)}`,
+    ROSTER: (hospitalId: string, from: string, to: string, deptId?: string) => {
+      const parts = [`hospitalId=${encodeURIComponent(hospitalId)}`, `from=${from}`, `to=${to}`];
+      if (deptId) parts.push(`deptId=${encodeURIComponent(deptId)}`);
+      return `hr/roster?${parts.join('&')}`;
+    },
+    ROSTER_UPSERT: 'hr/roster/upsert',
+
+    // Attendance
+    ATTENDANCE_LOG: 'hr/attendance/log',
+    ATTENDANCE_TODAY: (hospitalId: string) => `hr/attendance/today?hospitalId=${encodeURIComponent(hospitalId)}`,
+
+    // Leave
+    LEAVE_REQUESTS: (hospitalId: string) => `hr/leave/requests?hospitalId=${encodeURIComponent(hospitalId)}`,
+    LEAVE_BALANCE: (employeeId: string) => `hr/leave/balances?employeeId=${encodeURIComponent(employeeId)}`,
+    LEAVE_SUBMIT: 'hr/leave/request',
+    LEAVE_DECIDE: (id: string) => `hr/leave/${encodeURIComponent(id)}/decide`,
+
+    // Payroll
+    PAYROLL_RUN: (hospitalId: string, month: number, year: number) =>
+      `hr/payroll/run?hospitalId=${encodeURIComponent(hospitalId)}&month=${month}&year=${year}`,
+    PAYROLL_INITIATE: 'hr/payroll/run',
+    PAYROLL_DISBURSE: (runId: string) => `hr/payroll/disburse/${encodeURIComponent(runId)}`,
+    PAYROLL_BANK_EXPORT: (runId: string, format: 'HDFC' | 'SBI' | 'GENERIC') =>
+      `hr/payroll/export/${encodeURIComponent(runId)}?format=${format}`,
+    PAYSLIP_BULK_PDF: (runId: string) => `hr/payroll/${encodeURIComponent(runId)}/payslips/pdf`,
+    PAYSLIP_WHATSAPP_PUSH: (runId: string) => `hr/payroll/${encodeURIComponent(runId)}/payslips/whatsapp`,
+
+    // KPI & Alerts
+    KPI_SUMMARY: (hospitalId: string) => `hr/kpi-summary?hospitalId=${encodeURIComponent(hospitalId)}`,
+    LICENSE_ALERTS: (hospitalId: string) => `hr/license-alerts?hospitalId=${encodeURIComponent(hospitalId)}`,
+
+    // Biometric (ZKTeco webhook receiver)
+    BIOMETRIC_PUNCH: 'hr/biometric/punch',
+  },
 } as const;
 
 // Default headers
