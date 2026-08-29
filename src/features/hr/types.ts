@@ -343,9 +343,34 @@ export interface BiometricPunchWebhookPayload {
   verificationMode: 'FINGERPRINT' | 'FACE' | 'CARD' | 'PIN';
 }
 
+// ─── Create Employee Request ────────────────────────────────────────────────
+// Mirrors CreateHrEmployeeRequestModel.cs -- only these fields are currently
+// persisted by the backend. hospitalId is required; userId is stamped
+// server-side from the caller's own identity, never sent by the client.
+
+export interface CreateHrEmployeeRequest {
+  hospitalId: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  dateOfBirth: string; // 'yyyy-MM-dd'
+  contactNumber: string;
+  email?: string;
+  employmentType: EmploymentType;
+  departmentId: string;
+  designation: string;
+  dateOfJoining: string; // 'yyyy-MM-dd'
+  panNumber: string;
+  payrollTrack: PayrollTrack;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+}
+
 // ─── Filter/Pagination Helpers ─────────────────────────────────────────────
 
 export interface EmployeeFilters {
+  hospitalId?: string;
   search?: string;
   departmentId?: string;
   employmentType?: EmploymentType;

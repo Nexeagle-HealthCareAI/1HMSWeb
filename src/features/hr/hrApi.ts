@@ -3,10 +3,12 @@
 // Mock data is used when the backend endpoint is not yet available.
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 // No mock data needed, everything is wired to the backend API
 import type {
   HrEmployee,
   EmployeeFilters,
+  CreateHrEmployeeRequest,
   HrLeaveRequest,
   HrLeaveBalance,
   HrPayrollRun,
@@ -196,11 +198,11 @@ export function useGetPayrollRun(hospitalId: string, month: number, year: number
 // ─── Attendance ───────────────────────────────────────────────────────────────
 
 export function useGetAttendanceToday(hospitalId: string, date: Date = new Date()) {
+  const dateStr = format(date, 'yyyy-MM-dd');
   return useQuery<HrAttendanceLog[]>({
-    queryKey: HR_QUERY_KEYS.attendanceToday(hospitalId, date),
+    queryKey: HR_QUERY_KEYS.attendance(hospitalId, dateStr),
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const dateStr = format(date, 'yyyy-MM-dd');
       const response = await fetch(`/api/v1/hr/attendance-today?hospitalId=${hospitalId}&date=${dateStr}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -272,7 +274,7 @@ export function useDutyRoster(hospitalId: string, startDate: Date, endDate: Date
 export function useCreateEmployee() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Partial<HrEmployee>) => {
+    mutationFn: async (data: CreateHrEmployeeRequest) => {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/hr/employees', {
         method: 'POST',

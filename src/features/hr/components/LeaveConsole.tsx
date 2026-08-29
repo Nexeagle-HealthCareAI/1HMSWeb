@@ -16,7 +16,7 @@ import type { HrLeaveRequest, LeaveStatus } from '../types';
 
 export const LeaveConsole: React.FC<{ hospitalId: string }> = ({ hospitalId }) => {
   const { data: leaves, isLoading } = useLeaveRequests(hospitalId);
-  const { data: employees } = useHrEmployees();
+  const { data: employees } = useHrEmployees({ hospitalId });
   const decideLeave = useDecideLeave();
 
   const [filterStatus, setFilterStatus] = useState<LeaveStatus | 'ALL'>('PENDING');

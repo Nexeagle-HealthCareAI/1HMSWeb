@@ -19,14 +19,14 @@ import { format, subMonths } from 'date-fns';
 import { useRunPayroll, downloadBankExport, useGetPayslipsByRun, useDispatchPayslips } from '../hrApi';
 import { usePayslipPdf } from '../hooks/usePayslipPdf';
 import { PayslipDocument } from './PayslipDocument';
-import { HrPayslip } from '../types';
+import { HrPayslipDto } from '../types';
 
 export const PayrollWizard: React.FC<{ hospitalId: string }> = ({ hospitalId }) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedMonth, setSelectedMonth] = useState(subMonths(new Date(), 1));
   const [payrollRunId, setPayrollRunId] = useState<string | null>(null);
   const [totals, setTotals] = useState<{ net: number, count: number } | null>(null);
-  const [selectedPayslipPreview, setSelectedPayslipPreview] = useState<HrPayslip | null>(null);
+  const [selectedPayslipPreview, setSelectedPayslipPreview] = useState<HrPayslipDto | null>(null);
   
   const { mutate: runPayroll, isPending: isRunning, error: runError } = useRunPayroll();
   const { mutate: dispatchWhatsApp, isPending: isDispatching } = useDispatchPayslips();

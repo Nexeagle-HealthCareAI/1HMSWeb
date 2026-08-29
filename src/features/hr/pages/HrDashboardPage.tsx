@@ -64,53 +64,6 @@ const HR_TABS: { id: HrTab; label: string; icon: React.ReactNode; description: s
   },
 ];
 
-// ─── Placeholder panels for modules not yet built ────────────────────────────
-
-const ComingSoonPanel: React.FC<{ tab: HrTab }> = ({ tab }) => {
-  const config: Record<HrTab, { icon: React.ReactNode; title: string; description: string; color: string }> = {
-    overview: { icon: null, title: '', description: '', color: '' },
-    employees: { icon: null, title: '', description: '', color: '' },
-    roster: {
-      icon: <CalendarDays className="h-10 w-10" />,
-      title: '24/7 Duty Roster Planner',
-      description: 'Drag-and-drop visual shift planner with rest-period violation detection and automated night allowance calculation.',
-      color: 'from-indigo-500 to-violet-600',
-    },
-    leave: {
-      icon: <UmbrellaOff className="h-10 w-10" />,
-      title: 'Leave & Comp-Off Console',
-      description: 'Leave approval workflow, balance tracking, automatic Comp-Off crediting for public holidays, and CME leave management.',
-      color: 'from-amber-500 to-orange-600',
-    },
-    payroll: {
-      icon: <IndianRupee className="h-10 w-10" />,
-      title: '1-Click Dual-Track Payroll',
-      description: 'Automated payroll for Track A (Salaried – Sec 192) and Track B (Consultants – Sec 194J) with NEFT bank export, bulk PDF payslips, and WhatsApp push.',
-      color: 'from-sky-500 to-blue-600',
-    },
-  };
-
-  const c = config[tab];
-  if (!c.title) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-20 text-center"
-    >
-      <div className={`p-5 rounded-3xl bg-gradient-to-br ${c.color} text-white mb-6 shadow-2xl`}>
-        {c.icon}
-      </div>
-      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{c.title}</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md leading-relaxed">{c.description}</p>
-      <div className="mt-6 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400">
-        🚧 Module 2/3/4 — Coming in next iteration
-      </div>
-    </motion.div>
-  );
-};
-
 // ─── Main Dashboard Page ──────────────────────────────────────────────────────
 
 export const HrDashboardPage: React.FC = () => {
@@ -293,6 +246,7 @@ export const HrDashboardPage: React.FC = () => {
 
       {/* Add Employee Modal */}
       <AddEmployeeModal
+        hospitalId={hospitalId}
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />

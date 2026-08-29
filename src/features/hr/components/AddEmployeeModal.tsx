@@ -12,9 +12,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateEmployee } from '../hrApi';
-import type { EmploymentType } from '../types';
+import { useDepartments } from '@/features/appointment/hooks/useDepartments';
+import type { EmploymentType, PayrollTrack } from '../types';
 
 interface AddEmployeeModalProps {
+  hospitalId: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -28,13 +30,14 @@ const STEPS: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: 'clinical', label: 'Clinical Credentials', icon: <Stethoscope className="h-4 w-4" /> },
 ];
 
-const DEPARTMENTS = [
-  'General Medicine', 'General Surgery', 'ICU / Critical Care',
-  'Gynaecology & Obstetrics', 'Orthopaedics', 'Anaesthesiology',
-  'Pathology & Lab', 'Radiology', 'Pharmacy', 'Emergency Medicine',
-  'Cardiology', 'Paediatrics', 'Support & Operations', 'Security',
-  'Administration & Billing',
-];
+// TRACK_A (salaried) vs TRACK_B (consultant) drives which payroll strategy runs for this
+// employee -- see RunMonthlyPayrollHandler / SalariedPayrollStrategy / ConsultantPayrollStrategy.
+const PAYROLL_TRACK_FOR: Record<EmploymentType, PayrollTrack> = {
+  FULL_TIME_SALARIED: 'TRACK_A_SALARIED',
+  VISITING_CONSULTANT: 'TRACK_B_CONSULTANT',
+  CONTRACTUAL: 'TRACK_A_SALARIED',
+  INTERN: 'TRACK_A_SALARIED',
+};
 
 const DESIGNATIONS: Record<EmploymentType, string[]> = {
   FULL_TIME_SALARIED: [
@@ -52,7 +55,7 @@ const DESIGNATIONS: Record<EmploymentType, string[]> = {
   INTERN: ['Medical Intern', 'Nursing Intern', 'Pharmacy Intern'],
 };
 
-export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose }) => {
+export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ hospitalId, isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState<Step>('personal');
   const [formData, setFormData] = useState<Record<string, string>>({
     gender: 'Male',
@@ -60,6 +63,8 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onCl
   });
   const [success, setSuccess] = useState(false);
   const { mutateAsync: createEmployee, isPending } = useCreateEmployee();
+  const { data: departmentsData } = useDepartments(hospitalId);
+  const departments = departmentsData?.departments ?? [];
 
   const stepIndex = STEPS.findIndex(s => s.id === currentStep);
 
@@ -76,8 +81,26 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onCl
   };
 
   const handleSubmit = async () => {
+    const employmentType = (formData.employmentType as EmploymentType) || 'FULL_TIME_SALARIED';
     try {
-      await createEmployee(formData);
+      await createEmployee({
+        hospitalId,
+        firstName: formData.firstName || '',
+        lastName: formData.lastName || '',
+        gender: formData.gender || 'Male',
+        dateOfBirth: formData.dob || '',
+        contactNumber: formData.contactNumber || '',
+        email: formData.email || undefined,
+        employmentType,
+        departmentId: formData.departmentId || '',
+        designation: formData.designation || '',
+        dateOfJoining: formData.dateOfJoining || '',
+        panNumber: formData.panNumber || '',
+        payrollTrack: PAYROLL_TRACK_FOR[employmentType],
+        bankName: formData.bankName || undefined,
+        bankAccountNumber: formData.bankAccountNumber || undefined,
+        bankIfsc: formData.bankIfsc || undefined,
+      });
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -269,10 +292,10 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onCl
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Department *</Label>
-                              <Select value={formData.department || ''} onValueChange={v => update('department', v)}>
+                              <Select value={formData.departmentId || ''} onValueChange={v => update('departmentId', v)}>
                                 <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select dept." /></SelectTrigger>
                                 <SelectContent>
-                                  {DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                  {departments.map(d => <SelectItem key={d.departmentId} value={d.departmentId}>{d.departmentName}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>

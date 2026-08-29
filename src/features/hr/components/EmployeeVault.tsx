@@ -79,6 +79,7 @@ export const EmployeeVault: React.FC<EmployeeVaultProps> = ({ hospitalId, onEmpl
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
   const { data: employees = [], isLoading, refetch } = useHrEmployees({
+    hospitalId,
     search: search || undefined,
     employmentType: typeFilter !== 'all' ? typeFilter as EmploymentType : undefined,
   });

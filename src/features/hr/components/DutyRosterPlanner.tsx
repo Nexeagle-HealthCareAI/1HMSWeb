@@ -20,7 +20,7 @@ export const DutyRosterPlanner: React.FC<{ hospitalId: string }> = ({ hospitalId
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
-  const { data: employees } = useHrEmployees({ isActive: true });
+  const { data: employees } = useHrEmployees({ hospitalId, isActive: true });
   const { data: shifts } = useHospitalShifts(hospitalId);
   const endDate = addDays(startDate, 6);
   const { data: roster } = useDutyRoster(hospitalId, startDate, endDate);
