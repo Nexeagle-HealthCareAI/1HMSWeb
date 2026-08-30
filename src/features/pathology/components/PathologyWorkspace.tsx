@@ -279,6 +279,8 @@ export const PathologyWorkspace: React.FC = () => {
                       hospitalId={hospitalId ?? ''}
                       orderId={selectedOrderDetails.orderId}
                       orderLine={line}
+                      patientAgeYears={selectedOrderDetails.patientAgeYears}
+                      patientGender={selectedOrderDetails.patientGender}
                       onSuccess={() => handleOrderSelect(selectedOrderDetails.orderId)}
                     />
                   ))
