@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PathologyOrderLineDto, pathologyService } from '../services/pathologyService';
-import { calculateResultFlag, PathologyResultFlag } from '../utils/resultFlagCalculator';
+import { calculateResultFlag, resolveRange, PathologyResultFlag } from '../utils/resultFlagCalculator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,8 +14,8 @@ interface OrderResultEntryProps {
   hospitalId: string;
   orderId: string;
   orderLine: PathologyOrderLineDto;
-  patientAgeYears?: number;
-  patientGender?: string;
+  patientAgeYears?: number | null;
+  patientGender?: string | null;
   onSuccess: () => void;
 }
 
@@ -58,11 +58,12 @@ function playCriticalBeep() {
   }
 }
 
-function normalRangeLabel(param: TestParam): string | null {
-  const min = param.maleMin ?? param.femaleMin ?? param.childMin ?? param.min;
-  const max = param.maleMax ?? param.femaleMax ?? param.childMax ?? param.max;
-  if (min === undefined && max === undefined) return null;
-  return `Normal: ${min ?? '–'} – ${max ?? '–'}`;
+function normalRangeLabel(param: TestParam, patientAgeYears?: number, patientGender?: string): string | null {
+  const { min, max } = resolveRange(param, patientAgeYears, patientGender);
+  const fallbackMin = min ?? param.min;
+  const fallbackMax = max ?? param.max;
+  if (fallbackMin === undefined && fallbackMax === undefined) return null;
+  return `Normal: ${fallbackMin ?? '–'} – ${fallbackMax ?? '–'}`;
 }
 
 const FLAG_STYLES: Record<PathologyResultFlag, string> = {
@@ -226,7 +227,7 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
                   )}
                 </div>
                 <div className="col-span-1 text-xs text-muted-foreground">
-                  {normalRangeLabel(param)}
+                  {normalRangeLabel(param, patientAgeYears, patientGender)}
                 </div>
               </div>
             );

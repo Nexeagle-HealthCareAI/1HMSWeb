@@ -47,8 +47,8 @@ export interface PathologyOrderDto {
   status: string;
   patientId: string;
   patientName: string;
-  patientAgeYears?: number;
-  patientGender?: string;
+  patientAgeYears?: number | null;
+  patientGender?: string | null;
   lines: PathologyOrderLineDto[];
 }
 
