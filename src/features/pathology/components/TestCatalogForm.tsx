@@ -2,23 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/store';
 import { pathologyService, PathologyTestMaster } from '../services/pathologyService';
+import { ipdBillingService, ChargeMaster } from '@/features/billing/services/ipdBillingService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { GripVertical, Plus, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
+// Mirrors PathologyResultFlagCalculator.PathologyParameterRange on the backend -- those field
+// names are what EnterPathologyResultHandler will eventually deserialize ParameterSchemaJson
+// into, so this form has to read/write the same shape rather than the old flat {min, max}.
 interface ParameterDef {
   id: string;
   name: string;
   unit: string;
-  min: string;
-  max: string;
+  defaultValue: string;
+  maleMin: string;
+  maleMax: string;
+  femaleMin: string;
+  femaleMax: string;
+  childMin: string;
+  childMax: string;
+  criticalLow: string;
+  criticalHigh: string;
 }
+
+const EMPTY_PARAMETER: Omit<ParameterDef, 'id'> = {
+  name: '', unit: '', defaultValue: '',
+  maleMin: '', maleMax: '', femaleMin: '', femaleMax: '',
+  childMin: '', childMax: '', criticalLow: '', criticalHigh: ''
+};
 
 interface TestCatalogFormProps {
   test: PathologyTestMaster | null;
@@ -31,6 +49,8 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
   const hospitalId = useAuthStore(state => state.hospitalId);
   const [loading, setLoading] = useState(false);
   const [parameters, setParameters] = useState<ParameterDef[]>([]);
+  const [chargeMasters, setChargeMasters] = useState<ChargeMaster[]>([]);
+  const [loadingCharges, setLoadingCharges] = useState(false);
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
     defaultValues: {
@@ -39,10 +59,30 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
       category: '',
       sampleType: '',
       containerType: '',
+      chargeId: '',
       isActive: true,
       sortOrder: 0
     }
   });
+
+  // Chargeable items an admin can link this test to for auto-billing (CreatePathologyOrderHandler
+  // and the IPD ClinicalOrder dual-write both match on PathologyTestMaster.ChargeId).
+  useEffect(() => {
+    if (!isOpen || !hospitalId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingCharges(true);
+      try {
+        const res = await ipdBillingService.listChargeMasters({ hospitalId, pageSize: 500 });
+        if (!cancelled) setChargeMasters((res?.items ?? []).filter(m => m.isActive));
+      } catch (e: any) {
+        if (!cancelled) toast.error("Could not load charge catalog for billing linkage");
+      } finally {
+        if (!cancelled) setLoadingCharges(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, hospitalId]);
 
   useEffect(() => {
     if (test) {
@@ -52,6 +92,7 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
         category: test.category || '',
         sampleType: test.sampleType || '',
         containerType: test.containerType || '',
+        chargeId: test.chargeId || '',
         isActive: test.isActive,
         sortOrder: test.sortOrder
       });
@@ -60,10 +101,23 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
         try {
           const parsed = JSON.parse(test.parameterSchemaJson);
           if (parsed && Array.isArray(parsed.params)) {
-            // Ensure each parameter has a unique id for dnd
-            const paramsWithIds = parsed.params.map((p: any) => ({
-              ...p,
-              id: p.id || uuidv4()
+            // Legacy rows may only have the old flat {min, max} shape -- fold those into the
+            // male band, matching PathologyResultFlagCalculator's own fallback order (it prefers
+            // male, then female, then child, when no demographic split is set).
+            const numOrBlank = (v: unknown) => (v === undefined || v === null ? '' : String(v));
+            const paramsWithIds: ParameterDef[] = parsed.params.map((p: any) => ({
+              id: p.id || uuidv4(),
+              name: p.name ?? '',
+              unit: p.unit ?? '',
+              defaultValue: numOrBlank(p.defaultValue),
+              maleMin: numOrBlank(p.maleMin ?? p.min),
+              maleMax: numOrBlank(p.maleMax ?? p.max),
+              femaleMin: numOrBlank(p.femaleMin),
+              femaleMax: numOrBlank(p.femaleMax),
+              childMin: numOrBlank(p.childMin),
+              childMax: numOrBlank(p.childMax),
+              criticalLow: numOrBlank(p.criticalLow),
+              criticalHigh: numOrBlank(p.criticalHigh),
             }));
             setParameters(paramsWithIds);
           }
@@ -90,7 +144,7 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
   const handleAddParameter = () => {
     setParameters([
       ...parameters,
-      { id: uuidv4(), name: '', unit: '', min: '', max: '' }
+      { id: uuidv4(), ...EMPTY_PARAMETER }
     ]);
   };
 
@@ -106,11 +160,27 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
     if (!hospitalId) return;
     try {
       setLoading(true);
-      
+
+      const toNum = (v: string) => (v === '' || v === undefined ? undefined : Number(v));
       const payload = {
         ...data,
-        parameterSchemaJson: JSON.stringify({ params: parameters }),
-        // ChargeId can be hooked up to ChargeMaster later
+        chargeId: data.chargeId || undefined,
+        parameterSchemaJson: JSON.stringify({
+          params: parameters.map((p, index) => ({
+            name: p.name,
+            unit: p.unit || undefined,
+            defaultValue: p.defaultValue || undefined,
+            maleMin: toNum(p.maleMin),
+            maleMax: toNum(p.maleMax),
+            femaleMin: toNum(p.femaleMin),
+            femaleMax: toNum(p.femaleMax),
+            childMin: toNum(p.childMin),
+            childMax: toNum(p.childMax),
+            criticalLow: toNum(p.criticalLow),
+            criticalHigh: toNum(p.criticalHigh),
+            sortOrder: index + 1,
+          }))
+        }),
       };
 
       if (test) {
@@ -165,8 +235,34 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
               <Label>Container Type</Label>
               <Input {...register('containerType')} placeholder="EDTA Tube" />
             </div>
-            
-            <div className="flex items-center space-x-2 pt-8">
+
+            <div className="space-y-2 col-span-2">
+              <Label>Linked Charge (for auto-billing)</Label>
+              <Controller
+                name="chargeId"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value || 'none'} onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingCharges ? 'Loading charges...' : 'Not linked — no auto-billing'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not linked — no auto-billing</SelectItem>
+                      {chargeMasters.map(c => (
+                        <SelectItem key={c.chargeId} value={c.chargeId}>
+                          {c.displayName} · ₹{c.defaultRate}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-xs text-gray-500">
+                Required for this test to auto-bill on order placement, sample collection, or report approval.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
               <Controller
                 name="isActive"
                 control={control}
@@ -199,37 +295,78 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-800 border rounded-md"
+                            className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-slate-800 border rounded-md"
                           >
-                            <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600">
+                            <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600 pt-2">
                               <GripVertical className="h-5 w-5" />
                             </div>
-                            <div className="grid grid-cols-4 gap-2 flex-1">
-                              <Input 
-                                placeholder="Name (e.g. Hemoglobin)" 
-                                value={param.name} 
-                                onChange={(e) => updateParameter(param.id, 'name', e.target.value)}
-                              />
-                              <Input 
-                                placeholder="Unit (e.g. g/dL)" 
-                                value={param.unit} 
-                                onChange={(e) => updateParameter(param.id, 'unit', e.target.value)}
-                              />
-                              <Input 
-                                placeholder="Min Ref" 
-                                value={param.min} 
-                                onChange={(e) => updateParameter(param.id, 'min', e.target.value)}
-                              />
-                              <Input 
-                                placeholder="Max Ref" 
-                                value={param.max} 
-                                onChange={(e) => updateParameter(param.id, 'max', e.target.value)}
-                              />
+                            <div className="flex-1 space-y-2">
+                              <div className="grid grid-cols-3 gap-2">
+                                <Input
+                                  placeholder="Name (e.g. Hemoglobin)"
+                                  value={param.name}
+                                  onChange={(e) => updateParameter(param.id, 'name', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Unit (e.g. g/dL)"
+                                  value={param.unit}
+                                  onChange={(e) => updateParameter(param.id, 'unit', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Default value"
+                                  value={param.defaultValue}
+                                  onChange={(e) => updateParameter(param.id, 'defaultValue', e.target.value)}
+                                />
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                <Input
+                                  placeholder="Male Min"
+                                  value={param.maleMin}
+                                  onChange={(e) => updateParameter(param.id, 'maleMin', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Male Max"
+                                  value={param.maleMax}
+                                  onChange={(e) => updateParameter(param.id, 'maleMax', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Female Min"
+                                  value={param.femaleMin}
+                                  onChange={(e) => updateParameter(param.id, 'femaleMin', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Female Max"
+                                  value={param.femaleMax}
+                                  onChange={(e) => updateParameter(param.id, 'femaleMax', e.target.value)}
+                                />
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                <Input
+                                  placeholder="Child Min"
+                                  value={param.childMin}
+                                  onChange={(e) => updateParameter(param.id, 'childMin', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Child Max"
+                                  value={param.childMax}
+                                  onChange={(e) => updateParameter(param.id, 'childMax', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Critical Low"
+                                  value={param.criticalLow}
+                                  onChange={(e) => updateParameter(param.id, 'criticalLow', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Critical High"
+                                  value={param.criticalHigh}
+                                  onChange={(e) => updateParameter(param.id, 'criticalHigh', e.target.value)}
+                                />
+                              </div>
                             </div>
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
                               className="text-red-500 hover:bg-red-50"
                               onClick={() => handleRemoveParameter(param.id)}
                             >
