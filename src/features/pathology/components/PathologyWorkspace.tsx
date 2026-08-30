@@ -230,7 +230,10 @@ export const PathologyWorkspace: React.FC = () => {
               unit: p.unit,
               value,
               flag,
-              normalRangeLabel: min !== undefined || max !== undefined ? `${min ?? '–'} – ${max ?? '–'}` : undefined,
+              // Plain hyphen, not an en dash -- pdf-lib's WinAnsi StandardFonts encoding threw on
+              // the arrow glyphs used elsewhere in this file (see generatePathologyReportPdf.ts),
+              // so this stays ASCII-only defensively rather than assuming en dash is safe too.
+              normalRangeLabel: min !== undefined || max !== undefined ? `${min ?? '-'} - ${max ?? '-'}` : undefined,
             };
           }),
       };
@@ -387,7 +390,7 @@ export const PathologyWorkspace: React.FC = () => {
                         <ShieldCheck className="h-3.5 w-3.5 mr-1" />
                         Report {selectedOrderDetails.report.reportNo} approved
                       </Badge>
-                      {selectedOrderDetails.report.pdfBlobPath && (
+                      {selectedOrderDetails.report.pdfBlobPath ? (
                         <a
                           href={`${window.location.origin}/verify/report/${selectedOrderDetails.report.reportId}`}
                           target="_blank" rel="noopener noreferrer"
@@ -395,8 +398,11 @@ export const PathologyWorkspace: React.FC = () => {
                         >
                           Verification page
                         </a>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={() => finalizeReportPdf(selectedOrderDetails)} disabled={isFinalizingPdf}>
+                          {isFinalizingPdf ? 'Finalizing PDF...' : 'Retry PDF generation'}
+                        </Button>
                       )}
-                      {isFinalizingPdf && <span className="text-xs text-muted-foreground">Finalizing PDF...</span>}
                     </div>
                   )}
                 </div>

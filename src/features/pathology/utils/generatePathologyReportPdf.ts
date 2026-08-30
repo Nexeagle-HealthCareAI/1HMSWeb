@@ -24,12 +24,15 @@ const flagColor = (flag: PathologyResultFlag): RGB =>
     : flag === 'HIGH' || flag === 'LOW' ? COLORS.abnormal
     : COLORS.normal;
 
+// pdf-lib's StandardFonts only support WinAnsi encoding -- the ▲/▼ glyphs used for the on-screen
+// live preview (resultFlagCalculator consumers) throw "WinAnsi cannot encode" here, so the PDF
+// uses plain ASCII markers instead.
 const flagSuffix = (flag: PathologyResultFlag): string => {
   switch (flag) {
-    case 'CRITICAL_HIGH': return ' ▲▲ CRITICAL';
-    case 'CRITICAL_LOW': return ' ▼▼ CRITICAL';
-    case 'HIGH': return ' ▲';
-    case 'LOW': return ' ▼';
+    case 'CRITICAL_HIGH': return ' (H) CRITICAL';
+    case 'CRITICAL_LOW': return ' (L) CRITICAL';
+    case 'HIGH': return ' (H)';
+    case 'LOW': return ' (L)';
     default: return '';
   }
 };
