@@ -483,7 +483,8 @@ export const ClinicalDashboard: React.FC = () => {
       .then(reports => {
         if (cancelled) return;
         const map: Record<string, PathologyReportReadyDto> = {};
-        reports.forEach(r => { map[r.patientId] = r; });
+        // Reports come back newest-first, so the first one seen per patient is the latest.
+        reports.forEach(r => { if (!map[r.patientId]) map[r.patientId] = r; });
         setLabReportsByPatient(map);
       })
       .catch(() => { if (!cancelled) setLabReportsByPatient({}); });
