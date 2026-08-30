@@ -15,6 +15,8 @@ export interface CreatePathologyOrderRequest {
   orderedByDoctorId?: string;
   notes?: string;
   testIds: string[];
+  sourceType?: 'OPD' | 'IPD' | 'EMERGENCY' | 'WALK_IN';
+  isStat?: boolean;
 }
 
 export interface CreatePathologyOrderResponse {
@@ -50,6 +52,8 @@ export interface PathologyOrderDto {
   patientAgeYears?: number | null;
   patientGender?: string | null;
   hospitalName?: string | null;
+  sourceType?: string | null;
+  isStat: boolean;
   lines: PathologyOrderLineDto[];
   report?: PathologyReportDto | null;
 }

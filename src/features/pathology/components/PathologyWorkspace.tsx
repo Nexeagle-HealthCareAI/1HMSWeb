@@ -36,7 +36,23 @@ export const PathologyWorkspace: React.FC = () => {
   const [testCatalog, setTestCatalog] = useState<PathologyTestMaster[]>([]);
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
+  const [orderSourceType, setOrderSourceType] = useState<'OPD' | 'EMERGENCY' | 'WALK_IN'>('OPD');
+  const [orderIsStat, setOrderIsStat] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  // Worklist filter -- IPD orders show up here too (they're created from the IPD Clinical Order
+  // Panel, not this dialog, since they need an active admission to bill against), this just filters
+  // what's already in `orders`.
+  const [activeFilterTab, setActiveFilterTab] = useState<'ALL' | 'OPD' | 'IPD' | 'STAT' | 'COMPLETED'>('ALL');
+  const filteredOrders = orders.filter(o => {
+    switch (activeFilterTab) {
+      case 'OPD': return o.sourceType !== 'IPD';
+      case 'IPD': return o.sourceType === 'IPD';
+      case 'STAT': return o.isStat;
+      case 'COMPLETED': return o.status === 'COMPLETED';
+      default: return true;
+    }
+  });
 
   // Report generation / dual-signature (order-detail panel). The report's own state lives on
   // selectedOrderDetails.report (refetched from the server after every action) rather than local
@@ -107,6 +123,8 @@ export const PathologyWorkspace: React.FC = () => {
     setSelectedPatient(null);
     setSelectedTestIds([]);
     setOrderNotes('');
+    setOrderSourceType('OPD');
+    setOrderIsStat(false);
     setNewOrderOpen(true);
     if (hospitalId) {
       pathologyService.getTests(hospitalId).then(setTestCatalog).catch(() => setTestCatalog([]));
@@ -140,6 +158,8 @@ export const PathologyWorkspace: React.FC = () => {
         patientId: selectedPatient.patientId,
         testIds: selectedTestIds,
         notes: orderNotes || undefined,
+        sourceType: orderSourceType,
+        isStat: orderIsStat,
       });
       if (!response.success) {
         toast.error('Could not place order', { description: response.message });
@@ -312,6 +332,27 @@ export const PathologyWorkspace: React.FC = () => {
             <Plus className="h-3.5 w-3.5 mr-1" /> New Order
           </Button>
         </div>
+        <div className="flex gap-1 px-2 pt-2 pb-1 border-b overflow-x-auto">
+          {([
+            { key: 'ALL', label: 'All' },
+            { key: 'OPD', label: 'OPD' },
+            { key: 'IPD', label: 'IPD' },
+            { key: 'STAT', label: 'STAT' },
+            { key: 'COMPLETED', label: 'Completed' },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveFilterTab(tab.key)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                activeFilterTab === tab.key
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         <ScrollArea className="flex-1">
           {isLoadingOrders ? (
             <div className="p-4 space-y-4">
@@ -322,34 +363,42 @@ export const PathologyWorkspace: React.FC = () => {
                 </div>
               ))}
             </div>
-          ) : orders.length > 0 ? (
+          ) : filteredOrders.length > 0 ? (
             <div className="p-2 space-y-2">
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <div
                   key={order.orderId}
                   onClick={() => handleOrderSelect(order.orderId)}
                   className={`p-4 rounded-md cursor-pointer border transition-colors ${
+                    order.isStat ? 'border-l-4 border-l-red-500' : ''
+                  } ${
                     selectedOrderId === order.orderId
                       ? 'border-primary bg-primary/5'
-                      : 'border-transparent hover:bg-muted'
+                      : order.isStat ? 'hover:bg-muted' : 'border-transparent hover:bg-muted'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-semibold text-sm">{order.orderNo}</span>
-                    <Badge variant="outline" className={getStatusColor(order.status)}>
-                      {order.status.replace('_', ' ')}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      {order.isStat && (
+                        <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
+                      )}
+                      <Badge variant="outline" className={getStatusColor(order.status)}>
+                        {order.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="text-sm font-medium">{order.patientName}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(order.orderDate).toLocaleString()}
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <span>{new Date(order.orderDate).toLocaleString()}</span>
+                    {order.sourceType && <span>· {order.sourceType.replace('_', '-')}</span>}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
-              No pending orders.
+              No orders in this view.
             </div>
           )}
         </ScrollArea>
@@ -510,6 +559,35 @@ export const PathologyWorkspace: React.FC = () => {
                     </label>
                   ))
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Source</Label>
+                <div className="flex gap-1 mt-1">
+                  {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
+                    <Button
+                      key={st}
+                      type="button"
+                      size="sm"
+                      variant={orderSourceType === st ? 'default' : 'outline'}
+                      onClick={() => setOrderSourceType(st)}
+                    >
+                      {st === 'WALK_IN' ? 'Walk-in' : st === 'EMERGENCY' ? 'Emergency' : 'OPD'}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  IPD lab orders are placed from the patient's Clinical Order Panel so they bill against the admission.
+                </p>
+              </div>
+              <div>
+                <Label>Urgency</Label>
+                <label className="flex items-center gap-2 mt-1 p-2 border rounded-md cursor-pointer w-fit">
+                  <Checkbox checked={orderIsStat} onCheckedChange={(c) => setOrderIsStat(!!c)} />
+                  <span className="text-sm font-medium">Mark as STAT</span>
+                </label>
               </div>
             </div>
 

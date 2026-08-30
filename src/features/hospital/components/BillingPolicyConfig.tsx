@@ -16,12 +16,19 @@ import { cn } from '@/lib/utils';
 type TriggerKey = 'opdConsultTrigger' | 'ipdBedChargeMode';
 
 // Per-module auto-billing rules. onValue = the trigger value that means "auto-post"; 'OFF' = manual.
-// Pharmacy/Lab (Path & Rad) triggers are intentionally not listed here — those fields exist on
+// Lab Rad / Pharmacy IPD triggers are intentionally not listed here — those fields exist on
 // BillingPolicy but nothing in the backend reads them to auto-post a charge, so exposing a toggle
-// for them would promise automation that doesn't exist.
+// for them would promise automation that doesn't exist. Lab Path has its own 3-state control below
+// (it isn't a simple on/off switch, so it doesn't fit this list).
 const AUTO_BILLING_RULES: { key: TriggerKey; label: string; desc: string; onValue: string }[] = [
     { key: 'opdConsultTrigger', label: 'OPD Consultation', desc: 'Post the consult fee automatically when an appointment is booked.', onValue: 'AUTO' },
     { key: 'ipdBedChargeMode', label: 'IPD Bed Charge', desc: 'Post the daily bed charge automatically each midnight.', onValue: 'DAILY_AUTO' },
+];
+
+const LAB_PATH_TRIGGER_OPTIONS: { value: string; label: string; desc: string }[] = [
+    { value: 'OFF', label: 'Manual', desc: 'Lab charges are added to the bill by hand — nothing posts automatically.' },
+    { value: 'ON_ORDER', label: 'On order placement', desc: 'Post the charge the moment a lab order is placed (OPD or IPD).' },
+    { value: 'ON_REPORT_APPROVAL', label: 'On report approval', desc: 'Post the charge only once the pathologist signs off the report — avoids billing for orders that get cancelled before results come back.' },
 ];
 
 export const BillingPolicyConfig = () => {
@@ -373,6 +380,39 @@ export const BillingPolicyConfig = () => {
                             </div>
                         );
                     })}
+                </div>
+
+                {/* Lab Path Trigger — 3 states, so it gets a dropdown instead of the on/off Switch above */}
+                <div className="p-5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-slate-200/60 dark:border-zinc-805/80 rounded-2xl shadow-sm space-y-3">
+                    <div>
+                        <h4 className="font-extrabold text-sm text-slate-800 dark:text-zinc-100 flex items-center gap-2">
+                            Lab / Pathology
+                            {config.labPathTrigger !== 'OFF' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-200/30">
+                                    Active
+                                </span>
+                            )}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                            When to auto-post a lab test's linked charge. An IPD order bills against the admission's own encounter; an OPD order needs an active encounter to bill against.
+                        </p>
+                    </div>
+                    <Select
+                        value={config.labPathTrigger}
+                        onValueChange={(val) => handleChange('labPathTrigger', val)}
+                    >
+                        <SelectTrigger className="h-11.5 rounded-2xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-850">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-2xl">
+                            {LAB_PATH_TRIGGER_OPTIONS.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+                        {LAB_PATH_TRIGGER_OPTIONS.find(o => o.value === config.labPathTrigger)?.desc}
+                    </p>
                 </div>
             </div>
 
