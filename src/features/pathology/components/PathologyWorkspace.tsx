@@ -12,10 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { Plus, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { OrderResultEntry } from './OrderResultEntry';
+import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/generatePathologyReportPdf';
+import { resolveRange } from '../utils/resultFlagCalculator';
 
 export const PathologyWorkspace: React.FC = () => {
   const hospitalId = useAuthStore(state => state.hospitalId);
@@ -36,10 +38,18 @@ export const PathologyWorkspace: React.FC = () => {
   const [orderNotes, setOrderNotes] = useState('');
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  // Report generation/approval (order-detail panel)
+  // Report generation / dual-signature (order-detail panel). The report's own state lives on
+  // selectedOrderDetails.report (refetched from the server after every action) rather than local
+  // state, so a page reload mid-flow shows the true status instead of a stale client guess.
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isSigningAsTechnician, setIsSigningAsTechnician] = useState(false);
   const [isApprovingReport, setIsApprovingReport] = useState(false);
-  const [generatedReport, setGeneratedReport] = useState<{ reportId: string; reportNo: string; approved: boolean } | null>(null);
+  const [isFinalizingPdf, setIsFinalizingPdf] = useState(false);
+
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [technicianRegNo, setTechnicianRegNo] = useState('');
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [pathologistRegNo, setPathologistRegNo] = useState('');
 
   useEffect(() => {
     if (hospitalId) fetchOrders();
@@ -62,7 +72,6 @@ export const PathologyWorkspace: React.FC = () => {
     if (!hospitalId) return;
     setSelectedOrderId(orderId);
     setIsLoadingDetails(true);
-    setGeneratedReport(null);
     try {
       const details = await pathologyService.getOrderById(hospitalId, orderId);
       setSelectedOrderDetails(details);
@@ -71,6 +80,15 @@ export const PathologyWorkspace: React.FC = () => {
     } finally {
       setIsLoadingDetails(false);
     }
+  };
+
+  // Silent refresh after a report action -- keeps the order-detail panel open but pulls the
+  // authoritative report state from the server instead of guessing it locally.
+  const refreshSelectedOrder = async () => {
+    if (!hospitalId || !selectedOrderId) return;
+    const details = await pathologyService.getOrderById(hospitalId, selectedOrderId);
+    setSelectedOrderDetails(details);
+    return details;
   };
 
   const getStatusColor = (status: string) => {
@@ -145,12 +163,12 @@ export const PathologyWorkspace: React.FC = () => {
     setIsGeneratingReport(true);
     try {
       const response = await pathologyService.generateReport(hospitalId, selectedOrderDetails.orderId, {});
-      if (!response.success || !response.reportId || !response.reportNo) {
+      if (!response.success) {
         toast.error('Could not generate report', { description: response.message });
         return;
       }
-      setGeneratedReport({ reportId: response.reportId, reportNo: response.reportNo, approved: false });
       toast.success('Report generated', { description: response.reportNo });
+      await refreshSelectedOrder();
     } catch (e) {
       toast.error('Could not generate report');
     } finally {
@@ -158,17 +176,122 @@ export const PathologyWorkspace: React.FC = () => {
     }
   };
 
+  const handleSignAsTechnician = async () => {
+    if (!hospitalId || !selectedOrderDetails?.report || !technicianRegNo.trim()) return;
+    setIsSigningAsTechnician(true);
+    try {
+      const success = await pathologyService.signReportAsTechnician(
+        hospitalId, selectedOrderDetails.orderId, selectedOrderDetails.report.reportId, technicianRegNo.trim()
+      );
+      if (!success) {
+        toast.error('Could not sign report');
+        return;
+      }
+      toast.success('Signed as technician');
+      setSignDialogOpen(false);
+      setTechnicianRegNo('');
+      await refreshSelectedOrder();
+    } catch (e) {
+      toast.error('Could not sign report');
+    } finally {
+      setIsSigningAsTechnician(false);
+    }
+  };
+
+  // Builds the results table from each line's schema + saved {value, flag} results, using the
+  // same age/gender-resolved band shown on screen so the printed "Normal Range" column matches
+  // what the technician actually saw while entering the result.
+  const buildPdfLines = (order: PathologyOrderDto): PathologyReportPdfLine[] => {
+    return order.lines.map((line) => {
+      let params: any[] = [];
+      try {
+        const schema = line.parameterSchemaJson ? JSON.parse(line.parameterSchemaJson) : null;
+        if (schema && Array.isArray(schema.params)) params = schema.params;
+      } catch { /* leave params empty */ }
+
+      let savedValues: Record<string, any> = {};
+      try {
+        savedValues = line.result?.resultValuesJson ? JSON.parse(line.result.resultValuesJson) : {};
+      } catch { /* leave savedValues empty */ }
+
+      return {
+        testName: line.testName,
+        testCode: line.testCode,
+        interpretation: line.result?.interpretation,
+        parameters: params
+          .filter((p) => savedValues[p.name] !== undefined)
+          .map((p) => {
+            const entry = savedValues[p.name];
+            const value = typeof entry === 'string' ? entry : entry?.value ?? '';
+            const flag = typeof entry === 'string' ? 'NORMAL' : entry?.flag ?? 'NORMAL';
+            const { min, max } = resolveRange(p, order.patientAgeYears, order.patientGender);
+            return {
+              name: p.name,
+              unit: p.unit,
+              value,
+              flag,
+              normalRangeLabel: min !== undefined || max !== undefined ? `${min ?? '–'} – ${max ?? '–'}` : undefined,
+            };
+          }),
+      };
+    });
+  };
+
+  const finalizeReportPdf = async (order: PathologyOrderDto) => {
+    if (!hospitalId || !order.report || order.report.status !== 'APPROVED') return;
+    setIsFinalizingPdf(true);
+    try {
+      const verifyUrl = `${window.location.origin}/verify/report/${order.report.reportId}`;
+      const blob = await generatePathologyReportPdf({
+        hospitalName: order.hospitalName ?? 'Hospital',
+        reportNo: order.report.reportNo,
+        orderNo: order.orderNo,
+        orderDate: order.orderDate,
+        patientName: order.patientName,
+        patientId: order.patientId,
+        patientAgeYears: order.patientAgeYears,
+        patientGender: order.patientGender,
+        lines: buildPdfLines(order),
+        technicianName: order.report.technicianName ?? '—',
+        technicianRegNo: order.report.technicianRegNo ?? '—',
+        technicianSignedAt: order.report.technicianSignedAt ?? new Date().toISOString(),
+        pathologistName: order.report.pathologistName ?? '—',
+        pathologistRegNo: order.report.pathologistRegNo ?? '—',
+        approvedAt: order.report.approvedAt ?? new Date().toISOString(),
+        verifyUrl,
+      });
+
+      const uploadResult = await pathologyService.uploadReportPdf(hospitalId, order.orderId, order.report.reportId, blob);
+      if (!uploadResult.success) {
+        toast.error('Report approved, but the final PDF could not be saved', { description: uploadResult.message });
+        return;
+      }
+      toast.success('Final signed report PDF generated');
+      await refreshSelectedOrder();
+    } catch (e) {
+      console.error('Failed to generate/upload final report PDF', e);
+      toast.error('Report approved, but the final PDF could not be generated');
+    } finally {
+      setIsFinalizingPdf(false);
+    }
+  };
+
   const handleApproveReport = async () => {
-    if (!hospitalId || !selectedOrderDetails || !generatedReport) return;
+    if (!hospitalId || !selectedOrderDetails?.report || !pathologistRegNo.trim()) return;
     setIsApprovingReport(true);
     try {
-      const success = await pathologyService.approveReport(hospitalId, selectedOrderDetails.orderId, generatedReport.reportId);
+      const success = await pathologyService.approveReport(
+        hospitalId, selectedOrderDetails.orderId, selectedOrderDetails.report.reportId, pathologistRegNo.trim()
+      );
       if (!success) {
         toast.error('Could not approve report');
         return;
       }
-      setGeneratedReport(prev => prev ? { ...prev, approved: true } : prev);
       toast.success('Report approved');
+      setApproveDialogOpen(false);
+      setPathologistRegNo('');
+      const refreshed = await refreshSelectedOrder();
+      if (refreshed) await finalizeReportPdf(refreshed);
     } catch (e) {
       toast.error('Could not approve report');
     } finally {
@@ -243,20 +366,38 @@ export const PathologyWorkspace: React.FC = () => {
                   <h2 className="text-2xl font-bold tracking-tight mb-2">
                     Order {selectedOrderDetails.orderNo}
                   </h2>
-                  {allResultsEntered && !generatedReport && (
+                  {allResultsEntered && !selectedOrderDetails.report && (
                     <Button size="sm" onClick={handleGenerateReport} disabled={isGeneratingReport}>
                       {isGeneratingReport ? 'Generating...' : 'Generate Report'}
                     </Button>
                   )}
-                  {generatedReport && !generatedReport.approved && (
-                    <Button size="sm" onClick={handleApproveReport} disabled={isApprovingReport}>
-                      {isApprovingReport ? 'Approving...' : `Approve Report ${generatedReport.reportNo}`}
+                  {selectedOrderDetails.report?.status === 'DRAFT' && (
+                    <Button size="sm" onClick={() => setSignDialogOpen(true)}>
+                      Sign as Technician
                     </Button>
                   )}
-                  {generatedReport?.approved && (
-                    <Badge variant="outline" className="bg-green-100 text-green-800">
-                      Report {generatedReport.reportNo} approved
-                    </Badge>
+                  {selectedOrderDetails.report?.status === 'TECH_SIGNED' && (
+                    <Button size="sm" onClick={() => setApproveDialogOpen(true)} disabled={isFinalizingPdf}>
+                      {isFinalizingPdf ? 'Finalizing PDF...' : `Approve Report ${selectedOrderDetails.report.reportNo}`}
+                    </Button>
+                  )}
+                  {selectedOrderDetails.report?.status === 'APPROVED' && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-green-100 text-green-800">
+                        <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                        Report {selectedOrderDetails.report.reportNo} approved
+                      </Badge>
+                      {selectedOrderDetails.report.pdfBlobPath && (
+                        <a
+                          href={`${window.location.origin}/verify/report/${selectedOrderDetails.report.reportId}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-primary underline"
+                        >
+                          Verification page
+                        </a>
+                      )}
+                      {isFinalizingPdf && <span className="text-xs text-muted-foreground">Finalizing PDF...</span>}
+                    </div>
                   )}
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -376,6 +517,54 @@ export const PathologyWorkspace: React.FC = () => {
             <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancel</Button>
             <Button onClick={submitOrder} disabled={!canSubmitOrder}>
               {isCreatingOrder ? 'Placing...' : 'Place Order'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Technician sign-off dialog */}
+      <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign as Lab Technician</DialogTitle>
+            <DialogDescription>Enter your DMLT/BMLT registration number to sign off on this report's results.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Registration Number</Label>
+            <Input
+              value={technicianRegNo}
+              onChange={(e) => setTechnicianRegNo(e.target.value)}
+              placeholder="e.g. DMLT-12345"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSignDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSignAsTechnician} disabled={isSigningAsTechnician || !technicianRegNo.trim()}>
+              {isSigningAsTechnician ? 'Signing...' : 'Sign Report'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pathologist approval dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve as Pathologist</DialogTitle>
+            <DialogDescription>Enter your medical registration number to finalize and authorize this report.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Registration Number</Label>
+            <Input
+              value={pathologistRegNo}
+              onChange={(e) => setPathologistRegNo(e.target.value)}
+              placeholder="e.g. MCI-99999"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleApproveReport} disabled={isApprovingReport || !pathologistRegNo.trim()}>
+              {isApprovingReport ? 'Approving...' : 'Approve & Finalize'}
             </Button>
           </DialogFooter>
         </DialogContent>

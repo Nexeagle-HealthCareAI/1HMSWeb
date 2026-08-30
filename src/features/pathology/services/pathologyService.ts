@@ -49,7 +49,24 @@ export interface PathologyOrderDto {
   patientName: string;
   patientAgeYears?: number | null;
   patientGender?: string | null;
+  hospitalName?: string | null;
   lines: PathologyOrderLineDto[];
+  report?: PathologyReportDto | null;
+}
+
+export interface PathologyReportDto {
+  reportId: string;
+  reportNo: string;
+  status: 'DRAFT' | 'TECH_SIGNED' | 'APPROVED';
+  generatedAt?: string;
+  technicianName?: string;
+  technicianRegNo?: string;
+  technicianSignedAt?: string;
+  pathologistName?: string;
+  pathologistRegNo?: string;
+  approvedAt?: string;
+  pdfBlobPath?: string;
+  pdfSha256?: string;
 }
 
 export interface EnterPathologyResultRequest {

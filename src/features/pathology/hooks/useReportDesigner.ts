@@ -81,7 +81,7 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
     color: '#000000',
   });
   
-  const [overflowStrategy, setOverflowStrategy] = useState<'reuse-template' | 'blank-page'>('reuse-template');
+  const [overflowStrategy, setOverflowStrategy] = useState<'reuse-template' | 'blank'>('reuse-template');
 
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [templateMeta, setTemplateMeta] = useState<TemplateMetadata | null>(null);

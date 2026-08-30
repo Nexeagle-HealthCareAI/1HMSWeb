@@ -25,6 +25,14 @@ export const ReportLetterheadConfig: React.FC = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<PathologyReportTemplate | null>(null);
 
+    // LayoutControlsPanel is shared with the prescription designer, where "system default" means
+    // "fall back to the hospital's letterhead when this doctor hasn't uploaded their own" and
+    // "valid upto" bounds a doctor's personal override. Pathology report templates are hospital-wide
+    // only -- there's no per-doctor override to fall back from -- so these two controls are inert
+    // here rather than wired to real state.
+    const [useSystemDefault, setUseSystemDefault] = useState(false);
+    const [validUpto, setValidUpto] = useState(0);
+
     const fetchTemplates = async () => {
         if (!hospitalId) return;
         try {
@@ -136,6 +144,10 @@ export const ReportLetterheadConfig: React.FC = () => {
                                 onMarginsChange={designer.updateMargins}
                                 overflowStrategy={designer.overflowStrategy}
                                 onOverflowChange={designer.setOverflowStrategy}
+                                useSystemDefault={useSystemDefault}
+                                onUseSystemDefaultChange={setUseSystemDefault}
+                                validUpto={validUpto}
+                                onValidUptoChange={setValidUpto}
                                 templateMeta={designer.templateMeta}
                                 templateError={designer.templateError}
                                 isAnalyzingTemplate={designer.isAnalyzingTemplate}
