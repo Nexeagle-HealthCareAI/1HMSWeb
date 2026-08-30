@@ -4,6 +4,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { isAxiosError } from 'axios';
+import { apiClient } from '@/services/axiosClient';
 // No mock data needed, everything is wired to the backend API
 import type {
   HrEmployee,
@@ -22,6 +24,22 @@ import type {
   GetPayslipsByRunResponseModel,
   DispatchPayslipsResponseModel
 } from './types';
+
+// The old fetch()-based implementation threw new Error(body.message) on failure, so components
+// like PayrollWizard's runError.message expect the backend's actual message. Axios errors carry
+// that in error.response.data.message instead -- this keeps the same error.message contract for
+// every mutation caller without touching each consuming component.
+async function unwrapMutationError<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (isAxiosError(err)) {
+      const apiMessage = (err.response?.data as { message?: string } | undefined)?.message;
+      if (apiMessage) throw new Error(apiMessage);
+    }
+    throw err;
+  }
+}
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -43,19 +61,7 @@ export const HR_QUERY_KEYS = {
 export function useHrKpi(hospitalId: string) {
   return useQuery<HrKpiSummary>({
     queryKey: HR_QUERY_KEYS.kpi(hospitalId),
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/kpi-summary?hospitalId=${hospitalId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch KPI summary');
-      }
-      return data;
-    },
+    queryFn: () => apiClient.get(`/api/v1/hr/kpi-summary?hospitalId=${hospitalId}`),
     staleTime: 30_000,
     enabled: !!hospitalId,
   });
@@ -67,7 +73,6 @@ export function useHrEmployees(filters: EmployeeFilters = {}) {
   return useQuery<HrEmployee[]>({
     queryKey: HR_QUERY_KEYS.employees(filters),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (filters.hospitalId) params.append('hospitalId', filters.hospitalId);
       if (filters.search) params.append('searchQuery', filters.search);
@@ -75,15 +80,7 @@ export function useHrEmployees(filters: EmployeeFilters = {}) {
       if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
       if (filters.departmentId) params.append('departmentId', filters.departmentId);
 
-      const response = await fetch(`/api/v1/hr/employees?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch employees');
-      }
+      const data = await apiClient.get<{ employees: HrEmployee[] }>(`/api/v1/hr/employees?${params.toString()}`);
       return data.employees || [];
     },
     staleTime: 60_000,
@@ -94,18 +91,9 @@ export function useHrEmployee(id: string) {
   return useQuery<HrEmployee | undefined>({
     queryKey: HR_QUERY_KEYS.employee(id),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       // Use the generic employees endpoint and filter for now (or a specific by-id endpoint if available)
-      const response = await fetch(`/api/v1/hr/employees`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch employee');
-      }
-      const all: HrEmployee[] = data.employees || [];
+      const data = await apiClient.get<{ employees: HrEmployee[] }>('/api/v1/hr/employees');
+      const all = data.employees || [];
       return all.find(e => e.id === id);
     },
     enabled: !!id,
@@ -118,12 +106,7 @@ export function useLeaveRequests(hospitalId: string) {
   return useQuery<HrLeaveRequest[]>({
     queryKey: HR_QUERY_KEYS.leaveRequests(hospitalId),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/leave-requests?hospitalId=${hospitalId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch leave requests');
+      const data = await apiClient.get<{ leaveRequests: HrLeaveRequest[] }>(`/api/v1/hr/leave-requests?hospitalId=${hospitalId}`);
       return data.leaveRequests || [];
     },
     staleTime: 30_000,
@@ -134,13 +117,8 @@ export function useLeaveBalance(employeeId: string) {
   return useQuery<HrLeaveBalance | undefined>({
     queryKey: HR_QUERY_KEYS.leaveBalance(employeeId),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/leave-balances?employeeId=${employeeId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch leave balance');
-      return data.leaveBalance || null;
+      const data = await apiClient.get<{ leaveBalance: HrLeaveBalance | null }>(`/api/v1/hr/leave-balances?employeeId=${employeeId}`);
+      return data.leaveBalance || undefined;
     },
     enabled: !!employeeId,
   });
@@ -149,22 +127,8 @@ export function useLeaveBalance(employeeId: string) {
 export function useDecideLeave() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ leaveId, status, reason }: { leaveId: string; status: LeaveStatus; reason?: string }) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/leave-requests/${leaveId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status, reason })
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to update leave status');
-      }
-      return result;
-    },
+    mutationFn: ({ leaveId, status, reason }: { leaveId: string; status: LeaveStatus; reason?: string }) =>
+      unwrapMutationError(() => apiClient.put(`/api/v1/hr/leave-requests/${leaveId}/status`, { status, reason })),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['hr', 'leave-requests'] });
     },
@@ -177,16 +141,7 @@ export function useGetPayrollRun(hospitalId: string, month: number, year: number
   return useQuery<HrPayrollRun>({
     queryKey: HR_QUERY_KEYS.payrollRun(hospitalId, month, year),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/payroll/run?hospitalId=${hospitalId}&month=${month}&year=${year}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch payroll run');
-      }
+      const data = await apiClient.get<{ payrollRuns: HrPayrollRun[] }>(`/api/v1/hr/payroll/run?hospitalId=${hospitalId}&month=${month}&year=${year}`);
       return data.payrollRuns[0] || null;
     },
     enabled: !!hospitalId && !!month && !!year,
@@ -202,12 +157,7 @@ export function useGetAttendanceToday(hospitalId: string, date: Date = new Date(
   return useQuery<HrAttendanceLog[]>({
     queryKey: HR_QUERY_KEYS.attendance(hospitalId, dateStr),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/attendance-today?hospitalId=${hospitalId}&date=${dateStr}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch attendance');
+      const data = await apiClient.get<{ attendanceLogs: HrAttendanceLog[] }>(`/api/v1/hr/attendance-today?hospitalId=${hospitalId}&date=${dateStr}`);
       return data.attendanceLogs || [];
     },
     staleTime: 60_000,
@@ -219,12 +169,7 @@ export function useAttendanceExceptions(hospitalId: string, startDate: string, e
   return useQuery<AttendanceExceptionDto[]>({
     queryKey: HR_QUERY_KEYS.attendanceExceptions(hospitalId, startDate, endDate),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/attendance/exceptions?hospitalId=${hospitalId}&startDate=${startDate}&endDate=${endDate}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch attendance exceptions');
+      const data = await apiClient.get<{ exceptions: AttendanceExceptionDto[] }>(`/api/v1/hr/attendance/exceptions?hospitalId=${hospitalId}&startDate=${startDate}&endDate=${endDate}`);
       return data.exceptions || [];
     },
     staleTime: 30_000,
@@ -237,12 +182,7 @@ export function useHospitalShifts(hospitalId: string) {
   return useQuery<HrHospitalShift[]>({
     queryKey: HR_QUERY_KEYS.shifts(hospitalId),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/shifts?hospitalId=${hospitalId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch shifts');
+      const data = await apiClient.get<{ shifts: HrHospitalShift[] }>(`/api/v1/hr/shifts?hospitalId=${hospitalId}`);
       return data.shifts || [];
     },
     staleTime: 300_000,
@@ -255,41 +195,21 @@ export function useDutyRoster(hospitalId: string, startDate: Date, endDate: Date
   return useQuery<HrDutyRoster[]>({
     queryKey: HR_QUERY_KEYS.roster(hospitalId, startDate, endDate),
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const start = format(startDate, 'yyyy-MM-dd');
       const end = format(endDate, 'yyyy-MM-dd');
-      const response = await fetch(`/api/v1/hr/rosters?hospitalId=${hospitalId}&startDate=${start}&endDate=${end}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch roster');
+      const data = await apiClient.get<{ rosters: HrDutyRoster[] }>(`/api/v1/hr/rosters?hospitalId=${hospitalId}&startDate=${start}&endDate=${end}`);
       return data.rosters || [];
     },
     staleTime: 60_000,
   });
 }
 
-// ─── Create / Update Employee (stub) ─────────────────────────────────────────
+// ─── Create / Update Employee ─────────────────────────────────────────────────
 
 export function useCreateEmployee() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: CreateHrEmployeeRequest) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/hr/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(data)
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to create employee');
-      }
-      return result;
-    },
+    mutationFn: (data: CreateHrEmployeeRequest) => unwrapMutationError(() => apiClient.post('/api/v1/hr/employees', data)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['hr', 'employees'] });
       qc.invalidateQueries({ queryKey: ['hr', 'kpi'] });
@@ -301,81 +221,27 @@ export function useCreateEmployee() {
 
 export function useRunPayroll() {
   return useMutation<RunMonthlyPayrollResponseModel, Error, { hospitalId: string, month: number, year: number }>({
-    mutationFn: async ({ hospitalId, month, year }) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/payroll/run?hospitalId=${hospitalId}&month=${month}&year=${year}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to run payroll');
-      }
-      return data;
-    }
+    mutationFn: ({ hospitalId, month, year }) =>
+      unwrapMutationError(() => apiClient.post(`/api/v1/hr/payroll/run?hospitalId=${hospitalId}&month=${month}&year=${year}`)),
   });
 }
 
-export const downloadBankExport = async (hrPayrollRunId: string, format: string) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`/api/v1/hr/payroll/export-bank?hrPayrollRunId=${hrPayrollRunId}&format=${format}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to download bank export');
-  }
-  
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Payroll_${format}_${new Date().getTime()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-};
+export const downloadBankExport = (hrPayrollRunId: string, format: string) =>
+  unwrapMutationError(() => apiClient.download(
+    `/api/v1/hr/payroll/export-bank?hrPayrollRunId=${hrPayrollRunId}&format=${format}`,
+    `Payroll_${format}_${new Date().getTime()}.csv`
+  ));
 
 export function useGetPayslipsByRun(hrPayrollRunId: string | null) {
   return useQuery<GetPayslipsByRunResponseModel, Error>({
     queryKey: ['hr', 'payroll', hrPayrollRunId, 'payslips'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/payroll/${hrPayrollRunId}/payslips`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch payslips');
-      }
-      return data;
-    },
+    queryFn: () => apiClient.get(`/api/v1/hr/payroll/${hrPayrollRunId}/payslips`),
     enabled: !!hrPayrollRunId
   });
 }
 
 export function useDispatchPayslips() {
   return useMutation<DispatchPayslipsResponseModel, Error, string>({
-    mutationFn: async (hrPayrollRunId: string) => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/hr/payroll/${hrPayrollRunId}/dispatch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to dispatch payslips');
-      }
-      return data;
-    }
+    mutationFn: (hrPayrollRunId: string) => unwrapMutationError(() => apiClient.post(`/api/v1/hr/payroll/${hrPayrollRunId}/dispatch`)),
   });
 }
