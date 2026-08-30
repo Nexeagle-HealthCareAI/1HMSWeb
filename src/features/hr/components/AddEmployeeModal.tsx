@@ -130,14 +130,15 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ hospitalId, 
             onClick={onClose}
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl mx-4"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-0 right-0 h-full w-full sm:max-w-xl z-50 bg-white dark:bg-gray-950 shadow-2xl border-l border-gray-200 dark:border-gray-800 flex flex-col"
           >
-            <div className="bg-white dark:bg-gray-950 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="flex flex-col h-full overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-brand-500 to-purple-600 p-5">
+              <div className="bg-gradient-to-r from-brand-500 to-purple-600 p-5 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-white">Add New Staff Member</h2>
@@ -162,7 +163,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ hospitalId, 
               </div>
 
               {/* Step indicators */}
-              <div className="flex border-b border-gray-100 dark:border-gray-800 px-4 bg-gray-50 dark:bg-gray-900/50">
+              <div className="flex border-b border-gray-100 dark:border-gray-800 px-4 bg-gray-50 dark:bg-gray-900/50 flex-shrink-0 overflow-x-auto">
                 {STEPS.map((step, idx) => (
                   <button
                     key={step.id}
@@ -182,7 +183,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ hospitalId, 
               </div>
 
               {/* Form content */}
-              <div className="p-5 min-h-[320px]">
+              <div className="p-5 flex-1 overflow-y-auto custom-scrollbar">
                 {success ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -418,7 +419,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ hospitalId, 
 
               {/* Footer actions */}
               {!success && (
-                <div className="border-t border-gray-100 dark:border-gray-800 p-4 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+                <div className="border-t border-gray-100 dark:border-gray-800 p-4 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 flex-shrink-0 mt-auto">
                   <Button
                     variant="ghost"
                     size="sm"
