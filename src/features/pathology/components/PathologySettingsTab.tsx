@@ -20,6 +20,7 @@ export const PathologySettingsTab: React.FC = () => {
     autoBillOnOrder: false,
     defaultReportHeaderBlob: '',
     defaultReportFooterText: '',
+    letterheadMode: 'SYSTEM_DEFAULT',
   });
 
   useEffect(() => {
@@ -34,6 +35,10 @@ export const PathologySettingsTab: React.FC = () => {
           autoBillOnOrder: data.autoBillOnOrder ?? false,
           defaultReportHeaderBlob: data.defaultReportHeaderBlob ?? '',
           defaultReportFooterText: data.defaultReportFooterText ?? '',
+          // Not editable from this tab -- ReportLetterheadConfig owns that control -- but this
+          // still has to be carried through on save, since updateLabConfig overwrites the whole
+          // row rather than patching individual fields.
+          letterheadMode: data.letterheadMode ?? 'SYSTEM_DEFAULT',
         });
       } catch (error) {
         console.error('Failed to load lab config:', error);
@@ -53,6 +58,7 @@ export const PathologySettingsTab: React.FC = () => {
         autoBillOnOrder: config.autoBillOnOrder,
         defaultReportHeaderBlob: config.defaultReportHeaderBlob,
         defaultReportFooterText: config.defaultReportFooterText,
+        letterheadMode: config.letterheadMode,
       });
       toast.success('Saved', { description: 'Lab configuration updated successfully.' });
     } catch (error) {

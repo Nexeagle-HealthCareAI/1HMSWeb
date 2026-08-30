@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { PDFDocument } from 'pdf-lib';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
-import { pathologyService, PathologyReportTemplate } from '../services/pathologyService';
+import { pathologyService, PathologyReportTemplate, PathologyLetterheadMode } from '../services/pathologyService';
 import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
+import { generatePathologyReportPdf } from '../utils/generatePathologyReportPdf';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 
 export interface MarginConfig {
   top: number;
@@ -331,24 +333,76 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
     };
   }, [reportTemplate?.headerBlobPath, revokePreviewUrl]);
 
-  const generatePreview = useCallback(async () => {
+  // Renders through the exact same function that produces the real, signed report PDF (just fed
+  // mock sample data), so "Live Preview" always reflects what a real report will actually look
+  // like -- including the currently-edited, not-yet-saved margins/typography/mode -- rather than
+  // a separate approximation that can drift from the real renderer.
+  const generatePreview = useCallback(async (letterheadMode: PathologyLetterheadMode) => {
     setIsGeneratingPreview(true);
     try {
-      // In a real application, you would dynamically create a PDF using jspdf + pdf-lib, 
-      // injecting the layout constraints over the uploaded template preview.
-      // For the scope of this generic useDesigner we assume the `previewUrl` will just show the file itself
-      // or we can just rely on the layout controls panel.
-      
-      // Let's just resolve this quickly for the designer.
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
+      const hospital = hospitalId ? await hospitalApi.getHospitalById(hospitalId).catch(() => null) : null;
+      const now = new Date().toISOString();
+
+      const blob = await generatePathologyReportPdf({
+        hospitalName: hospital?.name ?? 'Hospital',
+        reportNo: 'PREVIEW-0000',
+        orderNo: 'PREVIEW-0000',
+        orderDate: now,
+        patientName: 'Sample Patient',
+        patientId: 'PTID00000000',
+        patientAgeYears: 35,
+        patientGender: 'M',
+        lines: [
+          {
+            testName: 'Complete Blood Count (CBC)',
+            testCode: 'HEM-CBC',
+            parameters: [
+              { name: 'Hemoglobin (Hb)', unit: 'g/dL', value: '14.2', flag: 'NORMAL', normalRangeLabel: 'Normal: 13.5 - 17.5' },
+              { name: 'Total WBC Count (TLC)', unit: '/µL', value: '7200', flag: 'NORMAL', normalRangeLabel: 'Normal: 4000 - 11000' },
+              { name: 'Platelet Count', unit: '/µL', value: '95000', flag: 'LOW', normalRangeLabel: 'Normal: 150000 - 450000' },
+            ],
+            interpretation: 'Sample interpretation text for preview purposes.',
+          },
+        ],
+        technicianName: 'Sample Technician',
+        technicianRegNo: 'DMLT-00000',
+        technicianSignedAt: now,
+        pathologistName: 'Dr. Sample Pathologist',
+        pathologistRegNo: 'MCI-00000',
+        approvedAt: now,
+        verifyUrl: `${window.location.origin}/verify/report/preview`,
+        letterheadMode,
+        letterheadTemplateUrl: reportTemplate?.headerBlobPath ?? null,
+        letterheadMargins: layoutMargins,
+        hospitalBranding: hospital && {
+          name: hospital.name,
+          location: hospital.location,
+          city: hospital.city,
+          state: hospital.state,
+          pincode: hospital.pincode,
+          contact: hospital.contact,
+          alternateContact: hospital.alternateContact,
+          email: hospital.email,
+          website: hospital.website,
+          registrationNumber: hospital.registrationNumber,
+          nabhNumber: hospital.nabhNumber,
+        },
+      });
+
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl((current) => {
+        revokePreviewUrl(current);
+        return url;
+      });
+      return url;
     } catch (error) {
       console.error('Failed to generate preview', error);
       toast({ title: 'Preview Error', description: 'Failed to generate a preview', variant: 'destructive' });
+      return null;
     } finally {
       setIsGeneratingPreview(false);
     }
-  }, [toast]);
+  }, [toast, hospitalId, reportTemplate?.headerBlobPath, layoutMargins, revokePreviewUrl]);
 
   const openPreviewInNewTab = useCallback(() => {
     if (!previewUrl) return;

@@ -1,13 +1,15 @@
-import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb, RGB } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFPage, PDFEmbeddedPage, StandardFonts, rgb, RGB } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { PathologyResultFlag } from './resultFlagCalculator';
+import { generateDefaultLetterheadTemplate, DefaultLetterheadHospitalInfo } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
+import { PathologyLetterheadMode } from '../services/pathologyService';
 
 const MM_TO_PT = 72 / 25.4;
 const mmToPt = (value: number) => value * MM_TO_PT;
 
 const PAGE_WIDTH = mmToPt(210);
 const PAGE_HEIGHT = mmToPt(297);
-const MARGIN = mmToPt(18);
+const DEFAULT_MARGIN_MM = 18;
 
 const COLORS = {
   text: rgb(0.07, 0.09, 0.15),
@@ -52,6 +54,13 @@ export interface PathologyReportPdfLine {
   interpretation?: string;
 }
 
+export interface PathologyReportPdfMargins {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface PathologyReportPdfData {
   hospitalName: string;
   reportNo: string;
@@ -69,6 +78,74 @@ export interface PathologyReportPdfData {
   pathologistRegNo: string;
   approvedAt: string;
   verifyUrl: string;
+
+  // Which source the header/footer artwork is drawn from -- omitted entirely (undefined) preserves
+  // the original fixed plain-text header for any caller that predates this, CUSTOM_TEMPLATE/
+  // SYSTEM_DEFAULT/BLANK_PREPRINTED are the three real modes a hospital picks from in the
+  // Configurator (see LabConfiguration.LetterheadMode).
+  letterheadMode?: PathologyLetterheadMode;
+  // Fetchable URL of the hospital's default PathologyReportTemplate.headerBlobPath, used only when
+  // letterheadMode is CUSTOM_TEMPLATE. If missing, or the fetch fails, falls back to the same
+  // branded rendering as SYSTEM_DEFAULT rather than silently producing a blank medico-legal
+  // document -- BLANK_PREPRINTED is the only mode that ever draws nothing, and only when chosen
+  // deliberately.
+  letterheadTemplateUrl?: string | null;
+  // From the default template's layoutJson (mm). Falls back to a flat 18mm on every side.
+  letterheadMargins?: PathologyReportPdfMargins | null;
+  // Hospital branding fields for the SYSTEM_DEFAULT branch -- same shape prescription/discharge
+  // already feed into generateDefaultLetterheadTemplate.
+  hospitalBranding?: DefaultLetterheadHospitalInfo | null;
+}
+
+const resolveMargins = (margins: PathologyReportPdfMargins | null | undefined) => ({
+  top: mmToPt(margins?.top ?? DEFAULT_MARGIN_MM),
+  right: mmToPt(margins?.right ?? DEFAULT_MARGIN_MM),
+  bottom: mmToPt(margins?.bottom ?? DEFAULT_MARGIN_MM),
+  left: mmToPt(margins?.left ?? DEFAULT_MARGIN_MM),
+});
+
+// Resolves what (if anything) gets drawn as the page background, per LetterheadMode. Returns null
+// for BLANK_PREPRINTED (deliberately nothing) and for the legacy no-mode-supplied case (the caller
+// draws the original hardcoded text header itself instead). A CUSTOM_TEMPLATE that can't be
+// fetched falls back to the same branded default SYSTEM_DEFAULT produces, rather than shipping a
+// blank signed report because of a transient storage/network failure.
+async function resolveLetterheadBackground(
+  doc: PDFDocument,
+  data: PathologyReportPdfData,
+): Promise<PDFEmbeddedPage | null> {
+  const mode = data.letterheadMode;
+  if (!mode || mode === 'BLANK_PREPRINTED') return null;
+
+  const embedFromBytes = async (bytes: Uint8Array) => {
+    const [embedded] = await doc.embedPdf(bytes, [0]);
+    return embedded;
+  };
+
+  if (mode === 'CUSTOM_TEMPLATE' && data.letterheadTemplateUrl) {
+    try {
+      const res = await fetch(data.letterheadTemplateUrl);
+      if (res.ok) {
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        return await embedFromBytes(bytes);
+      }
+    } catch (err) {
+      console.error('Failed to fetch the configured pathology letterhead template, falling back to the system default.', err);
+    }
+  }
+
+  // SYSTEM_DEFAULT, or CUSTOM_TEMPLATE with no usable template.
+  try {
+    const margins = data.letterheadMargins ?? { top: DEFAULT_MARGIN_MM, right: DEFAULT_MARGIN_MM, bottom: DEFAULT_MARGIN_MM, left: DEFAULT_MARGIN_MM };
+    const defaultFile = await generateDefaultLetterheadTemplate({
+      layout: { margins, headerHeight: 20, footerHeight: 15, overflowStrategy: 'reuse-template' },
+      hospital: data.hospitalBranding,
+    });
+    const bytes = new Uint8Array(await defaultFile.arrayBuffer());
+    return await embedFromBytes(bytes);
+  } catch (err) {
+    console.error('Failed to generate the default pathology letterhead, continuing with a blank header.', err);
+    return null;
+  }
 }
 
 // Purpose-built for pathology reports rather than reusing the prescription preview's richer
@@ -83,17 +160,28 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   const qrPngBytes = Uint8Array.from(atob(qrDataUrl.split(',')[1]), c => c.charCodeAt(0));
   const qrImage = await doc.embedPng(qrPngBytes);
 
+  const background = await resolveLetterheadBackground(doc, data);
+  const margins = resolveMargins(data.letterheadMargins);
+  const contentWidth = PAGE_WIDTH - margins.left - margins.right;
+
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let cursorY = PAGE_HEIGHT - MARGIN;
-  const contentWidth = PAGE_WIDTH - MARGIN * 2;
+  let cursorY = PAGE_HEIGHT - margins.top;
+
+  const drawBackground = (p: PDFPage) => {
+    if (background) {
+      p.drawPage(background, { x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT });
+    }
+  };
+  drawBackground(page);
 
   const newPage = () => {
     page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    cursorY = PAGE_HEIGHT - MARGIN;
+    drawBackground(page);
+    cursorY = PAGE_HEIGHT - margins.top;
   };
 
   const ensureRoom = (height: number) => {
-    if (cursorY - height < MARGIN) newPage();
+    if (cursorY - height < margins.bottom) newPage();
   };
 
   const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): string[] => {
@@ -119,20 +207,26 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   ) => {
     const font = opts.font ?? regularFont;
     const size = opts.size ?? 9.5;
-    const x = opts.x ?? MARGIN;
+    const x = opts.x ?? margins.left;
     ensureRoom(size + 4);
     page.drawText(text, { x, y: cursorY, size, font, color: opts.color ?? COLORS.text });
     cursorY -= size + (opts.gapAfter ?? 4);
   };
 
   // --- Header ---
-  drawLine(data.hospitalName, { font: boldFont, size: 16, gapAfter: 4 });
-  drawLine('Pathology Report', { font: regularFont, size: 10, color: COLORS.muted, gapAfter: 10 });
-  page.drawLine({
-    start: { x: MARGIN, y: cursorY }, end: { x: PAGE_WIDTH - MARGIN, y: cursorY },
-    thickness: 1, color: COLORS.border,
-  });
-  cursorY -= 14;
+  // A resolved background (custom template or system-default) already carries its own hospital
+  // identity in the reserved margin band -- drawing the plain-text header on top of it would
+  // duplicate/collide with that artwork. Only the legacy no-mode-supplied path (data.letterheadMode
+  // undefined) keeps the original fixed text header.
+  if (!background && !data.letterheadMode) {
+    drawLine(data.hospitalName, { font: boldFont, size: 16, gapAfter: 4 });
+    drawLine('Pathology Report', { font: regularFont, size: 10, color: COLORS.muted, gapAfter: 10 });
+    page.drawLine({
+      start: { x: margins.left, y: cursorY }, end: { x: PAGE_WIDTH - margins.right, y: cursorY },
+      thickness: 1, color: COLORS.border,
+    });
+    cursorY -= 14;
+  }
 
   // --- Patient / order info ---
   const ageGender = [
@@ -149,10 +243,10 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     ensureRoom(30);
     drawLine(`${line.testName} (${line.testCode})`, { font: boldFont, size: 11, gapAfter: 6 });
 
-    const colParam = MARGIN;
-    const colValue = MARGIN + contentWidth * 0.45;
-    const colUnit = MARGIN + contentWidth * 0.65;
-    const colRange = MARGIN + contentWidth * 0.78;
+    const colParam = margins.left;
+    const colValue = margins.left + contentWidth * 0.45;
+    const colUnit = margins.left + contentWidth * 0.65;
+    const colRange = margins.left + contentWidth * 0.78;
 
     ensureRoom(14);
     page.drawText('Parameter', { x: colParam, y: cursorY, size: 8.5, font: boldFont, color: COLORS.muted });
@@ -160,7 +254,7 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     page.drawText('Unit', { x: colUnit, y: cursorY, size: 8.5, font: boldFont, color: COLORS.muted });
     page.drawText('Normal Range', { x: colRange, y: cursorY, size: 8.5, font: boldFont, color: COLORS.muted });
     cursorY -= 4;
-    page.drawLine({ start: { x: MARGIN, y: cursorY }, end: { x: PAGE_WIDTH - MARGIN, y: cursorY }, thickness: 0.5, color: COLORS.border });
+    page.drawLine({ start: { x: margins.left, y: cursorY }, end: { x: PAGE_WIDTH - margins.right, y: cursorY }, thickness: 0.5, color: COLORS.border });
     cursorY -= 12;
 
     for (const p of line.parameters) {
@@ -186,12 +280,12 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   // --- Signature block ---
   ensureRoom(90);
   cursorY -= 6;
-  page.drawLine({ start: { x: MARGIN, y: cursorY }, end: { x: PAGE_WIDTH - MARGIN, y: cursorY }, thickness: 1, color: COLORS.border });
+  page.drawLine({ start: { x: margins.left, y: cursorY }, end: { x: PAGE_WIDTH - margins.right, y: cursorY }, thickness: 1, color: COLORS.border });
   cursorY -= 20;
 
   const sigColWidth = contentWidth / 2;
-  const techX = MARGIN;
-  const pathX = MARGIN + sigColWidth;
+  const techX = margins.left;
+  const pathX = margins.left + sigColWidth;
   const sigTopY = cursorY;
 
   page.drawText('Verified by (Lab Technician)', { x: techX, y: sigTopY, size: 8.5, font: boldFont, color: COLORS.muted });
@@ -209,9 +303,9 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   // --- QR verification block ---
   ensureRoom(70);
   const qrSize = 56;
-  page.drawImage(qrImage, { x: MARGIN, y: cursorY - qrSize, width: qrSize, height: qrSize });
+  page.drawImage(qrImage, { x: margins.left, y: cursorY - qrSize, width: qrSize, height: qrSize });
   page.drawText('Scan to verify this report is genuine', {
-    x: MARGIN + qrSize + 10, y: cursorY - qrSize / 2 + 4, size: 8.5, font: regularFont, color: COLORS.muted,
+    x: margins.left + qrSize + 10, y: cursorY - qrSize / 2 + 4, size: 8.5, font: regularFont, color: COLORS.muted,
   });
 
   const pdfBytes = await doc.save();

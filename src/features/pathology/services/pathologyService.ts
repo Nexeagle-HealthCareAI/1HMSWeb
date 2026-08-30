@@ -1,11 +1,14 @@
 import { axiosInstance as api } from '@/services/axiosClient';
 
+export type PathologyLetterheadMode = 'CUSTOM_TEMPLATE' | 'BLANK_PREPRINTED' | 'SYSTEM_DEFAULT';
+
 export interface LabConfiguration {
   configId?: string;
   hospitalId?: string;
   autoBillOnOrder: boolean;
   defaultReportHeaderBlob?: string;
   defaultReportFooterText?: string;
+  letterheadMode: PathologyLetterheadMode;
 }
 
 export interface CreatePathologyOrderRequest {
@@ -176,6 +179,7 @@ export interface UpdateLabConfigRequest {
   autoBillOnOrder: boolean;
   defaultReportHeaderBlob?: string;
   defaultReportFooterText?: string;
+  letterheadMode: PathologyLetterheadMode;
 }
 
 export interface PathologyReportReadyDto {

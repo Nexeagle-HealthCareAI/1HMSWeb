@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store';
 import { OrderResultEntry } from './OrderResultEntry';
 import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/generatePathologyReportPdf';
 import { resolveRange } from '../utils/resultFlagCalculator';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 
 export const PathologyWorkspace: React.FC = () => {
   const hospitalId = useAuthStore(state => state.hospitalId);
@@ -265,6 +266,26 @@ export const PathologyWorkspace: React.FC = () => {
     setIsFinalizingPdf(true);
     try {
       const verifyUrl = `${window.location.origin}/verify/report/${order.report.reportId}`;
+
+      // Letterhead source is hospital-wide config (LabConfiguration), not tied to any one order --
+      // resolved fresh at finalization time rather than cached, so a mode/margin change in the
+      // Configurator takes effect on the very next report without a reload.
+      const [labConfig, templates, hospital] = await Promise.all([
+        pathologyService.getLabConfig(hospitalId).catch(() => null),
+        pathologyService.getTemplates(hospitalId).catch(() => []),
+        hospitalApi.getHospitalById(hospitalId).catch(() => null),
+      ]);
+      const defaultTemplate = templates.find(t => t.isDefault);
+      const letterheadMargins = (() => {
+        if (!defaultTemplate?.layoutJson) return null;
+        try {
+          const parsed = JSON.parse(defaultTemplate.layoutJson);
+          return parsed.margins ?? null;
+        } catch {
+          return null;
+        }
+      })();
+
       const blob = await generatePathologyReportPdf({
         hospitalName: order.hospitalName ?? 'Hospital',
         reportNo: order.report.reportNo,
@@ -282,6 +303,22 @@ export const PathologyWorkspace: React.FC = () => {
         pathologistRegNo: order.report.pathologistRegNo ?? '—',
         approvedAt: order.report.approvedAt ?? new Date().toISOString(),
         verifyUrl,
+        letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
+        letterheadTemplateUrl: defaultTemplate?.headerBlobPath ?? null,
+        letterheadMargins,
+        hospitalBranding: hospital && {
+          name: hospital.name,
+          location: hospital.location,
+          city: hospital.city,
+          state: hospital.state,
+          pincode: hospital.pincode,
+          contact: hospital.contact,
+          alternateContact: hospital.alternateContact,
+          email: hospital.email,
+          website: hospital.website,
+          registrationNumber: hospital.registrationNumber,
+          nabhNumber: hospital.nabhNumber,
+        },
       });
 
       const uploadResult = await pathologyService.uploadReportPdf(hospitalId, order.orderId, order.report.reportId, blob);
