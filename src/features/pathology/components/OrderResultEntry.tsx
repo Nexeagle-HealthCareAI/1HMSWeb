@@ -89,6 +89,8 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const [values, setValues] = useState<Record<string, string>>({});
   const [interpretation, setInterpretation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sampleBarcode, setSampleBarcode] = useState('');
+  const [isCollectingSample, setIsCollectingSample] = useState(false);
   const previouslyCriticalRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -159,6 +161,23 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     setValues(filled);
   };
 
+  const handleCollectSample = async () => {
+    setIsCollectingSample(true);
+    try {
+      const success = await pathologyService.collectSample(hospitalId, orderId, orderLine.orderLineId, sampleBarcode.trim() || undefined);
+      if (!success) {
+        toast.error('Could not record sample collection');
+        return;
+      }
+      toast.success('Sample marked as collected');
+      onSuccess();
+    } catch (error) {
+      toast.error('Could not record sample collection');
+    } finally {
+      setIsCollectingSample(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -180,6 +199,7 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   };
 
   const isCompleted = orderLine.status === 'REPORT_APPROVED';
+  const isPending = orderLine.status === 'PENDING';
   const hasAutofillableParams = params.some(p => !!p.defaultValue);
 
   return (
@@ -188,7 +208,15 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">{orderLine.testName} ({orderLine.testCode})</CardTitle>
-            <CardDescription>Status: {orderLine.status.replace('_', ' ')}</CardDescription>
+            <CardDescription>
+              Status: {orderLine.status.replace('_', ' ')}
+              {orderLine.sampleCollectedAt && (
+                <span className="ml-1">
+                  · Sample collected {new Date(orderLine.sampleCollectedAt).toLocaleString()}
+                  {orderLine.sampleBarcode ? ` (${orderLine.sampleBarcode})` : ''}
+                </span>
+              )}
+            </CardDescription>
           </div>
           {!isCompleted && hasAutofillableParams && (
             <Button type="button" variant="outline" size="sm" onClick={handleAutofillNormals}>
@@ -196,6 +224,19 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
             </Button>
           )}
         </div>
+        {isPending && (
+          <div className="flex items-center gap-2 pt-3">
+            <Input
+              value={sampleBarcode}
+              onChange={(e) => setSampleBarcode(e.target.value)}
+              placeholder="Sample barcode (optional)"
+              className="h-9 max-w-xs"
+            />
+            <Button type="button" size="sm" onClick={handleCollectSample} disabled={isCollectingSample}>
+              {isCollectingSample ? 'Marking...' : 'Mark Sample Collected'}
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="pt-6 space-y-4">
         {criticalParams.length > 0 && (

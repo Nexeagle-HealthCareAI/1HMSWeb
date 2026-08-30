@@ -39,6 +39,8 @@ export interface PathologyOrderLineDto {
   testCode: string;
   status: string;
   parameterSchemaJson?: string;
+  sampleBarcode?: string | null;
+  sampleCollectedAt?: string | null;
   result?: PathologyResultDto;
 }
 
@@ -209,6 +211,11 @@ export const pathologyService = {
 
   enterResult: async (hospitalId: string, orderId: string, orderLineId: string, request: EnterPathologyResultRequest): Promise<boolean> => {
     const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/result`, request);
+    return response.data.success;
+  },
+
+  collectSample: async (hospitalId: string, orderId: string, orderLineId: string, sampleBarcode?: string): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/collect-sample`, { sampleBarcode });
     return response.data.success;
   },
 
