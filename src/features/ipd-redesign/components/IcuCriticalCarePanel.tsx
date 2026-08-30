@@ -143,7 +143,13 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                 respiratoryRate: draft.respiratoryRate != null ? String(draft.respiratoryRate) : '',
                 gcsTotal: draft.gcsTotal != null ? String(draft.gcsTotal) : '',
                 ageYears: draft.ageYears != null ? String(draft.ageYears) : '',
-                fiO2: '', paO2: '', arterialPh: '', serumSodium: '', serumPotassium: '', serumCreatinine: '', hematocrit: '', wbc: '',
+                // ABG isn't a seeded catalog panel, so these three always start blank.
+                fiO2: '', paO2: '', arterialPh: '',
+                serumSodium: draft.serumSodium != null ? String(draft.serumSodium) : '',
+                serumPotassium: draft.serumPotassium != null ? String(draft.serumPotassium) : '',
+                serumCreatinine: draft.serumCreatinine != null ? String(draft.serumCreatinine) : '',
+                hematocrit: draft.hematocrit != null ? String(draft.hematocrit) : '',
+                wbc: draft.wbc != null ? String(draft.wbc) : '',
             });
         } catch {
             setApacheForm({});
@@ -191,7 +197,11 @@ export const IcuCriticalCarePanel: React.FC<Props> = ({ admissionId, isActive })
                 mapValue: draft.mapValue != null ? String(draft.mapValue) : '',
                 gcsTotal: draft.gcsTotal != null ? String(draft.gcsTotal) : '',
                 urineOutputMlPerDay: draft.urineOutputMlPerDay != null ? String(draft.urineOutputMlPerDay) : '',
-                paO2FiO2Ratio: '', plateletsCount: '', bilirubinMgDl: '', creatinineMgDl: '',
+                // ABG isn't a seeded catalog panel, so PaO2/FiO2 ratio always starts blank.
+                paO2FiO2Ratio: '',
+                plateletsCount: draft.plateletsCount != null ? String(draft.plateletsCount) : '',
+                bilirubinMgDl: draft.bilirubinMgDl != null ? String(draft.bilirubinMgDl) : '',
+                creatinineMgDl: draft.creatinineMgDl != null ? String(draft.creatinineMgDl) : '',
             });
         } catch {
             setSofaForm({});

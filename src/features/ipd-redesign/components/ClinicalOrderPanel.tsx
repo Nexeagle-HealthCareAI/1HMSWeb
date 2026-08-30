@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,7 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
     showMedicationFields, showUrgency, showScheduledAt,
 }) => {
     const { toast } = useToast();
+    const navigate = useNavigate();
     const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
     const [orders, setOrders] = useState<ClinicalOrderItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -187,6 +189,21 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                                                 {l.isHighAlert && <Badge variant="outline" className="text-[9px] font-bold bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/30 rounded-full">HIGH ALERT</Badge>}
                                                 {l.isDailyRecurringCharge && <Badge variant="outline" className="text-[9px] font-bold bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-900/30 rounded-full">DAILY CHARGE</Badge>}
                                                 {l.statusCode === 'DISCONTINUED' && <Badge variant="outline" className="text-[9px] bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700 rounded-full">DISCONTINUED</Badge>}
+                                                {l.linkedPathologyReportId && (
+                                                    l.linkedPathologyReportStatus === 'APPROVED' ? (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30 rounded-full cursor-pointer hover:bg-emerald-100"
+                                                            onClick={() => navigate('/pathology')}
+                                                        >
+                                                            Completed (View Report)
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[9px] font-bold bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-900/30 rounded-full">
+                                                            Sent to Lab
+                                                        </Badge>
+                                                    )
+                                                )}
                                             </div>
                                             <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
                                                 {[l.dose, l.route, l.frequency, l.durationDays ? `${l.durationDays}d` : null, l.scheduledAt ? `Scheduled ${formatIstDateTime(l.scheduledAt)}` : null].filter(Boolean).join(' · ') || '—'}

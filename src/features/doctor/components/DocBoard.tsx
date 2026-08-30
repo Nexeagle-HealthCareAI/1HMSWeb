@@ -109,6 +109,8 @@ import AttachmentsSection from '@/features/patient/components/AttachmentsSection
 import { AdviseAdmissionSheet } from '@/features/patient/components/AdviseAdmissionSheet';
 import { AdmissionStatusBadge } from '@/features/patient/components/AdmissionStatusBadge';
 import { admissionReferralApi, AdmissionReferralItem } from '@/features/ipd-redesign/services/admissionReferralApi';
+import { LabReportReadyBadge } from './LabReportReadyBadge';
+import { pathologyService, PathologyReportReadyDto } from '@/features/pathology/services/pathologyService';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
@@ -464,6 +466,29 @@ export const ClinicalDashboard: React.FC = () => {
       .catch(() => { if (!cancelled) setReferralsByPatient({}); });
     return () => { cancelled = true; };
   }, [hospitalId, doctorId]);
+
+  // Recently-approved pathology reports per patient, for the LabReportReadyBadge shown alongside
+  // each appointment row. Same fetch-once-and-index-by-patientId shape as referralsByPatient above
+  // -- hospital-wide (not scoped to this doctor), since a lab result becoming ready is relevant to
+  // whichever doctor is seeing the patient today, not just whoever originally ordered the test.
+  const [labReportsByPatient, setLabReportsByPatient] = useState<Record<string, PathologyReportReadyDto>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!hospitalId) {
+      setLabReportsByPatient({});
+      return;
+    }
+    pathologyService.getRecentlyApprovedReports(hospitalId)
+      .then(reports => {
+        if (cancelled) return;
+        const map: Record<string, PathologyReportReadyDto> = {};
+        reports.forEach(r => { map[r.patientId] = r; });
+        setLabReportsByPatient(map);
+      })
+      .catch(() => { if (!cancelled) setLabReportsByPatient({}); });
+    return () => { cancelled = true; };
+  }, [hospitalId]);
 
   // Loading + Error state combine
   // If profile is restricted (204), we shouldn't consider appointment loading state as blocking
@@ -1753,6 +1778,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <div className="transform transition-transform duration-200 hover:scale-105 origin-left flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
                                         <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
+                                        <LabReportReadyBadge report={labReportsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4 align-middle text-center">
@@ -2139,6 +2165,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <div className="flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
                                         <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
+                                        <LabReportReadyBadge report={labReportsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4">
@@ -2417,6 +2444,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <div className="flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
                                         <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
+                                        <LabReportReadyBadge report={labReportsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4">

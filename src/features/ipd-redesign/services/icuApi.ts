@@ -32,6 +32,13 @@ export interface ApacheIIAutoFill {
     gcsTotal?: number | null;
     ageYears?: number | null;
     sourceVitalRecordedAt?: string | null;
+    // Pulled from the patient's most recent approved pathology report, when one exists.
+    serumSodium?: number | null;
+    serumPotassium?: number | null;
+    serumCreatinine?: number | null;
+    hematocrit?: number | null;
+    wbc?: number | null;
+    sourceLabReportApprovedAt?: string | null;
 }
 
 export interface ApacheIIScoreInput {
@@ -68,6 +75,11 @@ export interface SofaAutoFill {
     gcsTotal?: number | null;
     urineOutputMlPerDay?: number | null;
     sourceVitalRecordedAt?: string | null;
+    // Pulled from the patient's most recent approved pathology report, when one exists.
+    plateletsCount?: number | null;
+    bilirubinMgDl?: number | null;
+    creatinineMgDl?: number | null;
+    sourceLabReportApprovedAt?: string | null;
 }
 
 export interface SofaScoreInput {

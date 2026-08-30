@@ -172,6 +172,15 @@ export interface UpdateLabConfigRequest {
   defaultReportFooterText?: string;
 }
 
+export interface PathologyReportReadyDto {
+  patientId: string;
+  reportId: string;
+  reportNo: string;
+  orderNo: string;
+  approvedAt?: string;
+  pdfBlobPath?: string;
+}
+
 export const pathologyService = {
   createOrder: async (hospitalId: string, request: CreatePathologyOrderRequest): Promise<CreatePathologyOrderResponse> => {
     const response = await api.post<CreatePathologyOrderResponse>(`/api/v1/PathologyOrder/${hospitalId}`, request);
@@ -181,6 +190,11 @@ export const pathologyService = {
   getOrders: async (hospitalId: string, status?: string): Promise<PathologyOrderDto[]> => {
     const url = status ? `/api/v1/PathologyOrder/${hospitalId}?status=${status}` : `/api/v1/PathologyOrder/${hospitalId}`;
     const response = await api.get<PathologyOrderDto[]>(url);
+    return response.data;
+  },
+
+  getRecentlyApprovedReports: async (hospitalId: string): Promise<PathologyReportReadyDto[]> => {
+    const response = await api.get<PathologyReportReadyDto[]>(`/api/v1/PathologyOrder/${hospitalId}/reports/ready`);
     return response.data;
   },
 
