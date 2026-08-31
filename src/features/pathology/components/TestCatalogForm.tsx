@@ -52,7 +52,7 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
   const [chargeMasters, setChargeMasters] = useState<ChargeMaster[]>([]);
   const [loadingCharges, setLoadingCharges] = useState(false);
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm({
     defaultValues: {
       testCode: '',
       testName: '',
@@ -60,6 +60,7 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
       sampleType: '',
       containerType: '',
       chargeId: '',
+      rate: '',
       isActive: true,
       sortOrder: 0
     }
@@ -76,7 +77,15 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
         const res = await ipdBillingService.listChargeMasters({ hospitalId, pageSize: 500 });
         // Scoped to LAB/ANY items -- same inclusion rule AddChargesModal uses -- so linking a test
         // isn't a scroll through the entire OPD/IPD/PHARMACY charge catalog.
-        if (!cancelled) setChargeMasters((res?.items ?? []).filter(m => m.isActive && (m.appliesTo === 'LAB' || m.appliesTo === 'ANY')));
+        const list = (res?.items ?? []).filter(m => m.isActive && (m.appliesTo === 'LAB' || m.appliesTo === 'ANY'));
+        if (cancelled) return;
+        setChargeMasters(list);
+        // Prefill the rate field from the currently-linked charge, once the catalog (and its
+        // rates) has actually loaded -- reset() below may already have run with the list empty.
+        if (test?.chargeId) {
+          const linked = list.find(c => c.chargeId === test.chargeId);
+          if (linked) setValue('rate', String(linked.defaultRate));
+        }
       } catch (e: any) {
         if (!cancelled) toast.error("Could not load charge catalog for billing linkage");
       } finally {
@@ -84,7 +93,7 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
       }
     })();
     return () => { cancelled = true; };
-  }, [isOpen, hospitalId]);
+  }, [isOpen, hospitalId, test?.chargeId, setValue]);
 
   useEffect(() => {
     if (test) {
@@ -95,6 +104,7 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
         sampleType: test.sampleType || '',
         containerType: test.containerType || '',
         chargeId: test.chargeId || '',
+        rate: '',
         isActive: test.isActive,
         sortOrder: test.sortOrder
       });
@@ -163,10 +173,46 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
     try {
       setLoading(true);
 
+      // Resolve the charge link before saving the test -- editing the rate here updates the
+      // already-linked charge in place; typing a rate with nothing linked yet creates a new
+      // charge named after this test, so an admin never has to pre-create one on a separate
+      // screen just to link it back here.
+      let resolvedChargeId: string | undefined = data.chargeId || undefined;
+      const rateNum = data.rate === '' || data.rate === undefined ? undefined : Number(data.rate);
+      if (resolvedChargeId) {
+        const existing = chargeMasters.find(c => c.chargeId === resolvedChargeId);
+        if (existing && rateNum !== undefined && rateNum !== existing.defaultRate) {
+          await ipdBillingService.upsertChargeMaster({
+            chargeId: existing.chargeId,
+            hospitalId,
+            chargeCode: existing.chargeCode,
+            displayName: existing.displayName || data.testName,
+            categoryCode: existing.categoryCode || 'LAB_PATH',
+            appliesTo: existing.appliesTo || 'LAB',
+            defaultRate: rateNum,
+            defaultQty: existing.defaultQty ?? 1,
+            isActive: existing.isActive ?? true,
+          });
+        }
+      } else if (rateNum !== undefined && rateNum >= 0) {
+        const created = await ipdBillingService.upsertChargeMaster({
+          hospitalId,
+          chargeCode: data.testCode,
+          displayName: data.testName,
+          categoryCode: 'LAB_PATH',
+          appliesTo: 'LAB',
+          defaultRate: rateNum,
+          defaultQty: 1,
+          isActive: true,
+        });
+        resolvedChargeId = created.chargeId;
+      }
+
       const toNum = (v: string) => (v === '' || v === undefined ? undefined : Number(v));
       const payload = {
         ...data,
-        chargeId: data.chargeId || undefined,
+        chargeId: resolvedChargeId,
+        rate: undefined,
         parameterSchemaJson: JSON.stringify({
           params: parameters.map((p, index) => ({
             name: p.name,
@@ -238,13 +284,22 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
               <Input {...register('containerType')} placeholder="EDTA Tube" />
             </div>
 
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2">
               <Label>Linked Charge (for auto-billing)</Label>
               <Controller
                 name="chargeId"
                 control={control}
                 render={({ field }) => (
-                  <Select value={field.value || 'none'} onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}>
+                  <Select
+                    value={field.value || 'none'}
+                    onValueChange={(v) => {
+                      field.onChange(v === 'none' ? '' : v);
+                      // Picking an existing charge loads its current rate here too, so this
+                      // field is always "what will be saved", not just "what's picked."
+                      const picked = v !== 'none' ? chargeMasters.find(c => c.chargeId === v) : undefined;
+                      setValue('rate', picked ? String(picked.defaultRate) : '');
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={loadingCharges ? 'Loading charges...' : 'Not linked — no auto-billing'} />
                     </SelectTrigger>
@@ -259,8 +314,17 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
                   </Select>
                 )}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Rate (₹)</Label>
+              <Input type="number" step="0.01" min="0" {...register('rate')} placeholder="0.00" />
+            </div>
+            <div className="col-span-2 -mt-2">
               <p className="text-xs text-gray-500">
                 Required for this test to auto-bill on order placement, sample collection, or report approval.
+                Picking a charge above loads its current rate — edit it here and Save updates that charge
+                directly. Leaving "Not linked" but entering a rate creates a new charge for this test, named
+                after it, so you don't need to set one up separately first.
               </p>
             </div>
 
