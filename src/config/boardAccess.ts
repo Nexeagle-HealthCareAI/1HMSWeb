@@ -66,6 +66,8 @@ export const BOARD_ACCESS: BoardAccessRule[] = [
   { id: 'ipd-workspace-patient', path: '/ipd-workspace/patient/:id', permissionKeys: ['ipd'] },
   { id: 'inventory', path: '/inventory', permissionKeys: ['inventory'], navLabel: 'Inventory', navIcon: Boxes, showInSidebar: true },
   { id: 'pathology', path: '/pathology', permissionKeys: ['pathology'], navLabel: 'Pathology Lab', navIcon: FlaskConical, showInSidebar: true },
+  { id: 'pathology-new-order', path: '/pathology/orders/new', permissionKeys: ['pathology'] },
+  { id: 'pathology-order', path: '/pathology/orders/:orderId', permissionKeys: ['pathology'] },
   { id: 'ot-board', path: '/ot-board', permissionKeys: ['ot_board'], navLabel: 'OT Board', navIcon: ActivityIcon, showInSidebar: true },
   { id: 'icu-board', path: '/icu-board', permissionKeys: ['icu_board'], navLabel: 'ICU Board', navIcon: HeartPulse, showInSidebar: true },
   { id: 'nursing-station', path: '/nursing-station', permissionKeys: ['nursing_station'], navLabel: 'Nursing Station', navIcon: ClipboardList, showInSidebar: true },

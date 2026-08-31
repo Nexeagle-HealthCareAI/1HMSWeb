@@ -1,0 +1,456 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { pathologyService, PathologyOrderDto } from '../services/pathologyService';
+import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/store';
+import { OrderResultEntry } from '../components/OrderResultEntry';
+import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/generatePathologyReportPdf';
+import { resolveRange } from '../utils/resultFlagCalculator';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { usePathologyReportFieldLayout } from '../hooks/usePathologyReportFieldLayout';
+import type { PathologyFieldConfigItem } from '../services/pathologyFieldLayoutApi';
+import { getPathologyStatusColor } from '../utils/pathologyStatusColor';
+
+// Dedicated page for one pathology order -- a pathologist/technician lands here from the
+// Pathology Lab dashboard's order cards to fill in per-test results, report-level fields, and
+// preview/generate the report. Deep-linkable (reloading this URL re-fetches the same order),
+// mirroring IpdPatientWorkspacePage.tsx's routed detail-page pattern.
+const PathologyOrderDetailPage: React.FC = () => {
+  const { orderId } = useParams<{ orderId: string }>();
+  const navigate = useNavigate();
+  const hospitalId = useAuthStore(state => state.hospitalId);
+
+  const [order, setOrder] = useState<PathologyOrderDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // The hospital's configured report field layout -- report-level fields (once per report) and
+  // per-test fields (repeat on every test line, starting with Interpretation / Notes). See
+  // PathologyReportFieldLayoutEditor.tsx / pathologyFieldLayoutApi.ts.
+  const { reportFields, lineFields } = usePathologyReportFieldLayout(hospitalId ?? undefined);
+  const [reportFieldValues, setReportFieldValues] = useState<Record<string, string>>({});
+  const [isSavingReportFields, setIsSavingReportFields] = useState(false);
+
+  // This order's billing status, once it's known to be attached to a visit (order.encounterId) --
+  // the ledger for that encounter, scoped down to this order's own lab-sourced lines, so a tech
+  // can see the same invoice number Billing sees without leaving Pathology.
+  const [orderBilling, setOrderBilling] = useState<{ invoiceNo?: string; invoiceStatus?: string; labTotal: number } | null>(null);
+  const [isLoadingOrderBilling, setIsLoadingOrderBilling] = useState(false);
+
+  // Report generation. The report's own state lives on order.report (refetched from the server
+  // after every action) rather than local state, so a page reload mid-flow shows the true status
+  // instead of a stale client guess.
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isFinalizingPdf, setIsFinalizingPdf] = useState(false);
+  const [isPreviewingReport, setIsPreviewingReport] = useState(false);
+
+  const refetch = useCallback(async () => {
+    if (!hospitalId || !orderId) return undefined;
+    try {
+      const details = await pathologyService.getOrderById(hospitalId, orderId);
+      setOrder(details);
+      setLoadError(null);
+      return details;
+    } catch (e) {
+      console.error('Failed to fetch order details', e);
+      setLoadError('Could not load this order.');
+      return undefined;
+    }
+  }, [hospitalId, orderId]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    refetch().finally(() => setIsLoading(false));
+  }, [refetch]);
+
+  useEffect(() => {
+    try {
+      setReportFieldValues(order?.reportFieldValuesJson ? JSON.parse(order.reportFieldValuesJson) : {});
+    } catch {
+      setReportFieldValues({});
+    }
+  }, [order?.orderId, order?.reportFieldValuesJson]);
+
+  const handleReportFieldChange = (key: string, value: string) => {
+    setReportFieldValues(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveReportFields = async () => {
+    if (!hospitalId || !order) return;
+    setIsSavingReportFields(true);
+    try {
+      const success = await pathologyService.saveOrderReportFields(hospitalId, order.orderId, JSON.stringify(reportFieldValues));
+      if (!success) {
+        toast.error('Could not save report details');
+        return;
+      }
+      toast.success('Report details saved');
+      await refetch();
+    } catch (e) {
+      toast.error('Could not save report details');
+    } finally {
+      setIsSavingReportFields(false);
+    }
+  };
+
+  const renderReportFieldInput = (field: PathologyFieldConfigItem) => {
+    const value = reportFieldValues[field.key] ?? '';
+    const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
+    switch (field.type) {
+      case 'paragraph':
+        return <Textarea value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+      case 'number':
+        return <Input type="number" value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+      case 'date':
+        return <Input type="date" value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} />;
+      case 'boolean':
+        return (
+          <select value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} className={selectClass}>
+            <option value="">—</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        );
+      case 'select':
+        return (
+          <select value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} className={selectClass}>
+            <option value="">Select...</option>
+            {(field.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        );
+      default:
+        return <Input value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+    }
+  };
+
+  useEffect(() => {
+    const encounterId = order?.encounterId;
+    if (!encounterId) { setOrderBilling(null); return; }
+    let cancelled = false;
+    setIsLoadingOrderBilling(true);
+    ipdBillingService.getEncounterEvents(encounterId, order!.patientId)
+      .then((res) => {
+        if (cancelled || !res?.success) { if (!cancelled) setOrderBilling(null); return; }
+        const labTotal = (res.data?.charges ?? [])
+          .filter(c => c.sourceModule === 'LAB_PATH')
+          .reduce((sum, c) => sum + c.netAmount, 0);
+        setOrderBilling({
+          invoiceNo: res.data?.currentInvoice?.invoiceNo,
+          invoiceStatus: res.data?.currentInvoice?.statusCode as string | undefined,
+          labTotal,
+        });
+      })
+      .catch(() => { if (!cancelled) setOrderBilling(null); })
+      .finally(() => { if (!cancelled) setIsLoadingOrderBilling(false); });
+    return () => { cancelled = true; };
+  }, [order?.encounterId, order?.patientId]);
+
+  const allResultsEntered = !!order && order.lines.length > 0 && order.lines.every(l => !!l.result);
+
+  // Builds the results table from each line's schema + saved {value, flag} results, using the
+  // same age/gender-resolved band shown on screen so the printed "Normal Range" column matches
+  // what the technician actually saw while entering the result. Every schema parameter is always
+  // included (blank when unset) so a report can be previewed before any results exist at all.
+  const buildPdfLines = (o: PathologyOrderDto): PathologyReportPdfLine[] => {
+    return o.lines.map((line) => {
+      let params: any[] = [];
+      try {
+        const schema = line.parameterSchemaJson ? JSON.parse(line.parameterSchemaJson) : null;
+        if (schema && Array.isArray(schema.params)) params = schema.params;
+      } catch { /* leave params empty */ }
+
+      let savedValues: Record<string, any> = {};
+      try {
+        savedValues = line.result?.resultValuesJson ? JSON.parse(line.result.resultValuesJson) : {};
+      } catch { /* leave savedValues empty */ }
+
+      const parameters = params.map((p) => {
+        const entry = savedValues[p.name];
+        const value = typeof entry === 'string' ? entry : entry?.value ?? '';
+        const flag = typeof entry === 'string' ? 'NORMAL' : entry?.flag ?? 'NORMAL';
+        const { min, max } = resolveRange(p, o.patientAgeYears, o.patientGender);
+        return {
+          name: p.name,
+          unit: p.unit,
+          value,
+          flag,
+          // Plain hyphen, not an en dash -- pdf-lib's WinAnsi StandardFonts encoding threw on
+          // the arrow glyphs used elsewhere in this file (see generatePathologyReportPdf.ts),
+          // so this stays ASCII-only defensively rather than assuming en dash is safe too.
+          normalRangeLabel: min !== undefined || max !== undefined ? `${min ?? '-'} - ${max ?? '-'}` : undefined,
+        };
+      });
+
+      // Per-test narrative fields (Interpretation / Notes + any hospital-added custom line
+      // fields), in the hospital's configured order -- built from the field layout, not from
+      // whatever keys happen to be in resultValuesJson, so the printed order always matches the
+      // Report Fields editor.
+      const noteFields = lineFields
+        .filter((f) => f.showInPrint)
+        .map((f) => {
+          const entry = f.key === 'interpretation' ? line.result?.interpretation : savedValues[f.key];
+          const value = typeof entry === 'string' ? entry : entry?.value ?? '';
+          return { label: f.label, value };
+        })
+        .filter((f) => f.value.trim().length > 0);
+
+      return {
+        testName: line.testName,
+        testCode: line.testCode,
+        parameters,
+        noteFields,
+      };
+    });
+  };
+
+  // Resolves everything generatePathologyReportPdf needs except the report number, which the two
+  // callers below source differently (a live preview has no PathologyReport row yet, so it makes
+  // one up). Letterhead source is hospital-wide config (LabConfiguration), not tied to any one
+  // order -- resolved fresh on every call rather than cached, so a mode/margin change in the
+  // Configurator takes effect on the very next report/preview without a reload.
+  const resolveReportPdfData = async (o: PathologyOrderDto, reportNo: string) => {
+    const [labConfig, templates, hospital] = await Promise.all([
+      pathologyService.getLabConfig(hospitalId!).catch(() => null),
+      pathologyService.getTemplates(hospitalId!).catch(() => []),
+      hospitalApi.getHospitalById(hospitalId!).catch(() => null),
+    ]);
+    const defaultTemplate = templates.find(t => t.isDefault);
+    const letterheadMargins = (() => {
+      if (!defaultTemplate?.layoutJson) return null;
+      try {
+        const parsed = JSON.parse(defaultTemplate.layoutJson);
+        return parsed.margins ?? null;
+      } catch {
+        return null;
+      }
+    })();
+
+    let savedReportFieldValues: Record<string, any> = {};
+    try {
+      savedReportFieldValues = o.reportFieldValuesJson ? JSON.parse(o.reportFieldValuesJson) : {};
+    } catch { /* leave empty */ }
+    const reportFieldsForPdf = reportFields
+      .filter((f) => f.showInPrint)
+      .map((f) => ({ label: f.label, value: savedReportFieldValues[f.key] ?? '' }))
+      .filter((f) => f.value.trim().length > 0);
+
+    return {
+      hospitalName: o.hospitalName ?? 'Hospital',
+      reportNo,
+      orderNo: o.orderNo,
+      orderDate: o.orderDate,
+      patientName: o.patientName,
+      patientId: o.patientId,
+      patientAgeYears: o.patientAgeYears,
+      patientGender: o.patientGender,
+      lines: buildPdfLines(o),
+      reportFields: reportFieldsForPdf,
+      letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
+      letterheadTemplateUrl: defaultTemplate?.headerBlobPath ?? null,
+      letterheadMargins,
+      hospitalBranding: hospital && {
+        name: hospital.name,
+        location: hospital.location,
+        city: hospital.city,
+        state: hospital.state,
+        pincode: hospital.pincode,
+        contact: hospital.contact,
+        alternateContact: hospital.alternateContact,
+        email: hospital.email,
+        website: hospital.website,
+        registrationNumber: hospital.registrationNumber,
+        nabhNumber: hospital.nabhNumber,
+      },
+    };
+  };
+
+  // Always available, even with zero results entered -- builds and opens the PDF client-side only
+  // (no upload, no PathologyReport row required), so a technician can see exactly what the report
+  // will look like before anything is saved.
+  const previewReport = async (o: PathologyOrderDto) => {
+    if (!hospitalId) return;
+    setIsPreviewingReport(true);
+    try {
+      const data = await resolveReportPdfData(o, o.report?.reportNo ?? 'PREVIEW');
+      const blob = await generatePathologyReportPdf(data);
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch (e) {
+      console.error('Failed to build report preview', e);
+      toast.error('Could not build report preview');
+    } finally {
+      setIsPreviewingReport(false);
+    }
+  };
+
+  // Renders and uploads the report PDF for an order that already has a PathologyReport row.
+  // Freely re-callable -- there's no approval gate anymore, so editing a result and generating
+  // again just overwrites the previous PDF with one that reflects the current data.
+  const finalizeReportPdf = async (o: PathologyOrderDto) => {
+    if (!hospitalId || !o.report) return;
+    setIsFinalizingPdf(true);
+    try {
+      const data = await resolveReportPdfData(o, o.report.reportNo);
+      const blob = await generatePathologyReportPdf(data);
+
+      const uploadResult = await pathologyService.uploadReportPdf(hospitalId, o.orderId, o.report.reportId, blob);
+      if (!uploadResult.success) {
+        toast.error('Report generated, but the PDF could not be saved', { description: uploadResult.message });
+        return;
+      }
+      toast.success('Report PDF generated');
+      await refetch();
+    } catch (e) {
+      console.error('Failed to generate/upload report PDF', e);
+      toast.error('Report generated, but the PDF could not be generated');
+    } finally {
+      setIsFinalizingPdf(false);
+    }
+  };
+
+  // The one report action: creates the PathologyReport row if this order doesn't have one yet
+  // (or reuses/updates it if it does -- GeneratePathologyReportHandler is freely repeatable), then
+  // renders and uploads the PDF. Re-clickable any time results change.
+  const handleGenerateOrUpdateReport = async () => {
+    if (!hospitalId || !order) return;
+    setIsGeneratingReport(true);
+    try {
+      const response = await pathologyService.generateReport(hospitalId, order.orderId, {});
+      if (!response.success) {
+        toast.error('Could not generate report', { description: response.message });
+        return;
+      }
+      const refreshed = await refetch();
+      if (refreshed) await finalizeReportPdf(refreshed);
+    } catch (e) {
+      toast.error('Could not generate report');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+        <Skeleton className="h-[500px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (loadError || !order) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center gap-4 text-center min-h-[50vh]">
+        <AlertCircle className="h-10 w-10 text-muted-foreground" />
+        <p className="text-muted-foreground">{loadError ?? 'Order not found.'}</p>
+        <Button variant="outline" onClick={() => navigate('/pathology')}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Pathology Lab
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[calc(100vh-4rem)]">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+        <button
+          onClick={() => navigate('/pathology')}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Pathology Lab
+        </button>
+
+        <div className="mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-2xl font-bold tracking-tight mb-2">
+              Order {order.orderNo}
+            </h2>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => previewReport(order)} disabled={isPreviewingReport}>
+                {isPreviewingReport ? 'Preparing preview...' : 'Preview Report'}
+              </Button>
+              <Button size="sm" onClick={handleGenerateOrUpdateReport} disabled={!allResultsEntered || isGeneratingReport || isFinalizingPdf}>
+                {isGeneratingReport || isFinalizingPdf
+                  ? (order.report ? 'Updating...' : 'Generating...')
+                  : (order.report ? `Update Report ${order.report.reportNo}` : 'Generate Report')}
+              </Button>
+              {order.report?.pdfBlobPath && (
+                <Badge variant="outline" className="bg-green-100 text-green-800">
+                  <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                  Report {order.report.reportNo} ready
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+            <span>Patient: <span className="font-medium text-foreground">{order.patientName}</span></span>
+            <span>•</span>
+            <span>Date: {new Date(order.orderDate).toLocaleString()}</span>
+            <span>•</span>
+            <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
+              {order.status.replace('_', ' ')}
+            </Badge>
+          </div>
+          {!order.encounterId ? (
+            <p className="text-xs text-muted-foreground mt-1">Not linked to a billing visit.</p>
+          ) : isLoadingOrderBilling ? (
+            <p className="text-xs text-muted-foreground mt-1">Loading billing status...</p>
+          ) : orderBilling ? (
+            <p className="text-xs text-emerald-600 mt-1">
+              Billed to: {orderBilling.invoiceNo ?? 'Draft'}
+              {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
+            </p>
+          ) : null}
+        </div>
+
+        {reportFields.filter(f => f.showInPad).length > 0 && (
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="text-lg font-semibold">Report Details</h3>
+              <Button size="sm" variant="outline" onClick={handleSaveReportFields} disabled={isSavingReportFields}>
+                {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
+              </Button>
+            </div>
+            {reportFields.filter(f => f.showInPad).map((field) => (
+              <div key={field.key} className="space-y-2">
+                <Label>{field.label}</Label>
+                {renderReportFieldInput(field)}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold border-b pb-2">Tests & Results</h3>
+          {order.lines.length > 0 ? (
+            order.lines.map((line) => (
+              <OrderResultEntry
+                key={line.orderLineId}
+                hospitalId={hospitalId ?? ''}
+                orderId={order.orderId}
+                orderLine={line}
+                patientAgeYears={order.patientAgeYears}
+                patientGender={order.patientGender}
+                lineFields={lineFields}
+                onSuccess={() => refetch()}
+              />
+            ))
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              No tests found in this order.
+            </div>
+          )}
+        </div>
+      </div>
+    </ScrollArea>
+  );
+};
+
+export default PathologyOrderDetailPage;
