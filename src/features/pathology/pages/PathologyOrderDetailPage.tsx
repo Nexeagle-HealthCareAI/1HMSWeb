@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { pathologyService, PathologyOrderDto } from '../services/pathologyService';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { OrderResultEntry } from '../components/OrderResultEntry';
+import { PathologyReportPreviewModal } from '../components/PathologyReportPreviewModal';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/generatePathologyReportPdf';
 import { resolveRange } from '../utils/resultFlagCalculator';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
@@ -52,6 +54,21 @@ const PathologyOrderDetailPage: React.FC = () => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isFinalizingPdf, setIsFinalizingPdf] = useState(false);
   const [isPreviewingReport, setIsPreviewingReport] = useState(false);
+
+  // Preview popup state -- the blob: URL is built client-side (see previewReport below) and owned
+  // here rather than inside the modal, since generating it depends on this page's own report-field
+  // layout/hospital-config lookups. Revoked on close/regenerate/unmount so a technician clicking
+  // Preview repeatedly doesn't leak one blob per click.
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    previewUrlRef.current = previewUrl;
+  }, [previewUrl]);
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
 
   const refetch = useCallback(async () => {
     if (!hospitalId || !orderId) return undefined;
@@ -279,15 +296,29 @@ const PathologyOrderDetailPage: React.FC = () => {
   const previewReport = async (o: PathologyOrderDto) => {
     if (!hospitalId) return;
     setIsPreviewingReport(true);
+    setPreviewError(null);
+    setIsPreviewModalOpen(true);
     try {
       const data = await resolveReportPdfData(o, o.report?.reportNo ?? 'PREVIEW');
       const blob = await generatePathologyReportPdf(data);
-      window.open(URL.createObjectURL(blob), '_blank');
+      const nextUrl = URL.createObjectURL(blob);
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      setPreviewUrl(nextUrl);
     } catch (e) {
       console.error('Failed to build report preview', e);
+      setPreviewError('Could not build report preview');
       toast.error('Could not build report preview');
     } finally {
       setIsPreviewingReport(false);
+    }
+  };
+
+  const handlePreviewOpenChange = (open: boolean) => {
+    setIsPreviewModalOpen(open);
+    if (!open && previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      setPreviewUrl(null);
+      setPreviewError(null);
     }
   };
 
@@ -357,6 +388,9 @@ const PathologyOrderDetailPage: React.FC = () => {
     );
   }
 
+  const padFields = reportFields.filter(f => f.showInPad);
+  const resultsEnteredCount = order.lines.filter(l => !!l.result).length;
+
   return (
     <ScrollArea className="h-[calc(100vh-4rem)]">
       <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -367,68 +401,118 @@ const PathologyOrderDetailPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" /> Back to Pathology Lab
         </button>
 
-        <div className="mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-2xl font-bold tracking-tight mb-2">
-              Order {order.orderNo}
-            </h2>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => previewReport(order)} disabled={isPreviewingReport}>
-                {isPreviewingReport ? 'Preparing preview...' : 'Preview Report'}
-              </Button>
-              <Button size="sm" onClick={handleGenerateOrUpdateReport} disabled={!allResultsEntered || isGeneratingReport || isFinalizingPdf}>
-                {isGeneratingReport || isFinalizingPdf
-                  ? (order.report ? 'Updating...' : 'Generating...')
-                  : (order.report ? `Update Report ${order.report.reportNo}` : 'Generate Report')}
-              </Button>
+        {/* Top card -- order/patient summary + the two report actions, always visible without
+            scrolling past the fields below (per the "top card, then all fields" request). */}
+        <Card className="mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <div className="min-w-0">
+                <h2 className="text-2xl font-bold tracking-tight">Order {order.orderNo}</h2>
+                <div className="flex items-center gap-1.5 text-brand-50 text-sm mt-1.5">
+                  <User2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="font-medium truncate">{order.patientName}</span>
+                  {(order.patientAgeYears != null || order.patientGender) && (
+                    <span className="text-brand-100">
+                      · {order.patientAgeYears ?? '—'}{order.patientGender ? `/${order.patientGender}` : ''}
+                    </span>
+                  )}
+                  <span className="text-brand-200">· {order.patientId}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-brand-100 text-xs mt-1">
+                  <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                  Ordered {new Date(order.orderDate).toLocaleString()}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm" variant="secondary"
+                  className="bg-white/15 text-white border border-white/25 hover:bg-white/25"
+                  onClick={() => previewReport(order)} disabled={isPreviewingReport}
+                >
+                  <FileText className="h-4 w-4 mr-1.5" />
+                  {isPreviewingReport ? 'Preparing...' : 'Preview Report'}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-white text-brand-700 hover:bg-brand-50 font-semibold"
+                  onClick={handleGenerateOrUpdateReport}
+                  disabled={!allResultsEntered || isGeneratingReport || isFinalizingPdf}
+                >
+                  {isGeneratingReport || isFinalizingPdf
+                    ? (order.report ? 'Updating...' : 'Generating...')
+                    : (order.report ? `Update Report ${order.report.reportNo}` : 'Generate Report')}
+                </Button>
+              </div>
+            </div>
+          </div>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              {order.isStat && (
+                <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
+              )}
+              <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
+                {order.status.replace('_', ' ')}
+              </Badge>
               {order.report?.pdfBlobPath && (
                 <Badge variant="outline" className="bg-green-100 text-green-800">
                   <ShieldCheck className="h-3.5 w-3.5 mr-1" />
                   Report {order.report.reportNo} ready
                 </Badge>
               )}
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                {resultsEnteredCount}/{order.lines.length} results entered
+              </span>
             </div>
-          </div>
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>Patient: <span className="font-medium text-foreground">{order.patientName}</span></span>
-            <span>•</span>
-            <span>Date: {new Date(order.orderDate).toLocaleString()}</span>
-            <span>•</span>
-            <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
-              {order.status.replace('_', ' ')}
-            </Badge>
-          </div>
-          {!order.encounterId ? (
-            <p className="text-xs text-muted-foreground mt-1">Not linked to a billing visit.</p>
-          ) : isLoadingOrderBilling ? (
-            <p className="text-xs text-muted-foreground mt-1">Loading billing status...</p>
-          ) : orderBilling ? (
-            <p className="text-xs text-emerald-600 mt-1">
-              Billed to: {orderBilling.invoiceNo ?? 'Draft'}
-              {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
-            </p>
-          ) : null}
-        </div>
+            <div className="flex items-center gap-1.5 text-xs mt-2">
+              <ReceiptText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              {!order.encounterId ? (
+                <span className="text-muted-foreground">Not linked to a billing visit.</span>
+              ) : isLoadingOrderBilling ? (
+                <span className="text-muted-foreground">Loading billing status...</span>
+              ) : orderBilling ? (
+                <span className="text-emerald-600">
+                  Billed to: {orderBilling.invoiceNo ?? 'Draft'}
+                  {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Billing status unavailable.</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        {reportFields.filter(f => f.showInPad).length > 0 && (
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-lg font-semibold">Report Details</h3>
+        {padFields.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 bg-muted/30 space-y-0">
+              <div>
+                <CardTitle className="text-lg">Report Details</CardTitle>
+                <CardDescription>Included on the printed report, in the order configured in Pathology Settings.</CardDescription>
+              </div>
               <Button size="sm" variant="outline" onClick={handleSaveReportFields} disabled={isSavingReportFields}>
                 {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
               </Button>
-            </div>
-            {reportFields.filter(f => f.showInPad).map((field) => (
-              <div key={field.key} className="space-y-2">
-                <Label>{field.label}</Label>
-                {renderReportFieldInput(field)}
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                {padFields.map((field) => (
+                  <div key={field.key} className={`space-y-2 ${field.type === 'paragraph' ? 'sm:col-span-2' : ''}`}>
+                    <Label>{field.label}</Label>
+                    {renderReportFieldInput(field)}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold border-b pb-2">Tests & Results</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h3 className="text-lg font-semibold">Tests &amp; Results</h3>
+            <span className="text-xs font-medium text-muted-foreground">
+              {resultsEnteredCount}/{order.lines.length} entered
+            </span>
+          </div>
           {order.lines.length > 0 ? (
             order.lines.map((line) => (
               <OrderResultEntry
@@ -449,6 +533,16 @@ const PathologyOrderDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      <PathologyReportPreviewModal
+        open={isPreviewModalOpen}
+        onOpenChange={handlePreviewOpenChange}
+        previewUrl={previewUrl}
+        isLoading={isPreviewingReport}
+        error={previewError}
+        fileName={`${order.orderNo}-report.pdf`}
+        title={`Report Preview — ${order.orderNo}`}
+      />
     </ScrollArea>
   );
 };
