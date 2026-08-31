@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Microscope, Receipt, Settings, TestTube } from 'lucide-react';
+import { Microscope, IndianRupee, Settings, TestTube } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PathologyBillingTab } from './PathologyBillingTab';
 import { PathologyWorkspace } from './PathologyWorkspace';
@@ -8,7 +8,7 @@ import { PathologySettingsTab } from './PathologySettingsTab';
 
 const TABS = [
     { id: 'workspace', label: 'Workspace', description: 'Manage orders & results', icon: Microscope },
-    { id: 'billing', label: 'Billing', description: 'Invoices & collections', icon: Receipt },
+    { id: 'billing', label: 'Billing', description: 'Invoices & collections', icon: IndianRupee },
     { id: 'settings', label: 'Settings', description: 'Lab config & templates', icon: Settings },
 ] as const;
 
