@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { OrderResultEntry } from '../components/OrderResultEntry';
 import { PathologyReportPreviewModal } from '../components/PathologyReportPreviewModal';
+import { PathologyReportFieldLayoutEditor } from '../components/PathologyReportFieldLayoutEditor';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/generatePathologyReportPdf';
 import { resolveRange } from '../utils/resultFlagCalculator';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
@@ -38,9 +40,15 @@ const PathologyOrderDetailPage: React.FC = () => {
   // The hospital's configured report field layout -- report-level fields (once per report) and
   // per-test fields (repeat on every test line, starting with Interpretation / Notes). See
   // PathologyReportFieldLayoutEditor.tsx / pathologyFieldLayoutApi.ts.
-  const { reportFields, lineFields } = usePathologyReportFieldLayout(hospitalId ?? undefined);
+  const { reportFields, lineFields, refetch: refetchFieldLayout } = usePathologyReportFieldLayout(hospitalId ?? undefined);
   const [reportFieldValues, setReportFieldValues] = useState<Record<string, string>>({});
   const [isSavingReportFields, setIsSavingReportFields] = useState(false);
+  // The same field-layout editor Pathology Settings uses (add/reorder/rename custom fields),
+  // opened in a dialog here too -- a pathologist filling in a report shouldn't have to leave it to
+  // add a field like "Method Used". It manages its own hospitalId/save via useAuthStore, so it's
+  // safe to drop in as-is; this page's own field-layout hook instance is refetched on close since
+  // it's a separate hook call and won't otherwise see the edit.
+  const [isFieldEditorOpen, setIsFieldEditorOpen] = useState(false);
 
   // This order's billing status, once it's known to be attached to a visit (order.encounterId) --
   // the ledger for that encounter, scoped down to this order's own lab-sourced lines, so a tech
@@ -482,18 +490,25 @@ const PathologyOrderDetailPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {padFields.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 bg-muted/30 space-y-0">
-              <div>
-                <CardTitle className="text-lg">Report Details</CardTitle>
-                <CardDescription>Included on the printed report, in the order configured in Pathology Settings.</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={handleSaveReportFields} disabled={isSavingReportFields}>
-                {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 bg-muted/30 space-y-0">
+            <div>
+              <CardTitle className="text-lg">Report Details</CardTitle>
+              <CardDescription>Included on the printed report, in the order configured in Pathology Settings.</CardDescription>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setIsFieldEditorOpen(true)}>
+                <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" /> Manage Fields
               </Button>
-            </CardHeader>
-            <CardContent className="pt-6">
+              {padFields.length > 0 && (
+                <Button size="sm" variant="outline" onClick={handleSaveReportFields} disabled={isSavingReportFields}>
+                  {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {padFields.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 {padFields.map((field) => (
                   <div key={field.key} className={`space-y-2 ${field.type === 'paragraph' ? 'sm:col-span-2' : ''}`}>
@@ -502,16 +517,25 @@ const PathologyOrderDetailPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                No report-level fields configured yet. Use <span className="font-medium text-foreground">Manage Fields</span> to add one -- e.g. Clinical History, Specimen Type.
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-lg font-semibold">Tests &amp; Results</h3>
-            <span className="text-xs font-medium text-muted-foreground">
-              {resultsEnteredCount}/{order.lines.length} entered
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-medium text-muted-foreground">
+                {resultsEnteredCount}/{order.lines.length} entered
+              </span>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setIsFieldEditorOpen(true)}>
+                <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Manage Fields
+              </Button>
+            </div>
           </div>
           {order.lines.length > 0 ? (
             order.lines.map((line) => (
@@ -543,6 +567,27 @@ const PathologyOrderDetailPage: React.FC = () => {
         fileName={`${order.orderNo}-report.pdf`}
         title={`Report Preview — ${order.orderNo}`}
       />
+
+      <Dialog
+        open={isFieldEditorOpen}
+        onOpenChange={(open) => {
+          setIsFieldEditorOpen(open);
+          if (!open) refetchFieldLayout();
+        }}
+      >
+        {isFieldEditorOpen && (
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Report Fields</DialogTitle>
+              <DialogDescription>
+                Add and arrange custom fields for your pathology reports -- report-level fields fill in
+                once per report, per-test fields repeat on every test alongside Interpretation / Notes.
+              </DialogDescription>
+            </DialogHeader>
+            <PathologyReportFieldLayoutEditor />
+          </DialogContent>
+        )}
+      </Dialog>
     </ScrollArea>
   );
 };
