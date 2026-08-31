@@ -352,6 +352,9 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
         patientId: 'PTID00000000',
         patientAgeYears: 35,
         patientGender: 'M',
+        reportFields: [
+          { label: 'Clinical History', value: 'Sample clinical history text for preview purposes.' },
+        ],
         lines: [
           {
             testName: 'Complete Blood Count (CBC)',
@@ -361,7 +364,9 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
               { name: 'Total WBC Count (TLC)', unit: '/µL', value: '7200', flag: 'NORMAL', normalRangeLabel: 'Normal: 4000 - 11000' },
               { name: 'Platelet Count', unit: '/µL', value: '95000', flag: 'LOW', normalRangeLabel: 'Normal: 150000 - 450000' },
             ],
-            interpretation: 'Sample interpretation text for preview purposes.',
+            noteFields: [
+              { label: 'Interpretation / Notes', value: 'Sample interpretation text for preview purposes.' },
+            ],
           },
         ],
         letterheadMode,

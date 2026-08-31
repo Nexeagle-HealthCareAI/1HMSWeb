@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PathologyOrderLineDto, pathologyService } from '../services/pathologyService';
 import { calculateResultFlag, resolveRange, PathologyResultFlag } from '../utils/resultFlagCalculator';
+import type { PathologyFieldConfigItem } from '../services/pathologyFieldLayoutApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Zap, AlertTriangle, Plus, X } from 'lucide-react';
+import { Zap, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OrderResultEntryProps {
@@ -16,6 +17,10 @@ interface OrderResultEntryProps {
   orderLine: PathologyOrderLineDto;
   patientAgeYears?: number | null;
   patientGender?: string | null;
+  // The hospital's configured per-test field layout (Interpretation / Notes + any custom fields
+  // it added), in display order -- see PathologyReportFieldLayoutEditor.tsx. Field *definitions*
+  // come from here; this component only fills in *values*.
+  lineFields: PathologyFieldConfigItem[];
   onSuccess: () => void;
 }
 
@@ -34,13 +39,6 @@ interface TestParam {
   // Legacy pre-Phase-1 shape -- some rows may still only have these.
   min?: number;
   max?: number;
-}
-
-interface CustomField {
-  key: string;
-  name: string;
-  unit: string;
-  value: string;
 }
 
 // Beeps play through the Web Audio API rather than an audio asset -- no file to manage, and it
@@ -90,11 +88,14 @@ const FLAG_LABELS: Record<PathologyResultFlag, string> = {
 };
 
 export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
-  hospitalId, orderId, orderLine, patientAgeYears, patientGender, onSuccess
+  hospitalId, orderId, orderLine, patientAgeYears, patientGender, lineFields, onSuccess
 }) => {
   const [params, setParams] = useState<TestParam[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  // Values for every configured line field except the built-in "interpretation" (which keeps its
+  // own dedicated state/param below, matching EnterPathologyResultHandler's wire format), keyed by
+  // field.key.
+  const [lineFieldValues, setLineFieldValues] = useState<Record<string, string>>({});
   const [interpretation, setInterpretation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sampleBarcode, setSampleBarcode] = useState('');
@@ -115,24 +116,22 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
 
       if (orderLine.result?.resultValuesJson) {
         const saved = JSON.parse(orderLine.result.resultValuesJson);
-        // Handles both the enriched {value, flag[, unit]} shape and older raw-string saves.
+        // Handles both the enriched {value, flag} shape and older raw-string saves.
         const rawValues: Record<string, string> = {};
-        const custom: CustomField[] = [];
+        const fieldValues: Record<string, string> = {};
         for (const [key, entry] of Object.entries(saved || {})) {
           const value = typeof entry === 'string' ? entry : (entry as { value?: string })?.value ?? '';
           if (schemaNames.has(key)) {
             rawValues[key] = value;
           } else {
-            // A key not in this test's fixed schema -- an ad-hoc field added on a previous save.
-            const unit = typeof entry === 'string' ? '' : (entry as { unit?: string })?.unit ?? '';
-            custom.push({ key, name: key, unit, value });
+            fieldValues[key] = value;
           }
         }
         setValues(rawValues);
-        setCustomFields(custom);
+        setLineFieldValues(fieldValues);
       } else {
         setValues({});
-        setCustomFields([]);
+        setLineFieldValues({});
       }
 
       setInterpretation(orderLine.result?.interpretation || '');
@@ -170,16 +169,47 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     setValues(prev => ({ ...prev, [paramName]: value }));
   };
 
-  const handleAddCustomField = () => {
-    setCustomFields(prev => [...prev, { key: `custom-${Date.now()}-${prev.length}`, name: '', unit: '', value: '' }]);
+  const handleLineFieldChange = (key: string, value: string) => {
+    setLineFieldValues(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleCustomFieldChange = (key: string, field: 'name' | 'unit' | 'value', value: string) => {
-    setCustomFields(prev => prev.map(f => f.key === key ? { ...f, [field]: value } : f));
-  };
-
-  const handleRemoveCustomField = (key: string) => {
-    setCustomFields(prev => prev.filter(f => f.key !== key));
+  const renderLineFieldInput = (field: PathologyFieldConfigItem) => {
+    if (field.key === 'interpretation') {
+      return (
+        <Textarea
+          value={interpretation}
+          onChange={(e) => setInterpretation(e.target.value)}
+          placeholder="Add any specific observations..."
+        />
+      );
+    }
+    const value = lineFieldValues[field.key] ?? '';
+    const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
+    switch (field.type) {
+      case 'paragraph':
+        return <Textarea value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+      case 'number':
+        return <Input type="number" value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+      case 'date':
+        return <Input type="date" value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} />;
+      case 'boolean':
+        return (
+          <select value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} className={selectClass}>
+            <option value="">—</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        );
+      case 'select':
+        return (
+          <select value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} className={selectClass}>
+            <option value="">Select...</option>
+            {(field.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        );
+      default:
+        return <Input value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+    }
   };
 
   const handleAutofillNormals = () => {
@@ -212,13 +242,13 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Schema-driven values stay plain strings; a custom field is the only entry that carries a
-      // {value, unit} shape -- EnterPathologyResultHandler accepts both in one submission.
-      const payload: Record<string, string | { value: string; unit?: string }> = { ...values };
-      for (const field of customFields) {
-        const name = field.name.trim();
-        if (!name) continue;
-        payload[name] = { value: field.value, unit: field.unit || undefined };
+      // Schema-driven values plus every configured line field except "interpretation" (which has
+      // its own dedicated param below) -- field definitions come from the hospital's saved layout,
+      // not typed per-value, so this is a flat string map same as before.
+      const payload: Record<string, string> = { ...values };
+      for (const field of lineFields) {
+        if (field.key === 'interpretation') continue;
+        payload[field.key] = lineFieldValues[field.key] ?? '';
       }
       await pathologyService.enterResult(hospitalId, orderId, orderLine.orderLineId, {
         resultValuesJson: JSON.stringify(payload),
@@ -316,55 +346,12 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
           </div>
         )}
 
-        <div className="pt-2 space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Additional Fields</Label>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddCustomField}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Field
-            </Button>
+        {lineFields.filter(f => f.showInPad).map((field) => (
+          <div key={field.key} className="pt-4 space-y-2">
+            <Label>{field.label}</Label>
+            {renderLineFieldInput(field)}
           </div>
-          {customFields.length > 0 && (
-            <div className="space-y-3">
-              {customFields.map((field) => (
-                <div key={field.key} className="grid grid-cols-12 items-center gap-2">
-                  <Input
-                    value={field.name}
-                    onChange={(e) => handleCustomFieldChange(field.key, 'name', e.target.value)}
-                    placeholder="Field name"
-                    className="col-span-4"
-                  />
-                  <Input
-                    value={field.value}
-                    onChange={(e) => handleCustomFieldChange(field.key, 'value', e.target.value)}
-                    placeholder="Value"
-                    className="col-span-4"
-                  />
-                  <Input
-                    value={field.unit}
-                    onChange={(e) => handleCustomFieldChange(field.key, 'unit', e.target.value)}
-                    placeholder="Unit (optional)"
-                    className="col-span-3"
-                  />
-                  <Button
-                    type="button" variant="ghost" size="icon" className="col-span-1"
-                    onClick={() => handleRemoveCustomField(field.key)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="pt-4 space-y-2">
-          <Label>Interpretation / Notes</Label>
-          <Textarea
-            value={interpretation}
-            onChange={(e) => setInterpretation(e.target.value)}
-            placeholder="Add any specific observations..."
-          />
-        </div>
+        ))}
 
         <div className="flex justify-end pt-4">
           <Button onClick={handleSubmit} disabled={isSubmitting}>

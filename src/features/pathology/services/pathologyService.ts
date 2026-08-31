@@ -9,6 +9,9 @@ export interface LabConfiguration {
   defaultReportHeaderBlob?: string;
   defaultReportFooterText?: string;
   letterheadMode: PathologyLetterheadMode;
+  // { reportFields: PathologyFieldConfigItem[]; lineFields: PathologyFieldConfigItem[] } --
+  // see pathologyFieldLayoutApi.ts for the parsed shape.
+  reportFieldLayoutJson?: string;
 }
 
 export interface CreatePathologyOrderRequest {
@@ -62,6 +65,9 @@ export interface PathologyOrderDto {
   // Set when this order was attached to the patient's OPD/IPD billing visit at order time --
   // lets the order-detail view show which invoice this order's charges landed on.
   encounterId?: string | null;
+  // Values for the hospital's configured report-level fields -- {key: value}, see
+  // pathologyFieldLayoutApi.ts.
+  reportFieldValuesJson?: string | null;
   lines: PathologyOrderLineDto[];
   report?: PathologyReportDto | null;
 }
@@ -167,6 +173,7 @@ export interface UpdateLabConfigRequest {
   defaultReportHeaderBlob?: string;
   defaultReportFooterText?: string;
   letterheadMode: PathologyLetterheadMode;
+  reportFieldLayoutJson?: string;
 }
 
 export interface PathologyReportReadyDto {
@@ -207,6 +214,11 @@ export const pathologyService = {
 
   collectSample: async (hospitalId: string, orderId: string, orderLineId: string, sampleBarcode?: string): Promise<boolean> => {
     const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/collect-sample`, { sampleBarcode });
+    return response.data.success;
+  },
+
+  saveOrderReportFields: async (hospitalId: string, orderId: string, reportFieldValuesJson: string): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report-fields`, { reportFieldValuesJson });
     return response.data.success;
   },
 

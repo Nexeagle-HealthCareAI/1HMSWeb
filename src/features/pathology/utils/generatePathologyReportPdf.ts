@@ -46,11 +46,20 @@ export interface PathologyReportPdfParameter {
   normalRangeLabel?: string;
 }
 
+// A generic label+value section -- report-level fields and per-line note fields (Interpretation /
+// Notes plus any hospital-added custom fields) both use this shape; there's no bespoke drawer per
+// field since they're all just narrative label+value pairs, in whatever order the hospital's
+// Report Fields layout configured (see pathologyFieldLayoutApi.ts).
+export interface PathologyReportPdfField {
+  label: string;
+  value: string;
+}
+
 export interface PathologyReportPdfLine {
   testName: string;
   testCode: string;
   parameters: PathologyReportPdfParameter[];
-  interpretation?: string;
+  noteFields?: PathologyReportPdfField[];
 }
 
 export interface PathologyReportPdfMargins {
@@ -70,6 +79,10 @@ export interface PathologyReportPdfData {
   patientAgeYears?: number | null;
   patientGender?: string | null;
   lines: PathologyReportPdfLine[];
+  // Report-level fields (Clinical History, Comments, ...) -- filled in once for the whole report,
+  // drawn after the patient/order info block and before the per-test results. See
+  // PathologyReportFieldLayoutEditor.tsx / pathologyFieldLayoutApi.ts.
+  reportFields?: PathologyReportPdfField[];
 
   // Which source the header/footer artwork is drawn from -- omitted entirely (undefined) preserves
   // the original fixed plain-text header for any caller that predates this, CUSTOM_TEMPLATE/
@@ -229,6 +242,23 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   drawLine(`Order No: ${data.orderNo}  |  Order Date: ${new Date(data.orderDate).toLocaleString()}`, { gapAfter: 3 });
   drawLine(`Report No: ${data.reportNo}`, { gapAfter: 12 });
 
+  // --- Generic label+value section, shared by report-level fields and each line's note fields ---
+  const drawSection = (label: string, value: string) => {
+    if (!value.trim()) return;
+    ensureRoom(20);
+    for (const wrapped of wrapText(`${label}: ${value}`, regularFont, 9, contentWidth)) {
+      drawLine(wrapped, { size: 9, color: COLORS.muted, gapAfter: 3 });
+    }
+  };
+
+  // --- Report-level fields (Clinical History, Comments, ...) ---
+  if (data.reportFields?.length) {
+    for (const field of data.reportFields) {
+      drawSection(field.label, field.value);
+    }
+    cursorY -= 8;
+  }
+
   // --- Results per test line ---
   for (const line of data.lines) {
     ensureRoom(30);
@@ -259,10 +289,10 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
       cursorY -= 14;
     }
 
-    if (line.interpretation) {
+    if (line.noteFields?.length) {
       cursorY -= 2;
-      for (const wrapped of wrapText(`Interpretation: ${line.interpretation}`, regularFont, 9, contentWidth)) {
-        drawLine(wrapped, { size: 9, color: COLORS.muted, gapAfter: 3 });
+      for (const field of line.noteFields) {
+        drawSection(field.label, field.value);
       }
     }
     cursorY -= 10;

@@ -22,6 +22,8 @@ import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/gen
 import { resolveRange } from '../utils/resultFlagCalculator';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
+import { usePathologyReportFieldLayout } from '../hooks/usePathologyReportFieldLayout';
+import type { PathologyFieldConfigItem } from '../services/pathologyFieldLayoutApi';
 import { format } from 'date-fns';
 
 export const PathologyWorkspace: React.FC = () => {
@@ -31,6 +33,25 @@ export const PathologyWorkspace: React.FC = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<PathologyOrderDto | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  // The hospital's configured report field layout -- report-level fields (once per report) and
+  // per-test fields (repeat on every test line, starting with Interpretation / Notes). See
+  // PathologyReportFieldLayoutEditor.tsx / pathologyFieldLayoutApi.ts.
+  const { reportFields, lineFields } = usePathologyReportFieldLayout(hospitalId ?? undefined);
+  const [reportFieldValues, setReportFieldValues] = useState<Record<string, string>>({});
+  const [isSavingReportFields, setIsSavingReportFields] = useState(false);
+
+  useEffect(() => {
+    try {
+      setReportFieldValues(selectedOrderDetails?.reportFieldValuesJson ? JSON.parse(selectedOrderDetails.reportFieldValuesJson) : {});
+    } catch {
+      setReportFieldValues({});
+    }
+  }, [selectedOrderDetails?.orderId, selectedOrderDetails?.reportFieldValuesJson]);
+
+  const handleReportFieldChange = (key: string, value: string) => {
+    setReportFieldValues(prev => ({ ...prev, [key]: value }));
+  };
 
   // This order's billing status, once it's known to be attached to a visit (selectedOrderDetails.
   // encounterId) -- the ledger for that encounter, scoped down to this order's own lab-sourced
@@ -186,6 +207,54 @@ export const PathologyWorkspace: React.FC = () => {
     const details = await pathologyService.getOrderById(hospitalId, selectedOrderId);
     setSelectedOrderDetails(details);
     return details;
+  };
+
+  const handleSaveReportFields = async () => {
+    if (!hospitalId || !selectedOrderDetails) return;
+    setIsSavingReportFields(true);
+    try {
+      const success = await pathologyService.saveOrderReportFields(hospitalId, selectedOrderDetails.orderId, JSON.stringify(reportFieldValues));
+      if (!success) {
+        toast.error('Could not save report details');
+        return;
+      }
+      toast.success('Report details saved');
+      await refreshSelectedOrder();
+    } catch (e) {
+      toast.error('Could not save report details');
+    } finally {
+      setIsSavingReportFields(false);
+    }
+  };
+
+  const renderReportFieldInput = (field: PathologyFieldConfigItem) => {
+    const value = reportFieldValues[field.key] ?? '';
+    const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
+    switch (field.type) {
+      case 'paragraph':
+        return <Textarea value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+      case 'number':
+        return <Input type="number" value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+      case 'date':
+        return <Input type="date" value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} />;
+      case 'boolean':
+        return (
+          <select value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} className={selectClass}>
+            <option value="">—</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        );
+      case 'select':
+        return (
+          <select value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} className={selectClass}>
+            <option value="">Select...</option>
+            {(field.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        );
+      default:
+        return <Input value={value} onChange={(e) => handleReportFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+    }
   };
 
   useEffect(() => {
@@ -380,9 +449,7 @@ export const PathologyWorkspace: React.FC = () => {
   // Builds the results table from each line's schema + saved {value, flag} results, using the
   // same age/gender-resolved band shown on screen so the printed "Normal Range" column matches
   // what the technician actually saw while entering the result. Every schema parameter is always
-  // included (blank when unset) so a report can be previewed before any results exist at all; any
-  // saved key that ISN'T in the schema is a custom/ad-hoc field the technician added on this order,
-  // appended the same way but with no reference range to flag against.
+  // included (blank when unset) so a report can be previewed before any results exist at all.
   const buildPdfLines = (order: PathologyOrderDto): PathologyReportPdfLine[] => {
     return order.lines.map((line) => {
       let params: any[] = [];
@@ -396,7 +463,7 @@ export const PathologyWorkspace: React.FC = () => {
         savedValues = line.result?.resultValuesJson ? JSON.parse(line.result.resultValuesJson) : {};
       } catch { /* leave savedValues empty */ }
 
-      const schemaParameters = params.map((p) => {
+      const parameters = params.map((p) => {
         const entry = savedValues[p.name];
         const value = typeof entry === 'string' ? entry : entry?.value ?? '';
         const flag = typeof entry === 'string' ? 'NORMAL' : entry?.flag ?? 'NORMAL';
@@ -413,21 +480,24 @@ export const PathologyWorkspace: React.FC = () => {
         };
       });
 
-      const schemaNames = new Set(params.map((p) => p.name));
-      const customParameters = Object.keys(savedValues)
-        .filter((name) => !schemaNames.has(name))
-        .map((name) => {
-          const entry = savedValues[name];
+      // Per-test narrative fields (Interpretation / Notes + any hospital-added custom line
+      // fields), in the hospital's configured order -- built from the field layout, not from
+      // whatever keys happen to be in resultValuesJson, so the printed order always matches the
+      // Report Fields editor.
+      const noteFields = lineFields
+        .filter((f) => f.showInPrint)
+        .map((f) => {
+          const entry = f.key === 'interpretation' ? line.result?.interpretation : savedValues[f.key];
           const value = typeof entry === 'string' ? entry : entry?.value ?? '';
-          const unit = typeof entry === 'string' ? undefined : entry?.unit;
-          return { name, unit, value, flag: 'NORMAL' as const };
-        });
+          return { label: f.label, value };
+        })
+        .filter((f) => f.value.trim().length > 0);
 
       return {
         testName: line.testName,
         testCode: line.testCode,
-        interpretation: line.result?.interpretation,
-        parameters: [...schemaParameters, ...customParameters],
+        parameters,
+        noteFields,
       };
     });
   };
@@ -454,6 +524,15 @@ export const PathologyWorkspace: React.FC = () => {
       }
     })();
 
+    let savedReportFieldValues: Record<string, any> = {};
+    try {
+      savedReportFieldValues = order.reportFieldValuesJson ? JSON.parse(order.reportFieldValuesJson) : {};
+    } catch { /* leave empty */ }
+    const reportFieldsForPdf = reportFields
+      .filter((f) => f.showInPrint)
+      .map((f) => ({ label: f.label, value: savedReportFieldValues[f.key] ?? '' }))
+      .filter((f) => f.value.trim().length > 0);
+
     return {
       hospitalName: order.hospitalName ?? 'Hospital',
       reportNo,
@@ -464,6 +543,7 @@ export const PathologyWorkspace: React.FC = () => {
       patientAgeYears: order.patientAgeYears,
       patientGender: order.patientGender,
       lines: buildPdfLines(order),
+      reportFields: reportFieldsForPdf,
       letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
       letterheadTemplateUrl: defaultTemplate?.headerBlobPath ?? null,
       letterheadMargins,
@@ -694,6 +774,23 @@ export const PathologyWorkspace: React.FC = () => {
                 ) : null}
               </div>
 
+              {reportFields.filter(f => f.showInPad).length > 0 && (
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h3 className="text-lg font-semibold">Report Details</h3>
+                    <Button size="sm" variant="outline" onClick={handleSaveReportFields} disabled={isSavingReportFields}>
+                      {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
+                    </Button>
+                  </div>
+                  {reportFields.filter(f => f.showInPad).map((field) => (
+                    <div key={field.key} className="space-y-2">
+                      <Label>{field.label}</Label>
+                      {renderReportFieldInput(field)}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold border-b pb-2">Tests & Results</h3>
                 {selectedOrderDetails.lines.length > 0 ? (
@@ -705,6 +802,7 @@ export const PathologyWorkspace: React.FC = () => {
                       orderLine={line}
                       patientAgeYears={selectedOrderDetails.patientAgeYears}
                       patientGender={selectedOrderDetails.patientGender}
+                      lineFields={lineFields}
                       onSuccess={() => handleOrderSelect(selectedOrderDetails.orderId)}
                     />
                   ))

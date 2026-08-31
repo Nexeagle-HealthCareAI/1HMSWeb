@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { TestCatalogManager } from './TestCatalogManager';
 import { ReportLetterheadConfig } from './ReportLetterheadConfig';
+import { PathologyReportFieldLayoutEditor } from './PathologyReportFieldLayoutEditor';
 
 export const PathologySettingsTab: React.FC = () => {
   return (
@@ -16,6 +17,20 @@ export const PathologySettingsTab: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ReportLetterheadConfig />
+        </CardContent>
+      </Card>
+
+      {/* Report Fields */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Report Fields</CardTitle>
+          <CardDescription>
+            Add and arrange custom fields for your pathology reports -- report-level fields fill in once
+            per report, per-test fields repeat on every test alongside Interpretation / Notes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PathologyReportFieldLayoutEditor />
         </CardContent>
       </Card>
 
