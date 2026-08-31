@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Zap, AlertTriangle } from 'lucide-react';
+import { Zap, AlertTriangle, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OrderResultEntryProps {
@@ -34,6 +34,13 @@ interface TestParam {
   // Legacy pre-Phase-1 shape -- some rows may still only have these.
   min?: number;
   max?: number;
+}
+
+interface CustomField {
+  key: string;
+  name: string;
+  unit: string;
+  value: string;
 }
 
 // Beeps play through the Web Audio API rather than an audio asset -- no file to manage, and it
@@ -87,6 +94,7 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
 }) => {
   const [params, setParams] = useState<TestParam[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [interpretation, setInterpretation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sampleBarcode, setSampleBarcode] = useState('');
@@ -95,25 +103,36 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
 
   useEffect(() => {
     try {
+      let schemaParams: TestParam[] = [];
       if (orderLine.parameterSchemaJson) {
         const schema = JSON.parse(orderLine.parameterSchemaJson);
         if (schema && Array.isArray(schema.params)) {
-          setParams(schema.params);
+          schemaParams = schema.params;
         }
-      } else {
-        setParams([]);
       }
+      setParams(schemaParams);
+      const schemaNames = new Set(schemaParams.map(p => p.name));
 
       if (orderLine.result?.resultValuesJson) {
         const saved = JSON.parse(orderLine.result.resultValuesJson);
-        // Handles both the enriched {value, flag} shape and older raw-string saves.
+        // Handles both the enriched {value, flag[, unit]} shape and older raw-string saves.
         const rawValues: Record<string, string> = {};
+        const custom: CustomField[] = [];
         for (const [key, entry] of Object.entries(saved || {})) {
-          rawValues[key] = typeof entry === 'string' ? entry : (entry as { value?: string })?.value ?? '';
+          const value = typeof entry === 'string' ? entry : (entry as { value?: string })?.value ?? '';
+          if (schemaNames.has(key)) {
+            rawValues[key] = value;
+          } else {
+            // A key not in this test's fixed schema -- an ad-hoc field added on a previous save.
+            const unit = typeof entry === 'string' ? '' : (entry as { unit?: string })?.unit ?? '';
+            custom.push({ key, name: key, unit, value });
+          }
         }
         setValues(rawValues);
+        setCustomFields(custom);
       } else {
         setValues({});
+        setCustomFields([]);
       }
 
       setInterpretation(orderLine.result?.interpretation || '');
@@ -151,6 +170,18 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     setValues(prev => ({ ...prev, [paramName]: value }));
   };
 
+  const handleAddCustomField = () => {
+    setCustomFields(prev => [...prev, { key: `custom-${Date.now()}-${prev.length}`, name: '', unit: '', value: '' }]);
+  };
+
+  const handleCustomFieldChange = (key: string, field: 'name' | 'unit' | 'value', value: string) => {
+    setCustomFields(prev => prev.map(f => f.key === key ? { ...f, [field]: value } : f));
+  };
+
+  const handleRemoveCustomField = (key: string) => {
+    setCustomFields(prev => prev.filter(f => f.key !== key));
+  };
+
   const handleAutofillNormals = () => {
     const filled: Record<string, string> = { ...values };
     for (const param of params) {
@@ -181,8 +212,16 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      // Schema-driven values stay plain strings; a custom field is the only entry that carries a
+      // {value, unit} shape -- EnterPathologyResultHandler accepts both in one submission.
+      const payload: Record<string, string | { value: string; unit?: string }> = { ...values };
+      for (const field of customFields) {
+        const name = field.name.trim();
+        if (!name) continue;
+        payload[name] = { value: field.value, unit: field.unit || undefined };
+      }
       await pathologyService.enterResult(hospitalId, orderId, orderLine.orderLineId, {
-        resultValuesJson: JSON.stringify(values),
+        resultValuesJson: JSON.stringify(payload),
         interpretation
       });
       toast.success("Success", {
@@ -198,7 +237,6 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     }
   };
 
-  const isCompleted = orderLine.status === 'REPORT_APPROVED';
   const isPending = orderLine.status === 'PENDING';
   const hasAutofillableParams = params.some(p => !!p.defaultValue);
 

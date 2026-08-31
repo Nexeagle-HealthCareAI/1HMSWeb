@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
-import { Plus, ShieldCheck, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Flame, CheckCircle2 } from 'lucide-react';
+import { Plus, ShieldCheck, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Flame, CheckCircle2, ClipboardList, Activity, ActivitySquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { OrderResultEntry } from './OrderResultEntry';
@@ -759,83 +760,218 @@ export const PathologyWorkspace: React.FC = () => {
       </div>
 
       {/* New Order dialog */}
-      <Sheet open={newOrderOpen} onOpenChange={setNewOrderOpen}>
-        <SheetContent className="w-full sm:max-w-2xl md:max-w-3xl h-full overflow-y-auto bg-slate-50/50">
-          <SheetHeader className="mb-6">
-            <SheetTitle className="text-2xl">New Pathology Order</SheetTitle>
-            <SheetDescription>Configure patient details, select tests, and place the order.</SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-8 pb-8">
+      <Dialog open={newOrderOpen} onOpenChange={setNewOrderOpen}>
+        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-50 sm:rounded-2xl">
+          
+          <div className="flex h-full w-full">
             
-            {/* Step 1: Patient Selection */}
-            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">1</div>
-                  Patient Details
-                </h3>
+            {/* LEFT COLUMN: Order Summary (Cart) */}
+            <div className="w-[340px] md:w-[400px] bg-white border-r flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 shrink-0">
+              
+              <div className="p-6 border-b bg-gradient-to-br from-brand-50/80 to-emerald-50/50">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-10 w-10 rounded-xl bg-brand-100 flex items-center justify-center shadow-sm border border-brand-200">
+                    <ClipboardList className="h-5 w-5 text-brand-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">Order Summary</h2>
+                    <p className="text-xs text-slate-500 font-medium">Review before placing</p>
+                  </div>
+                </div>
               </div>
 
-              {selectedPatient ? (
-                <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-200 bg-emerald-50/60">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-semibold shrink-0">
-                      {selectedPatient.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 truncate">{selectedPatient.name}</p>
-                      <p className="text-xs text-slate-500">{selectedPatient.patientId} · {selectedPatient.mobile}</p>
+              <ScrollArea className="flex-1 p-6">
+                <div className="space-y-6">
+                  
+                  {/* Patient Summary Card */}
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Patient Details</h4>
+                    {selectedPatient ? (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-100 rounded-bl-full -z-0 opacity-50 transition-transform group-hover:scale-110"></div>
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shrink-0">
+                            {selectedPatient.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 truncate text-sm">{selectedPatient.name}</p>
+                            <p className="text-xs text-slate-500">{selectedPatient.patientId} · {selectedPatient.mobile}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-center text-sm text-slate-400">
+                        No patient selected yet
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Context Summary Card */}
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Order Context</h4>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`px-3 py-1 text-xs font-semibold ${orderSourceType === 'OPD' ? 'bg-blue-50 text-blue-700 border-blue-200' : orderSourceType === 'EMERGENCY' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
+                        {orderSourceType}
+                      </Badge>
+                      {orderIsStat && (
+                        <Badge variant="outline" className="px-3 py-1 text-xs font-semibold bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+                          <Flame className="h-3 w-3" /> STAT
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>Change</Button>
+
+                  {/* Tests Summary Card */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Selected Tests</h4>
+                      <span className="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{selectedTestIds.length}</span>
+                    </div>
+                    
+                    {selectedTestIds.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedTestIds.map(id => {
+                          const t = testCatalog.find(x => x.testId === id);
+                          if (!t) return null;
+                          return (
+                            <div key={id} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="h-8 w-8 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
+                                  <ActivitySquare className="h-4 w-4 text-brand-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-slate-800 truncate">{t.testName}</p>
+                                  <p className="text-xs text-slate-400">{t.testCode}</p>
+                                </div>
+                              </div>
+                              <button onClick={() => toggleTest(id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors shrink-0">
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-center text-sm text-slate-400">
+                        No tests selected
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Billing Hint */}
+                  {selectedPatient && (
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
+                      <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">Billing Routing</h4>
+                      {isLoadingOpdVisits ? (
+                        <p className="text-xs text-amber-600/70">Checking billing visit...</p>
+                      ) : orderSourceType === 'OPD' ? (
+                        opdVisits.length === 0 ? (
+                          <p className="text-xs text-amber-600">No active OPD visit found — this order won't auto-bill.</p>
+                        ) : opdVisits.length === 1 ? (
+                          <p className="text-xs text-emerald-600 font-medium">Billing to OPD visit: {opdVisits[0].invoiceNo ?? 'Draft'}</p>
+                        ) : (
+                          <p className="text-xs text-emerald-600 font-medium">Billing to selected OPD visit: {opdVisits.find(v => v.encounterId === selectedOpdEncounterId)?.invoiceNo ?? 'Draft'}</p>
+                        )
+                      ) : (
+                        labVisits.length === 0 ? (
+                          <p className="text-xs text-emerald-600 font-medium">A new Lab visit will be created for billing.</p>
+                        ) : (
+                          <p className="text-xs text-emerald-600 font-medium">Billing to existing Lab visit: {labVisits[0].invoiceNo ?? 'Draft'}</p>
+                        )
+                      )}
+                    </div>
+                  )}
+
                 </div>
-              ) : null}
-              {!selectedPatient && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPatientMode('search')}
-                      className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all ${
-                        patientMode === 'search'
-                          ? 'border-brand-600 bg-brand-50 shadow-sm'
-                          : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className={`p-2 rounded-lg mb-3 ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                        <User className="h-5 w-5" />
-                      </div>
-                      <span className="font-semibold text-slate-900">Registered Patient</span>
-                      <span className="text-xs text-slate-500 mt-1 text-left">Search existing hospital records by name or mobile.</span>
-                      {patientMode === 'search' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600" />}
-                    </button>
+              </ScrollArea>
 
-                    <button
-                      type="button"
-                      onClick={() => setPatientMode('register')}
-                      className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all ${
-                        patientMode === 'register'
-                          ? 'border-brand-600 bg-brand-50 shadow-sm'
-                          : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className={`p-2 rounded-lg mb-3 ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                        <UserPlus className="h-5 w-5" />
-                      </div>
-                      <span className="font-semibold text-slate-900">Walk-in / New</span>
-                      <span className="text-xs text-slate-500 mt-1 text-left">Quickly register a new patient for this lab order.</span>
-                      {patientMode === 'register' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600" />}
-                    </button>
+              <div className="p-6 border-t bg-white">
+                <Button 
+                  onClick={submitOrder} 
+                  disabled={!canSubmitOrder || isCreatingOrder} 
+                  className="w-full h-12 text-base font-bold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-[0_8px_16px_rgba(37,99,235,0.2)] hover:shadow-[0_8px_20px_rgba(37,99,235,0.3)] transition-all disabled:shadow-none"
+                >
+                  {isCreatingOrder ? (
+                    <span className="flex items-center gap-2">
+                      <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Placing Order...
+                    </span>
+                  ) : 'Place Order'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setNewOrderOpen(false)} 
+                  className="w-full h-10 mt-2 text-sm text-slate-500 hover:text-slate-700"
+                >
+                  Cancel
+                </Button>
+              </div>
+
+            </div>
+
+            {/* RIGHT COLUMN: Interactive Form */}
+            <ScrollArea className="flex-1 bg-slate-50/50">
+              <div className="max-w-4xl mx-auto p-8 md:p-12 space-y-10">
+                
+                {/* Header */}
+                <div className="mb-4">
+                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Configure Order</h1>
+                  <p className="text-slate-500 mt-2 text-base">Complete the steps below to place a new pathology order.</p>
+                </div>
+
+                {/* Step 1: Patient Selection */}
+                <section className="bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-6 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-brand-500 rounded-l-2xl"></div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold shadow-sm">1</div>
+                    <h3 className="text-lg font-bold text-slate-800">Patient Details</h3>
                   </div>
 
-                  {patientMode === 'search' ? (
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  {!selectedPatient && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setPatientMode('search')}
+                        className={`group relative flex flex-col items-start p-5 rounded-xl border-2 transition-all ${
+                          patientMode === 'search'
+                            ? 'border-brand-600 bg-brand-50/50 shadow-sm'
+                            : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`p-2.5 rounded-lg mb-4 transition-colors ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
+                          <User className="h-5 w-5" />
+                        </div>
+                        <span className="font-bold text-slate-900 text-base">Registered Patient</span>
+                        <span className="text-sm text-slate-500 mt-1 text-left leading-relaxed">Search existing hospital records by name or mobile.</span>
+                        {patientMode === 'search' && <CheckCircle2 className="absolute top-5 right-5 h-6 w-6 text-brand-600 animate-in zoom-in" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPatientMode('register')}
+                        className={`group relative flex flex-col items-start p-5 rounded-xl border-2 transition-all ${
+                          patientMode === 'register'
+                            ? 'border-brand-600 bg-brand-50/50 shadow-sm'
+                            : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`p-2.5 rounded-lg mb-4 transition-colors ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
+                          <UserPlus className="h-5 w-5" />
+                        </div>
+                        <span className="font-bold text-slate-900 text-base">Walk-in / New</span>
+                        <span className="text-sm text-slate-500 mt-1 text-left leading-relaxed">Quickly register a new patient for this lab order.</span>
+                        {patientMode === 'register' && <CheckCircle2 className="absolute top-5 right-5 h-6 w-6 text-brand-600 animate-in zoom-in" />}
+                      </button>
+                    </div>
+                  )}
+
+                  {!selectedPatient && patientMode === 'search' && (
+                    <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-2">
+                      <div className="flex gap-3">
+                        <div className="relative flex-1 group">
+                          <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
                           <Input
-                            className="pl-9 bg-slate-50"
+                            className="pl-12 h-12 text-base bg-slate-50 border-slate-200 focus-visible:ring-brand-500"
                             value={patientQuery}
                             onChange={(e) => setPatientQuery(e.target.value)}
                             placeholder="Search by patient name or mobile..."
@@ -843,271 +979,289 @@ export const PathologyWorkspace: React.FC = () => {
                           {patientQuery && (
                             <button 
                               onClick={() => setPatientQuery('')} 
-                              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
+                              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-700 bg-slate-200/50 hover:bg-slate-200 p-1 rounded-full"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-3 w-3" />
                             </button>
                           )}
                         </div>
                         <Button 
                           onClick={() => searchPatients(patientQuery)} 
                           disabled={isSearchingPatients || !patientQuery.trim()}
+                          className="h-12 px-6 font-semibold shadow-sm"
                         >
                           {isSearchingPatients ? 'Searching...' : 'Search'}
                         </Button>
                       </div>
+                      
                       {patientResults.length > 0 && (
-                        <div className="border rounded-xl mt-3 max-h-48 overflow-y-auto divide-y shadow-sm">
+                        <div className="border border-slate-200 rounded-xl mt-4 max-h-60 overflow-y-auto divide-y divide-slate-100 shadow-sm bg-white">
                           {patientResults.map((p) => (
                             <div
                               key={p.patientId}
-                              className="p-2 cursor-pointer hover:bg-muted text-sm"
+                              className="p-4 cursor-pointer hover:bg-brand-50/50 transition-colors flex items-center justify-between group"
                               onClick={() => { setSelectedPatient(p); setPatientResults([]); }}
                             >
-                              <span className="font-medium">{p.name}</span>
-                              <span className="text-muted-foreground"> · {p.patientId} · {p.mobile}</span>
+                              <div className="flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold group-hover:bg-brand-100 group-hover:text-brand-700 transition-colors">
+                                  {p.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-slate-900 text-base">{p.name}</p>
+                                  <p className="text-sm text-slate-500 mt-0.5">{p.patientId} • {p.mobile}</p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 text-brand-600">Select</Button>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="mt-2 space-y-2 border rounded-md p-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          value={newPatientName}
-                          onChange={(e) => setNewPatientName(e.target.value)}
-                          placeholder="Full name *"
-                          className="col-span-2"
-                        />
-                        <Input
-                          value={newPatientMobile}
-                          onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          placeholder="Mobile (10 digits) *"
-                        />
-                        <Input
-                          type="number" min={0}
-                          value={newPatientAge}
-                          onChange={(e) => setNewPatientAge(e.target.value)}
-                          placeholder="Age"
-                        />
-                        <div className="flex gap-1">
-                          {(['Male', 'Female'] as const).map(g => (
-                            <Button
-                              key={g}
-                              type="button"
-                              size="sm"
-                              variant={newPatientGender === g ? 'default' : 'outline'}
-                              onClick={() => setNewPatientGender(g)}
-                              className="flex-1"
-                            >
-                              {g}
-                            </Button>
-                          ))}
+                  )}
+
+                  {!selectedPatient && patientMode === 'register' && (
+                    <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-2">
+                      <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-200">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <Label className="text-slate-700 font-semibold">Full Name <span className="text-red-500">*</span></Label>
+                            <Input
+                              value={newPatientName}
+                              onChange={(e) => setNewPatientName(e.target.value)}
+                              placeholder="e.g. Rahul Sharma"
+                              className="h-11 bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-slate-700 font-semibold">Mobile Number <span className="text-red-500">*</span></Label>
+                            <Input
+                              value={newPatientMobile}
+                              onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              placeholder="10-digit mobile"
+                              className="h-11 bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-slate-700 font-semibold">Age</Label>
+                            <Input
+                              type="number" min={0}
+                              value={newPatientAge}
+                              onChange={(e) => setNewPatientAge(e.target.value)}
+                              placeholder="e.g. 34"
+                              className="h-11 bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-slate-700 font-semibold">Gender</Label>
+                            <div className="flex gap-2 h-11">
+                              {(['Male', 'Female'] as const).map(g => (
+                                <Button
+                                  key={g}
+                                  type="button"
+                                  variant={newPatientGender === g ? 'default' : 'outline'}
+                                  onClick={() => setNewPatientGender(g)}
+                                  className={`flex-1 ${newPatientGender === g ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}
+                                >
+                                  {g}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-slate-700 font-semibold">Guardian Name (Optional)</Label>
+                            <Input
+                              value={newPatientGuardian}
+                              onChange={(e) => setNewPatientGuardian(e.target.value)}
+                              placeholder="e.g. Father's Name"
+                              className="h-11 bg-white"
+                            />
+                          </div>
                         </div>
-                        <Input
-                          value={newPatientGuardian}
-                          onChange={(e) => setNewPatientGuardian(e.target.value)}
-                          placeholder="Guardian (optional)"
-                        />
+                        <Button
+                          type="button"
+                          className="w-full mt-6 h-11 text-base font-semibold shadow-sm"
+                          onClick={registerWalkInPatient}
+                          disabled={isRegisteringPatient}
+                        >
+                          {isRegisteringPatient ? 'Registering Patient...' : 'Complete Registration'}
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="w-full"
-                        onClick={registerWalkInPatient}
-                        disabled={isRegisteringPatient}
-                      >
-                        {isRegisteringPatient ? 'Registering...' : 'Register & Continue'}
-                      </Button>
                     </div>
                   )}
-                </>
-              )}
-            </section>
 
-            {/* Step 2: Order Type */}
-            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">2</div>
-                  Order Context
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setOrderSourceType(st)}
-                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-                      orderSourceType === st
-                        ? 'border-brand-600 bg-brand-50 shadow-sm'
-                        : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-full mb-2 ${orderSourceType === st ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                      {st === 'OPD' ? <Stethoscope className="h-5 w-5" /> : st === 'EMERGENCY' ? <Ambulance className="h-5 w-5" /> : <Footprints className="h-5 w-5" />}
+                  {selectedPatient && (
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="text-sm text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-md flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" /> Patient selected successfully
+                      </p>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedPatient(null)} className="h-8">Change Patient</Button>
                     </div>
-                    <span className="font-semibold text-slate-900 text-sm">
-                      {st === 'OPD' ? 'OPD' : st === 'EMERGENCY' ? 'Emergency' : 'Walk-in'}
-                    </span>
-                    {orderSourceType === st && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-brand-600" />}
-                  </button>
-                ))}
-              </div>
+                  )}
+                </section>
 
-              {selectedPatient && (
-                isLoadingOpdVisits ? (
-                  <p className="text-xs text-slate-500">Checking billing visit...</p>
-                ) : orderSourceType === 'OPD' ? (
-                  opdVisits.length === 0 ? (
-                    <p className="text-xs text-amber-600">No active OPD visit found — this order won't auto-bill.</p>
-                  ) : opdVisits.length === 1 ? (
-                    <p className="text-xs text-emerald-600">
-                      Billing to: OPD visit · {opdVisits[0].invoiceNo ?? 'Draft'} · {new Date(opdVisits[0].invoiceDate).toLocaleDateString()}
-                    </p>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Multiple open OPD visits — pick which one to bill:</p>
-                      {opdVisits.map(v => (
-                        <button
-                          key={v.encounterId}
-                          type="button"
-                          onClick={() => setSelectedOpdEncounterId(v.encounterId)}
-                          className={`w-full flex items-center justify-between text-xs rounded-md border px-2 py-1.5 ${v.encounterId === selectedOpdEncounterId ? 'border-brand-400 bg-brand-50' : 'border-slate-200'}`}
-                        >
-                          <span>{v.invoiceNo ?? 'Draft'} · {new Date(v.invoiceDate).toLocaleDateString()}</span>
-                          <span className="text-slate-400">{v.status}</span>
-                        </button>
-                      ))}
+                {/* Step 2: Order Context */}
+                <section className={`bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-6 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-2xl"></div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold shadow-sm">2</div>
+                      <h3 className="text-lg font-bold text-slate-800">Order Context & Priority</h3>
                     </div>
-                  )
-                ) : (
-                  labVisits.length === 0 ? (
-                    <p className="text-xs text-emerald-600">A new Lab visit will be created for billing when you place this order.</p>
-                  ) : (
-                    <p className="text-xs text-emerald-600">
-                      Billing to: existing Lab visit · {labVisits[0].invoiceNo ?? 'Draft'} · {new Date(labVisits[0].invoiceDate).toLocaleDateString()}
-                    </p>
-                  )
-                )
-              )}
+                  </div>
 
-              <div className="pt-2 border-t mt-4 flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900">Priority</h4>
-                  <p className="text-xs text-slate-500">Is this order urgent?</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOrderIsStat(!orderIsStat)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-medium text-sm transition-colors ${
-                    orderIsStat 
-                      ? 'border-red-600 bg-red-50 text-red-700' 
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
-                >
-                  <Flame className={`h-4 w-4 ${orderIsStat ? 'text-red-600' : 'text-slate-400'}`} />
-                  STAT
-                </button>
-              </div>
-            </section>
-
-            {/* Step 3: Tests Selection */}
-            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">3</div>
-                  Select Tests
-                </h3>
-                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-brand-100 text-brand-700">
-                  {selectedTestIds.length} selected
-                </span>
-              </div>
-              
-              {selectedTestIds.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border border-brand-200 bg-brand-50/50">
-                  {selectedTestIds.map(id => {
-                    const t = testCatalog.find(x => x.testId === id);
-                    if (!t) return null;
-                    return (
-                      <Badge key={id} variant="secondary" className="flex items-center gap-1 pr-1 bg-white border-brand-200 text-brand-800 hover:bg-brand-50 shadow-sm">
-                        {t.testName}
-                        <button onClick={() => toggleTest(id)} className="text-brand-500 hover:text-brand-900 rounded-full p-0.5 hover:bg-brand-100">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="relative mt-2">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <Input
-                  className="pl-9 bg-slate-50"
-                  placeholder="Search catalog by name or code..."
-                  value={testSearchQuery}
-                  onChange={(e) => setTestSearchQuery(e.target.value)}
-                />
-              </div>
-
-              <div className="border rounded-xl mt-2 max-h-56 overflow-y-auto divide-y shadow-inner bg-slate-50/50">
-                {testCatalog.length === 0 ? (
-                  <div className="p-4 text-sm text-center text-slate-500">No active tests in the catalog.</div>
-                ) : (() => {
-                  const filteredTests = testCatalog.filter(t => 
-                    t.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
-                    t.testCode.toLowerCase().includes(testSearchQuery.toLowerCase())
-                  );
-                  return filteredTests.length === 0 ? (
-                    <div className="p-4 text-sm text-center text-slate-500">No tests matching "{testSearchQuery}".</div>
-                  ) : (
-                    filteredTests.map((t) => (
-                      <label key={t.testId} className="flex items-center gap-3 p-3 text-sm cursor-pointer hover:bg-white transition-colors">
-                        <Checkbox 
-                          checked={selectedTestIds.includes(t.testId)} 
-                          onCheckedChange={() => toggleTest(t.testId)}
-                          className="data-[state=checked]:bg-brand-600 data-[state=checked]:border-brand-600"
-                        />
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-800">{t.testName}</span>
-                          <span className="text-xs text-slate-500">{t.testCode}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setOrderSourceType(st)}
+                        className={`relative flex flex-col items-center justify-center p-5 rounded-xl border-2 transition-all ${
+                          orderSourceType === st
+                            ? 'border-brand-600 bg-brand-50/50 shadow-sm'
+                            : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`p-3 rounded-full mb-3 transition-colors ${orderSourceType === st ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
+                          {st === 'OPD' ? <Stethoscope className="h-6 w-6" /> : st === 'EMERGENCY' ? <Ambulance className="h-6 w-6" /> : <Footprints className="h-6 w-6" />}
                         </div>
-                      </label>
-                    ))
-                  );
-                })()}
-              </div>
-            </section>
+                        <span className="font-bold text-slate-900 text-base">
+                          {st === 'OPD' ? 'OPD Visit' : st === 'EMERGENCY' ? 'Emergency' : 'Walk-in'}
+                        </span>
+                        {orderSourceType === st && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600 animate-in zoom-in" />}
+                      </button>
+                    ))}
+                  </div>
 
-            {/* Step 4: Notes */}
-            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">4</div>
-                  Additional Notes
-                </h3>
+                  {/* OPD Billing Selection */}
+                  {selectedPatient && orderSourceType === 'OPD' && opdVisits.length > 1 && (
+                    <div className="mt-4 p-4 rounded-xl border border-blue-100 bg-blue-50/50 space-y-3">
+                      <p className="text-sm font-semibold text-slate-800">Select which OPD visit to attach this order to:</p>
+                      <div className="grid gap-2">
+                        {opdVisits.map(v => (
+                          <button
+                            key={v.encounterId}
+                            type="button"
+                            onClick={() => setSelectedOpdEncounterId(v.encounterId)}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${v.encounterId === selectedOpdEncounterId ? 'border-brand-500 bg-white shadow-sm ring-1 ring-brand-500' : 'border-slate-200 bg-white hover:border-brand-300'}`}
+                          >
+                            <span className="font-medium text-slate-700">{v.invoiceNo ?? 'Draft Invoice'}</span>
+                            <span className="text-sm text-slate-500">{new Date(v.invoiceDate).toLocaleDateString()}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-slate-100 mt-6 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900">Mark as STAT (Urgent)</h4>
+                      <p className="text-sm text-slate-500 mt-1">Check this if the results are required immediately.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOrderIsStat(!orderIsStat)}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 font-bold text-sm transition-all ${
+                        orderIsStat 
+                          ? 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <Flame className={`h-4 w-4 ${orderIsStat ? 'text-red-600 animate-pulse' : 'text-slate-400'}`} />
+                      {orderIsStat ? 'STAT ORDER ACTIVE' : 'Mark STAT'}
+                    </button>
+                  </div>
+                </section>
+
+                {/* Step 3: Tests Selection */}
+                <section className={`bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-6 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl"></div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shadow-sm">3</div>
+                    <h3 className="text-lg font-bold text-slate-800">Select Lab Tests</h3>
+                  </div>
+                  
+                  <div className="relative group mt-4">
+                    <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
+                    <Input
+                      className="pl-12 h-12 text-base bg-slate-50 border-slate-200 focus-visible:ring-brand-500 shadow-inner"
+                      placeholder="Search test catalog by name or code..."
+                      value={testSearchQuery}
+                      onChange={(e) => setTestSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                    {testCatalog.length === 0 ? (
+                      <div className="p-8 text-center text-slate-500 flex flex-col items-center">
+                        <Activity className="h-10 w-10 text-slate-300 mb-3" />
+                        <p className="font-medium text-slate-600">No active tests in the catalog</p>
+                        <p className="text-sm mt-1">Add tests from Settings to see them here.</p>
+                      </div>
+                    ) : (() => {
+                      const filteredTests = testCatalog.filter(t => 
+                        t.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
+                        t.testCode.toLowerCase().includes(testSearchQuery.toLowerCase())
+                      );
+                      return filteredTests.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500">No tests matching "{testSearchQuery}".</div>
+                      ) : (
+                        <ScrollArea className="h-64 max-h-[40vh]">
+                          <div className="divide-y divide-slate-100">
+                            {filteredTests.map((t) => (
+                              <label key={t.testId} className="flex items-center justify-between p-4 cursor-pointer hover:bg-brand-50/50 transition-colors group">
+                                <div className="flex items-center gap-4">
+                                  <div className={`flex items-center justify-center h-5 w-5 rounded border ${selectedTestIds.includes(t.testId) ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
+                                    {selectedTestIds.includes(t.testId) && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold text-slate-800 text-base">{t.testName}</span>
+                                    <span className="text-sm text-slate-500 mt-0.5 font-mono">{t.testCode}</span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-bold text-slate-700">₹{t.price}</span>
+                                </div>
+                                {/* Hidden actual checkbox for accessibility */}
+                                <input 
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={selectedTestIds.includes(t.testId)} 
+                                  onChange={() => toggleTest(t.testId)}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      );
+                    })()}
+                  </div>
+                </section>
+
+                {/* Step 4: Notes */}
+                <section className={`bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
+                  
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold shadow-sm">4</div>
+                    <h3 className="text-lg font-bold text-slate-800">Clinical Notes (Optional)</h3>
+                  </div>
+                  <Textarea 
+                    value={orderNotes} 
+                    onChange={(e) => setOrderNotes(e.target.value)} 
+                    placeholder="Enter any additional remarks, clinical history, or instructions for the lab technician..." 
+                    className="bg-slate-50 resize-none min-h-[120px] text-base p-4 border-slate-200 focus-visible:ring-brand-500"
+                  />
+                </section>
+                
+                {/* Bottom Padding for scroll area */}
+                <div className="h-10"></div>
               </div>
-              <Textarea 
-                value={orderNotes} 
-                onChange={(e) => setOrderNotes(e.target.value)} 
-                placeholder="Optional clinical notes or remarks..." 
-                className="bg-slate-50 resize-none min-h-[80px]"
-              />
-            </section>
+            </ScrollArea>
           </div>
-
-          <SheetFooter className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t z-10 flex justify-end gap-2 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
-            <Button variant="outline" onClick={() => setNewOrderOpen(false)} className="px-6 rounded-full">Cancel</Button>
-            <Button onClick={submitOrder} disabled={!canSubmitOrder} className="px-6 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-md">
-              {isCreatingOrder ? 'Placing...' : 'Place Order'}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Technician sign-off dialog */}
       <Sheet open={signDialogOpen} onOpenChange={setSignDialogOpen}>

@@ -74,7 +74,6 @@ const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
-const PathologyReportVerificationPage = lazy(() => import('@/features/pathology/pages/PathologyReportVerificationPage').then(module => ({ default: module.default })));
 const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
 
 // Patient routes
@@ -307,12 +306,6 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/verify/:appointmentId"
           element={<PrescriptionVerificationPage />}
-        />
-
-        {/* Pathology Report Verification Route - Public (what the QR on a signed report links to) */}
-        <Route
-          path="/verify/report/:reportId"
-          element={<PathologyReportVerificationPage />}
         />
 
         <Route

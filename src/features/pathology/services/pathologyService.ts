@@ -69,14 +69,8 @@ export interface PathologyOrderDto {
 export interface PathologyReportDto {
   reportId: string;
   reportNo: string;
-  status: 'DRAFT' | 'TECH_SIGNED' | 'APPROVED';
+  status: string;
   generatedAt?: string;
-  technicianName?: string;
-  technicianRegNo?: string;
-  technicianSignedAt?: string;
-  pathologistName?: string;
-  pathologistRegNo?: string;
-  approvedAt?: string;
   pdfBlobPath?: string;
   pdfSha256?: string;
 }
@@ -168,16 +162,6 @@ export interface GeneratePathologyReportResponse {
   reportNo?: string;
 }
 
-export interface PathologyReportVerificationResponse {
-  isAuthentic: boolean;
-  message: string;
-  reportNo?: string;
-  hospitalName?: string;
-  approvedAt?: string;
-  technicianName?: string;
-  pathologistName?: string;
-}
-
 export interface UpdateLabConfigRequest {
   autoBillOnOrder: boolean;
   defaultReportHeaderBlob?: string;
@@ -190,7 +174,7 @@ export interface PathologyReportReadyDto {
   reportId: string;
   reportNo: string;
   orderNo: string;
-  approvedAt?: string;
+  generatedAt?: string;
   pdfBlobPath?: string;
 }
 
@@ -231,37 +215,12 @@ export const pathologyService = {
     return response.data;
   },
 
-  signReportAsTechnician: async (hospitalId: string, orderId: string, reportId: string, technicianRegNo: string): Promise<boolean> => {
-    const response = await api.post<{ success: boolean }>(
-      `/api/v1/PathologyOrder/${hospitalId}/${orderId}/report/${reportId}/sign-technician`,
-      { technicianRegNo }
-    );
-    return response.data.success;
-  },
-
-  approveReport: async (hospitalId: string, orderId: string, reportId: string, pathologistRegNo: string): Promise<boolean> => {
-    const response = await api.post<{ success: boolean }>(
-      `/api/v1/PathologyOrder/${hospitalId}/${orderId}/report/${reportId}/approve`,
-      { pathologistRegNo }
-    );
-    return response.data.success;
-  },
-
   uploadReportPdf: async (hospitalId: string, orderId: string, reportId: string, file: Blob): Promise<{ success: boolean; message?: string; url?: string; sha256?: string }> => {
     const formData = new FormData();
     formData.append('File', file, `${reportId}.pdf`);
     const response = await api.post(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report/${reportId}/pdf`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return response.data;
-  },
-
-  // Public, unauthenticated -- called from the QR-scan verification page, not from within the app.
-  verifyReport: async (reportId: string, sha256?: string): Promise<PathologyReportVerificationResponse> => {
-    const url = sha256
-      ? `/verify/report/${reportId}?hash=${encodeURIComponent(sha256)}`
-      : `/verify/report/${reportId}`;
-    const response = await api.get<PathologyReportVerificationResponse>(url);
     return response.data;
   },
 

@@ -1,5 +1,4 @@
 import { PDFDocument, PDFFont, PDFPage, PDFEmbeddedPage, StandardFonts, rgb, RGB } from 'pdf-lib';
-import QRCode from 'qrcode';
 import { PathologyResultFlag } from './resultFlagCalculator';
 import { generateDefaultLetterheadTemplate, DefaultLetterheadHospitalInfo } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
 import { PathologyLetterheadMode } from '../services/pathologyService';
@@ -71,13 +70,6 @@ export interface PathologyReportPdfData {
   patientAgeYears?: number | null;
   patientGender?: string | null;
   lines: PathologyReportPdfLine[];
-  technicianName: string;
-  technicianRegNo: string;
-  technicianSignedAt: string;
-  pathologistName: string;
-  pathologistRegNo: string;
-  approvedAt: string;
-  verifyUrl: string;
 
   // Which source the header/footer artwork is drawn from -- omitted entirely (undefined) preserves
   // the original fixed plain-text header for any caller that predates this, CUSTOM_TEMPLATE/
@@ -149,16 +141,15 @@ async function resolveLetterheadBackground(
 }
 
 // Purpose-built for pathology reports rather than reusing the prescription preview's richer
-// markdown/theme renderer (previewRenderer.ts) -- a lab report's content is a flat results table
-// plus a signature block, not free-form doctor-authored prose, so it doesn't need that machinery.
+// markdown/theme renderer (previewRenderer.ts) -- a lab report's content is a flat results table,
+// not free-form doctor-authored prose, so it doesn't need that machinery. No signature block: the
+// technician/pathologist sign-off workflow was removed in favor of one freely repeatable "generate
+// report" action, so this same function doubles as both the always-available preview (called with
+// live, possibly-partial data before a PathologyReport row even exists) and the uploaded PDF.
 export async function generatePathologyReportPdf(data: PathologyReportPdfData): Promise<Blob> {
   const doc = await PDFDocument.create();
   const regularFont = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
-
-  const qrDataUrl = await QRCode.toDataURL(data.verifyUrl, { margin: 1, width: 200 });
-  const qrPngBytes = Uint8Array.from(atob(qrDataUrl.split(',')[1]), c => c.charCodeAt(0));
-  const qrImage = await doc.embedPng(qrPngBytes);
 
   const background = await resolveLetterheadBackground(doc, data);
   const margins = resolveMargins(data.letterheadMargins);
@@ -276,37 +267,6 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     }
     cursorY -= 10;
   }
-
-  // --- Signature block ---
-  ensureRoom(90);
-  cursorY -= 6;
-  page.drawLine({ start: { x: margins.left, y: cursorY }, end: { x: PAGE_WIDTH - margins.right, y: cursorY }, thickness: 1, color: COLORS.border });
-  cursorY -= 20;
-
-  const sigColWidth = contentWidth / 2;
-  const techX = margins.left;
-  const pathX = margins.left + sigColWidth;
-  const sigTopY = cursorY;
-
-  page.drawText('Verified by (Lab Technician)', { x: techX, y: sigTopY, size: 8.5, font: boldFont, color: COLORS.muted });
-  page.drawText(data.technicianName, { x: techX, y: sigTopY - 16, size: 10, font: boldFont, color: COLORS.text });
-  page.drawText(`Reg. No: ${data.technicianRegNo}`, { x: techX, y: sigTopY - 30, size: 9, font: regularFont, color: COLORS.text });
-  page.drawText(`Signed: ${new Date(data.technicianSignedAt).toLocaleString()}`, { x: techX, y: sigTopY - 44, size: 8.5, font: regularFont, color: COLORS.muted });
-
-  page.drawText('Authorized by (Pathologist)', { x: pathX, y: sigTopY, size: 8.5, font: boldFont, color: COLORS.muted });
-  page.drawText(data.pathologistName, { x: pathX, y: sigTopY - 16, size: 10, font: boldFont, color: COLORS.text });
-  page.drawText(`Reg. No: ${data.pathologistRegNo}`, { x: pathX, y: sigTopY - 30, size: 9, font: regularFont, color: COLORS.text });
-  page.drawText(`Approved: ${new Date(data.approvedAt).toLocaleString()}`, { x: pathX, y: sigTopY - 44, size: 8.5, font: regularFont, color: COLORS.muted });
-
-  cursorY = sigTopY - 60;
-
-  // --- QR verification block ---
-  ensureRoom(70);
-  const qrSize = 56;
-  page.drawImage(qrImage, { x: margins.left, y: cursorY - qrSize, width: qrSize, height: qrSize });
-  page.drawText('Scan to verify this report is genuine', {
-    x: margins.left + qrSize + 10, y: cursorY - qrSize / 2 + 4, size: 8.5, font: regularFont, color: COLORS.muted,
-  });
 
   const pdfBytes = await doc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });

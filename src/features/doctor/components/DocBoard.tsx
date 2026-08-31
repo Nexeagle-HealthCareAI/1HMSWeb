@@ -467,7 +467,7 @@ export const ClinicalDashboard: React.FC = () => {
     return () => { cancelled = true; };
   }, [hospitalId, doctorId]);
 
-  // Recently-approved pathology reports per patient, for the LabReportReadyBadge shown alongside
+  // Recently-generated pathology reports per patient, for the LabReportReadyBadge shown alongside
   // each appointment row. Same fetch-once-and-index-by-patientId shape as referralsByPatient above
   // -- hospital-wide (not scoped to this doctor), since a lab result becoming ready is relevant to
   // whichever doctor is seeing the patient today, not just whoever originally ordered the test.

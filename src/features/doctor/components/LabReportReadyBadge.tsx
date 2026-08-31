@@ -31,7 +31,7 @@ export const LabReportReadyBadge: React.FC<Props> = ({ report }) => {
         <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Lab Report {report.reportNo}</DialogTitle>
-            <DialogDescription>Order {report.orderNo}{report.approvedAt ? ` · Approved ${new Date(report.approvedAt).toLocaleString()}` : ''}</DialogDescription>
+            <DialogDescription>Order {report.orderNo}{report.generatedAt ? ` · Generated ${new Date(report.generatedAt).toLocaleString()}` : ''}</DialogDescription>
           </DialogHeader>
           {report.pdfBlobPath ? (
             <iframe src={report.pdfBlobPath} className="flex-1 w-full rounded-md border" title={`Lab Report ${report.reportNo}`} />
