@@ -67,6 +67,12 @@ export const PathologyWorkspace: React.FC = () => {
   const [opdVisits, setOpdVisits] = useState<Array<{ encounterId: string; invoiceNo?: string; status: string; invoiceDate: string }>>([]);
   const [isLoadingOpdVisits, setIsLoadingOpdVisits] = useState(false);
   const [selectedOpdEncounterId, setSelectedOpdEncounterId] = useState<string | null>(null);
+  // Same idea for Walk-in/Emergency orders, which have no OPD visit to attach to -- reuse the
+  // patient's open Lab visit if one exists (same fetch as opdVisits above, just filtered to LAB),
+  // or submitOrder() creates one fresh at placement time so the charge still has something to
+  // post against immediately instead of the pathologist having to go create an invoice separately.
+  const [labVisits, setLabVisits] = useState<Array<{ encounterId: string; invoiceNo?: string; status: string; invoiceDate: string }>>([]);
+  const [selectedLabEncounterId, setSelectedLabEncounterId] = useState<string | null>(null);
 
   // Date filter -- defaults to "all" (not "today", unlike RevenueTab's billing dashboard) since a
   // tech needs to see backlog like an older still-pending STAT order; narrowing to today shouldn't
@@ -235,6 +241,8 @@ export const PathologyWorkspace: React.FC = () => {
     setOrderIsStat(false);
     setOpdVisits([]);
     setSelectedOpdEncounterId(null);
+    setLabVisits([]);
+    setSelectedLabEncounterId(null);
     setNewOrderOpen(true);
     if (hospitalId) {
       pathologyService.getTests(hospitalId).then(setTestCatalog).catch(() => setTestCatalog([]));
@@ -292,23 +300,39 @@ export const PathologyWorkspace: React.FC = () => {
   // Refetch whenever the selected patient changes -- independent of orderSourceType so switching
   // Source after picking a patient doesn't need a re-fetch.
   useEffect(() => {
-    if (!selectedPatient) { setOpdVisits([]); setSelectedOpdEncounterId(null); return; }
+    if (!selectedPatient) {
+      setOpdVisits([]); setSelectedOpdEncounterId(null);
+      setLabVisits([]); setSelectedLabEncounterId(null);
+      return;
+    }
     let cancelled = false;
     setIsLoadingOpdVisits(true);
     ipdBillingService.getPatientEvents(selectedPatient.patientId)
       .then((res: any) => {
         if (cancelled) return;
-        const list = (res?.data?.encounters ?? [])
-          .filter((e: any) => (e.encounterTypeCode ?? '').toUpperCase() === 'OPD' && !e.isCancelled)
-          .map((e: any) => ({ encounterId: e.encounterId, invoiceNo: e.invoiceNo ?? undefined, status: e.status ?? 'OPEN', invoiceDate: e.invoiceDate ?? '' }))
-          .sort((a: any, b: any) => (b.invoiceDate ?? '').localeCompare(a.invoiceDate ?? ''));
-        setOpdVisits(list);
+        const encounters = res?.data?.encounters ?? [];
         // Prefer the most recent still-open (not finalized) visit, same convention BillingPage's
         // "land on the current bill" logic uses; fall back to the most recent one otherwise.
-        const current = list.find((e: any) => (e.status ?? '').toUpperCase() !== 'FINALIZED') ?? list[0];
-        setSelectedOpdEncounterId(current?.encounterId ?? null);
+        const deriveVisits = (typeCode: string) => {
+          const list = encounters
+            .filter((e: any) => (e.encounterTypeCode ?? '').toUpperCase() === typeCode && !e.isCancelled)
+            .map((e: any) => ({ encounterId: e.encounterId, invoiceNo: e.invoiceNo ?? undefined, status: e.status ?? 'OPEN', invoiceDate: e.invoiceDate ?? '' }))
+            .sort((a: any, b: any) => (b.invoiceDate ?? '').localeCompare(a.invoiceDate ?? ''));
+          const current = list.find((e: any) => (e.status ?? '').toUpperCase() !== 'FINALIZED') ?? list[0];
+          return { list, currentId: current?.encounterId ?? null };
+        };
+        const opd = deriveVisits('OPD');
+        setOpdVisits(opd.list);
+        setSelectedOpdEncounterId(opd.currentId);
+        const lab = deriveVisits('LAB');
+        setLabVisits(lab.list);
+        setSelectedLabEncounterId(lab.currentId);
       })
-      .catch(() => { if (!cancelled) { setOpdVisits([]); setSelectedOpdEncounterId(null); } })
+      .catch(() => {
+        if (cancelled) return;
+        setOpdVisits([]); setSelectedOpdEncounterId(null);
+        setLabVisits([]); setSelectedLabEncounterId(null);
+      })
       .finally(() => { if (!cancelled) setIsLoadingOpdVisits(false); });
     return () => { cancelled = true; };
   }, [selectedPatient]);
@@ -323,15 +347,23 @@ export const PathologyWorkspace: React.FC = () => {
     if (!hospitalId || !selectedPatient || selectedTestIds.length === 0) return;
     setIsCreatingOrder(true);
     try {
+      // OPD attaches to the patient's open OPD visit (their consultation's own invoice). Walk-in/
+      // Emergency have no such visit to attach to -- reuse their open Lab visit if one exists,
+      // else create one right now, same "New Lab Invoice" flow PathologyBillingTab.tsx already
+      // uses, so the order always has something to bill against instead of the pathologist having
+      // to separately create an invoice afterward.
+      let billingEncounterId: string | undefined = orderSourceType === 'OPD' ? (selectedOpdEncounterId ?? undefined) : (selectedLabEncounterId ?? undefined);
+      if (orderSourceType !== 'OPD' && !billingEncounterId) {
+        const encRes = await ipdBillingService.createEncounter({ patientId: selectedPatient.patientId, encounterType: 'LAB' });
+        if (encRes?.success && encRes.data?.encounterId) billingEncounterId = encRes.data.encounterId;
+      }
       const response = await pathologyService.createOrder(hospitalId, {
         patientId: selectedPatient.patientId,
         testIds: selectedTestIds,
         notes: orderNotes || undefined,
         sourceType: orderSourceType,
         isStat: orderIsStat,
-        // Attach to the patient's open OPD visit so these charges land on the same invoice as
-        // their consultation, instead of never billing (IPD already does this via CPOE).
-        encounterId: orderSourceType === 'OPD' ? (selectedOpdEncounterId ?? undefined) : undefined,
+        encounterId: billingEncounterId,
       });
       if (!response.success) {
         toast.error('Could not place order', { description: response.message });
@@ -745,7 +777,21 @@ export const PathologyWorkspace: React.FC = () => {
                 </h3>
               </div>
 
-              {!selectedPatient ? (
+              {selectedPatient ? (
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-200 bg-emerald-50/60">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-semibold shrink-0">
+                      {selectedPatient.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900 truncate">{selectedPatient.name}</p>
+                      <p className="text-xs text-slate-500">{selectedPatient.patientId} · {selectedPatient.mobile}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>Change</Button>
+                </div>
+              ) : null}
+              {!selectedPatient && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <button
@@ -824,7 +870,7 @@ export const PathologyWorkspace: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </>
+                    </div>
                   ) : (
                     <div className="mt-2 space-y-2 border rounded-md p-3">
                       <div className="grid grid-cols-2 gap-2">
@@ -911,6 +957,43 @@ export const PathologyWorkspace: React.FC = () => {
                   </button>
                 ))}
               </div>
+
+              {selectedPatient && (
+                isLoadingOpdVisits ? (
+                  <p className="text-xs text-slate-500">Checking billing visit...</p>
+                ) : orderSourceType === 'OPD' ? (
+                  opdVisits.length === 0 ? (
+                    <p className="text-xs text-amber-600">No active OPD visit found — this order won't auto-bill.</p>
+                  ) : opdVisits.length === 1 ? (
+                    <p className="text-xs text-emerald-600">
+                      Billing to: OPD visit · {opdVisits[0].invoiceNo ?? 'Draft'} · {new Date(opdVisits[0].invoiceDate).toLocaleDateString()}
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Multiple open OPD visits — pick which one to bill:</p>
+                      {opdVisits.map(v => (
+                        <button
+                          key={v.encounterId}
+                          type="button"
+                          onClick={() => setSelectedOpdEncounterId(v.encounterId)}
+                          className={`w-full flex items-center justify-between text-xs rounded-md border px-2 py-1.5 ${v.encounterId === selectedOpdEncounterId ? 'border-brand-400 bg-brand-50' : 'border-slate-200'}`}
+                        >
+                          <span>{v.invoiceNo ?? 'Draft'} · {new Date(v.invoiceDate).toLocaleDateString()}</span>
+                          <span className="text-slate-400">{v.status}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  labVisits.length === 0 ? (
+                    <p className="text-xs text-emerald-600">A new Lab visit will be created for billing when you place this order.</p>
+                  ) : (
+                    <p className="text-xs text-emerald-600">
+                      Billing to: existing Lab visit · {labVisits[0].invoiceNo ?? 'Draft'} · {new Date(labVisits[0].invoiceDate).toLocaleDateString()}
+                    </p>
+                  )
+                )
+              )}
 
               <div className="pt-2 border-t mt-4 flex items-center justify-between">
                 <div>
