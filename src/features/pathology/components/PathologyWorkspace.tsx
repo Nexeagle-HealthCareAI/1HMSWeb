@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
-import { Plus, ShieldCheck } from 'lucide-react';
+import { Plus, ShieldCheck, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Flame, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { OrderResultEntry } from './OrderResultEntry';
@@ -54,6 +54,7 @@ export const PathologyWorkspace: React.FC = () => {
   const [newPatientGuardian, setNewPatientGuardian] = useState('');
   const [isRegisteringPatient, setIsRegisteringPatient] = useState(false);
   const [testCatalog, setTestCatalog] = useState<PathologyTestMaster[]>([]);
+  const [testSearchQuery, setTestSearchQuery] = useState('');
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
   const [orderSourceType, setOrderSourceType] = useState<'OPD' | 'EMERGENCY' | 'WALK_IN'>('OPD');
@@ -240,11 +241,11 @@ export const PathologyWorkspace: React.FC = () => {
     }
   };
 
-  const searchPatients = async () => {
-    if (!patientQuery.trim()) return;
+  const searchPatients = async (queryToSearch: string) => {
+    if (!queryToSearch.trim()) return;
     setIsSearchingPatients(true);
     try {
-      const results = await patientService.searchPatients(patientQuery.trim(), 'name');
+      const results = await patientService.searchPatients(queryToSearch.trim(), 'name');
       setPatientResults(results);
     } catch (e) {
       toast.error('Patient search failed');
@@ -252,6 +253,17 @@ export const PathologyWorkspace: React.FC = () => {
       setIsSearchingPatients(false);
     }
   };
+
+  useEffect(() => {
+    if (patientMode !== 'search' || !patientQuery.trim()) {
+      setPatientResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      searchPatients(patientQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [patientQuery, patientMode]);
 
   const registerWalkInPatient = async () => {
     if (!hospitalId || isRegisteringPatient) return;
@@ -716,85 +728,90 @@ export const PathologyWorkspace: React.FC = () => {
 
       {/* New Order dialog */}
       <Sheet open={newOrderOpen} onOpenChange={setNewOrderOpen}>
-        <SheetContent className="w-full sm:max-w-2xl md:max-w-3xl h-full overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>New Pathology Order</SheetTitle>
-            <SheetDescription>Search for a patient and select the tests to order.</SheetDescription>
+        <SheetContent className="w-full sm:max-w-2xl md:max-w-3xl h-full overflow-y-auto bg-slate-50/50">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-2xl">New Pathology Order</SheetTitle>
+            <SheetDescription>Configure patient details, select tests, and place the order.</SheetDescription>
           </SheetHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Label>Patient</Label>
-              {selectedPatient ? (
-                <div className="flex items-center justify-between border rounded-md p-3 mt-1">
-                  <div>
-                    <div className="font-medium">{selectedPatient.name}</div>
-                    <div className="text-xs text-muted-foreground">{selectedPatient.patientId} · {selectedPatient.mobile}</div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>Change</Button>
-                </div>
-              ) : null}
-              {selectedPatient && orderSourceType === 'OPD' && (
-                isLoadingOpdVisits ? (
-                  <p className="text-xs text-muted-foreground mt-1.5">Checking for an open OPD visit...</p>
-                ) : opdVisits.length === 0 ? (
-                  <p className="text-xs text-amber-600 mt-1.5">No active OPD visit found — this order won't auto-bill.</p>
-                ) : opdVisits.length === 1 ? (
-                  <p className="text-xs text-emerald-600 mt-1.5">
-                    Billing to: OPD visit · {opdVisits[0].invoiceNo ?? 'Draft'} · {new Date(opdVisits[0].invoiceDate).toLocaleDateString()}
-                  </p>
-                ) : (
-                  <div className="mt-1.5 space-y-1">
-                    <p className="text-xs text-muted-foreground">Multiple open OPD visits — pick which one to bill:</p>
-                    {opdVisits.map(v => (
-                      <button
-                        key={v.encounterId}
-                        type="button"
-                        onClick={() => setSelectedOpdEncounterId(v.encounterId)}
-                        className={`w-full flex items-center justify-between text-xs rounded-md border px-2 py-1.5 ${v.encounterId === selectedOpdEncounterId ? 'border-brand-400 bg-brand-50' : 'border-border'}`}
-                      >
-                        <span>{v.invoiceNo ?? 'Draft'} · {new Date(v.invoiceDate).toLocaleDateString()}</span>
-                        <span className="text-muted-foreground">{v.status}</span>
-                      </button>
-                    ))}
-                  </div>
-                )
-              )}
-              {!selectedPatient && (
+          <div className="space-y-8 pb-8">
+            
+            {/* Step 1: Patient Selection */}
+            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
+                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">1</div>
+                  Patient Details
+                </h3>
+              </div>
+
+              {!selectedPatient ? (
                 <>
-                  <div className="flex gap-1 mt-1">
-                    <Button
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
                       type="button"
-                      size="sm"
-                      variant={patientMode === 'search' ? 'default' : 'outline'}
                       onClick={() => setPatientMode('search')}
+                      className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all ${
+                        patientMode === 'search'
+                          ? 'border-brand-600 bg-brand-50 shadow-sm'
+                          : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                      }`}
                     >
-                      Registered Patient
-                    </Button>
-                    <Button
+                      <div className={`p-2 rounded-lg mb-3 ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                        <User className="h-5 w-5" />
+                      </div>
+                      <span className="font-semibold text-slate-900">Registered Patient</span>
+                      <span className="text-xs text-slate-500 mt-1 text-left">Search existing hospital records by name or mobile.</span>
+                      {patientMode === 'search' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600" />}
+                    </button>
+
+                    <button
                       type="button"
-                      size="sm"
-                      variant={patientMode === 'register' ? 'default' : 'outline'}
                       onClick={() => setPatientMode('register')}
+                      className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all ${
+                        patientMode === 'register'
+                          ? 'border-brand-600 bg-brand-50 shadow-sm'
+                          : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                      }`}
                     >
-                      New / Walk-in Patient
-                    </Button>
+                      <div className={`p-2 rounded-lg mb-3 ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                        <UserPlus className="h-5 w-5" />
+                      </div>
+                      <span className="font-semibold text-slate-900">Walk-in / New</span>
+                      <span className="text-xs text-slate-500 mt-1 text-left">Quickly register a new patient for this lab order.</span>
+                      {patientMode === 'register' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600" />}
+                    </button>
                   </div>
+
                   {patientMode === 'search' ? (
-                    <>
-                      <div className="flex gap-2 mt-2">
-                        <Input
-                          value={patientQuery}
-                          onChange={(e) => setPatientQuery(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') searchPatients(); }}
-                          placeholder="Search by patient name..."
-                        />
-                        <Button onClick={searchPatients} disabled={isSearchingPatients}>
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                          <Input
+                            className="pl-9 bg-slate-50"
+                            value={patientQuery}
+                            onChange={(e) => setPatientQuery(e.target.value)}
+                            placeholder="Search by patient name or mobile..."
+                          />
+                          {patientQuery && (
+                            <button 
+                              onClick={() => setPatientQuery('')} 
+                              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                        <Button 
+                          onClick={() => searchPatients(patientQuery)} 
+                          disabled={isSearchingPatients || !patientQuery.trim()}
+                        >
                           {isSearchingPatients ? 'Searching...' : 'Search'}
                         </Button>
                       </div>
                       {patientResults.length > 0 && (
-                        <div className="border rounded-md mt-2 max-h-40 overflow-y-auto divide-y">
+                        <div className="border rounded-xl mt-3 max-h-48 overflow-y-auto divide-y shadow-sm">
                           {patientResults.map((p) => (
                             <div
                               key={p.patientId}
@@ -861,63 +878,148 @@ export const PathologyWorkspace: React.FC = () => {
                   )}
                 </>
               )}
-            </div>
+            </section>
 
-            <div>
-              <Label>Tests</Label>
-              <div className="border rounded-md mt-1 max-h-56 overflow-y-auto divide-y">
-                {testCatalog.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-foreground">No active tests in the catalog.</div>
-                ) : (
-                  testCatalog.map((t) => (
-                    <label key={t.testId} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-muted">
-                      <Checkbox checked={selectedTestIds.includes(t.testId)} onCheckedChange={() => toggleTest(t.testId)} />
-                      <span className="font-medium">{t.testName}</span>
-                      <span className="text-muted-foreground">({t.testCode})</span>
-                    </label>
-                  ))
-                )}
+            {/* Step 2: Order Type */}
+            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
+                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">2</div>
+                  Order Context
+                </h3>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Source</Label>
-                <div className="flex gap-1 mt-1">
-                  {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
-                    <Button
-                      key={st}
-                      type="button"
-                      size="sm"
-                      variant={orderSourceType === st ? 'default' : 'outline'}
-                      onClick={() => setOrderSourceType(st)}
-                    >
-                      {st === 'WALK_IN' ? 'Walk-in' : st === 'EMERGENCY' ? 'Emergency' : 'OPD'}
-                    </Button>
-                  ))}
+              <div className="grid grid-cols-3 gap-3">
+                {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setOrderSourceType(st)}
+                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                      orderSourceType === st
+                        ? 'border-brand-600 bg-brand-50 shadow-sm'
+                        : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-full mb-2 ${orderSourceType === st ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      {st === 'OPD' ? <Stethoscope className="h-5 w-5" /> : st === 'EMERGENCY' ? <Ambulance className="h-5 w-5" /> : <Footprints className="h-5 w-5" />}
+                    </div>
+                    <span className="font-semibold text-slate-900 text-sm">
+                      {st === 'OPD' ? 'OPD' : st === 'EMERGENCY' ? 'Emergency' : 'Walk-in'}
+                    </span>
+                    {orderSourceType === st && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-brand-600" />}
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t mt-4 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">Priority</h4>
+                  <p className="text-xs text-slate-500">Is this order urgent?</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  IPD lab orders are placed from the patient's Clinical Order Panel so they bill against the admission.
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setOrderIsStat(!orderIsStat)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-medium text-sm transition-colors ${
+                    orderIsStat 
+                      ? 'border-red-600 bg-red-50 text-red-700' 
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <Flame className={`h-4 w-4 ${orderIsStat ? 'text-red-600' : 'text-slate-400'}`} />
+                  STAT
+                </button>
               </div>
-              <div>
-                <Label>Urgency</Label>
-                <label className="flex items-center gap-2 mt-1 p-2 border rounded-md cursor-pointer w-fit">
-                  <Checkbox checked={orderIsStat} onCheckedChange={(c) => setOrderIsStat(!!c)} />
-                  <span className="text-sm font-medium">Mark as STAT</span>
-                </label>
-              </div>
-            </div>
+            </section>
 
-            <div>
-              <Label>Notes</Label>
-              <Textarea value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Optional notes..." />
-            </div>
+            {/* Step 3: Tests Selection */}
+            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
+                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">3</div>
+                  Select Tests
+                </h3>
+                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-brand-100 text-brand-700">
+                  {selectedTestIds.length} selected
+                </span>
+              </div>
+              
+              {selectedTestIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border border-brand-200 bg-brand-50/50">
+                  {selectedTestIds.map(id => {
+                    const t = testCatalog.find(x => x.testId === id);
+                    if (!t) return null;
+                    return (
+                      <Badge key={id} variant="secondary" className="flex items-center gap-1 pr-1 bg-white border-brand-200 text-brand-800 hover:bg-brand-50 shadow-sm">
+                        {t.testName}
+                        <button onClick={() => toggleTest(id)} className="text-brand-500 hover:text-brand-900 rounded-full p-0.5 hover:bg-brand-100">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="relative mt-2">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  className="pl-9 bg-slate-50"
+                  placeholder="Search catalog by name or code..."
+                  value={testSearchQuery}
+                  onChange={(e) => setTestSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="border rounded-xl mt-2 max-h-56 overflow-y-auto divide-y shadow-inner bg-slate-50/50">
+                {testCatalog.length === 0 ? (
+                  <div className="p-4 text-sm text-center text-slate-500">No active tests in the catalog.</div>
+                ) : (() => {
+                  const filteredTests = testCatalog.filter(t => 
+                    t.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
+                    t.testCode.toLowerCase().includes(testSearchQuery.toLowerCase())
+                  );
+                  return filteredTests.length === 0 ? (
+                    <div className="p-4 text-sm text-center text-slate-500">No tests matching "{testSearchQuery}".</div>
+                  ) : (
+                    filteredTests.map((t) => (
+                      <label key={t.testId} className="flex items-center gap-3 p-3 text-sm cursor-pointer hover:bg-white transition-colors">
+                        <Checkbox 
+                          checked={selectedTestIds.includes(t.testId)} 
+                          onCheckedChange={() => toggleTest(t.testId)}
+                          className="data-[state=checked]:bg-brand-600 data-[state=checked]:border-brand-600"
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-800">{t.testName}</span>
+                          <span className="text-xs text-slate-500">{t.testCode}</span>
+                        </div>
+                      </label>
+                    ))
+                  );
+                })()}
+              </div>
+            </section>
+
+            {/* Step 4: Notes */}
+            <section className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
+                  <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs">4</div>
+                  Additional Notes
+                </h3>
+              </div>
+              <Textarea 
+                value={orderNotes} 
+                onChange={(e) => setOrderNotes(e.target.value)} 
+                placeholder="Optional clinical notes or remarks..." 
+                className="bg-slate-50 resize-none min-h-[80px]"
+              />
+            </section>
           </div>
 
-          <SheetFooter>
-            <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancel</Button>
-            <Button onClick={submitOrder} disabled={!canSubmitOrder}>
+          <SheetFooter className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t z-10 flex justify-end gap-2 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
+            <Button variant="outline" onClick={() => setNewOrderOpen(false)} className="px-6 rounded-full">Cancel</Button>
+            <Button onClick={submitOrder} disabled={!canSubmitOrder} className="px-6 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-md">
               {isCreatingOrder ? 'Placing...' : 'Place Order'}
             </Button>
           </SheetFooter>
