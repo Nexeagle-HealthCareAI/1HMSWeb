@@ -60,7 +60,7 @@ export const RevenueTab: React.FC = () => {
     const [rangeStart, setRangeStart] = useState<string>('');
     const [rangeEnd, setRangeEnd] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
+    const itemsPerPage = 20;
 
     const [billingData, setBillingData] = useState<Visit[]>([]);
     const [loading, setLoading] = useState(true);

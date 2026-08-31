@@ -256,7 +256,7 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
               )}
             </CardDescription>
           </div>
-          {!isCompleted && hasAutofillableParams && (
+          {hasAutofillableParams && (
             <Button type="button" variant="outline" size="sm" onClick={handleAutofillNormals}>
               <Zap className="h-4 w-4 mr-2" /> 1-Click Autofill Normals
             </Button>
@@ -295,7 +295,6 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
                     value={values[param.name] || ''}
                     onChange={(e) => handleValueChange(param.name, e.target.value)}
                     placeholder="Enter value"
-                    disabled={isCompleted}
                     className={cn(flag !== 'NORMAL' && FLAG_STYLES[flag])}
                   />
                   <span className="text-sm text-muted-foreground w-16">{param.unit}</span>
@@ -317,23 +316,61 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
           </div>
         )}
 
+        <div className="pt-2 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Additional Fields</Label>
+            <Button type="button" variant="outline" size="sm" onClick={handleAddCustomField}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Field
+            </Button>
+          </div>
+          {customFields.length > 0 && (
+            <div className="space-y-3">
+              {customFields.map((field) => (
+                <div key={field.key} className="grid grid-cols-12 items-center gap-2">
+                  <Input
+                    value={field.name}
+                    onChange={(e) => handleCustomFieldChange(field.key, 'name', e.target.value)}
+                    placeholder="Field name"
+                    className="col-span-4"
+                  />
+                  <Input
+                    value={field.value}
+                    onChange={(e) => handleCustomFieldChange(field.key, 'value', e.target.value)}
+                    placeholder="Value"
+                    className="col-span-4"
+                  />
+                  <Input
+                    value={field.unit}
+                    onChange={(e) => handleCustomFieldChange(field.key, 'unit', e.target.value)}
+                    placeholder="Unit (optional)"
+                    className="col-span-3"
+                  />
+                  <Button
+                    type="button" variant="ghost" size="icon" className="col-span-1"
+                    onClick={() => handleRemoveCustomField(field.key)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="pt-4 space-y-2">
           <Label>Interpretation / Notes</Label>
           <Textarea
             value={interpretation}
             onChange={(e) => setInterpretation(e.target.value)}
             placeholder="Add any specific observations..."
-            disabled={isCompleted}
           />
         </div>
 
-        {!isCompleted && (
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Result'}
-            </Button>
-          </div>
-        )}
+        <div className="flex justify-end pt-4">
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Result'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
