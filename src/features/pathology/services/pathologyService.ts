@@ -68,6 +68,12 @@ export interface PathologyOrderDto {
   // Values for the hospital's configured report-level fields -- {key: value}, see
   // pathologyFieldLayoutApi.ts.
   reportFieldValuesJson?: string | null;
+  // Dashboard-list-only fields (from getOrders' list query) -- 0/null on getOrderById's response,
+  // which exposes the same information via lines/report instead.
+  testCount: number;
+  reportNo?: string | null;
+  reportGeneratedAt?: string | null;
+  reportPdfBlobPath?: string | null;
   lines: PathologyOrderLineDto[];
   report?: PathologyReportDto | null;
 }

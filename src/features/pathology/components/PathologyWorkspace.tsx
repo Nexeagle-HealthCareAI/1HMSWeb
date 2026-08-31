@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pathologyService, PathologyOrderDto } from '../services/pathologyService';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, FileCheck2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
 import { getPathologyStatusColor } from '../utils/pathologyStatusColor';
@@ -83,6 +82,23 @@ export const PathologyWorkspace: React.FC = () => {
     }
   });
 
+  // Small, fixed page size so the table never needs its own inner scrollbar -- the page itself
+  // scrolls if needed, same "Showing A-B of N" + Prev/Next convention RevenueTab.tsx uses.
+  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / itemsPerPage));
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredOrders.slice(start, start + itemsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredOrders, currentPage]);
+
+  // Jump back to page 1 whenever the visible set changes shape, so a filter/date change never
+  // strands the user on a now-empty page.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilterTab, dateMode, dayDate, rangeStart, rangeEnd]);
+
   useEffect(() => {
     if (hospitalId) fetchOrders();
   }, [hospitalId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -128,7 +144,7 @@ export const PathologyWorkspace: React.FC = () => {
         rangeEnd={rangeEnd}
         onRangeEndChange={setRangeEnd}
       />
-      <div className="flex-1 min-h-0 flex flex-col border rounded-lg bg-card">
+      <div className="border rounded-lg bg-card">
         <div className="p-4 border-b bg-muted/20 flex items-center justify-between gap-2 flex-wrap">
           <h2 className="font-semibold text-lg">Orders</h2>
         </div>
@@ -153,59 +169,99 @@ export const PathologyWorkspace: React.FC = () => {
             </button>
           ))}
         </div>
-        <ScrollArea className="flex-1">
-          {isLoadingOrders ? (
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="border rounded-xl p-4 space-y-2">
-                  <Skeleton className="h-4 w-[70%]" />
-                  <Skeleton className="h-4 w-[50%]" />
-                </div>
-              ))}
+        {isLoadingOrders ? (
+          <div className="p-4 space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-11 w-full rounded-md" />
+            ))}
+          </div>
+        ) : filteredOrders.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-muted-foreground">
+                  <tr>
+                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Order No</th>
+                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Patient</th>
+                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Order Date</th>
+                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Source</th>
+                    <th className="text-center font-semibold px-4 py-2.5 text-xs">Tests</th>
+                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Status</th>
+                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Report</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedOrders.map((order) => (
+                    <tr
+                      key={order.orderId}
+                      onClick={() => navigate(`/pathology/orders/${order.orderId}`)}
+                      className={`border-t cursor-pointer hover:bg-muted/40 transition-colors ${
+                        order.isStat ? 'border-l-4 border-l-red-500' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3 font-semibold whitespace-nowrap">{order.orderNo}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{order.patientName}</td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{new Date(order.orderDate).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{order.sourceType ? order.sourceType.replace('_', '-') : '—'}</td>
+                      <td className="px-4 py-3 text-center tabular-nums">{order.testCount}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {order.isStat && (
+                            <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
+                          )}
+                          <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
+                            {order.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {order.reportPdfBlobPath ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); window.open(order.reportPdfBlobPath!, '_blank'); }}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                          >
+                            <FileCheck2 className="h-3.5 w-3.5" />
+                            {order.reportGeneratedAt ? new Date(order.reportGeneratedAt).toLocaleDateString() : 'View'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Not generated</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ) : filteredOrders.length > 0 ? (
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredOrders.map((order) => (
-                <div
-                  key={order.orderId}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/pathology/orders/${order.orderId}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigate(`/pathology/orders/${order.orderId}`);
-                    }
-                  }}
-                  className={`p-4 rounded-xl cursor-pointer border bg-background transition-colors hover:border-primary hover:shadow-sm ${
-                    order.isStat ? 'border-l-4 border-l-red-500' : ''
-                  }`}
+            <div className="flex items-center justify-between gap-2 px-4 py-3 border-t text-xs text-muted-foreground">
+              <div className="truncate">
+                Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredOrders.length)} of {filteredOrders.length}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-sm">{order.orderNo}</span>
-                    <div className="flex items-center gap-1">
-                      {order.isStat && (
-                        <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
-                      )}
-                      <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
-                        {order.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-sm font-medium">{order.patientName}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <span>{new Date(order.orderDate).toLocaleString()}</span>
-                    {order.sourceType && <span>· {order.sourceType.replace('_', '-')}</span>}
-                  </div>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="px-2 font-bold bg-white border rounded-lg tabular-nums whitespace-nowrap">
+                  {currentPage} / {totalPages}
                 </div>
-              ))}
+                <Button
+                  variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          ) : (
-            <div className="p-8 text-center text-muted-foreground">
-              No orders in this view.
-            </div>
-          )}
-        </ScrollArea>
+          </>
+        ) : (
+          <div className="p-8 text-center text-muted-foreground">
+            No orders in this view.
+          </div>
+        )}
       </div>
     </div>
   );
