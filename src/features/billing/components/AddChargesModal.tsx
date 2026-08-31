@@ -139,6 +139,10 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                 rate: l.rate,
                 discountPercent: l.discountPercent || 0,
                 categoryCode: l.categoryCode || 'OTHER',
+                // Every charge posted through the LAB-scoped picker bills as pathology-sourced,
+                // whether picked from the catalog or typed as a manual line -- matches the tag
+                // CreatePathologyOrderHandler/ClinicalOrderCommandHandlers already use.
+                sourceModule: appliesToFilter === 'LAB' ? 'LAB_PATH' : undefined,
             }));
             const hospitalId = useAuthStore.getState().getHospitalId() ?? undefined;
             // Safe to queue offline (appends to an existing encounter); payments/finalize stay online.

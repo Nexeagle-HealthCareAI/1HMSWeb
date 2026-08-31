@@ -74,7 +74,9 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
       setLoadingCharges(true);
       try {
         const res = await ipdBillingService.listChargeMasters({ hospitalId, pageSize: 500 });
-        if (!cancelled) setChargeMasters((res?.items ?? []).filter(m => m.isActive));
+        // Scoped to LAB/ANY items -- same inclusion rule AddChargesModal uses -- so linking a test
+        // isn't a scroll through the entire OPD/IPD/PHARMACY charge catalog.
+        if (!cancelled) setChargeMasters((res?.items ?? []).filter(m => m.isActive && (m.appliesTo === 'LAB' || m.appliesTo === 'ANY')));
       } catch (e: any) {
         if (!cancelled) toast.error("Could not load charge catalog for billing linkage");
       } finally {

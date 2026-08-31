@@ -918,6 +918,7 @@ export const BillingPage: React.FC = () => {
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className={cn('font-semibold text-slate-800', row.c.statusCode === 'VOID' && 'line-through text-slate-500')}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</span>
                                                             {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
+                                                            {row.c.sourceModule === 'LAB_PATH' && <Badge variant="outline" className="text-[9px] bg-violet-50 text-violet-600 border-violet-200">Lab</Badge>}
                                                         </div>
                                                         {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
                                                             <div className={cn('text-[10px] text-slate-500', row.c.statusCode === 'VOID' && 'line-through opacity-70')}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
@@ -1003,6 +1004,7 @@ export const BillingPage: React.FC = () => {
                                                             <div className="flex items-center gap-2">
                                                                 <div className={cn("font-semibold text-slate-800 truncate max-w-[260px]", row.c.statusCode === 'VOID' && "line-through text-slate-500")}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
                                                                 {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
+                                                                {row.c.sourceModule === 'LAB_PATH' && <Badge variant="outline" className="text-[9px] bg-violet-50 text-violet-600 border-violet-200">Lab</Badge>}
                                                             </div>
                                                             {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
                                                                 <div className={cn("text-[10px] text-slate-500 whitespace-nowrap", row.c.statusCode === 'VOID' && "line-through opacity-70")}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>

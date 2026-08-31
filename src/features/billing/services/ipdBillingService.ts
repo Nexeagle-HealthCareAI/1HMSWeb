@@ -162,6 +162,9 @@ export interface AddChargeEventRequest {
         rate: number;
         discountPercent: number;
         categoryCode: string;
+        // Canonical origin tag (e.g. "LAB_PATH") — lets a downstream view filter "which module
+        // posted this charge" reliably instead of guessing from the encounter's own type.
+        sourceModule?: string;
         // GST overrides — when supplied they override the ChargeMaster snapshot.
         hsnSacCode?: string;
         gstRate?: number;

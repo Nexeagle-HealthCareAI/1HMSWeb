@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { pathologyService, PathologyOrderDto, PathologyTestMaster } from '../services/pathologyService';
 import { patientService } from '@/features/billing/services/patientService';
+import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { Patient } from '@/features/billing/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +31,12 @@ export const PathologyWorkspace: React.FC = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<PathologyOrderDto | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
+  // This order's billing status, once it's known to be attached to a visit (selectedOrderDetails.
+  // encounterId) -- the ledger for that encounter, scoped down to this order's own lab-sourced
+  // lines, so a tech can see the same invoice number Billing sees without leaving Pathology.
+  const [orderBilling, setOrderBilling] = useState<{ invoiceNo?: string; invoiceStatus?: string; labTotal: number } | null>(null);
+  const [isLoadingOrderBilling, setIsLoadingOrderBilling] = useState(false);
+
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [patientQuery, setPatientQuery] = useState('');
@@ -42,6 +49,13 @@ export const PathologyWorkspace: React.FC = () => {
   const [orderSourceType, setOrderSourceType] = useState<'OPD' | 'EMERGENCY' | 'WALK_IN'>('OPD');
   const [orderIsStat, setOrderIsStat] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  // The patient's open OPD visit(s), so an OPD order can attach to the SAME invoice as their
+  // consultation instead of never billing at all (IPD already does this via the Clinical Order
+  // Panel -- this is the OPD equivalent for orders placed from Pathology's own screen).
+  const [opdVisits, setOpdVisits] = useState<Array<{ encounterId: string; invoiceNo?: string; status: string; invoiceDate: string }>>([]);
+  const [isLoadingOpdVisits, setIsLoadingOpdVisits] = useState(false);
+  const [selectedOpdEncounterId, setSelectedOpdEncounterId] = useState<string | null>(null);
 
   // Date filter -- defaults to "all" (not "today", unlike RevenueTab's billing dashboard) since a
   // tech needs to see backlog like an older still-pending STAT order; narrowing to today shouldn't
@@ -162,6 +176,28 @@ export const PathologyWorkspace: React.FC = () => {
     return details;
   };
 
+  useEffect(() => {
+    const encounterId = selectedOrderDetails?.encounterId;
+    if (!encounterId) { setOrderBilling(null); return; }
+    let cancelled = false;
+    setIsLoadingOrderBilling(true);
+    ipdBillingService.getEncounterEvents(encounterId, selectedOrderDetails.patientId)
+      .then((res) => {
+        if (cancelled || !res?.success) { if (!cancelled) setOrderBilling(null); return; }
+        const labTotal = (res.data?.charges ?? [])
+          .filter(c => c.sourceModule === 'LAB_PATH')
+          .reduce((sum, c) => sum + c.netAmount, 0);
+        setOrderBilling({
+          invoiceNo: res.data?.currentInvoice?.invoiceNo,
+          invoiceStatus: res.data?.currentInvoice?.statusCode as string | undefined,
+          labTotal,
+        });
+      })
+      .catch(() => { if (!cancelled) setOrderBilling(null); })
+      .finally(() => { if (!cancelled) setIsLoadingOrderBilling(false); });
+    return () => { cancelled = true; };
+  }, [selectedOrderDetails?.encounterId, selectedOrderDetails?.patientId]);
+
   const getStatusColor = (status: string) => {
     switch(status) {
       case 'PLACED': return 'bg-blue-100 text-blue-800';
@@ -180,6 +216,8 @@ export const PathologyWorkspace: React.FC = () => {
     setOrderNotes('');
     setOrderSourceType('OPD');
     setOrderIsStat(false);
+    setOpdVisits([]);
+    setSelectedOpdEncounterId(null);
     setNewOrderOpen(true);
     if (hospitalId) {
       pathologyService.getTests(hospitalId).then(setTestCatalog).catch(() => setTestCatalog([]));
@@ -199,6 +237,30 @@ export const PathologyWorkspace: React.FC = () => {
     }
   };
 
+  // Refetch whenever the selected patient changes -- independent of orderSourceType so switching
+  // Source after picking a patient doesn't need a re-fetch.
+  useEffect(() => {
+    if (!selectedPatient) { setOpdVisits([]); setSelectedOpdEncounterId(null); return; }
+    let cancelled = false;
+    setIsLoadingOpdVisits(true);
+    ipdBillingService.getPatientEvents(selectedPatient.patientId)
+      .then((res: any) => {
+        if (cancelled) return;
+        const list = (res?.data?.encounters ?? [])
+          .filter((e: any) => (e.encounterTypeCode ?? '').toUpperCase() === 'OPD' && !e.isCancelled)
+          .map((e: any) => ({ encounterId: e.encounterId, invoiceNo: e.invoiceNo ?? undefined, status: e.status ?? 'OPEN', invoiceDate: e.invoiceDate ?? '' }))
+          .sort((a: any, b: any) => (b.invoiceDate ?? '').localeCompare(a.invoiceDate ?? ''));
+        setOpdVisits(list);
+        // Prefer the most recent still-open (not finalized) visit, same convention BillingPage's
+        // "land on the current bill" logic uses; fall back to the most recent one otherwise.
+        const current = list.find((e: any) => (e.status ?? '').toUpperCase() !== 'FINALIZED') ?? list[0];
+        setSelectedOpdEncounterId(current?.encounterId ?? null);
+      })
+      .catch(() => { if (!cancelled) { setOpdVisits([]); setSelectedOpdEncounterId(null); } })
+      .finally(() => { if (!cancelled) setIsLoadingOpdVisits(false); });
+    return () => { cancelled = true; };
+  }, [selectedPatient]);
+
   const toggleTest = (testId: string) => {
     setSelectedTestIds(prev => prev.includes(testId) ? prev.filter(id => id !== testId) : [...prev, testId]);
   };
@@ -215,6 +277,9 @@ export const PathologyWorkspace: React.FC = () => {
         notes: orderNotes || undefined,
         sourceType: orderSourceType,
         isStat: orderIsStat,
+        // Attach to the patient's open OPD visit so these charges land on the same invoice as
+        // their consultation, instead of never billing (IPD already does this via CPOE).
+        encounterId: orderSourceType === 'OPD' ? (selectedOpdEncounterId ?? undefined) : undefined,
       });
       if (!response.success) {
         toast.error('Could not place order', { description: response.message });
@@ -568,6 +633,16 @@ export const PathologyWorkspace: React.FC = () => {
                     {selectedOrderDetails.status.replace('_', ' ')}
                   </Badge>
                 </div>
+                {!selectedOrderDetails.encounterId ? (
+                  <p className="text-xs text-muted-foreground mt-1">Not linked to a billing visit.</p>
+                ) : isLoadingOrderBilling ? (
+                  <p className="text-xs text-muted-foreground mt-1">Loading billing status...</p>
+                ) : orderBilling ? (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    Billed to: {orderBilling.invoiceNo ?? 'Draft'}
+                    {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-6">
@@ -618,7 +693,34 @@ export const PathologyWorkspace: React.FC = () => {
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>Change</Button>
                 </div>
-              ) : (
+              ) : null}
+              {selectedPatient && orderSourceType === 'OPD' && (
+                isLoadingOpdVisits ? (
+                  <p className="text-xs text-muted-foreground mt-1.5">Checking for an open OPD visit...</p>
+                ) : opdVisits.length === 0 ? (
+                  <p className="text-xs text-amber-600 mt-1.5">No active OPD visit found — this order won't auto-bill.</p>
+                ) : opdVisits.length === 1 ? (
+                  <p className="text-xs text-emerald-600 mt-1.5">
+                    Billing to: OPD visit · {opdVisits[0].invoiceNo ?? 'Draft'} · {new Date(opdVisits[0].invoiceDate).toLocaleDateString()}
+                  </p>
+                ) : (
+                  <div className="mt-1.5 space-y-1">
+                    <p className="text-xs text-muted-foreground">Multiple open OPD visits — pick which one to bill:</p>
+                    {opdVisits.map(v => (
+                      <button
+                        key={v.encounterId}
+                        type="button"
+                        onClick={() => setSelectedOpdEncounterId(v.encounterId)}
+                        className={`w-full flex items-center justify-between text-xs rounded-md border px-2 py-1.5 ${v.encounterId === selectedOpdEncounterId ? 'border-brand-400 bg-brand-50' : 'border-border'}`}
+                      >
+                        <span>{v.invoiceNo ?? 'Draft'} · {new Date(v.invoiceDate).toLocaleDateString()}</span>
+                        <span className="text-muted-foreground">{v.status}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              )}
+              {!selectedPatient && (
                 <>
                   <div className="flex gap-2 mt-1">
                     <Input

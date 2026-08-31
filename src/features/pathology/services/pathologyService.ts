@@ -59,6 +59,9 @@ export interface PathologyOrderDto {
   hospitalName?: string | null;
   sourceType?: string | null;
   isStat: boolean;
+  // Set when this order was attached to the patient's OPD/IPD billing visit at order time --
+  // lets the order-detail view show which invoice this order's charges landed on.
+  encounterId?: string | null;
   lines: PathologyOrderLineDto[];
   report?: PathologyReportDto | null;
 }
