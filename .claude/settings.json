@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sleep 2; cat \"C:/Users/mtnoo/AppData/Local/Temp/claude/c--Users-mtnoo-OneDrive-Desktop-EasyHMS-easyHMSWeb/9170d574-0cee-4f70-b241-ce2250c9836f/tasks/bs4tc101v.output\" 2>/dev/null; ls -la /tmp/test-letterhead.pdf 2>/dev/null)",
+      "Read(//tmp/**)"
+    ]
+  }
+}
