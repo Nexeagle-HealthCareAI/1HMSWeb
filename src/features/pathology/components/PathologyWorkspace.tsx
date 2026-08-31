@@ -43,6 +43,16 @@ export const PathologyWorkspace: React.FC = () => {
   const [patientResults, setPatientResults] = useState<Patient[]>([]);
   const [isSearchingPatients, setIsSearchingPatients] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  // A patient placing an order might already be registered (appointment, IPD, WhatsApp -- all
+  // just rows in the same table, found via search) or might be a genuine walk-in with no record
+  // yet -- this toggle switches the panel below between searching and a quick inline registration.
+  const [patientMode, setPatientMode] = useState<'search' | 'register'>('search');
+  const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientMobile, setNewPatientMobile] = useState('');
+  const [newPatientAge, setNewPatientAge] = useState('');
+  const [newPatientGender, setNewPatientGender] = useState<'Male' | 'Female'>('Male');
+  const [newPatientGuardian, setNewPatientGuardian] = useState('');
+  const [isRegisteringPatient, setIsRegisteringPatient] = useState(false);
   const [testCatalog, setTestCatalog] = useState<PathologyTestMaster[]>([]);
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
@@ -212,6 +222,12 @@ export const PathologyWorkspace: React.FC = () => {
     setPatientQuery('');
     setPatientResults([]);
     setSelectedPatient(null);
+    setPatientMode('search');
+    setNewPatientName('');
+    setNewPatientMobile('');
+    setNewPatientAge('');
+    setNewPatientGender('Male');
+    setNewPatientGuardian('');
     setSelectedTestIds([]);
     setOrderNotes('');
     setOrderSourceType('OPD');
@@ -234,6 +250,30 @@ export const PathologyWorkspace: React.FC = () => {
       toast.error('Patient search failed');
     } finally {
       setIsSearchingPatients(false);
+    }
+  };
+
+  const registerWalkInPatient = async () => {
+    if (!hospitalId || isRegisteringPatient) return;
+    const name = newPatientName.trim();
+    const mobile = newPatientMobile.trim();
+    if (!name) { toast.error('Name is required'); return; }
+    if (!/^\d{10}$/.test(mobile)) { toast.error('Enter a valid 10-digit mobile number'); return; }
+    setIsRegisteringPatient(true);
+    try {
+      const patient = await patientService.registerWalkIn(hospitalId, {
+        fullName: name,
+        mobile,
+        age: newPatientAge ? Number(newPatientAge) : undefined,
+        sex: newPatientGender,
+        guardianName: newPatientGuardian.trim() || undefined,
+      });
+      setSelectedPatient(patient);
+      toast.success('Patient registered');
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not register patient');
+    } finally {
+      setIsRegisteringPatient(false);
     }
   };
 
@@ -722,29 +762,101 @@ export const PathologyWorkspace: React.FC = () => {
               )}
               {!selectedPatient && (
                 <>
-                  <div className="flex gap-2 mt-1">
-                    <Input
-                      value={patientQuery}
-                      onChange={(e) => setPatientQuery(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') searchPatients(); }}
-                      placeholder="Search by patient name..."
-                    />
-                    <Button onClick={searchPatients} disabled={isSearchingPatients}>
-                      {isSearchingPatients ? 'Searching...' : 'Search'}
+                  <div className="flex gap-1 mt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={patientMode === 'search' ? 'default' : 'outline'}
+                      onClick={() => setPatientMode('search')}
+                    >
+                      Registered Patient
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={patientMode === 'register' ? 'default' : 'outline'}
+                      onClick={() => setPatientMode('register')}
+                    >
+                      New / Walk-in Patient
                     </Button>
                   </div>
-                  {patientResults.length > 0 && (
-                    <div className="border rounded-md mt-2 max-h-40 overflow-y-auto divide-y">
-                      {patientResults.map((p) => (
-                        <div
-                          key={p.patientId}
-                          className="p-2 cursor-pointer hover:bg-muted text-sm"
-                          onClick={() => { setSelectedPatient(p); setPatientResults([]); }}
-                        >
-                          <span className="font-medium">{p.name}</span>
-                          <span className="text-muted-foreground"> · {p.patientId} · {p.mobile}</span>
+                  {patientMode === 'search' ? (
+                    <>
+                      <div className="flex gap-2 mt-2">
+                        <Input
+                          value={patientQuery}
+                          onChange={(e) => setPatientQuery(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') searchPatients(); }}
+                          placeholder="Search by patient name..."
+                        />
+                        <Button onClick={searchPatients} disabled={isSearchingPatients}>
+                          {isSearchingPatients ? 'Searching...' : 'Search'}
+                        </Button>
+                      </div>
+                      {patientResults.length > 0 && (
+                        <div className="border rounded-md mt-2 max-h-40 overflow-y-auto divide-y">
+                          {patientResults.map((p) => (
+                            <div
+                              key={p.patientId}
+                              className="p-2 cursor-pointer hover:bg-muted text-sm"
+                              onClick={() => { setSelectedPatient(p); setPatientResults([]); }}
+                            >
+                              <span className="font-medium">{p.name}</span>
+                              <span className="text-muted-foreground"> · {p.patientId} · {p.mobile}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                    </>
+                  ) : (
+                    <div className="mt-2 space-y-2 border rounded-md p-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={newPatientName}
+                          onChange={(e) => setNewPatientName(e.target.value)}
+                          placeholder="Full name *"
+                          className="col-span-2"
+                        />
+                        <Input
+                          value={newPatientMobile}
+                          onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="Mobile (10 digits) *"
+                        />
+                        <Input
+                          type="number" min={0}
+                          value={newPatientAge}
+                          onChange={(e) => setNewPatientAge(e.target.value)}
+                          placeholder="Age"
+                        />
+                        <div className="flex gap-1">
+                          {(['Male', 'Female'] as const).map(g => (
+                            <Button
+                              key={g}
+                              type="button"
+                              size="sm"
+                              variant={newPatientGender === g ? 'default' : 'outline'}
+                              onClick={() => setNewPatientGender(g)}
+                              className="flex-1"
+                            >
+                              {g}
+                            </Button>
+                          ))}
+                        </div>
+                        <Input
+                          value={newPatientGuardian}
+                          onChange={(e) => setNewPatientGuardian(e.target.value)}
+                          placeholder="Guardian (optional)"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full"
+                        onClick={registerWalkInPatient}
+                        disabled={isRegisteringPatient}
+                      >
+                        {isRegisteringPatient ? 'Registering...' : 'Register & Continue'}
+                      </Button>
                     </div>
                   )}
                 </>

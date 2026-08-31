@@ -195,6 +195,7 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
     SEARCH: (searchText: string, hospitalId: string) =>
       `/patient/search?searchText=${encodeURIComponent(searchText)}&hospitalId=${encodeURIComponent(hospitalId)}`,
+    REGISTER: 'patient/register',
   },
   CALENDAR: {
     GET_DOCTOR_TIMEOFF: (doctorId: string, hospitalId: string) => `calendar/doctor/timeoff?doctorId=${doctorId}&hospitalId=${hospitalId}`,

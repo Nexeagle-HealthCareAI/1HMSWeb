@@ -29,7 +29,61 @@ export interface PatientResult {
     tokenNumber: string | null;
 }
 
+export interface RegisterWalkInPatientInput {
+    fullName: string;
+    mobile: string;
+    age?: number;
+    ageUnit?: string;
+    sex?: 'Male' | 'Female';
+    guardianName?: string;
+}
+
+interface RegisterWalkInPatientResponse {
+    success: boolean;
+    message?: string;
+    patientId?: string;
+    fullName?: string;
+    mobile?: string;
+    age?: number;
+    sex?: string;
+}
+
 export const patientService = {
+    // Registers a patient with no appointment/admission attached -- for a walk-in with no
+    // doctor/slot/bed to book against. Matches by mobile+name and updates in place server-side
+    // (AppointmentBookingHelpers.FindOrCreatePatientAsync), same as every other registration path.
+    registerWalkIn: async (hospitalId: string, patient: RegisterWalkInPatientInput): Promise<Patient> => {
+        let userId: string | undefined;
+        try {
+            userId = useAuthStore.getState().getUserId() || undefined;
+        } catch (e) {
+            console.warn("Could not retrieve userId from store", e);
+        }
+        const response = await apiClient.post<RegisterWalkInPatientResponse>(API_ENDPOINTS.PATIENTS.REGISTER, {
+            hospitalId,
+            userId,
+            patient: {
+                fullName: patient.fullName,
+                mobile: patient.mobile,
+                age: patient.age,
+                ageUnit: patient.ageUnit || 'Y',
+                sex: patient.sex,
+                guardianName: patient.guardianName || undefined,
+            },
+        });
+        if (!response.success || !response.patientId) {
+            throw new Error(response.message || 'Could not register patient');
+        }
+        return {
+            id: response.patientId,
+            patientId: response.patientId,
+            name: response.fullName || patient.fullName,
+            mobile: response.mobile || patient.mobile,
+            age: response.age ?? patient.age ?? 0,
+            sex: (response.sex === 'Male' ? 'M' : response.sex === 'Female' ? 'F' : (patient.sex === 'Female' ? 'F' : 'M')) as 'M' | 'F',
+        };
+    },
+
     searchPatients: async (query: string, by: 'patientId' | 'name' | 'contact'): Promise<Patient[]> => {
         try {
             // Get hospitalId from auth store
