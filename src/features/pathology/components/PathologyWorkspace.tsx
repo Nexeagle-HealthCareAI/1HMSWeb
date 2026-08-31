@@ -716,7 +716,7 @@ export const PathologyWorkspace: React.FC = () => {
 
       {/* New Order dialog */}
       <Sheet open={newOrderOpen} onOpenChange={setNewOrderOpen}>
-        <SheetContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl md:max-w-3xl h-full overflow-y-auto">
           <SheetHeader>
             <SheetTitle>New Pathology Order</SheetTitle>
             <SheetDescription>Search for a patient and select the tests to order.</SheetDescription>
