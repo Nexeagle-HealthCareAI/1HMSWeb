@@ -725,7 +725,7 @@ export const PathologyWorkspace: React.FC = () => {
 
       {/* New Order dialog */}
       <Dialog open={newOrderOpen} onOpenChange={setNewOrderOpen}>
-        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] p-0 overflow-hidden flex flex-col bg-slate-50 sm:rounded-2xl">
+        <DialogContent className="w-[98vw] max-w-7xl h-[95vh] p-0 overflow-hidden flex flex-col bg-slate-50 sm:rounded-2xl">
           
           <div className="flex h-full w-full">
             
@@ -874,21 +874,21 @@ export const PathologyWorkspace: React.FC = () => {
 
             {/* RIGHT COLUMN: Interactive Form */}
             <ScrollArea className="flex-1 bg-slate-50/50">
-              <div className="max-w-4xl mx-auto p-8 md:p-12 space-y-10">
+              <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
                 
                 {/* Header */}
-                <div className="mb-4">
-                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Configure Order</h1>
-                  <p className="text-slate-500 mt-2 text-base">Complete the steps below to place a new pathology order.</p>
+                <div className="mb-2">
+                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Configure Order</h1>
+                  <p className="text-slate-500 mt-1 text-sm">Complete the steps below to place a new pathology order.</p>
                 </div>
 
                 {/* Step 1: Patient Selection */}
-                <section className="bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-6 relative overflow-hidden">
+                <section className="bg-white p-4 md:p-5 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-brand-500 rounded-l-2xl"></div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold shadow-sm">1</div>
-                    <h3 className="text-lg font-bold text-slate-800">Patient Details</h3>
+                    <div className="h-7 w-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shadow-sm">1</div>
+                    <h3 className="text-base font-bold text-slate-800">Patient Details</h3>
                   </div>
 
                   {!selectedPatient && (
@@ -902,12 +902,12 @@ export const PathologyWorkspace: React.FC = () => {
                             : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
                         }`}
                       >
-                        <div className={`p-2.5 rounded-lg mb-4 transition-colors ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
-                          <User className="h-5 w-5" />
+                        <div className={`p-2 rounded-lg mb-2 transition-colors ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
+                          <User className="h-4 w-4" />
                         </div>
-                        <span className="font-bold text-slate-900 text-base">Registered Patient</span>
-                        <span className="text-sm text-slate-500 mt-1 text-left leading-relaxed">Search existing hospital records by name or mobile.</span>
-                        {patientMode === 'search' && <CheckCircle2 className="absolute top-5 right-5 h-6 w-6 text-brand-600 animate-in zoom-in" />}
+                        <span className="font-bold text-slate-900 text-sm">Registered Patient</span>
+                        <span className="text-xs text-slate-500 mt-1 text-left leading-relaxed">Search existing hospital records by name or mobile.</span>
+                        {patientMode === 'search' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600 animate-in zoom-in" />}
                       </button>
 
                       <button
@@ -919,12 +919,12 @@ export const PathologyWorkspace: React.FC = () => {
                             : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
                         }`}
                       >
-                        <div className={`p-2.5 rounded-lg mb-4 transition-colors ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
-                          <UserPlus className="h-5 w-5" />
+                        <div className={`p-2 rounded-lg mb-2 transition-colors ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
+                          <UserPlus className="h-4 w-4" />
                         </div>
-                        <span className="font-bold text-slate-900 text-base">Walk-in / New</span>
-                        <span className="text-sm text-slate-500 mt-1 text-left leading-relaxed">Quickly register a new patient for this lab order.</span>
-                        {patientMode === 'register' && <CheckCircle2 className="absolute top-5 right-5 h-6 w-6 text-brand-600 animate-in zoom-in" />}
+                        <span className="font-bold text-slate-900 text-sm">Walk-in / New</span>
+                        <span className="text-xs text-slate-500 mt-1 text-left leading-relaxed">Quickly register a new patient for this lab order.</span>
+                        {patientMode === 'register' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600 animate-in zoom-in" />}
                       </button>
                     </div>
                   )}
@@ -1064,13 +1064,13 @@ export const PathologyWorkspace: React.FC = () => {
                 </section>
 
                 {/* Step 2: Order Context */}
-                <section className={`bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-6 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                <section className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-2xl"></div>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold shadow-sm">2</div>
-                      <h3 className="text-lg font-bold text-slate-800">Order Context & Priority</h3>
+                      <div className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shadow-sm">2</div>
+                      <h3 className="text-base font-bold text-slate-800">Order Context & Priority</h3>
                     </div>
                   </div>
 
@@ -1080,19 +1080,19 @@ export const PathologyWorkspace: React.FC = () => {
                         key={st}
                         type="button"
                         onClick={() => setOrderSourceType(st)}
-                        className={`relative flex flex-col items-center justify-center p-5 rounded-xl border-2 transition-all ${
+                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
                           orderSourceType === st
                             ? 'border-brand-600 bg-brand-50/50 shadow-sm'
                             : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
                         }`}
                       >
-                        <div className={`p-3 rounded-full mb-3 transition-colors ${orderSourceType === st ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
-                          {st === 'OPD' ? <Stethoscope className="h-6 w-6" /> : st === 'EMERGENCY' ? <Ambulance className="h-6 w-6" /> : <Footprints className="h-6 w-6" />}
+                        <div className={`p-2 rounded-full mb-2 transition-colors ${orderSourceType === st ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
+                          {st === 'OPD' ? <Stethoscope className="h-5 w-5" /> : st === 'EMERGENCY' ? <Ambulance className="h-5 w-5" /> : <Footprints className="h-5 w-5" />}
                         </div>
-                        <span className="font-bold text-slate-900 text-base">
+                        <span className="font-bold text-slate-900 text-sm">
                           {st === 'OPD' ? 'OPD Visit' : st === 'EMERGENCY' ? 'Emergency' : 'Walk-in'}
                         </span>
-                        {orderSourceType === st && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600 animate-in zoom-in" />}
+                        {orderSourceType === st && <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-brand-600 animate-in zoom-in" />}
                       </button>
                     ))}
                   </div>
@@ -1138,15 +1138,15 @@ export const PathologyWorkspace: React.FC = () => {
                 </section>
 
                 {/* Step 3: Tests Selection */}
-                <section className={`bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-6 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                <section className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl"></div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shadow-sm">3</div>
-                    <h3 className="text-lg font-bold text-slate-800">Select Lab Tests</h3>
+                    <div className="h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shadow-sm">3</div>
+                    <h3 className="text-base font-bold text-slate-800">Select Lab Tests</h3>
                   </div>
                   
-                  <div className="relative group mt-4">
+                  <div className="relative group mt-2">
                     <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
                     <Input
                       className="pl-12 h-12 text-base bg-slate-50 border-slate-200 focus-visible:ring-brand-500 shadow-inner"
