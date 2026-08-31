@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
@@ -675,12 +675,12 @@ export const PathologyWorkspace: React.FC = () => {
       </div>
 
       {/* New Order dialog */}
-      <Dialog open={newOrderOpen} onOpenChange={setNewOrderOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New Pathology Order</DialogTitle>
-            <DialogDescription>Search for a patient and select the tests to order.</DialogDescription>
-          </DialogHeader>
+      <Sheet open={newOrderOpen} onOpenChange={setNewOrderOpen}>
+        <SheetContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>New Pathology Order</SheetTitle>
+            <SheetDescription>Search for a patient and select the tests to order.</SheetDescription>
+          </SheetHeader>
 
           <div className="space-y-4">
             <div>
@@ -803,22 +803,22 @@ export const PathologyWorkspace: React.FC = () => {
             </div>
           </div>
 
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancel</Button>
             <Button onClick={submitOrder} disabled={!canSubmitOrder}>
               {isCreatingOrder ? 'Placing...' : 'Place Order'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Technician sign-off dialog */}
-      <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign as Lab Technician</DialogTitle>
-            <DialogDescription>Enter your DMLT/BMLT registration number to sign off on this report's results.</DialogDescription>
-          </DialogHeader>
+      <Sheet open={signDialogOpen} onOpenChange={setSignDialogOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Sign as Lab Technician</SheetTitle>
+            <SheetDescription>Enter your DMLT/BMLT registration number to sign off on this report's results.</SheetDescription>
+          </SheetHeader>
           <div className="space-y-2">
             <Label>Registration Number</Label>
             <Input
@@ -827,22 +827,22 @@ export const PathologyWorkspace: React.FC = () => {
               placeholder="e.g. DMLT-12345"
             />
           </div>
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setSignDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSignAsTechnician} disabled={isSigningAsTechnician || !technicianRegNo.trim()}>
               {isSigningAsTechnician ? 'Signing...' : 'Sign Report'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Pathologist approval dialog */}
-      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve as Pathologist</DialogTitle>
-            <DialogDescription>Enter your medical registration number to finalize and authorize this report.</DialogDescription>
-          </DialogHeader>
+      <Sheet open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Approve as Pathologist</SheetTitle>
+            <SheetDescription>Enter your medical registration number to finalize and authorize this report.</SheetDescription>
+          </SheetHeader>
           <div className="space-y-2">
             <Label>Registration Number</Label>
             <Input
@@ -851,15 +851,16 @@ export const PathologyWorkspace: React.FC = () => {
               placeholder="e.g. MCI-99999"
             />
           </div>
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleApproveReport} disabled={isApprovingReport || !pathologistRegNo.trim()}>
               {isApprovingReport ? 'Approving...' : 'Approve & Finalize'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
       </div>
     </div>
   );
 };
+

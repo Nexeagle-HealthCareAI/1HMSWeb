@@ -134,6 +134,10 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
         setSubmitting(true);
         try {
             const charges = validLines.map(l => ({
+                // Preserves the ChargeMaster link for catalog-picked lines -- AddChargeEventHandler
+                // snapshots HSN/GST/incentive from the master row when this is set, so omitting it
+                // silently dropped that snapshot even though the line looked identical on screen.
+                chargeId: l.chargeId,
                 displayName: l.displayName,
                 qty: l.qty,
                 rate: l.rate,
