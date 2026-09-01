@@ -60,21 +60,26 @@ export interface PathologyOrderDto {
   status: string;
   patientId: string;
   patientName: string;
+  patientMobile?: string | null;
   patientAgeYears?: number | null;
   patientGender?: string | null;
   hospitalName?: string | null;
   sourceType?: string | null;
   isStat: boolean;
+  // Daily, per-hospital token (resets every day) for the thermal-printed receipt -- separate from
+  // orderNo. Null for orders created before this feature shipped.
+  tokenNumber?: number | null;
   // Set when this order was attached to the patient's OPD/IPD billing visit at order time --
   // lets the order-detail view show which invoice this order's charges landed on.
   encounterId?: string | null;
   // Values for the hospital's configured report-level fields -- {key: value}, see
   // pathologyFieldLayoutApi.ts.
   reportFieldValuesJson?: string | null;
-  // Dashboard-list-only fields (from getOrders' list query) -- 0 on getOrderById's response, which
-  // exposes the same information per-line via lines[].report instead.
+  // Dashboard-list-only fields (from getOrders' list query) -- 0/empty on getOrderById's response,
+  // which exposes the same information per-line via lines[].report instead.
   testCount: number;
   reportsReadyCount: number;
+  testNames: string[];
   lines: PathologyOrderLineDto[];
 }
 
