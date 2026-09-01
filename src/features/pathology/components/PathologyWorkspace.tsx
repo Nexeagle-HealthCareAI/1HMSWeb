@@ -5,11 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Printer, Hotel, Stethoscope, MoreVertical, PackageCheck, PenLine, Ban, Loader2, Flame, AlertTriangle } from 'lucide-react';
+import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Printer, Hotel, Stethoscope, MoreVertical, PackageCheck, PenLine, Ban, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
 import { getPathologyStatusColor, getPathologySourceColor } from '../utils/pathologyStatusColor';
@@ -43,16 +42,14 @@ export const PathologyWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<PathologyOrderDto[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
-  const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
+  // Shared by both "New Lab Order" and the row-level "Edit Order" action -- orderId unset means
+  // create mode, set means edit mode (see PathologyNewOrderModal).
+  const [orderModal, setOrderModal] = useState<{ open: boolean; orderId?: string }>({ open: false });
   const [tokenPrintOrder, setTokenPrintOrder] = useState<PathologyOrderDto | null>(null);
 
-  // Quick actions -- Mark Sample Collected, Edit Notes, Cancel Order -- all reachable straight from
+  // Quick actions -- Mark Sample Collected, Edit Order, Cancel Order -- all reachable straight from
   // the dashboard row instead of requiring a trip into the order detail page first.
   const [collectingSampleOrderId, setCollectingSampleOrderId] = useState<string | null>(null);
-  const [notesEditOrder, setNotesEditOrder] = useState<PathologyOrderDto | null>(null);
-  const [notesDraft, setNotesDraft] = useState('');
-  const [statDraft, setStatDraft] = useState(false);
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<PathologyOrderDto | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -226,31 +223,6 @@ export const PathologyWorkspace: React.FC = () => {
     }
   };
 
-  const openEditNotes = (order: PathologyOrderDto) => {
-    setNotesEditOrder(order);
-    setNotesDraft(order.notes ?? '');
-    setStatDraft(order.isStat);
-  };
-
-  const saveNotes = async () => {
-    if (!hospitalId || !notesEditOrder) return;
-    setIsSavingNotes(true);
-    try {
-      const success = await pathologyService.updateOrderNotes(hospitalId, notesEditOrder.orderId, notesDraft, statDraft);
-      if (!success) {
-        toast.error('Could not save changes');
-        return;
-      }
-      toast.success('Order updated');
-      setNotesEditOrder(null);
-      await fetchOrders();
-    } catch (e) {
-      toast.error('Could not save changes');
-    } finally {
-      setIsSavingNotes(false);
-    }
-  };
-
   const confirmCancel = async () => {
     if (!hospitalId || !cancelTarget) return;
     setIsCancelling(true);
@@ -279,7 +251,7 @@ export const PathologyWorkspace: React.FC = () => {
         </div>
         <Button
           size="lg"
-          onClick={() => setIsNewOrderModalOpen(true)}
+          onClick={() => setOrderModal({ open: true })}
           disabled={!hospitalId}
           className="gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md hover:shadow-lg transition-all px-6"
         >
@@ -450,8 +422,8 @@ export const PathologyWorkspace: React.FC = () => {
                             >
                               <PackageCheck className="h-4 w-4 mr-2" /> Mark Sample Collected
                             </DropdownMenuItem>
-                            <DropdownMenuItem disabled={order.status === 'CANCELLED'} onClick={() => openEditNotes(order)}>
-                              <PenLine className="h-4 w-4 mr-2" /> Edit Notes
+                            <DropdownMenuItem disabled={order.status === 'CANCELLED'} onClick={() => setOrderModal({ open: true, orderId: order.orderId })}>
+                              <PenLine className="h-4 w-4 mr-2" /> Edit Order
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -502,9 +474,10 @@ export const PathologyWorkspace: React.FC = () => {
       </div>
 
       <PathologyNewOrderModal
-        open={isNewOrderModalOpen}
-        onOpenChange={setIsNewOrderModalOpen}
+        open={orderModal.open}
+        onOpenChange={(open) => setOrderModal(open ? { ...orderModal, open } : { open: false })}
         onSuccess={fetchOrders}
+        orderId={orderModal.orderId}
       />
 
       <PathologyTokenPrintModal
@@ -512,44 +485,6 @@ export const PathologyWorkspace: React.FC = () => {
         onOpenChange={(open) => { if (!open) setTokenPrintOrder(null); }}
         order={tokenPrintOrder}
       />
-
-      <Sheet open={!!notesEditOrder} onOpenChange={(open) => { if (!open) setNotesEditOrder(null); }}>
-        {notesEditOrder && (
-          <SheetContent side="right" className="w-full sm:max-w-md">
-            <SheetHeader className="text-left">
-              <SheetTitle>Edit Order {notesEditOrder.orderNo}</SheetTitle>
-              <SheetDescription>{notesEditOrder.patientName} · {notesEditOrder.patientId}</SheetDescription>
-            </SheetHeader>
-            <div className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600">Clinical Notes</label>
-                <Textarea
-                  value={notesDraft}
-                  onChange={(e) => setNotesDraft(e.target.value)}
-                  placeholder="Additional remarks or clinical history..."
-                  className="min-h-[120px]"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setStatDraft(!statDraft)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
-                  statDraft ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Flame className={`h-3.5 w-3.5 ${statDraft ? 'text-red-600' : 'text-slate-400'}`} /> STAT
-              </button>
-            </div>
-            <SheetFooter className="mt-6">
-              <Button variant="outline" onClick={() => setNotesEditOrder(null)}>Cancel</Button>
-              <Button onClick={saveNotes} disabled={isSavingNotes}>
-                {isSavingNotes ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-                {isSavingNotes ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        )}
-      </Sheet>
 
       <Sheet open={!!cancelTarget} onOpenChange={(open) => { if (!open) setCancelTarget(null); }}>
         {cancelTarget && (

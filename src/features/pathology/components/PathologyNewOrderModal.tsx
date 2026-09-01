@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { pathologyService, PathologyTestMaster } from '../services/pathologyService';
+import React, { useState, useEffect, useRef } from 'react';
+import { pathologyService, PathologyTestMaster, PathologyOrderLineDto } from '../services/pathologyService';
 import { patientService } from '@/features/billing/services/patientService';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { admissionApi, ActiveAdmissionItem } from '@/features/ipd-redesign/services/admissionApi';
@@ -10,16 +10,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Hotel, Flame, CheckCircle2, ClipboardList, Activity, ActivitySquare } from 'lucide-react';
+import { ArrowLeft, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Hotel, Flame, CheckCircle2, ClipboardList, Activity, ActivitySquare, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
-// Dedicated page for placing a new pathology order -- a pathologist/technician lands here from
-// the Pathology Lab dashboard's "New Lab Order" button. Mirrors PathologyOrderDetailPage.tsx's
-// routed-page pattern (full-screen room for the multi-step form instead of a cramped modal).
-export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o: boolean) => void; onSuccess: () => void }> = ({ open, onOpenChange, onSuccess }) => {
+// Dedicated page for placing a new pathology order, or editing an already-placed one -- a
+// pathologist/technician lands here from the Pathology Lab dashboard's "New Lab Order" button, or
+// from an order row's "Edit Order" action (orderId set). Edit mode reuses every step of the create
+// flow (patient, context, tests, notes) since the ask was to edit "all information added during
+// add new order" -- patient reassignment and test add/remove stay available no matter how far the
+// order has progressed (confirmed via clarifying question), so unchecking a test that already has a
+// generated report requires a second confirming click (see toggleTest) rather than being blocked.
+export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o: boolean) => void; onSuccess: () => void; orderId?: string }> = ({ open, onOpenChange, onSuccess, orderId }) => {
   const hospitalId = useAuthStore(state => state.hospitalId);
+  const isEditMode = !!orderId;
+  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+  // The order's lines at load time, keyed by TestId -- lets the test checklist know which selected
+  // tests already have a generated report, so removing one can warn before it deletes that report.
+  const [existingLinesByTestId, setExistingLinesByTestId] = useState<Record<string, PathologyOrderLineDto>>({});
+  const [testIdsPendingRemovalConfirm, setTestIdsPendingRemovalConfirm] = useState<string[]>([]);
+  // The order's own encounter/admission at load time -- preferred over the "current open visit"
+  // auto-selection below when it's still in the fetched list, so editing doesn't silently reattach
+  // the order to a different visit the patient happens to have opened more recently.
+  const originalEncounterIdRef = useRef<string | null>(null);
+  const originalAdmissionIdRef = useRef<string | null>(null);
 
   const [patientQuery, setPatientQuery] = useState('');
   const [patientResults, setPatientResults] = useState<Patient[]>([]);
@@ -67,6 +83,65 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
       pathologyService.getTests(hospitalId).then(setTestCatalog).catch(() => setTestCatalog([]));
     }
   }, [hospitalId]);
+
+  // This component stays mounted for the dashboard's whole lifetime (only `open` toggles), so
+  // without an explicit reset a later "New Lab Order" would silently inherit whatever an earlier
+  // create attempt or "Edit Order" session left behind. Reset once the dialog closes, so every
+  // fresh open (create or edit) starts from a clean slate -- edit mode's own loader effect above
+  // repopulates from scratch when orderId is set.
+  useEffect(() => {
+    if (open) return;
+    setSelectedPatient(null);
+    setPatientQuery('');
+    setPatientResults([]);
+    setPatientMode('search');
+    setNewPatientName(''); setNewPatientMobile(''); setNewPatientAge(''); setNewPatientGender('Male'); setNewPatientGuardian('');
+    setTestSearchQuery('');
+    setSelectedTestIds([]);
+    setOrderNotes('');
+    setOrderSourceType('OPD');
+    setOrderIsStat(false);
+    setSelectedAdmissionId(null);
+    setAdmissions([]);
+    setSelectedOpdEncounterId(null);
+    setOpdVisits([]);
+    setSelectedLabEncounterId(null);
+    setLabVisits([]);
+    setExistingLinesByTestId({});
+    setTestIdsPendingRemovalConfirm([]);
+    originalEncounterIdRef.current = null;
+    originalAdmissionIdRef.current = null;
+  }, [open]);
+
+  // Edit mode: load the existing order once and pre-fill every field the create flow below already
+  // knows how to drive -- patient, source type, selected tests, notes/STAT.
+  useEffect(() => {
+    if (!open || !orderId || !hospitalId) return;
+    let cancelled = false;
+    setIsLoadingOrder(true);
+    pathologyService.getOrderById(hospitalId, orderId)
+      .then((order) => {
+        if (cancelled) return;
+        setSelectedPatient({
+          id: order.patientId,
+          patientId: order.patientId,
+          name: order.patientName,
+          mobile: order.patientMobile || '',
+          age: order.patientAgeYears || 0,
+          sex: order.patientGender === 'F' ? 'F' : 'M',
+        });
+        setOrderSourceType((order.sourceType as typeof orderSourceType) || 'OPD');
+        setOrderNotes(order.notes || '');
+        setOrderIsStat(order.isStat);
+        setSelectedTestIds(order.lines.map(l => l.testId));
+        setExistingLinesByTestId(Object.fromEntries(order.lines.map(l => [l.testId, l])));
+        originalEncounterIdRef.current = order.encounterId || null;
+        originalAdmissionIdRef.current = order.admissionId || null;
+      })
+      .catch(() => { if (!cancelled) toast.error('Could not load order'); })
+      .finally(() => { if (!cancelled) setIsLoadingOrder(false); });
+    return () => { cancelled = true; };
+  }, [open, orderId, hospitalId]);
 
   const searchPatients = async (queryToSearch: string) => {
     if (!queryToSearch.trim()) return;
@@ -142,10 +217,11 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
         };
         const opd = deriveVisits('OPD');
         setOpdVisits(opd.list);
-        setSelectedOpdEncounterId(opd.currentId);
+        const originalStillOpen = (list: typeof opd.list) => list.find(v => v.encounterId === originalEncounterIdRef.current)?.encounterId;
+        setSelectedOpdEncounterId(originalStillOpen(opd.list) ?? opd.currentId);
         const lab = deriveVisits('LAB');
         setLabVisits(lab.list);
-        setSelectedLabEncounterId(lab.currentId);
+        setSelectedLabEncounterId(originalStillOpen(lab.list) ?? lab.currentId);
       })
       .catch(() => {
         if (cancelled) return;
@@ -172,15 +248,31 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
         if (cancelled) return;
         const mine = items.filter(a => a.patientId === selectedPatient.patientId);
         setAdmissions(mine);
-        setSelectedAdmissionId(mine.length > 0 ? mine[0].admissionId : null);
+        const original = mine.find(a => a.admissionId === originalAdmissionIdRef.current);
+        setSelectedAdmissionId(original?.admissionId ?? (mine.length > 0 ? mine[0].admissionId : null));
       })
       .catch(() => { if (!cancelled) { setAdmissions([]); setSelectedAdmissionId(null); } })
       .finally(() => { if (!cancelled) setIsLoadingAdmissions(false); });
     return () => { cancelled = true; };
   }, [orderSourceType, selectedPatient, hospitalId]);
 
+  // Unchecking a test that already has a generated report needs a second confirming click --
+  // removing it deletes that report (and its result) server-side, so the first click just arms a
+  // warning instead of silently discarding it.
   const toggleTest = (testId: string) => {
-    setSelectedTestIds(prev => prev.includes(testId) ? prev.filter(id => id !== testId) : [...prev, testId]);
+    const isSelected = selectedTestIds.includes(testId);
+    if (isSelected) {
+      const hasReport = !!existingLinesByTestId[testId]?.report;
+      if (hasReport && !testIdsPendingRemovalConfirm.includes(testId)) {
+        setTestIdsPendingRemovalConfirm(prev => [...prev, testId]);
+        return;
+      }
+      setTestIdsPendingRemovalConfirm(prev => prev.filter(id => id !== testId));
+      setSelectedTestIds(prev => prev.filter(id => id !== testId));
+    } else {
+      setTestIdsPendingRemovalConfirm(prev => prev.filter(id => id !== testId));
+      setSelectedTestIds(prev => [...prev, testId]);
+    }
   };
 
   const canSubmitOrder = !!selectedPatient && selectedTestIds.length > 0 && !isCreatingOrder
@@ -208,24 +300,43 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
           if (encRes?.success && encRes.data?.encounterId) billingEncounterId = encRes.data.encounterId;
         }
       }
-      const response = await pathologyService.createOrder(hospitalId, {
-        patientId: selectedPatient.patientId,
-        testIds: selectedTestIds,
-        notes: orderNotes || undefined,
-        sourceType: orderSourceType,
-        isStat: orderIsStat,
-        encounterId: billingEncounterId,
-        admissionId: orderSourceType === 'IPD' ? (selectedAdmissionId ?? undefined) : undefined,
-      });
-      if (!response.success) {
-        toast.error('Could not place order', { description: response.message });
-        return;
+      const admissionId = orderSourceType === 'IPD' ? (selectedAdmissionId ?? undefined) : undefined;
+
+      if (isEditMode && orderId) {
+        const response = await pathologyService.updateOrder(hospitalId, orderId, {
+          patientId: selectedPatient.patientId,
+          testIds: selectedTestIds,
+          notes: orderNotes || undefined,
+          sourceType: orderSourceType,
+          isStat: orderIsStat,
+          encounterId: billingEncounterId,
+          admissionId,
+        });
+        if (!response.success) {
+          toast.error('Could not save changes', { description: response.message });
+          return;
+        }
+        toast.success('Order updated');
+      } else {
+        const response = await pathologyService.createOrder(hospitalId, {
+          patientId: selectedPatient.patientId,
+          testIds: selectedTestIds,
+          notes: orderNotes || undefined,
+          sourceType: orderSourceType,
+          isStat: orderIsStat,
+          encounterId: billingEncounterId,
+          admissionId,
+        });
+        if (!response.success) {
+          toast.error('Could not place order', { description: response.message });
+          return;
+        }
+        toast.success('Order placed', { description: response.orderNo });
       }
-      toast.success('Order placed', { description: response.orderNo });
       onSuccess();
       onOpenChange(false);
     } catch (e) {
-      toast.error('Could not place order');
+      toast.error(isEditMode ? 'Could not save changes' : 'Could not place order');
     } finally {
       setIsCreatingOrder(false);
     }
@@ -254,7 +365,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-800 tracking-tight">Order Summary</h2>
-                <p className="text-xs text-slate-500 font-medium">Review before placing</p>
+                <p className="text-xs text-slate-500 font-medium">{isEditMode ? 'Review before saving' : 'Review before placing'}</p>
               </div>
             </div>
           </div>
@@ -317,20 +428,30 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                     {selectedTestIds.map(id => {
                       const t = testCatalog.find(x => x.testId === id);
                       if (!t) return null;
+                      const pendingConfirm = testIdsPendingRemovalConfirm.includes(id);
                       return (
-                        <div key={id} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="h-8 w-8 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
-                              <ActivitySquare className="h-4 w-4 text-brand-600" />
+                        <div key={id} className={`rounded-lg border shadow-sm ${pendingConfirm ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
+                          <div className="flex items-center justify-between p-3">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className="h-8 w-8 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
+                                <ActivitySquare className="h-4 w-4 text-brand-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-800 truncate">{t.testName}</p>
+                                <p className="text-xs text-slate-400">{t.testCode}</p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-800 truncate">{t.testName}</p>
-                              <p className="text-xs text-slate-400">{t.testCode}</p>
-                            </div>
+                            <button
+                              onClick={() => toggleTest(id)}
+                              title={pendingConfirm ? 'Click again to confirm removal' : undefined}
+                              className={`p-1.5 rounded-full transition-colors shrink-0 ${pendingConfirm ? 'text-red-600 bg-red-100 hover:bg-red-200' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                            >
+                              {pendingConfirm ? <AlertTriangle className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                            </button>
                           </div>
-                          <button onClick={() => toggleTest(id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors shrink-0">
-                            <X className="h-4 w-4" />
-                          </button>
+                          {pendingConfirm && (
+                            <p className="px-3 pb-2 text-[10px] text-red-600 font-medium">This test's report already exists -- click the warning icon again to remove it and delete that report.</p>
+                          )}
                         </div>
                       );
                     })}
@@ -385,9 +506,9 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
             >
               {isCreatingOrder ? (
                 <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Placing Order...
+                  <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> {isEditMode ? 'Saving Changes...' : 'Placing Order...'}
                 </span>
-              ) : 'Place Order'}
+              ) : (isEditMode ? 'Save Changes' : 'Place Order')}
             </Button>
             <Button
               variant="ghost"
@@ -406,10 +527,16 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
 
               {/* Header */}
               <div className="mb-1 flex items-center justify-between">
-                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">New Lab Order</h1>
-                <p className="text-slate-500 text-xs font-medium">Complete steps to place order.</p>
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">{isEditMode ? 'Edit Order' : 'New Lab Order'}</h1>
+                <p className="text-slate-500 text-xs font-medium">{isEditMode ? 'Change patient, tests, or notes.' : 'Complete steps to place order.'}</p>
               </div>
 
+            {isLoadingOrder ? (
+              <div className="flex items-center justify-center py-24">
+                <LoadingSpinner />
+              </div>
+            ) : (
+            <>
             {/* Step 1: Patient Selection */}
             <section className="bg-white p-3 rounded-xl border shadow-sm space-y-2.5 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-brand-500 rounded-l-xl"></div>
@@ -491,7 +618,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                         <div
                           key={p.patientId}
                           className="p-2 cursor-pointer hover:bg-brand-50/50 transition-colors flex items-center justify-between group"
-                          onClick={() => { setSelectedPatient(p); setPatientResults([]); }}
+                          onClick={() => { setSelectedPatient(p); setPatientResults([]); originalEncounterIdRef.current = null; originalAdmissionIdRef.current = null; }}
                         >
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs group-hover:bg-brand-100 group-hover:text-brand-700 transition-colors">
@@ -705,15 +832,19 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                   ) : (
                     <ScrollArea className="h-[20vh] min-h-[140px]">
                       <div className="divide-y divide-slate-100">
-                        {filteredTests.map((t) => (
-                          <label key={t.testId} className="flex items-center justify-between p-2 cursor-pointer hover:bg-brand-50/50 transition-colors group">
+                        {filteredTests.map((t) => {
+                          const pendingConfirm = testIdsPendingRemovalConfirm.includes(t.testId);
+                          return (
+                          <label key={t.testId} className={`flex items-center justify-between p-2 cursor-pointer transition-colors group ${pendingConfirm ? 'bg-red-50' : 'hover:bg-brand-50/50'}`}>
                             <div className="flex items-center gap-3">
-                              <div className={`flex items-center justify-center h-4 w-4 rounded border ${selectedTestIds.includes(t.testId) ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
-                                {selectedTestIds.includes(t.testId) && <CheckCircle2 className="h-3 w-3" />}
+                              <div className={`flex items-center justify-center h-4 w-4 rounded border ${pendingConfirm ? 'bg-red-100 border-red-400 text-red-600' : selectedTestIds.includes(t.testId) ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
+                                {pendingConfirm ? <AlertTriangle className="h-3 w-3" /> : selectedTestIds.includes(t.testId) && <CheckCircle2 className="h-3 w-3" />}
                               </div>
                               <div className="flex flex-col">
                                 <span className="font-semibold text-slate-800 text-xs">{t.testName}</span>
-                                <span className="text-[10px] text-slate-500 font-mono">{t.testCode}</span>
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  {pendingConfirm ? 'Click again to remove -- deletes the generated report' : t.testCode}
+                                </span>
                               </div>
                             </div>
                             {/* Hidden actual checkbox for accessibility */}
@@ -724,7 +855,8 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                               onChange={() => toggleTest(t.testId)}
                             />
                           </label>
-                        ))}
+                          );
+                        })}
                       </div>
                     </ScrollArea>
                   );
@@ -734,6 +866,8 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
 
               {/* Bottom Padding for scroll area */}
               <div className="h-10"></div>
+            </>
+            )}
             </div>
           </ScrollArea>
         </div>

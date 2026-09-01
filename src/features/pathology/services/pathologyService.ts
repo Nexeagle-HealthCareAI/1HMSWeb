@@ -32,6 +32,16 @@ export interface CreatePathologyOrderResponse {
   orderNo?: string;
 }
 
+export interface UpdatePathologyOrderRequest {
+  patientId: string;
+  encounterId?: string;
+  admissionId?: string;
+  sourceType?: 'OPD' | 'IPD' | 'EMERGENCY' | 'WALK_IN';
+  testIds: string[];
+  notes?: string;
+  isStat?: boolean;
+}
+
 export interface PathologyResultDto {
   resultId: string;
   resultValuesJson: string;
@@ -73,6 +83,9 @@ export interface PathologyOrderDto {
   // Set when this order was attached to the patient's OPD/IPD billing visit at order time --
   // lets the order-detail view show which invoice this order's charges landed on.
   encounterId?: string | null;
+  // Set for an IPD order instead of encounterId -- lets the order-edit flow re-select the same
+  // admission by default.
+  admissionId?: string | null;
   // Values for the hospital's configured report-level fields -- {key: value}, see
   // pathologyFieldLayoutApi.ts.
   reportFieldValuesJson?: string | null;
@@ -105,6 +118,9 @@ export interface PathologyTestMaster {
   testName: string;
   category?: string;
   chargeId?: string;
+  // The linked ChargeMaster's DefaultRate, resolved server-side -- undefined/null when the test has
+  // no linked charge (see TestCatalogForm's "Linked Charge" picker).
+  price?: number | null;
   sampleType?: string;
   containerType?: string;
   parameterSchemaJson?: string;
@@ -237,9 +253,9 @@ export const pathologyService = {
     return response.data.success;
   },
 
-  updateOrderNotes: async (hospitalId: string, orderId: string, notes: string, isStat: boolean): Promise<boolean> => {
-    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/notes`, { notes, isStat });
-    return response.data.success;
+  updateOrder: async (hospitalId: string, orderId: string, request: UpdatePathologyOrderRequest): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.put<{ success: boolean; message?: string }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}`, request);
+    return response.data;
   },
 
   cancelOrder: async (hospitalId: string, orderId: string): Promise<{ success: boolean; message?: string }> => {
