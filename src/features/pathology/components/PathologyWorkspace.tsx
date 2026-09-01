@@ -198,10 +198,7 @@ export const PathologyWorkspace: React.FC = () => {
         rangeEnd={rangeEnd}
         onRangeEndChange={setRangeEnd}
       />
-      <div className="border rounded-lg bg-card">
-        <div className="p-4 border-b bg-muted/20 flex items-center justify-between gap-2 flex-wrap">
-          <h2 className="font-semibold text-lg">Orders</h2>
-        </div>
+      <div className="border rounded-lg bg-card shadow-sm">
         <div className="flex gap-1 px-2 pt-2 pb-1 border-b overflow-x-auto">
           {([
             { key: 'ALL', label: 'All' },
