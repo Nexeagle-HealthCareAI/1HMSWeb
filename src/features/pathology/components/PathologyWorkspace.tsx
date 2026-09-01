@@ -238,7 +238,7 @@ export const PathologyWorkspace: React.FC = () => {
                     <SortableHeader column="sourceType" label="Source" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader column="testCount" label="Tests" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
                     <SortableHeader column="status" label="Status" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader column="reportGeneratedAt" label="Report" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader column="reportsReadyCount" label="Reports" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
                   </tr>
                 </thead>
                 <tbody>
@@ -266,14 +266,11 @@ export const PathologyWorkspace: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {order.reportPdfBlobPath ? (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); window.open(order.reportPdfBlobPath!, '_blank'); }}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
-                          >
+                        {order.reportsReadyCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
                             <FileCheck2 className="h-3.5 w-3.5" />
-                            {order.reportGeneratedAt ? new Date(order.reportGeneratedAt).toLocaleDateString() : 'View'}
-                          </button>
+                            {order.reportsReadyCount}/{order.testCount} ready
+                          </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">Not generated</span>
                         )}

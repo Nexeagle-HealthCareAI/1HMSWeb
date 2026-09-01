@@ -471,7 +471,9 @@ export const ClinicalDashboard: React.FC = () => {
   // each appointment row. Same fetch-once-and-index-by-patientId shape as referralsByPatient above
   // -- hospital-wide (not scoped to this doctor), since a lab result becoming ready is relevant to
   // whichever doctor is seeing the patient today, not just whoever originally ordered the test.
-  const [labReportsByPatient, setLabReportsByPatient] = useState<Record<string, PathologyReportReadyDto>>({});
+  // Each patient can have MULTIPLE ready reports now (one per test in a multi-test order), so this
+  // keeps every report per patient rather than dedup-ing down to one.
+  const [labReportsByPatient, setLabReportsByPatient] = useState<Record<string, PathologyReportReadyDto[]>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -482,9 +484,9 @@ export const ClinicalDashboard: React.FC = () => {
     pathologyService.getRecentlyApprovedReports(hospitalId)
       .then(reports => {
         if (cancelled) return;
-        const map: Record<string, PathologyReportReadyDto> = {};
-        // Reports come back newest-first, so the first one seen per patient is the latest.
-        reports.forEach(r => { if (!map[r.patientId]) map[r.patientId] = r; });
+        const map: Record<string, PathologyReportReadyDto[]> = {};
+        // Reports come back newest-first, so each patient's list stays newest-first too.
+        reports.forEach(r => { (map[r.patientId] ??= []).push(r); });
         setLabReportsByPatient(map);
       })
       .catch(() => { if (!cancelled) setLabReportsByPatient({}); });
@@ -1779,7 +1781,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <div className="transform transition-transform duration-200 hover:scale-105 origin-left flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
                                         <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
-                                        <LabReportReadyBadge report={labReportsByPatient[appointment.patientId]} />
+                                        <LabReportReadyBadge reports={labReportsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4 align-middle text-center">
@@ -2166,7 +2168,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <div className="flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
                                         <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
-                                        <LabReportReadyBadge report={labReportsByPatient[appointment.patientId]} />
+                                        <LabReportReadyBadge reports={labReportsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4">
@@ -2445,7 +2447,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <div className="flex flex-col gap-1 items-start">
                                         {getStatusBadge(appointment.finalStatusCode)}
                                         <AdmissionStatusBadge referral={referralsByPatient[appointment.patientId]} />
-                                        <LabReportReadyBadge report={labReportsByPatient[appointment.patientId]} />
+                                        <LabReportReadyBadge reports={labReportsByPatient[appointment.patientId]} />
                                       </div>
                                     </TableCell>
                                     <TableCell className="py-4">

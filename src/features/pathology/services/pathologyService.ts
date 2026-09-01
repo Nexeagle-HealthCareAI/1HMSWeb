@@ -48,6 +48,9 @@ export interface PathologyOrderLineDto {
   sampleBarcode?: string | null;
   sampleCollectedAt?: string | null;
   result?: PathologyResultDto;
+  // This line's own report -- each test line gets its own independent report rather than sharing
+  // one report for the whole order. Null until a report has been generated for this test.
+  report?: PathologyReportDto | null;
 }
 
 export interface PathologyOrderDto {
@@ -68,14 +71,11 @@ export interface PathologyOrderDto {
   // Values for the hospital's configured report-level fields -- {key: value}, see
   // pathologyFieldLayoutApi.ts.
   reportFieldValuesJson?: string | null;
-  // Dashboard-list-only fields (from getOrders' list query) -- 0/null on getOrderById's response,
-  // which exposes the same information via lines/report instead.
+  // Dashboard-list-only fields (from getOrders' list query) -- 0 on getOrderById's response, which
+  // exposes the same information per-line via lines[].report instead.
   testCount: number;
-  reportNo?: string | null;
-  reportGeneratedAt?: string | null;
-  reportPdfBlobPath?: string | null;
+  reportsReadyCount: number;
   lines: PathologyOrderLineDto[];
-  report?: PathologyReportDto | null;
 }
 
 export interface PathologyReportDto {
@@ -189,6 +189,9 @@ export interface PathologyReportReadyDto {
   orderNo: string;
   generatedAt?: string;
   pdfBlobPath?: string;
+  // Which test this report covers -- a patient can have more than one ready report per order now
+  // (one per test line), so callers need a way to tell them apart.
+  testName?: string | null;
 }
 
 export const pathologyService = {
@@ -228,8 +231,8 @@ export const pathologyService = {
     return response.data.success;
   },
 
-  generateReport: async (hospitalId: string, orderId: string, request: GeneratePathologyReportRequest): Promise<GeneratePathologyReportResponse> => {
-    const response = await api.post<GeneratePathologyReportResponse>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report`, request);
+  generateReport: async (hospitalId: string, orderId: string, orderLineId: string, request: GeneratePathologyReportRequest): Promise<GeneratePathologyReportResponse> => {
+    const response = await api.post<GeneratePathologyReportResponse>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/report`, request);
     return response.data;
   },
 

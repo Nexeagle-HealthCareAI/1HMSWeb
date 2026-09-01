@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { pathologyService, PathologyOrderDto } from '../services/pathologyService';
+import { pathologyService, PathologyOrderDto, PathologyOrderLineDto } from '../services/pathologyService';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +50,13 @@ const PathologyOrderDetailPage: React.FC = () => {
   // safe to drop in as-is; this page's own field-layout hook instance is refetched on close since
   // it's a separate hook call and won't otherwise see the edit.
   const [isFieldEditorOpen, setIsFieldEditorOpen] = useState(false);
+
+  // Which test's tab is active -- each line now has its own independent report, so the page shows
+  // one test's results/report actions at a time instead of stacking every line. Derived rather than
+  // synced via effect: falls back to the first line whenever activeLineId doesn't match anything in
+  // the current order (first load, or a stale id left over from a previously-viewed order), and
+  // naturally re-resolves to the updated line object on every refetch of the same order.
+  const [activeLineId, setActiveLineId] = useState<string | null>(null);
 
   // This order's billing status, once it's known to be attached to a visit (order.encounterId) --
   // the ledger for that encounter, scoped down to this order's own lab-sourced lines, so a tech
@@ -180,62 +187,60 @@ const PathologyOrderDetailPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [order?.encounterId, order?.patientId]);
 
-  const allResultsEntered = !!order && order.lines.length > 0 && order.lines.every(l => !!l.result);
-
-  // Builds the results table from each line's schema + saved {value, flag} results, using the
-  // same age/gender-resolved band shown on screen so the printed "Normal Range" column matches
+  // Builds the results table for ONE test line from its schema + saved {value, flag} result, using
+  // the same age/gender-resolved band shown on screen so the printed "Normal Range" column matches
   // what the technician actually saw while entering the result. Every schema parameter is always
-  // included (blank when unset) so a report can be previewed before any results exist at all.
-  const buildPdfLines = (o: PathologyOrderDto): PathologyReportPdfLine[] => {
-    return o.lines.map((line) => {
-      let params: any[] = [];
-      try {
-        const schema = line.parameterSchemaJson ? JSON.parse(line.parameterSchemaJson) : null;
-        if (schema && Array.isArray(schema.params)) params = schema.params;
-      } catch { /* leave params empty */ }
+  // included (blank when unset) so a report can be previewed before a result exists at all. Returns
+  // a one-element array -- generatePathologyReportPdf's `lines` was always iterated generically, so
+  // building it for a single test (its own report) needs no change there.
+  const buildPdfLine = (o: PathologyOrderDto, line: PathologyOrderLineDto): PathologyReportPdfLine[] => {
+    let params: any[] = [];
+    try {
+      const schema = line.parameterSchemaJson ? JSON.parse(line.parameterSchemaJson) : null;
+      if (schema && Array.isArray(schema.params)) params = schema.params;
+    } catch { /* leave params empty */ }
 
-      let savedValues: Record<string, any> = {};
-      try {
-        savedValues = line.result?.resultValuesJson ? JSON.parse(line.result.resultValuesJson) : {};
-      } catch { /* leave savedValues empty */ }
+    let savedValues: Record<string, any> = {};
+    try {
+      savedValues = line.result?.resultValuesJson ? JSON.parse(line.result.resultValuesJson) : {};
+    } catch { /* leave savedValues empty */ }
 
-      const parameters = params.map((p) => {
-        const entry = savedValues[p.name];
-        const value = typeof entry === 'string' ? entry : entry?.value ?? '';
-        const flag = typeof entry === 'string' ? 'NORMAL' : entry?.flag ?? 'NORMAL';
-        const { min, max } = resolveRange(p, o.patientAgeYears, o.patientGender);
-        return {
-          name: p.name,
-          unit: p.unit,
-          value,
-          flag,
-          // Plain hyphen, not an en dash -- pdf-lib's WinAnsi StandardFonts encoding threw on
-          // the arrow glyphs used elsewhere in this file (see generatePathologyReportPdf.ts),
-          // so this stays ASCII-only defensively rather than assuming en dash is safe too.
-          normalRangeLabel: min !== undefined || max !== undefined ? `${min ?? '-'} - ${max ?? '-'}` : undefined,
-        };
-      });
-
-      // Per-test narrative fields (Interpretation / Notes + any hospital-added custom line
-      // fields), in the hospital's configured order -- built from the field layout, not from
-      // whatever keys happen to be in resultValuesJson, so the printed order always matches the
-      // Report Fields editor.
-      const noteFields = lineFields
-        .filter((f) => f.showInPrint)
-        .map((f) => {
-          const entry = f.key === 'interpretation' ? line.result?.interpretation : savedValues[f.key];
-          const value = typeof entry === 'string' ? entry : entry?.value ?? '';
-          return { label: f.label, value };
-        })
-        .filter((f) => f.value.trim().length > 0);
-
+    const parameters = params.map((p) => {
+      const entry = savedValues[p.name];
+      const value = typeof entry === 'string' ? entry : entry?.value ?? '';
+      const flag = typeof entry === 'string' ? 'NORMAL' : entry?.flag ?? 'NORMAL';
+      const { min, max } = resolveRange(p, o.patientAgeYears, o.patientGender);
       return {
-        testName: line.testName,
-        testCode: line.testCode,
-        parameters,
-        noteFields,
+        name: p.name,
+        unit: p.unit,
+        value,
+        flag,
+        // Plain hyphen, not an en dash -- pdf-lib's WinAnsi StandardFonts encoding threw on
+        // the arrow glyphs used elsewhere in this file (see generatePathologyReportPdf.ts),
+        // so this stays ASCII-only defensively rather than assuming en dash is safe too.
+        normalRangeLabel: min !== undefined || max !== undefined ? `${min ?? '-'} - ${max ?? '-'}` : undefined,
       };
     });
+
+    // Per-test narrative fields (Interpretation / Notes + any hospital-added custom line
+    // fields), in the hospital's configured order -- built from the field layout, not from
+    // whatever keys happen to be in resultValuesJson, so the printed order always matches the
+    // Report Fields editor.
+    const noteFields = lineFields
+      .filter((f) => f.showInPrint)
+      .map((f) => {
+        const entry = f.key === 'interpretation' ? line.result?.interpretation : savedValues[f.key];
+        const value = typeof entry === 'string' ? entry : entry?.value ?? '';
+        return { label: f.label, value };
+      })
+      .filter((f) => f.value.trim().length > 0);
+
+    return [{
+      testName: line.testName,
+      testCode: line.testCode,
+      parameters,
+      noteFields,
+    }];
   };
 
   // Resolves everything generatePathologyReportPdf needs except the report number, which the two
@@ -243,7 +248,7 @@ const PathologyOrderDetailPage: React.FC = () => {
   // one up). Letterhead source is hospital-wide config (LabConfiguration), not tied to any one
   // order -- resolved fresh on every call rather than cached, so a mode/margin change in the
   // Configurator takes effect on the very next report/preview without a reload.
-  const resolveReportPdfData = async (o: PathologyOrderDto, reportNo: string) => {
+  const resolveReportPdfData = async (o: PathologyOrderDto, line: PathologyOrderLineDto, reportNo: string) => {
     const [labConfig, templates, hospital] = await Promise.all([
       pathologyService.getLabConfig(hospitalId!).catch(() => null),
       pathologyService.getTemplates(hospitalId!).catch(() => []),
@@ -278,7 +283,7 @@ const PathologyOrderDetailPage: React.FC = () => {
       patientId: o.patientId,
       patientAgeYears: o.patientAgeYears,
       patientGender: o.patientGender,
-      lines: buildPdfLines(o),
+      lines: buildPdfLine(o, line),
       reportFields: reportFieldsForPdf,
       letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
       letterheadTemplateUrl: defaultTemplate?.headerBlobPath ?? null,
@@ -300,15 +305,15 @@ const PathologyOrderDetailPage: React.FC = () => {
   };
 
   // Always available, even with zero results entered -- builds and opens the PDF client-side only
-  // (no upload, no PathologyReport row required), so a technician can see exactly what the report
-  // will look like before anything is saved.
-  const previewReport = async (o: PathologyOrderDto) => {
+  // (no upload, no PathologyReport row required), so a technician can see exactly what this one
+  // test's report will look like before anything is saved.
+  const previewReport = async (o: PathologyOrderDto, line: PathologyOrderLineDto) => {
     if (!hospitalId) return;
     setIsPreviewingReport(true);
     setPreviewError(null);
     setIsPreviewModalOpen(true);
     try {
-      const data = await resolveReportPdfData(o, o.report?.reportNo ?? 'PREVIEW');
+      const data = await resolveReportPdfData(o, line, line.report?.reportNo ?? 'PREVIEW');
       const blob = await generatePathologyReportPdf(data);
       const nextUrl = URL.createObjectURL(blob);
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -331,17 +336,17 @@ const PathologyOrderDetailPage: React.FC = () => {
     }
   };
 
-  // Renders and uploads the report PDF for an order that already has a PathologyReport row.
+  // Renders and uploads the report PDF for a test line that already has a PathologyReport row.
   // Freely re-callable -- there's no approval gate anymore, so editing a result and generating
   // again just overwrites the previous PDF with one that reflects the current data.
-  const finalizeReportPdf = async (o: PathologyOrderDto) => {
-    if (!hospitalId || !o.report) return;
+  const finalizeReportPdf = async (o: PathologyOrderDto, line: PathologyOrderLineDto) => {
+    if (!hospitalId || !line.report) return;
     setIsFinalizingPdf(true);
     try {
-      const data = await resolveReportPdfData(o, o.report.reportNo);
+      const data = await resolveReportPdfData(o, line, line.report.reportNo);
       const blob = await generatePathologyReportPdf(data);
 
-      const uploadResult = await pathologyService.uploadReportPdf(hospitalId, o.orderId, o.report.reportId, blob);
+      const uploadResult = await pathologyService.uploadReportPdf(hospitalId, o.orderId, line.report.reportId, blob);
       if (!uploadResult.success) {
         toast.error('Report generated, but the PDF could not be saved', { description: uploadResult.message });
         return;
@@ -356,20 +361,22 @@ const PathologyOrderDetailPage: React.FC = () => {
     }
   };
 
-  // The one report action: creates the PathologyReport row if this order doesn't have one yet
-  // (or reuses/updates it if it does -- GeneratePathologyReportHandler is freely repeatable), then
-  // renders and uploads the PDF. Re-clickable any time results change.
-  const handleGenerateOrUpdateReport = async () => {
+  // The one report action for the active tab's test: creates the PathologyReport row for this
+  // line if it doesn't have one yet (or reuses/updates it if it does --
+  // GeneratePathologyReportHandler is freely repeatable per line), then renders and uploads the
+  // PDF. Re-clickable any time this test's result changes.
+  const handleGenerateOrUpdateReport = async (line: PathologyOrderLineDto) => {
     if (!hospitalId || !order) return;
     setIsGeneratingReport(true);
     try {
-      const response = await pathologyService.generateReport(hospitalId, order.orderId, {});
+      const response = await pathologyService.generateReport(hospitalId, order.orderId, line.orderLineId, {});
       if (!response.success) {
         toast.error('Could not generate report', { description: response.message });
         return;
       }
       const refreshed = await refetch();
-      if (refreshed) await finalizeReportPdf(refreshed);
+      const refreshedLine = refreshed?.lines.find(l => l.orderLineId === line.orderLineId);
+      if (refreshed && refreshedLine) await finalizeReportPdf(refreshed, refreshedLine);
     } catch (e) {
       toast.error('Could not generate report');
     } finally {
@@ -399,6 +406,9 @@ const PathologyOrderDetailPage: React.FC = () => {
 
   const padFields = reportFields.filter(f => f.showInPad);
   const resultsEnteredCount = order.lines.filter(l => !!l.result).length;
+  const reportsReadyCount = order.lines.filter(l => !!l.report).length;
+  const activeLine = order.lines.find(l => l.orderLineId === activeLineId) ?? order.lines[0] ?? null;
+  const showTabs = order.lines.length > 1;
 
   return (
     <ScrollArea className="h-[calc(100vh-4rem)]">
@@ -488,22 +498,49 @@ const PathologyOrderDetailPage: React.FC = () => {
               <div className="flex items-center justify-between border-b pb-2">
                 <h3 className="text-lg font-semibold">Tests &amp; Results</h3>
                 <span className="text-xs font-medium text-muted-foreground">
-                  {resultsEnteredCount}/{order.lines.length} entered
+                  {resultsEnteredCount}/{order.lines.length} entered · {reportsReadyCount}/{order.lines.length} reports ready
                 </span>
               </div>
-              {order.lines.length > 0 ? (
-                order.lines.map((line) => (
-                  <OrderResultEntry
-                    key={line.orderLineId}
-                    hospitalId={hospitalId ?? ''}
-                    orderId={order.orderId}
-                    orderLine={line}
-                    patientAgeYears={order.patientAgeYears}
-                    patientGender={order.patientGender}
-                    lineFields={lineFields}
-                    onSuccess={() => refetch()}
-                  />
-                ))
+
+              {/* Multi-test orders get one report per test -- a tab per line to switch between
+                  them, each with its own status dot. A single-test order skips this entirely and
+                  looks exactly as it did before this test's report could be independent. */}
+              {showTabs && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {order.lines.map((line) => {
+                    const isActive = line.orderLineId === activeLine?.orderLineId;
+                    const dotClass = line.report
+                      ? 'bg-emerald-500'
+                      : line.result
+                        ? 'bg-sky-500'
+                        : 'bg-slate-300';
+                    return (
+                      <button
+                        key={line.orderLineId}
+                        onClick={() => setActiveLineId(line.orderLineId)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                          isActive ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isActive ? 'bg-white' : dotClass}`} />
+                        {line.testName}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {activeLine ? (
+                <OrderResultEntry
+                  key={activeLine.orderLineId}
+                  hospitalId={hospitalId ?? ''}
+                  orderId={order.orderId}
+                  orderLine={activeLine}
+                  patientAgeYears={order.patientAgeYears}
+                  patientGender={order.patientGender}
+                  lineFields={lineFields}
+                  onSuccess={() => refetch()}
+                />
               ) : (
                 <div className="text-center text-muted-foreground py-8">
                   No tests found in this order.
@@ -516,43 +553,45 @@ const PathologyOrderDetailPage: React.FC = () => {
           <div className="xl:sticky xl:top-6 space-y-4">
             <Card className="overflow-hidden">
               <div className="bg-gradient-to-b from-brand-600 to-brand-700 px-5 py-4 text-white">
-                <div className="text-xs font-bold uppercase tracking-widest text-brand-100">Report Actions</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-brand-100">
+                  {showTabs ? activeLine?.testName ?? 'Report Actions' : 'Report Actions'}
+                </div>
                 <div className="text-sm font-semibold mt-0.5 truncate">
-                  {order.report ? `Report ${order.report.reportNo}` : 'No report yet'}
+                  {activeLine?.report ? `Report ${activeLine.report.reportNo}` : 'No report yet'}
                 </div>
               </div>
               <CardContent className="p-4 space-y-2.5">
                 <Button
                   variant="outline" className="w-full justify-start gap-2"
-                  onClick={() => previewReport(order)} disabled={isPreviewingReport}
+                  onClick={() => activeLine && previewReport(order, activeLine)} disabled={isPreviewingReport || !activeLine}
                 >
                   {isPreviewingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                   {isPreviewingReport ? 'Preparing...' : 'Preview Report'}
                 </Button>
                 <Button
                   className="w-full justify-start gap-2 bg-brand-600 hover:bg-brand-700 text-white"
-                  onClick={handleGenerateOrUpdateReport}
-                  disabled={!allResultsEntered || isGeneratingReport || isFinalizingPdf}
+                  onClick={() => activeLine && handleGenerateOrUpdateReport(activeLine)}
+                  disabled={!activeLine?.result || isGeneratingReport || isFinalizingPdf}
                 >
                   {isGeneratingReport || isFinalizingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                   {isGeneratingReport || isFinalizingPdf
-                    ? (order.report ? 'Updating...' : 'Generating...')
-                    : (order.report ? 'Update Report' : 'Generate Report')}
+                    ? (activeLine?.report ? 'Updating...' : 'Generating...')
+                    : (activeLine?.report ? 'Update Report' : 'Generate Report')}
                 </Button>
-                {!allResultsEntered && (
+                {!activeLine?.result && (
                   <p className="text-[11px] text-muted-foreground px-0.5">
-                    Enter all {order.lines.length} test result{order.lines.length === 1 ? '' : 's'} to generate.
+                    Enter this test's result to generate its report.
                   </p>
                 )}
                 <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                  {order.report?.pdfBlobPath && (
+                  {activeLine?.report?.pdfBlobPath && (
                     <Badge variant="outline" className="bg-green-100 text-green-800">
                       <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Report ready
                     </Badge>
                   )}
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <ClipboardCheck className="h-3.5 w-3.5" />
-                    {resultsEnteredCount}/{order.lines.length} results
+                    {reportsReadyCount}/{order.lines.length} order reports
                   </span>
                 </div>
 
@@ -582,8 +621,8 @@ const PathologyOrderDetailPage: React.FC = () => {
         previewUrl={previewUrl}
         isLoading={isPreviewingReport}
         error={previewError}
-        fileName={`${order.orderNo}-report.pdf`}
-        title={`Report Preview — ${order.orderNo}`}
+        fileName={`${order.orderNo}${activeLine ? `-${activeLine.testCode}` : ''}-report.pdf`}
+        title={`Report Preview — ${order.orderNo}${activeLine && showTabs ? ` · ${activeLine.testName}` : ''}`}
       />
 
       <Sheet
