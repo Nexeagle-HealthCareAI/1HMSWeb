@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
 import { getPathologyStatusColor } from '../utils/pathologyStatusColor';
 import { format } from 'date-fns';
+import { PathologyNewOrderModal } from './PathologyNewOrderModal';
 
 const SortableHeader = ({ column, label, sortColumn, sortDirection, onSort, align = 'left' }: any) => {
   const isSorted = sortColumn === column;
@@ -34,6 +35,7 @@ export const PathologyWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<PathologyOrderDto[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
 
   // Date filter -- defaults to "all" (not "today", unlike RevenueTab's billing dashboard) since a
   // tech needs to see backlog like an older still-pending STAT order; narrowing to today shouldn't
@@ -177,7 +179,7 @@ export const PathologyWorkspace: React.FC = () => {
         </div>
         <Button
           size="lg"
-          onClick={() => navigate('/pathology/orders/new')}
+          onClick={() => setIsNewOrderModalOpen(true)}
           disabled={!hospitalId}
           className="gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md hover:shadow-lg transition-all px-6"
         >
@@ -310,12 +312,17 @@ export const PathologyWorkspace: React.FC = () => {
             </div>
           </>
         ) : (
-          <div className="p-8 text-center text-muted-foreground">
-            No orders in this view.
+          <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
+            <p>No orders found matching the current filters.</p>
           </div>
         )}
       </div>
+
+      <PathologyNewOrderModal
+        open={isNewOrderModalOpen}
+        onOpenChange={setIsNewOrderModalOpen}
+        onSuccess={fetchOrders}
+      />
     </div>
   );
 };
-
