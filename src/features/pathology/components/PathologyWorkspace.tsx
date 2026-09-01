@@ -206,9 +206,13 @@ export const PathologyWorkspace: React.FC = () => {
         toast.info('No pending samples to collect on this order');
         return;
       }
-      const results = await Promise.all(
-        pendingLines.map(l => pathologyService.collectSample(hospitalId, order.orderId, l.orderLineId))
-      );
+      // Sequential, not Promise.all: every line shares one PathologyOrder row (optimistic
+      // concurrency via RowVersion), and concurrent collect-sample calls on the same order race
+      // to flip its Status, throwing DbUpdateConcurrencyException on the loser.
+      const results: boolean[] = [];
+      for (const l of pendingLines) {
+        results.push(await pathologyService.collectSample(hospitalId, order.orderId, l.orderLineId));
+      }
       if (results.every(Boolean)) {
         toast.success(`Marked ${pendingLines.length} sample${pendingLines.length === 1 ? '' : 's'} collected`);
       } else {
