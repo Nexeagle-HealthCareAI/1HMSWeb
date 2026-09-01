@@ -9,14 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck, SlidersHorizontal, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { OrderResultEntry } from '../components/OrderResultEntry';
 import { PathologyReportPreviewModal } from '../components/PathologyReportPreviewModal';
 import { PathologyReportFieldLayoutEditor } from '../components/PathologyReportFieldLayoutEditor';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 import { generatePathologyReportPdf, PathologyReportPdfLine } from '../utils/generatePathologyReportPdf';
 import { resolveRange } from '../utils/resultFlagCalculator';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
@@ -401,7 +402,7 @@ const PathologyOrderDetailPage: React.FC = () => {
 
   return (
     <ScrollArea className="h-[calc(100vh-4rem)]">
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <button
           onClick={() => navigate('/pathology')}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
@@ -409,14 +410,16 @@ const PathologyOrderDetailPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" /> Back to Pathology Lab
         </button>
 
-        {/* Top card -- order/patient summary + the two report actions, always visible without
-            scrolling past the fields below (per the "top card, then all fields" request). */}
-        <Card className="mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
-            <div className="flex items-start justify-between flex-wrap gap-4">
-              <div className="min-w-0">
+        {/* Full-width two-column layout -- main content on the left, a sticky right-hand panel
+            holding every report action (preview/generate, manage fields, save) so they're reachable
+            without hunting through the page while filling in results further down. */}
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 items-start">
+          <div className="min-w-0 space-y-6">
+            {/* Order/patient identity -- who and what this order is, at a glance. */}
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
                 <h2 className="text-2xl font-bold tracking-tight">Order {order.orderNo}</h2>
-                <div className="flex items-center gap-1.5 text-brand-50 text-sm mt-1.5">
+                <div className="flex items-center gap-1.5 text-brand-50 text-sm mt-1.5 flex-wrap">
                   <User2 className="h-3.5 w-3.5 shrink-0" />
                   <span className="font-medium truncate">{order.patientName}</span>
                   {(order.patientAgeYears != null || order.patientGender) && (
@@ -431,130 +434,145 @@ const PathologyOrderDetailPage: React.FC = () => {
                   Ordered {new Date(order.orderDate).toLocaleString()}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {order.isStat && (
+                    <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
+                  )}
+                  <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
+                    {order.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs mt-2">
+                  <ReceiptText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  {!order.encounterId ? (
+                    <span className="text-muted-foreground">Not linked to a billing visit.</span>
+                  ) : isLoadingOrderBilling ? (
+                    <span className="text-muted-foreground">Loading billing status...</span>
+                  ) : orderBilling ? (
+                    <span className="text-emerald-600">
+                      Billed to: {orderBilling.invoiceNo ?? 'Draft'}
+                      {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Billing status unavailable.</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="bg-muted/30 space-y-0">
+                <CardTitle className="text-lg">Report Details</CardTitle>
+                <CardDescription>Included on the printed report, in the order configured in Pathology Settings.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {padFields.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    {padFields.map((field) => (
+                      <div key={field.key} className={`space-y-2 ${field.type === 'paragraph' ? 'sm:col-span-2' : ''}`}>
+                        <Label>{field.label}</Label>
+                        {renderReportFieldInput(field)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground py-4 text-center">
+                    No report-level fields configured yet. Use <span className="font-medium text-foreground">Manage Fields</span> (right panel) to add one -- e.g. Clinical History, Specimen Type.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h3 className="text-lg font-semibold">Tests &amp; Results</h3>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {resultsEnteredCount}/{order.lines.length} entered
+                </span>
+              </div>
+              {order.lines.length > 0 ? (
+                order.lines.map((line) => (
+                  <OrderResultEntry
+                    key={line.orderLineId}
+                    hospitalId={hospitalId ?? ''}
+                    orderId={order.orderId}
+                    orderLine={line}
+                    patientAgeYears={order.patientAgeYears}
+                    patientGender={order.patientGender}
+                    lineFields={lineFields}
+                    onSuccess={() => refetch()}
+                  />
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  No tests found in this order.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sticky action panel -- every report action lives here, in one reachable place. */}
+          <div className="xl:sticky xl:top-6 space-y-4">
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-b from-brand-600 to-brand-700 px-5 py-4 text-white">
+                <div className="text-xs font-bold uppercase tracking-widest text-brand-100">Report Actions</div>
+                <div className="text-sm font-semibold mt-0.5 truncate">
+                  {order.report ? `Report ${order.report.reportNo}` : 'No report yet'}
+                </div>
+              </div>
+              <CardContent className="p-4 space-y-2.5">
                 <Button
-                  size="sm" variant="secondary"
-                  className="bg-white/15 text-white border border-white/25 hover:bg-white/25"
+                  variant="outline" className="w-full justify-start gap-2"
                   onClick={() => previewReport(order)} disabled={isPreviewingReport}
                 >
-                  <FileText className="h-4 w-4 mr-1.5" />
+                  {isPreviewingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                   {isPreviewingReport ? 'Preparing...' : 'Preview Report'}
                 </Button>
                 <Button
-                  size="sm"
-                  className="bg-white text-brand-700 hover:bg-brand-50 font-semibold"
+                  className="w-full justify-start gap-2 bg-brand-600 hover:bg-brand-700 text-white"
                   onClick={handleGenerateOrUpdateReport}
                   disabled={!allResultsEntered || isGeneratingReport || isFinalizingPdf}
                 >
+                  {isGeneratingReport || isFinalizingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                   {isGeneratingReport || isFinalizingPdf
                     ? (order.report ? 'Updating...' : 'Generating...')
-                    : (order.report ? `Update Report ${order.report.reportNo}` : 'Generate Report')}
+                    : (order.report ? 'Update Report' : 'Generate Report')}
                 </Button>
-              </div>
-            </div>
-          </div>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              {order.isStat && (
-                <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
-              )}
-              <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
-                {order.status.replace('_', ' ')}
-              </Badge>
-              {order.report?.pdfBlobPath && (
-                <Badge variant="outline" className="bg-green-100 text-green-800">
-                  <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                  Report {order.report.reportNo} ready
-                </Badge>
-              )}
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <ClipboardCheck className="h-3.5 w-3.5" />
-                {resultsEnteredCount}/{order.lines.length} results entered
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs mt-2">
-              <ReceiptText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              {!order.encounterId ? (
-                <span className="text-muted-foreground">Not linked to a billing visit.</span>
-              ) : isLoadingOrderBilling ? (
-                <span className="text-muted-foreground">Loading billing status...</span>
-              ) : orderBilling ? (
-                <span className="text-emerald-600">
-                  Billed to: {orderBilling.invoiceNo ?? 'Draft'}
-                  {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">Billing status unavailable.</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                {!allResultsEntered && (
+                  <p className="text-[11px] text-muted-foreground px-0.5">
+                    Enter all {order.lines.length} test result{order.lines.length === 1 ? '' : 's'} to generate.
+                  </p>
+                )}
+                <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                  {order.report?.pdfBlobPath && (
+                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                      <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Report ready
+                    </Badge>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <ClipboardCheck className="h-3.5 w-3.5" />
+                    {resultsEnteredCount}/{order.lines.length} results
+                  </span>
+                </div>
 
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 bg-muted/30 space-y-0">
-            <div>
-              <CardTitle className="text-lg">Report Details</CardTitle>
-              <CardDescription>Included on the printed report, in the order configured in Pathology Settings.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button size="sm" variant="outline" onClick={() => setIsFieldEditorOpen(true)}>
-                <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" /> Manage Fields
-              </Button>
-              {padFields.length > 0 && (
-                <Button size="sm" variant="outline" onClick={handleSaveReportFields} disabled={isSavingReportFields}>
-                  {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
+                <Separator className="my-1" />
+
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsFieldEditorOpen(true)}>
+                  <SlidersHorizontal className="h-4 w-4" /> Manage Fields
                 </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {padFields.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {padFields.map((field) => (
-                  <div key={field.key} className={`space-y-2 ${field.type === 'paragraph' ? 'sm:col-span-2' : ''}`}>
-                    <Label>{field.label}</Label>
-                    {renderReportFieldInput(field)}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground py-4 text-center">
-                No report-level fields configured yet. Use <span className="font-medium text-foreground">Manage Fields</span> to add one -- e.g. Clinical History, Specimen Type.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b pb-2">
-            <h3 className="text-lg font-semibold">Tests &amp; Results</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {resultsEnteredCount}/{order.lines.length} entered
-              </span>
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setIsFieldEditorOpen(true)}>
-                <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Manage Fields
-              </Button>
-            </div>
+                {padFields.length > 0 && (
+                  <Button
+                    variant="outline" className="w-full justify-start gap-2"
+                    onClick={handleSaveReportFields} disabled={isSavingReportFields}
+                  >
+                    {isSavingReportFields ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          {order.lines.length > 0 ? (
-            order.lines.map((line) => (
-              <OrderResultEntry
-                key={line.orderLineId}
-                hospitalId={hospitalId ?? ''}
-                orderId={order.orderId}
-                orderLine={line}
-                patientAgeYears={order.patientAgeYears}
-                patientGender={order.patientGender}
-                lineFields={lineFields}
-                onSuccess={() => refetch()}
-              />
-            ))
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No tests found in this order.
-            </div>
-          )}
         </div>
       </div>
 
@@ -568,7 +586,7 @@ const PathologyOrderDetailPage: React.FC = () => {
         title={`Report Preview — ${order.orderNo}`}
       />
 
-      <Dialog
+      <Sheet
         open={isFieldEditorOpen}
         onOpenChange={(open) => {
           setIsFieldEditorOpen(open);
@@ -576,18 +594,20 @@ const PathologyOrderDetailPage: React.FC = () => {
         }}
       >
         {isFieldEditorOpen && (
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Report Fields</DialogTitle>
-              <DialogDescription>
+          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetHeader className="text-left">
+              <SheetTitle>Report Fields</SheetTitle>
+              <SheetDescription>
                 Add and arrange custom fields for your pathology reports -- report-level fields fill in
                 once per report, per-test fields repeat on every test alongside Interpretation / Notes.
-              </DialogDescription>
-            </DialogHeader>
-            <PathologyReportFieldLayoutEditor />
-          </DialogContent>
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-4">
+              <PathologyReportFieldLayoutEditor />
+            </div>
+          </SheetContent>
         )}
-      </Dialog>
+      </Sheet>
     </ScrollArea>
   );
 };

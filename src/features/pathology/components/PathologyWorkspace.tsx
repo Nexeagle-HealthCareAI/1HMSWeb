@@ -4,11 +4,30 @@ import { pathologyService, PathologyOrderDto } from '../services/pathologyServic
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, FileCheck2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
 import { getPathologyStatusColor } from '../utils/pathologyStatusColor';
 import { format } from 'date-fns';
+
+const SortableHeader = ({ column, label, sortColumn, sortDirection, onSort, align = 'left' }: any) => {
+  const isSorted = sortColumn === column;
+  return (
+    <th className={`px-4 py-2.5 text-xs font-semibold ${align === 'center' ? 'text-center' : 'text-left'}`}>
+      <button
+        onClick={() => onSort(column)}
+        className={`flex items-center gap-1 hover:text-foreground transition-colors ${align === 'center' ? 'mx-auto' : ''} ${isSorted ? 'text-foreground font-bold' : ''}`}
+      >
+        {label}
+        {isSorted ? (
+          sortDirection === 'asc' ? <ChevronUp className="h-3.5 w-3.5 text-brand-500" /> : <ChevronDown className="h-3.5 w-3.5 text-brand-500" />
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+};
 
 export const PathologyWorkspace: React.FC = () => {
   const hospitalId = useAuthStore(state => state.hospitalId);
@@ -82,22 +101,55 @@ export const PathologyWorkspace: React.FC = () => {
     }
   });
 
+  const [sortColumn, setSortColumn] = useState<keyof PathologyOrderDto | ''>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: keyof PathologyOrderDto) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedOrders = useMemo(() => {
+    if (!sortColumn) return filteredOrders;
+    return [...filteredOrders].sort((a, b) => {
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
+
+      if (aVal === bVal) return 0;
+      if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? -1 : 1;
+      if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? 1 : -1;
+      
+      const aString = String(aVal).toLowerCase();
+      const bString = String(bVal).toLowerCase();
+      
+      if (sortDirection === 'asc') {
+        return aString > bString ? 1 : -1;
+      } else {
+        return aString < bString ? 1 : -1;
+      }
+    });
+  }, [filteredOrders, sortColumn, sortDirection]);
+
   // Small, fixed page size so the table never needs its own inner scrollbar -- the page itself
   // scrolls if needed, same "Showing A-B of N" + Prev/Next convention RevenueTab.tsx uses.
   const itemsPerPage = 5;
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(sortedOrders.length / itemsPerPage));
   const paginatedOrders = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredOrders.slice(start, start + itemsPerPage);
+    return sortedOrders.slice(start, start + itemsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredOrders, currentPage]);
+  }, [sortedOrders, currentPage]);
 
   // Jump back to page 1 whenever the visible set changes shape, so a filter/date change never
   // strands the user on a now-empty page.
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilterTab, dateMode, dayDate, rangeStart, rangeEnd]);
+  }, [activeFilterTab, dateMode, dayDate, rangeStart, rangeEnd, sortColumn, sortDirection]);
 
   useEffect(() => {
     if (hospitalId) fetchOrders();
@@ -179,15 +231,15 @@ export const PathologyWorkspace: React.FC = () => {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/30 text-muted-foreground">
+                <thead className="bg-muted/30 text-muted-foreground select-none">
                   <tr>
-                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Order No</th>
-                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Patient</th>
-                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Order Date</th>
-                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Source</th>
-                    <th className="text-center font-semibold px-4 py-2.5 text-xs">Tests</th>
-                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Status</th>
-                    <th className="text-left font-semibold px-4 py-2.5 text-xs">Report</th>
+                    <SortableHeader column="orderNo" label="Order No" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader column="patientName" label="Patient" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader column="orderDate" label="Order Date" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader column="sourceType" label="Source" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader column="testCount" label="Tests" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                    <SortableHeader column="status" label="Status" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader column="reportGeneratedAt" label="Report" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
                   </tr>
                 </thead>
                 <tbody>

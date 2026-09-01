@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,19 +14,22 @@ export interface PathologyReportPreviewModalProps {
   title?: string;
 }
 
-// Mirrors DischargePreviewModal.tsx / PrescriptionPreviewModal.tsx's layout (iframe preview +
-// gradient actions rail) minus the translate toggle -- a lab report has no equivalent need. Unlike
-// those two, this modal doesn't own a data-fetching hook: the caller already builds the report PDF
-// client-side (resolveReportPdfData + generatePathologyReportPdf) and just hands over the blob URL,
-// since that generation logic is order-specific and already lives in PathologyOrderDetailPage.
-const PreviewModalBody: React.FC<Omit<PathologyReportPreviewModalProps, 'open' | 'onOpenChange'>> = ({
+// A side drawer (not a centered dialog) sliding in from the right -- keeps the underlying report
+// editor visible/reachable at a glance while previewing, per the report editor's "side drawer only"
+// popup convention. Layout otherwise mirrors DischargePreviewModal.tsx / PrescriptionPreviewModal.tsx
+// (iframe preview + gradient actions rail) minus the translate toggle, which a lab report has no
+// equivalent need for. Unlike those two, this drawer doesn't own a data-fetching hook: the caller
+// already builds the report PDF client-side (resolveReportPdfData + generatePathologyReportPdf) and
+// just hands over the blob URL, since that generation logic is order-specific and already lives in
+// PathologyOrderDetailPage.
+const PreviewSheetBody: React.FC<Omit<PathologyReportPreviewModalProps, 'open' | 'onOpenChange'>> = ({
   previewUrl, isLoading, error, fileName = 'pathology-report.pdf', title = 'Report Preview',
 }) => (
-  <DialogContent className="max-w-[95vw] xl:max-w-[1100px] w-full h-[92vh] p-0 flex flex-col overflow-hidden">
+  <SheetContent side="right" className="w-full sm:max-w-none md:w-[92vw] lg:w-[1100px] p-0 flex flex-col overflow-hidden">
     <div className="flex-shrink-0">
-      <DialogHeader className="px-6 pt-6 pb-4">
-        <DialogTitle>{title}</DialogTitle>
-      </DialogHeader>
+      <SheetHeader className="px-6 pt-6 pb-4 text-left">
+        <SheetTitle>{title}</SheetTitle>
+      </SheetHeader>
       <Separator />
     </div>
 
@@ -88,13 +91,13 @@ const PreviewModalBody: React.FC<Omit<PathologyReportPreviewModalProps, 'open' |
         </div>
       </div>
     </div>
-  </DialogContent>
+  </SheetContent>
 );
 
 export const PathologyReportPreviewModal: React.FC<PathologyReportPreviewModalProps> = ({ open, onOpenChange, ...rest }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    {open ? <PreviewModalBody {...rest} /> : null}
-  </Dialog>
+  <Sheet open={open} onOpenChange={onOpenChange}>
+    {open ? <PreviewSheetBody {...rest} /> : null}
+  </Sheet>
 );
 
 export default PathologyReportPreviewModal;
