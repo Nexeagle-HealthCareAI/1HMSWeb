@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { pathologyService, PathologyTestMaster } from '../services/pathologyService';
 import { patientService } from '@/features/billing/services/patientService';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
+import { admissionApi, ActiveAdmissionItem } from '@/features/ipd-redesign/services/admissionApi';
 import { Patient } from '@/features/billing/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Flame, CheckCircle2, ClipboardList, Activity, ActivitySquare } from 'lucide-react';
+import { ArrowLeft, Search, X, User, UserPlus, Stethoscope, Ambulance, Footprints, Hotel, Flame, CheckCircle2, ClipboardList, Activity, ActivitySquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -38,9 +39,15 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
   const [testSearchQuery, setTestSearchQuery] = useState('');
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
-  const [orderSourceType, setOrderSourceType] = useState<'OPD' | 'EMERGENCY' | 'WALK_IN'>('OPD');
+  const [orderSourceType, setOrderSourceType] = useState<'OPD' | 'EMERGENCY' | 'WALK_IN' | 'IPD'>('OPD');
   const [orderIsStat, setOrderIsStat] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  // IPD context -- the patient's own active admission(s), fetched only once IPD is selected (not
+  // eagerly with OPD/Lab visits above) since most orders never need it.
+  const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
+  const [isLoadingAdmissions, setIsLoadingAdmissions] = useState(false);
+  const [selectedAdmissionId, setSelectedAdmissionId] = useState<string | null>(null);
 
   // The patient's open OPD visit(s), so an OPD order can attach to the SAME invoice as their
   // consultation instead of never billing at all (IPD already does this via the Clinical Order
@@ -149,25 +156,57 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
     return () => { cancelled = true; };
   }, [selectedPatient]);
 
+  // Only fetched once IPD is actually selected -- most orders never touch this, so it stays out of
+  // the patient-selection critical path above. Filtered to the currently selected patient's own
+  // active admission(s); a hospital-wide fetch (no per-patient endpoint exists) is fine here since
+  // active-admission lists are small.
+  useEffect(() => {
+    if (orderSourceType !== 'IPD' || !selectedPatient || !hospitalId) {
+      setAdmissions([]); setSelectedAdmissionId(null);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAdmissions(true);
+    admissionApi.getActiveAdmissions('ACTIVE', hospitalId)
+      .then((items) => {
+        if (cancelled) return;
+        const mine = items.filter(a => a.patientId === selectedPatient.patientId);
+        setAdmissions(mine);
+        setSelectedAdmissionId(mine.length > 0 ? mine[0].admissionId : null);
+      })
+      .catch(() => { if (!cancelled) { setAdmissions([]); setSelectedAdmissionId(null); } })
+      .finally(() => { if (!cancelled) setIsLoadingAdmissions(false); });
+    return () => { cancelled = true; };
+  }, [orderSourceType, selectedPatient, hospitalId]);
+
   const toggleTest = (testId: string) => {
     setSelectedTestIds(prev => prev.includes(testId) ? prev.filter(id => id !== testId) : [...prev, testId]);
   };
 
-  const canSubmitOrder = !!selectedPatient && selectedTestIds.length > 0 && !isCreatingOrder;
+  const canSubmitOrder = !!selectedPatient && selectedTestIds.length > 0 && !isCreatingOrder
+    && (orderSourceType !== 'IPD' || !!selectedAdmissionId);
 
   const submitOrder = async () => {
     if (!hospitalId || !selectedPatient || selectedTestIds.length === 0) return;
+    if (orderSourceType === 'IPD' && !selectedAdmissionId) return;
     setIsCreatingOrder(true);
     try {
+      // IPD bills against the admission itself (PathologyAutoBillingHelper resolves its encounter
+      // server-side, same as ClinicalOrderCommandHandlers' lab orders) -- no encounterId needed.
       // OPD attaches to the patient's open OPD visit (their consultation's own invoice). Walk-in/
       // Emergency have no such visit to attach to -- reuse their open Lab visit if one exists,
       // else create one right now, same "New Lab Invoice" flow PathologyBillingTab.tsx already
       // uses, so the order always has something to bill against instead of the pathologist having
       // to separately create an invoice afterward.
-      let billingEncounterId: string | undefined = orderSourceType === 'OPD' ? (selectedOpdEncounterId ?? undefined) : (selectedLabEncounterId ?? undefined);
-      if (orderSourceType !== 'OPD' && !billingEncounterId) {
-        const encRes = await ipdBillingService.createEncounter({ patientId: selectedPatient.patientId, encounterType: 'LAB' });
-        if (encRes?.success && encRes.data?.encounterId) billingEncounterId = encRes.data.encounterId;
+      let billingEncounterId: string | undefined;
+      if (orderSourceType === 'OPD') {
+        billingEncounterId = selectedOpdEncounterId ?? undefined;
+      } else if (orderSourceType !== 'IPD') {
+        billingEncounterId = selectedLabEncounterId ?? undefined;
+        if (!billingEncounterId) {
+          const encRes = await ipdBillingService.createEncounter({ patientId: selectedPatient.patientId, encounterType: 'LAB' });
+          if (encRes?.success && encRes.data?.encounterId) billingEncounterId = encRes.data.encounterId;
+        }
       }
       const response = await pathologyService.createOrder(hospitalId, {
         patientId: selectedPatient.patientId,
@@ -176,6 +215,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
         sourceType: orderSourceType,
         isStat: orderIsStat,
         encounterId: billingEncounterId,
+        admissionId: orderSourceType === 'IPD' ? (selectedAdmissionId ?? undefined) : undefined,
       });
       if (!response.success) {
         toast.error('Could not place order', { description: response.message });
@@ -193,7 +233,15 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[98vw] max-w-7xl h-[95vh] p-0 overflow-hidden flex flex-col bg-slate-50 sm:rounded-2xl">
+      <DialogContent className="w-[98vw] max-w-7xl h-[95vh] p-0 overflow-hidden flex flex-col bg-slate-50 sm:rounded-2xl" hideClose>
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          aria-label="Close"
+          className="absolute right-4 top-4 z-20 h-8 w-8 rounded-full bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:shadow-lg transition-all"
+        >
+          <X className="h-4 w-4" />
+        </button>
         <div className="flex flex-1 min-h-0 w-full">
 
           {/* LEFT COLUMN: Order Summary (Cart) */}
@@ -241,7 +289,12 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Order Context</h4>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={`px-3 py-1 text-xs font-semibold ${orderSourceType === 'OPD' ? 'bg-blue-50 text-blue-700 border-blue-200' : orderSourceType === 'EMERGENCY' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
+                  <Badge variant="outline" className={`px-3 py-1 text-xs font-semibold ${
+                    orderSourceType === 'OPD' ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : orderSourceType === 'EMERGENCY' ? 'bg-orange-50 text-orange-700 border-orange-200'
+                      : orderSourceType === 'IPD' ? 'bg-purple-50 text-purple-700 border-purple-200'
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}>
                     {orderSourceType}
                   </Badge>
                   {orderIsStat && (
@@ -293,7 +346,15 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
               {selectedPatient && (
                 <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
                   <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">Billing Routing</h4>
-                  {isLoadingOpdVisits ? (
+                  {orderSourceType === 'IPD' ? (
+                    isLoadingAdmissions ? (
+                      <p className="text-xs text-amber-600/70">Checking active admissions...</p>
+                    ) : !selectedAdmissionId ? (
+                      <p className="text-xs text-amber-600">No active admission selected — this order won't auto-bill.</p>
+                    ) : (
+                      <p className="text-xs text-emerald-600 font-medium">Billing to admission: {admissions.find(a => a.admissionId === selectedAdmissionId)?.admissionNo}</p>
+                    )
+                  ) : isLoadingOpdVisits ? (
                     <p className="text-xs text-amber-600/70">Checking billing visit...</p>
                   ) : orderSourceType === 'OPD' ? (
                     opdVisits.length === 0 ? (
@@ -507,8 +568,8 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                   <h3 className="text-sm font-bold text-slate-800">Order Context</h3>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
+                <div className="grid grid-cols-4 gap-2">
+                  {(['OPD', 'IPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
                     <button
                       key={st}
                       type="button"
@@ -520,10 +581,10 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                       }`}
                     >
                       <div className={`p-1.5 rounded-full mb-1 transition-colors ${orderSourceType === st ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
-                        {st === 'OPD' ? <Stethoscope className="h-3 w-3" /> : st === 'EMERGENCY' ? <Ambulance className="h-3 w-3" /> : <Footprints className="h-3 w-3" />}
+                        {st === 'OPD' ? <Stethoscope className="h-3 w-3" /> : st === 'IPD' ? <Hotel className="h-3 w-3" /> : st === 'EMERGENCY' ? <Ambulance className="h-3 w-3" /> : <Footprints className="h-3 w-3" />}
                       </div>
                       <span className="font-bold text-[10px] text-slate-900 leading-tight">
-                        {st === 'OPD' ? 'OPD' : st === 'EMERGENCY' ? 'ER' : 'Walk-in'}
+                        {st === 'OPD' ? 'OPD' : st === 'IPD' ? 'IPD' : st === 'EMERGENCY' ? 'ER' : 'Walk-in'}
                       </span>
                     </button>
                   ))}
@@ -546,6 +607,34 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* IPD Admission Selection */}
+                {selectedPatient && orderSourceType === 'IPD' && (
+                  <div className="mt-2 p-2 rounded-lg border border-purple-100 bg-purple-50/50 space-y-1">
+                    {isLoadingAdmissions ? (
+                      <p className="text-[10px] text-purple-700">Checking active admissions...</p>
+                    ) : admissions.length === 0 ? (
+                      <p className="text-[10px] text-amber-700">No active admission found for this patient -- use OPD or Walk-in instead.</p>
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-semibold text-slate-800">Attach to admission:</p>
+                        <div className="grid gap-1">
+                          {admissions.map(a => (
+                            <button
+                              key={a.admissionId}
+                              type="button"
+                              onClick={() => setSelectedAdmissionId(a.admissionId)}
+                              className={`flex items-center justify-between p-1.5 rounded border transition-colors ${a.admissionId === selectedAdmissionId ? 'border-brand-500 bg-white shadow-sm ring-1 ring-brand-500' : 'border-slate-200 bg-white hover:border-brand-300'}`}
+                            >
+                              <span className="text-[10px] font-medium text-slate-700">{a.admissionNo}{a.bedCode ? ` · ${a.bedCode}` : ''}</span>
+                              <span className="text-[9px] text-slate-500">{new Date(a.admittedAt).toLocaleDateString()}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </section>

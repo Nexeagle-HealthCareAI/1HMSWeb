@@ -5,15 +5,19 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Printer } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Printer, Hotel, Stethoscope, MoreVertical, PackageCheck, PenLine, Ban, Loader2, Flame, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
-import { getPathologyStatusColor } from '../utils/pathologyStatusColor';
+import { getPathologyStatusColor, getPathologySourceColor } from '../utils/pathologyStatusColor';
 import { format } from 'date-fns';
 import { PathologyNewOrderModal } from './PathologyNewOrderModal';
 import { PathologyTokenPrintModal } from './PathologyTokenPrintModal';
 import { formatTokenNumber } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const SortableHeader = ({ column, label, sortColumn, sortDirection, onSort, align = 'left' }: any) => {
   const isSorted = sortColumn === column;
@@ -41,6 +45,16 @@ export const PathologyWorkspace: React.FC = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [tokenPrintOrder, setTokenPrintOrder] = useState<PathologyOrderDto | null>(null);
+
+  // Quick actions -- Mark Sample Collected, Edit Notes, Cancel Order -- all reachable straight from
+  // the dashboard row instead of requiring a trip into the order detail page first.
+  const [collectingSampleOrderId, setCollectingSampleOrderId] = useState<string | null>(null);
+  const [notesEditOrder, setNotesEditOrder] = useState<PathologyOrderDto | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [statDraft, setStatDraft] = useState(false);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<PathologyOrderDto | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Date filter -- defaults to today only, so a tech opening the dashboard lands on today's
   // worklist first and switches to "All dates"/a range deliberately rather than scrolling past
@@ -179,6 +193,79 @@ export const PathologyWorkspace: React.FC = () => {
     }
   };
 
+  // The dashboard list doesn't carry per-line detail, so this fetches the order fresh, collects
+  // every currently-PENDING line in one go (one draw usually covers every test on the order), and
+  // gracefully no-ops with a toast if there's nothing left to collect.
+  const handleMarkSampleCollected = async (order: PathologyOrderDto) => {
+    if (!hospitalId) return;
+    setCollectingSampleOrderId(order.orderId);
+    try {
+      const details = await pathologyService.getOrderById(hospitalId, order.orderId);
+      const pendingLines = details.lines.filter(l => l.status === 'PENDING');
+      if (pendingLines.length === 0) {
+        toast.info('No pending samples to collect on this order');
+        return;
+      }
+      const results = await Promise.all(
+        pendingLines.map(l => pathologyService.collectSample(hospitalId, order.orderId, l.orderLineId))
+      );
+      if (results.every(Boolean)) {
+        toast.success(`Marked ${pendingLines.length} sample${pendingLines.length === 1 ? '' : 's'} collected`);
+      } else {
+        toast.error('Some samples could not be marked collected');
+      }
+      await fetchOrders();
+    } catch (e) {
+      toast.error('Could not mark samples collected');
+    } finally {
+      setCollectingSampleOrderId(null);
+    }
+  };
+
+  const openEditNotes = (order: PathologyOrderDto) => {
+    setNotesEditOrder(order);
+    setNotesDraft(order.notes ?? '');
+    setStatDraft(order.isStat);
+  };
+
+  const saveNotes = async () => {
+    if (!hospitalId || !notesEditOrder) return;
+    setIsSavingNotes(true);
+    try {
+      const success = await pathologyService.updateOrderNotes(hospitalId, notesEditOrder.orderId, notesDraft, statDraft);
+      if (!success) {
+        toast.error('Could not save changes');
+        return;
+      }
+      toast.success('Order updated');
+      setNotesEditOrder(null);
+      await fetchOrders();
+    } catch (e) {
+      toast.error('Could not save changes');
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const confirmCancel = async () => {
+    if (!hospitalId || !cancelTarget) return;
+    setIsCancelling(true);
+    try {
+      const response = await pathologyService.cancelOrder(hospitalId, cancelTarget.orderId);
+      if (!response.success) {
+        toast.error('Could not cancel order', { description: response.message });
+        return;
+      }
+      toast.success('Order cancelled');
+      setCancelTarget(null);
+      await fetchOrders();
+    } catch (e) {
+      toast.error('Could not cancel order');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -268,6 +355,7 @@ export const PathologyWorkspace: React.FC = () => {
                     <th className="px-4 py-2.5 text-xs font-semibold text-left">Tests</th>
                     <SortableHeader column="status" label="Status" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader column="reportsReadyCount" label="Reports" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                    <th className="px-4 py-2.5 text-xs font-semibold text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -305,7 +393,13 @@ export const PathologyWorkspace: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{new Date(order.orderDate).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{order.sourceType ? order.sourceType.replace('_', '-') : '—'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Badge variant="outline" className={`gap-1 ${getPathologySourceColor(order.sourceType)}`}>
+                          {order.sourceType === 'IPD' && <Hotel className="h-3 w-3" />}
+                          {order.sourceType === 'OPD' && <Stethoscope className="h-3 w-3" />}
+                          {order.sourceType ? order.sourceType.replace('_', '-') : 'Self-added'}
+                        </Badge>
+                      </td>
                       <td className="px-4 py-3 max-w-[220px]">
                         <div className="flex flex-wrap gap-1">
                           {order.testNames.slice(0, 3).map((name, i) => (
@@ -337,6 +431,34 @@ export const PathologyWorkspace: React.FC = () => {
                         ) : (
                           <span className="text-xs text-muted-foreground">Not generated</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" disabled={collectingSampleOrderId === order.orderId}>
+                              {collectingSampleOrderId === order.orderId ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              disabled={order.status === 'CANCELLED' || collectingSampleOrderId === order.orderId}
+                              onClick={() => handleMarkSampleCollected(order)}
+                            >
+                              <PackageCheck className="h-4 w-4 mr-2" /> Mark Sample Collected
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={order.status === 'CANCELLED'} onClick={() => openEditNotes(order)}>
+                              <PenLine className="h-4 w-4 mr-2" /> Edit Notes
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={order.status === 'CANCELLED' || order.reportsReadyCount > 0}
+                              onClick={() => setCancelTarget(order)}
+                              className="text-red-600 focus:text-red-700"
+                            >
+                              <Ban className="h-4 w-4 mr-2" /> Cancel Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -386,6 +508,69 @@ export const PathologyWorkspace: React.FC = () => {
         onOpenChange={(open) => { if (!open) setTokenPrintOrder(null); }}
         order={tokenPrintOrder}
       />
+
+      <Sheet open={!!notesEditOrder} onOpenChange={(open) => { if (!open) setNotesEditOrder(null); }}>
+        {notesEditOrder && (
+          <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetHeader className="text-left">
+              <SheetTitle>Edit Order {notesEditOrder.orderNo}</SheetTitle>
+              <SheetDescription>{notesEditOrder.patientName} · {notesEditOrder.patientId}</SheetDescription>
+            </SheetHeader>
+            <div className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-600">Clinical Notes</label>
+                <Textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  placeholder="Additional remarks or clinical history..."
+                  className="min-h-[120px]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatDraft(!statDraft)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
+                  statDraft ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Flame className={`h-3.5 w-3.5 ${statDraft ? 'text-red-600' : 'text-slate-400'}`} /> STAT
+              </button>
+            </div>
+            <SheetFooter className="mt-6">
+              <Button variant="outline" onClick={() => setNotesEditOrder(null)}>Cancel</Button>
+              <Button onClick={saveNotes} disabled={isSavingNotes}>
+                {isSavingNotes ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                {isSavingNotes ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        )}
+      </Sheet>
+
+      <Sheet open={!!cancelTarget} onOpenChange={(open) => { if (!open) setCancelTarget(null); }}>
+        {cancelTarget && (
+          <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetHeader className="text-left">
+              <SheetTitle>Cancel Order {cancelTarget.orderNo}?</SheetTitle>
+              <SheetDescription>{cancelTarget.patientName} · {cancelTarget.patientId}</SheetDescription>
+            </SheetHeader>
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                This cancels the whole order and voids any charges already billed for it. This can't be undone --
+                if the tests are still needed, a new order will have to be placed.
+              </div>
+            </div>
+            <SheetFooter className="mt-6">
+              <Button variant="outline" onClick={() => setCancelTarget(null)}>Keep Order</Button>
+              <Button variant="destructive" onClick={confirmCancel} disabled={isCancelling}>
+                {isCancelling ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Ban className="h-4 w-4 mr-1.5" />}
+                {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        )}
+      </Sheet>
     </div>
   );
 };

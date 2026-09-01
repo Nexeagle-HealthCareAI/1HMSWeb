@@ -69,6 +69,7 @@ export interface PathologyOrderDto {
   // Daily, per-hospital token (resets every day) for the thermal-printed receipt -- separate from
   // orderNo. Null for orders created before this feature shipped.
   tokenNumber?: number | null;
+  notes?: string | null;
   // Set when this order was attached to the patient's OPD/IPD billing visit at order time --
   // lets the order-detail view show which invoice this order's charges landed on.
   encounterId?: string | null;
@@ -234,6 +235,16 @@ export const pathologyService = {
   saveOrderReportFields: async (hospitalId: string, orderId: string, reportFieldValuesJson: string): Promise<boolean> => {
     const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report-fields`, { reportFieldValuesJson });
     return response.data.success;
+  },
+
+  updateOrderNotes: async (hospitalId: string, orderId: string, notes: string, isStat: boolean): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/notes`, { notes, isStat });
+    return response.data.success;
+  },
+
+  cancelOrder: async (hospitalId: string, orderId: string): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post<{ success: boolean; message?: string }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/cancel`, {});
+    return response.data;
   },
 
   generateReport: async (hospitalId: string, orderId: string, orderLineId: string, request: GeneratePathologyReportRequest): Promise<GeneratePathologyReportResponse> => {

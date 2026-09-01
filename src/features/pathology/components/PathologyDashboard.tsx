@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Microscope, IndianRupee, Settings, TestTube } from 'lucide-react';
+import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PathologyBillingTab } from './PathologyBillingTab';
 import { PathologyWorkspace } from './PathologyWorkspace';
-import { PathologySettingsTab } from './PathologySettingsTab';
+import { TestCatalogManager } from './TestCatalogManager';
+import { ReportLetterheadConfig } from './ReportLetterheadConfig';
 
 const TABS = [
     { id: 'workspace', label: 'Workspace', description: 'Manage orders & results', icon: Microscope },
     { id: 'billing', label: 'Billing', description: 'Invoices & collections', icon: IndianRupee },
-    { id: 'settings', label: 'Settings', description: 'Lab config & templates', icon: Settings },
+    { id: 'catalog', label: 'Test Catalog', description: 'Test master, ranges & pricing', icon: FlaskConical },
+    { id: 'letterhead', label: 'Letterhead', description: 'Report letterhead designer', icon: LayoutTemplate },
 ] as const;
 
 export const PathologyDashboard: React.FC = () => {
@@ -60,8 +62,19 @@ export const PathologyDashboard: React.FC = () => {
           <TabsContent value="billing" className="h-full m-0 data-[state=inactive]:hidden">
             <PathologyBillingTab />
           </TabsContent>
-          <TabsContent value="settings" className="h-full m-0 pt-4 data-[state=inactive]:hidden">
-            <PathologySettingsTab />
+          <TabsContent value="catalog" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Test Catalog</h2>
+              <p className="text-sm text-muted-foreground">Manage your pathology test master list, normal ranges, and pricing linkage.</p>
+            </div>
+            <TestCatalogManager />
+          </TabsContent>
+          <TabsContent value="letterhead" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Report Letterhead Designer</h2>
+              <p className="text-sm text-muted-foreground">Design and configure letterheads for your pathology reports. You can create multiple templates and set a default.</p>
+            </div>
+            <ReportLetterheadConfig />
           </TabsContent>
         </div>
       </Tabs>
