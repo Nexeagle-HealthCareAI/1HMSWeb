@@ -341,108 +341,107 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
 
           {/* RIGHT COLUMN: Interactive Form */}
           <ScrollArea className="flex-1 bg-slate-50/50">
-            <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
+            <div className="max-w-5xl mx-auto p-3 md:p-4 space-y-3">
 
               {/* Header */}
-              <div className="mb-2">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">New Lab Order</h1>
-                <p className="text-slate-500 mt-1 text-sm">Complete the steps below to place a new pathology order.</p>
+              <div className="mb-1 flex items-center justify-between">
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">New Lab Order</h1>
+                <p className="text-slate-500 text-xs font-medium">Complete steps to place order.</p>
               </div>
 
             {/* Step 1: Patient Selection */}
-            <section className="bg-white p-4 md:p-5 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-brand-500 rounded-l-2xl"></div>
+            <section className="bg-white p-3 rounded-xl border shadow-sm space-y-2.5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-brand-500 rounded-l-xl"></div>
 
-              <div className="flex items-center gap-3">
-                <div className="h-7 w-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shadow-sm">1</div>
-                <h3 className="text-base font-bold text-slate-800">Patient Details</h3>
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-[10px] font-bold shadow-sm">1</div>
+                <h3 className="text-sm font-bold text-slate-800">Patient Details</h3>
               </div>
 
               {!selectedPatient && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setPatientMode('search')}
-                    className={`group relative flex flex-col items-start p-5 rounded-xl border-2 transition-all ${
+                    className={`group relative flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all ${
                       patientMode === 'search'
                         ? 'border-brand-600 bg-brand-50/50 shadow-sm'
                         : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg mb-2 transition-colors ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
+                    <div className={`p-1.5 rounded-md transition-colors ${patientMode === 'search' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
                       <User className="h-4 w-4" />
                     </div>
-                    <span className="font-bold text-slate-900 text-sm">Registered Patient</span>
-                    <span className="text-xs text-slate-500 mt-1 text-left leading-relaxed">Search existing hospital records by name or mobile.</span>
-                    {patientMode === 'search' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600 animate-in zoom-in" />}
+                    <div className="text-left">
+                      <span className="block font-bold text-slate-900 text-xs">Registered Patient</span>
+                      <span className="block text-[10px] text-slate-500">Search existing records.</span>
+                    </div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPatientMode('register')}
-                    className={`group relative flex flex-col items-start p-5 rounded-xl border-2 transition-all ${
+                    className={`group relative flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all ${
                       patientMode === 'register'
                         ? 'border-brand-600 bg-brand-50/50 shadow-sm'
                         : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg mb-2 transition-colors ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
+                    <div className={`p-1.5 rounded-md transition-colors ${patientMode === 'register' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-600 group-hover:bg-brand-100'}`}>
                       <UserPlus className="h-4 w-4" />
                     </div>
-                    <span className="font-bold text-slate-900 text-sm">Walk-in / New</span>
-                    <span className="text-xs text-slate-500 mt-1 text-left leading-relaxed">Quickly register a new patient for this lab order.</span>
-                    {patientMode === 'register' && <CheckCircle2 className="absolute top-4 right-4 h-5 w-5 text-brand-600 animate-in zoom-in" />}
+                    <div className="text-left">
+                      <span className="block font-bold text-slate-900 text-xs">Walk-in / New</span>
+                      <span className="block text-[10px] text-slate-500">Quickly register patient.</span>
+                    </div>
                   </button>
                 </div>
               )}
 
               {!selectedPatient && patientMode === 'search' && (
-                <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-2">
-                  <div className="flex gap-3">
+                <div className="mt-2 pt-2 border-t border-slate-100 animate-in slide-in-from-top-1">
+                  <div className="flex gap-2">
                     <div className="relative flex-1 group">
-                      <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
                       <Input
-                        className="pl-12 h-12 text-base bg-slate-50 border-slate-200 focus-visible:ring-brand-500"
+                        className="pl-9 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-brand-500"
                         value={patientQuery}
                         onChange={(e) => setPatientQuery(e.target.value)}
-                        placeholder="Search by patient name or mobile..."
+                        placeholder="Search patient..."
                       />
                       {patientQuery && (
-                        <button
-                          onClick={() => setPatientQuery('')}
-                          className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-700 bg-slate-200/50 hover:bg-slate-200 p-1 rounded-full"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                         <button onClick={() => setPatientQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 bg-slate-200/50 hover:bg-slate-200 p-0.5 rounded-full">
+                           <X className="h-3 w-3" />
+                         </button>
                       )}
                     </div>
                     <Button
                       onClick={() => searchPatients(patientQuery)}
                       disabled={isSearchingPatients || !patientQuery.trim()}
-                      className="h-12 px-6 font-semibold shadow-sm"
+                      className="h-9 px-4 text-sm font-semibold shadow-sm"
                     >
-                      {isSearchingPatients ? 'Searching...' : 'Search'}
+                      {isSearchingPatients ? 'Wait...' : 'Search'}
                     </Button>
                   </div>
 
                   {patientResults.length > 0 && (
-                    <div className="border border-slate-200 rounded-xl mt-4 max-h-60 overflow-y-auto divide-y divide-slate-100 shadow-sm bg-white">
+                    <div className="border border-slate-200 rounded-lg mt-2 max-h-40 overflow-y-auto divide-y divide-slate-100 shadow-sm bg-white">
                       {patientResults.map((p) => (
                         <div
                           key={p.patientId}
-                          className="p-4 cursor-pointer hover:bg-brand-50/50 transition-colors flex items-center justify-between group"
+                          className="p-2 cursor-pointer hover:bg-brand-50/50 transition-colors flex items-center justify-between group"
                           onClick={() => { setSelectedPatient(p); setPatientResults([]); }}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold group-hover:bg-brand-100 group-hover:text-brand-700 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs group-hover:bg-brand-100 group-hover:text-brand-700 transition-colors">
                               {p.name.charAt(0)}
                             </div>
                             <div>
-                              <p className="font-semibold text-slate-900 text-base">{p.name}</p>
-                              <p className="text-sm text-slate-500 mt-0.5">{p.patientId} • {p.mobile}</p>
+                              <p className="font-semibold text-slate-900 text-sm">{p.name}</p>
+                              <p className="text-[10px] text-slate-500">{p.patientId} • {p.mobile}</p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 text-brand-600">Select</Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs opacity-0 group-hover:opacity-100 text-brand-600">Select</Button>
                         </div>
                       ))}
                     </div>
@@ -451,70 +450,38 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
               )}
 
               {!selectedPatient && patientMode === 'register' && (
-                <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-2">
-                  <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-200">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-slate-700 font-semibold">Full Name <span className="text-red-500">*</span></Label>
-                        <Input
-                          value={newPatientName}
-                          onChange={(e) => setNewPatientName(e.target.value)}
-                          placeholder="e.g. Rahul Sharma"
-                          className="h-11 bg-white"
-                        />
+                <div className="mt-2 pt-2 border-t border-slate-100 animate-in slide-in-from-top-1">
+                  <div className="bg-slate-50/50 rounded-lg p-3 border border-slate-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label className="text-[10px] text-slate-700 font-semibold">Full Name <span className="text-red-500">*</span></Label>
+                        <Input value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} placeholder="e.g. Rahul Sharma" className="h-8 text-xs bg-white" />
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-slate-700 font-semibold">Mobile Number <span className="text-red-500">*</span></Label>
-                        <Input
-                          value={newPatientMobile}
-                          onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          placeholder="10-digit mobile"
-                          className="h-11 bg-white"
-                        />
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-slate-700 font-semibold">Mobile Number <span className="text-red-500">*</span></Label>
+                        <Input value={newPatientMobile} onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className="h-8 text-xs bg-white" />
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-slate-700 font-semibold">Age</Label>
-                        <Input
-                          type="number" min={0}
-                          value={newPatientAge}
-                          onChange={(e) => setNewPatientAge(e.target.value)}
-                          placeholder="e.g. 34"
-                          className="h-11 bg-white"
-                        />
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-slate-700 font-semibold">Age</Label>
+                        <Input type="number" min={0} value={newPatientAge} onChange={(e) => setNewPatientAge(e.target.value)} placeholder="e.g. 34" className="h-8 text-xs bg-white" />
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-slate-700 font-semibold">Gender</Label>
-                        <div className="flex gap-2 h-11">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-slate-700 font-semibold">Gender</Label>
+                        <div className="flex gap-1 h-8">
                           {(['Male', 'Female'] as const).map(g => (
-                            <Button
-                              key={g}
-                              type="button"
-                              variant={newPatientGender === g ? 'default' : 'outline'}
-                              onClick={() => setNewPatientGender(g)}
-                              className={`flex-1 ${newPatientGender === g ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}
-                            >
+                            <Button key={g} type="button" variant={newPatientGender === g ? 'default' : 'outline'} onClick={() => setNewPatientGender(g)} className={`flex-1 h-8 text-[10px] ${newPatientGender === g ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}>
                               {g}
                             </Button>
                           ))}
                         </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-slate-700 font-semibold">Guardian Name (Optional)</Label>
-                        <Input
-                          value={newPatientGuardian}
-                          onChange={(e) => setNewPatientGuardian(e.target.value)}
-                          placeholder="e.g. Father's Name"
-                          className="h-11 bg-white"
-                        />
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-slate-700 font-semibold">Guardian (Optional)</Label>
+                        <Input value={newPatientGuardian} onChange={(e) => setNewPatientGuardian(e.target.value)} placeholder="e.g. Father's Name" className="h-8 text-xs bg-white" />
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      className="w-full mt-6 h-11 text-base font-semibold shadow-sm"
-                      onClick={registerWalkInPatient}
-                      disabled={isRegisteringPatient}
-                    >
-                      {isRegisteringPatient ? 'Registering Patient...' : 'Complete Registration'}
+                    <Button type="button" className="w-full mt-3 h-8 text-xs font-semibold shadow-sm" onClick={registerWalkInPatient} disabled={isRegisteringPatient}>
+                      {isRegisteringPatient ? 'Registering...' : 'Register'}
                     </Button>
                   </div>
                 </div>
@@ -531,104 +498,113 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
             </section>
 
             {/* Step 2: Order Context */}
-            <section className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-2xl"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <section className={`bg-white p-3 rounded-xl border shadow-sm space-y-2.5 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l-xl"></div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shadow-sm">2</div>
-                  <h3 className="text-base font-bold text-slate-800">Order Context & Priority</h3>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shadow-sm">2</div>
+                  <h3 className="text-sm font-bold text-slate-800">Order Context</h3>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['OPD', 'EMERGENCY', 'WALK_IN'] as const).map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setOrderSourceType(st)}
+                      className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-lg border transition-all ${
+                        orderSourceType === st
+                          ? 'border-brand-600 bg-brand-50/50 shadow-sm'
+                          : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-full mb-1 transition-colors ${orderSourceType === st ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
+                        {st === 'OPD' ? <Stethoscope className="h-3 w-3" /> : st === 'EMERGENCY' ? <Ambulance className="h-3 w-3" /> : <Footprints className="h-3 w-3" />}
+                      </div>
+                      <span className="font-bold text-[10px] text-slate-900 leading-tight">
+                        {st === 'OPD' ? 'OPD' : st === 'EMERGENCY' ? 'ER' : 'Walk-in'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* OPD Billing Selection */}
+                {selectedPatient && orderSourceType === 'OPD' && opdVisits.length > 1 && (
+                  <div className="mt-2 p-2 rounded-lg border border-blue-100 bg-blue-50/50 space-y-1">
+                    <p className="text-[10px] font-semibold text-slate-800">Attach to OPD visit:</p>
+                    <div className="grid gap-1">
+                      {opdVisits.map(v => (
+                        <button
+                          key={v.encounterId}
+                          type="button"
+                          onClick={() => setSelectedOpdEncounterId(v.encounterId)}
+                          className={`flex items-center justify-between p-1.5 rounded border transition-colors ${v.encounterId === selectedOpdEncounterId ? 'border-brand-500 bg-white shadow-sm ring-1 ring-brand-500' : 'border-slate-200 bg-white hover:border-brand-300'}`}
+                        >
+                          <span className="text-[10px] font-medium text-slate-700">{v.invoiceNo ?? 'Draft Invoice'}</span>
+                          <span className="text-[9px] text-slate-500">{new Date(v.invoiceDate).toLocaleDateString()}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Step 4 Moved Here: Notes & Priority */}
+              <section className={`bg-white p-3 rounded-xl border shadow-sm space-y-2.5 relative flex flex-col transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-xl"></div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-bold shadow-sm">4</div>
+                    <h3 className="text-sm font-bold text-slate-800">Notes & Priority</h3>
+                  </div>
                   <button
-                    key={st}
                     type="button"
-                    onClick={() => setOrderSourceType(st)}
-                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-                      orderSourceType === st
-                        ? 'border-brand-600 bg-brand-50/50 shadow-sm'
-                        : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                    onClick={() => setOrderIsStat(!orderIsStat)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all ${
+                      orderIsStat
+                        ? 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <div className={`p-2 rounded-full mb-2 transition-colors ${orderSourceType === st ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
-                      {st === 'OPD' ? <Stethoscope className="h-5 w-5" /> : st === 'EMERGENCY' ? <Ambulance className="h-5 w-5" /> : <Footprints className="h-5 w-5" />}
-                    </div>
-                    <span className="font-bold text-slate-900 text-sm">
-                      {st === 'OPD' ? 'OPD Visit' : st === 'EMERGENCY' ? 'Emergency' : 'Walk-in'}
-                    </span>
-                    {orderSourceType === st && <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-brand-600 animate-in zoom-in" />}
+                    <Flame className={`h-3 w-3 ${orderIsStat ? 'text-red-600 animate-pulse' : 'text-slate-400'}`} />
+                    STAT
                   </button>
-                ))}
-              </div>
-
-              {/* OPD Billing Selection */}
-              {selectedPatient && orderSourceType === 'OPD' && opdVisits.length > 1 && (
-                <div className="mt-4 p-4 rounded-xl border border-blue-100 bg-blue-50/50 space-y-3">
-                  <p className="text-sm font-semibold text-slate-800">Select which OPD visit to attach this order to:</p>
-                  <div className="grid gap-2">
-                    {opdVisits.map(v => (
-                      <button
-                        key={v.encounterId}
-                        type="button"
-                        onClick={() => setSelectedOpdEncounterId(v.encounterId)}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${v.encounterId === selectedOpdEncounterId ? 'border-brand-500 bg-white shadow-sm ring-1 ring-brand-500' : 'border-slate-200 bg-white hover:border-brand-300'}`}
-                      >
-                        <span className="font-medium text-slate-700">{v.invoiceNo ?? 'Draft Invoice'}</span>
-                        <span className="text-sm text-slate-500">{new Date(v.invoiceDate).toLocaleDateString()}</span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              )}
-
-              <div className="pt-4 border-t border-slate-100 mt-6 flex items-center justify-between">
-                <div>
-                  <h4 className="text-base font-bold text-slate-900">Mark as STAT (Urgent)</h4>
-                  <p className="text-sm text-slate-500 mt-1">Check this if the results are required immediately.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOrderIsStat(!orderIsStat)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 font-bold text-sm transition-all ${
-                    orderIsStat
-                      ? 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
-                >
-                  <Flame className={`h-4 w-4 ${orderIsStat ? 'text-red-600 animate-pulse' : 'text-slate-400'}`} />
-                  {orderIsStat ? 'STAT ORDER ACTIVE' : 'Mark STAT'}
-                </button>
-              </div>
-            </section>
+                <Textarea
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  placeholder="Additional remarks or clinical history..."
+                  className="bg-slate-50 resize-none flex-1 min-h-[60px] text-xs p-2 border-slate-200 focus-visible:ring-brand-500"
+                />
+              </section>
+            </div>
 
             {/* Step 3: Tests Selection */}
-            <section className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl"></div>
+            <section className={`bg-white p-3 rounded-xl border shadow-sm space-y-2.5 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-xl"></div>
 
-              <div className="flex items-center gap-3">
-                <div className="h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shadow-sm">3</div>
-                <h3 className="text-base font-bold text-slate-800">Select Lab Tests</h3>
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shadow-sm">3</div>
+                <h3 className="text-sm font-bold text-slate-800">Select Lab Tests</h3>
               </div>
 
-              <div className="relative group mt-2">
-                <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
+              <div className="relative group">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-brand-600 transition-colors" />
                 <Input
-                  className="pl-12 h-12 text-base bg-slate-50 border-slate-200 focus-visible:ring-brand-500 shadow-inner"
-                  placeholder="Search test catalog by name or code..."
+                  className="pl-9 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-brand-500 shadow-inner"
+                  placeholder="Search catalog..."
                   value={testSearchQuery}
                   onChange={(e) => setTestSearchQuery(e.target.value)}
                 />
               </div>
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+              <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
                 {testCatalog.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 flex flex-col items-center">
-                    <Activity className="h-10 w-10 text-slate-300 mb-3" />
-                    <p className="font-medium text-slate-600">No active tests in the catalog</p>
-                    <p className="text-sm mt-1">Add tests from Settings to see them here.</p>
+                  <div className="p-4 text-center text-slate-500 flex flex-col items-center">
+                    <Activity className="h-6 w-6 text-slate-300 mb-1" />
+                    <p className="font-medium text-xs text-slate-600">No active tests in the catalog</p>
                   </div>
                 ) : (() => {
                   const filteredTests = testCatalog.filter(t =>
@@ -636,19 +612,19 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                     t.testCode.toLowerCase().includes(testSearchQuery.toLowerCase())
                   );
                   return filteredTests.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500">No tests matching "{testSearchQuery}".</div>
+                    <div className="p-4 text-center text-slate-500 text-xs">No tests matching "{testSearchQuery}".</div>
                   ) : (
-                    <ScrollArea className="h-64 max-h-[40vh]">
+                    <ScrollArea className="h-[20vh] min-h-[140px]">
                       <div className="divide-y divide-slate-100">
                         {filteredTests.map((t) => (
-                          <label key={t.testId} className="flex items-center justify-between p-4 cursor-pointer hover:bg-brand-50/50 transition-colors group">
-                            <div className="flex items-center gap-4">
-                              <div className={`flex items-center justify-center h-5 w-5 rounded border ${selectedTestIds.includes(t.testId) ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
-                                {selectedTestIds.includes(t.testId) && <CheckCircle2 className="h-3.5 w-3.5" />}
+                          <label key={t.testId} className="flex items-center justify-between p-2 cursor-pointer hover:bg-brand-50/50 transition-colors group">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex items-center justify-center h-4 w-4 rounded border ${selectedTestIds.includes(t.testId) ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
+                                {selectedTestIds.includes(t.testId) && <CheckCircle2 className="h-3 w-3" />}
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-semibold text-slate-800 text-base">{t.testName}</span>
-                                <span className="text-sm text-slate-500 mt-0.5 font-mono">{t.testCode}</span>
+                                <span className="font-semibold text-slate-800 text-xs">{t.testName}</span>
+                                <span className="text-[10px] text-slate-500 font-mono">{t.testCode}</span>
                               </div>
                             </div>
                             {/* Hidden actual checkbox for accessibility */}
@@ -665,22 +641,6 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                   );
                 })()}
               </div>
-            </section>
-
-            {/* Step 4: Notes */}
-            <section className={`bg-white p-6 md:p-8 rounded-2xl border shadow-sm space-y-4 relative overflow-hidden transition-opacity ${!selectedPatient ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-2xl"></div>
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold shadow-sm">4</div>
-                <h3 className="text-lg font-bold text-slate-800">Clinical Notes (Optional)</h3>
-              </div>
-              <Textarea
-                value={orderNotes}
-                onChange={(e) => setOrderNotes(e.target.value)}
-                placeholder="Enter any additional remarks, clinical history, or instructions for the lab technician..."
-                className="bg-slate-50 resize-none min-h-[120px] text-base p-4 border-slate-200 focus-visible:ring-brand-500"
-              />
             </section>
 
               {/* Bottom Padding for scroll area */}

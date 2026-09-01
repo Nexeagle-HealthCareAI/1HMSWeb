@@ -427,48 +427,51 @@ const PathologyOrderDetailPage: React.FC = () => {
           <div className="min-w-0 space-y-6">
             {/* Order/patient identity -- who and what this order is, at a glance. */}
             <Card className="overflow-hidden">
-              <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
-                <h2 className="text-2xl font-bold tracking-tight">Order {order.orderNo}</h2>
-                <div className="flex items-center gap-1.5 text-brand-50 text-sm mt-1.5 flex-wrap">
-                  <User2 className="h-3.5 w-3.5 shrink-0" />
-                  <span className="font-medium truncate">{order.patientName}</span>
-                  {(order.patientAgeYears != null || order.patientGender) && (
-                    <span className="text-brand-100">
-                      · {order.patientAgeYears ?? '—'}{order.patientGender ? `/${order.patientGender}` : ''}
-                    </span>
-                  )}
-                  <span className="text-brand-200">· {order.patientId}</span>
+              <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Order {order.orderNo}</h2>
+                  <div className="flex items-center gap-1.5 text-brand-50 text-sm mt-1.5 flex-wrap">
+                    <User2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="font-medium truncate">{order.patientName}</span>
+                    {(order.patientAgeYears != null || order.patientGender) && (
+                      <span className="text-brand-100">
+                        · {order.patientAgeYears ?? '—'}{order.patientGender ? `/${order.patientGender}` : ''}
+                      </span>
+                    )}
+                    <span className="text-brand-200">· {order.patientId}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-brand-100 text-xs mt-1">
+                    <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                    Ordered {new Date(order.orderDate).toLocaleString()}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-brand-100 text-xs mt-1">
-                  <CalendarClock className="h-3.5 w-3.5 shrink-0" />
-                  Ordered {new Date(order.orderDate).toLocaleString()}
+
+                <div className="flex flex-col items-start sm:items-end gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {order.isStat && (
+                      <Badge variant="outline" className="bg-red-500 text-white border-red-400 font-bold tracking-wider shadow-sm">STAT</Badge>
+                    )}
+                    <Badge variant="outline" className="bg-white/20 text-white border-white/30 backdrop-blur-md shadow-sm font-semibold tracking-wide">
+                      {order.status.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-brand-100 mt-1 sm:mt-0">
+                    <ReceiptText className="h-3.5 w-3.5 shrink-0" />
+                    {!order.encounterId ? (
+                      <span>Not linked to a billing visit.</span>
+                    ) : isLoadingOrderBilling ? (
+                      <span>Loading billing status...</span>
+                    ) : orderBilling ? (
+                      <span className="font-medium text-white bg-black/10 px-2 py-0.5 rounded border border-white/10 backdrop-blur-sm">
+                        Billed to: {orderBilling.invoiceNo ?? 'Draft'}
+                        {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
+                      </span>
+                    ) : (
+                      <span>Billing status unavailable.</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {order.isStat && (
-                    <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">STAT</Badge>
-                  )}
-                  <Badge variant="outline" className={getPathologyStatusColor(order.status)}>
-                    {order.status.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs mt-2">
-                  <ReceiptText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  {!order.encounterId ? (
-                    <span className="text-muted-foreground">Not linked to a billing visit.</span>
-                  ) : isLoadingOrderBilling ? (
-                    <span className="text-muted-foreground">Loading billing status...</span>
-                  ) : orderBilling ? (
-                    <span className="text-emerald-600">
-                      Billed to: {orderBilling.invoiceNo ?? 'Draft'}
-                      {orderBilling.invoiceStatus ? ` (${orderBilling.invoiceStatus})` : ''} · Lab total ₹{orderBilling.labTotal.toLocaleString('en-IN')}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Billing status unavailable.</span>
-                  )}
-                </div>
-              </CardContent>
             </Card>
 
             <Card>
