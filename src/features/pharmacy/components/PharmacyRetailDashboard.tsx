@@ -12,8 +12,17 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const TABS = [
+    { id: 'pos', label: 'Retail POS', description: 'Point of Sale & Checkout', icon: ShoppingCart },
+    { id: 'catalog', label: 'Medicine Catalog', description: 'Manage drugs & inventory', icon: Package },
+    { id: 'near-expiry', label: 'Near Expiry', description: 'Track expiring batches', icon: Clock },
+    { id: 'h1-register', label: 'H1 Register', description: 'Schedule H1 drugs register', icon: FileText },
+    { id: 'reorder', label: 'Reorder', description: 'Stock reorder suggestions', icon: Lightbulb },
+] as const;
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
@@ -440,30 +449,58 @@ export const PharmacyRetailDashboard: React.FC = () => {
   };
 
   return (
-    <Tabs defaultValue="pos" className="h-full flex flex-col bg-gray-50 dark:bg-slate-900/50">
-      <div className="px-6 py-4 bg-white dark:bg-slate-900 border-b flex justify-between items-center shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Pharmacy Retail</h1>
-          <p className="text-sm text-muted-foreground">Point of Sale & Medicine Management</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <TabsList className="bg-slate-100 dark:bg-slate-800">
-            <TabsTrigger value="pos">Retail POS</TabsTrigger>
-            <TabsTrigger value="catalog">Medicine Catalog</TabsTrigger>
-            <TabsTrigger value="near-expiry">Near Expiry</TabsTrigger>
-            <TabsTrigger value="h1-register">H1 Register</TabsTrigger>
-            <TabsTrigger value="reorder">Reorder Suggestions</TabsTrigger>
-          </TabsList>
-          <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)}>
-            Bulk Import
-          </Button>
-          <Button variant="outline" size="icon" title="Pharmacy Bill Settings" onClick={() => setIsPrintSettingsOpen(true)}>
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-3 sm:px-6 pt-2 pb-4 gap-4 overflow-visible lg:overflow-hidden">
+      <Tabs defaultValue="pos" className="flex flex-col flex-1 min-h-0">
+        {/* Header Card (Unified Theme & Layout matching IPD, Appointment & Billing Dashboards) */}
+        <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden shrink-0 mb-1">
+            {/* Decorative flare */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
 
-      <TabsContent value="pos" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex">
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* Left: Title & Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 min-w-0 flex-1">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
+                            <Pill className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="min-w-0 pr-4 sm:border-r border-white/20">
+                            <h1 className="text-xl font-bold tracking-tight">Pharmacy Retail</h1>
+                            <p className="text-[11px] text-brand-100 mt-0.5">Point of Sale & Medicine Management</p>
+                        </div>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8">
+                        Bulk Import
+                      </Button>
+                      <Button variant="outline" size="icon" title="Pharmacy Bill Settings" onClick={() => setIsPrintSettingsOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8 w-8">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </div>
+                </div>
+
+                {/* Right: Navigation Tab Capsule */}
+                <TabsList className="flex gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full sm:w-auto border-0 shadow-none shrink-0 overflow-x-auto custom-scrollbar">
+                    {TABS.map((t) => (
+                        <TabsTrigger
+                            key={t.id}
+                            value={t.id}
+                            className={cn(
+                                "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white",
+                                "px-3 select-none whitespace-normal flex-1 sm:flex-none sm:min-w-[100px]"
+                            )}
+                            title={t.description}
+                        >
+                            <t.icon className="h-5 w-5 mb-1 shrink-0" />
+                            <span className="text-[9px] font-bold tracking-wide leading-tight">{t.label}</span>
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
+        </div>
+
+        <div className="flex-1 mt-3 overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border shadow-sm">
+          <TabsContent value="pos" className="h-full m-0 data-[state=inactive]:hidden flex flex-col data-[state=active]:flex">
         {/* Left Pane: Search & Cart */}
         <div className="flex-1 flex flex-col border-r bg-white dark:bg-slate-900 overflow-hidden">
 
@@ -793,21 +830,21 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
       </TabsContent>
 
-      <TabsContent value="catalog" className="flex-1 overflow-hidden mt-0 p-4">
-        <div className="h-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+      <TabsContent value="catalog" className="h-full m-0 data-[state=inactive]:hidden flex flex-col data-[state=active]:flex p-4">
+        <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
           <ItemMaster fixedCategory="DRUG" />
         </div>
       </TabsContent>
 
-      <TabsContent value="near-expiry" className="flex-1 overflow-y-auto mt-0">
+      <TabsContent value="near-expiry" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <NearExpiryReport />
       </TabsContent>
 
-      <TabsContent value="h1-register" className="flex-1 overflow-y-auto mt-0">
+      <TabsContent value="h1-register" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <DrugScheduleRegister />
       </TabsContent>
 
-      <TabsContent value="reorder" className="flex-1 overflow-y-auto mt-0">
+      <TabsContent value="reorder" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <ReorderThresholdSuggestions />
       </TabsContent>
 
@@ -828,7 +865,9 @@ export const PharmacyRetailDashboard: React.FC = () => {
         onClose={() => setIsBulkImportOpen(false)}
         onImported={() => { /* stock now reflects in the next search/add */ }}
       />
-    </Tabs>
+        </div>
+      </Tabs>
+    </div>
   );
 };
 
