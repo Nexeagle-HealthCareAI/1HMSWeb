@@ -266,11 +266,21 @@ const SummaryPanel: React.FC = () => {
 
 // ─── Nexeagle AI Predictive Analysis sub-tab ──────────────────────────────────
 
+const HORIZONS = ['TOMORROW', 'WEEK', 'MONTH'] as const;
+type Horizon = typeof HORIZONS[number];
+
+const HORIZON_META: Record<Horizon, { label: string; historyDays: number; projectedDays: number; vsLabel: string }> = {
+    TOMORROW: { label: 'Tomorrow', historyDays: 7, projectedDays: 1, vsLabel: 'vs last 7-day daily average' },
+    WEEK: { label: 'Next 7 days', historyDays: 14, projectedDays: 7, vsLabel: 'vs last 7 days' },
+    MONTH: { label: 'Next 30 days', historyDays: 30, projectedDays: 30, vsLabel: 'vs prior 30 days' },
+};
+
 const AiPredictivePanel: React.FC = () => {
     const [data, setData] = useState<BillingAiInsightsResponse['data'] | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [horizon, setHorizon] = useState<Horizon>('MONTH');
 
     const load = useCallback(async (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
@@ -291,19 +301,39 @@ const AiPredictivePanel: React.FC = () => {
     // fetch once per visit to this tab rather than on every re-render.
     useEffect(() => { load(); }, [load]);
 
+    const meta = HORIZON_META[horizon];
+
     const chartData = useMemo(() => {
-        const hist = (data?.historicalTrend ?? []).slice(-30).map(p => ({
+        const hist = (data?.historicalTrend ?? []).slice(-meta.historyDays).map(p => ({
             date: format(new Date(p.date), 'dd MMM'),
             Actual: p.revenue,
             Projected: null as number | null,
         }));
-        const proj = (data?.projectedTrend ?? []).map(p => ({
+        const proj = (data?.projectedTrend ?? []).slice(0, meta.projectedDays).map(p => ({
             date: format(new Date(p.date), 'dd MMM'),
             Actual: null as number | null,
             Projected: p.revenue,
         }));
         return [...hist, ...proj];
-    }, [data]);
+    }, [data, meta]);
+
+    // The forecast model is a flat trend-continuation daily rate (see BillingTrendCalculator.cs),
+    // so "gap vs recent" for Tomorrow/Week compares against that same daily rate's actual baseline
+    // (avg7DayRevenue) rather than a server-computed percent -- Month already has one (month-over-month).
+    const horizonAmounts = useMemo(() => {
+        if (!data) return { revenue: 0, expense: 0, gapPercent: 0 };
+        if (horizon === 'TOMORROW') {
+            const baseline = data.avg7DayRevenue;
+            const gapPercent = baseline === 0 ? 0 : Math.round(((data.predictedTomorrowRevenue - baseline) / baseline) * 1000) / 10;
+            return { revenue: data.predictedTomorrowRevenue, expense: data.predictedTomorrowExpense, gapPercent };
+        }
+        if (horizon === 'WEEK') {
+            const baseline = data.avg7DayRevenue * 7;
+            const gapPercent = baseline === 0 ? 0 : Math.round(((data.predictedNext7DayRevenue - baseline) / baseline) * 1000) / 10;
+            return { revenue: data.predictedNext7DayRevenue, expense: data.predictedNext7DayExpense, gapPercent };
+        }
+        return { revenue: data.predictedNext30DayRevenue, expense: data.predictedNext30DayExpense, gapPercent: data.monthOverMonthRevenueChangePercent };
+    }, [data, horizon]);
 
     if (loading) return <LoadingState rows={5} />;
     if (error) return <ErrorState message={error} onRetry={() => load(true)} />;
@@ -324,63 +354,54 @@ const AiPredictivePanel: React.FC = () => {
                 <p className="text-sm text-slate-700">{data.outlook}</p>
             </Card>
 
-            <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Revenue forecast</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                    <KpiStat
-                        label="Tomorrow"
-                        amount={data.predictedTomorrowRevenue}
-                        format={inr}
-                        icon={<TrendingUp className="h-5 w-5 text-brand-600" />}
-                        tone="from-brand-50 to-brand-100/50 text-brand-900"
-                    />
-                    <KpiStat
-                        label="Next 7 days"
-                        amount={data.predictedNext7DayRevenue}
-                        format={inr}
-                        icon={<TrendingUp className="h-5 w-5 text-violet-600" />}
-                        tone="from-violet-50 to-violet-100/50 text-violet-900"
-                    />
-                    <KpiStat
-                        label="Next 30 days"
-                        amount={data.predictedNext30DayRevenue}
-                        format={inr}
-                        hint={`${data.monthOverMonthRevenueChangePercent >= 0 ? '+' : ''}${data.monthOverMonthRevenueChangePercent}% vs prior 30 days`}
-                        icon={<TrendingUp className="h-5 w-5 text-emerald-600" />}
-                        tone="from-emerald-50 to-teal-100/50 text-emerald-900"
-                    />
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Revenue forecast</p>
+                <div className="flex gap-1 p-1 rounded-xl bg-slate-100">
+                    {HORIZONS.map((h) => (
+                        <button
+                            key={h}
+                            onClick={() => setHorizon(h)}
+                            className={cn(
+                                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                                horizon === h ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                            )}
+                        >
+                            {HORIZON_META[h].label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 <KpiStat
-                    label="Predicted 30-day revenue"
-                    amount={data.predictedNext30DayRevenue}
+                    label={`${meta.label} revenue`}
+                    amount={horizonAmounts.revenue}
                     format={inr}
-                    hint={`${data.monthOverMonthRevenueChangePercent >= 0 ? '+' : ''}${data.monthOverMonthRevenueChangePercent}% vs prior 30 days`}
+                    hint={`${horizonAmounts.gapPercent >= 0 ? '+' : ''}${horizonAmounts.gapPercent}% ${meta.vsLabel}`}
                     icon={<TrendingUp className="h-5 w-5 text-brand-600" />}
                     tone="from-brand-50 to-brand-100/50 text-brand-900"
                 />
                 <KpiStat
-                    label="Predicted 30-day expense"
-                    amount={data.predictedNext30DayExpense}
+                    label={`${meta.label} expense`}
+                    amount={horizonAmounts.expense}
                     format={inr}
-                    hint={`${data.monthOverMonthExpenseChangePercent >= 0 ? '+' : ''}${data.monthOverMonthExpenseChangePercent}% vs prior 30 days`}
                     icon={<TrendingDown className="h-5 w-5 text-rose-600" />}
                     tone="from-rose-50 to-orange-100/50 text-rose-900"
                 />
                 <KpiStat
                     label="Projected net"
-                    amount={data.predictedNext30DayNet}
+                    amount={horizonAmounts.revenue - horizonAmounts.expense}
                     format={inr}
-                    hint="Next 30 days"
+                    hint={meta.label}
                     icon={<Wallet className="h-5 w-5 text-emerald-600" />}
                     tone="from-emerald-50 to-teal-100/50 text-emerald-900"
                 />
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Revenue: last 30 days + next 30 days projected</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                    Revenue: last {meta.historyDays} days + {meta.label.toLowerCase()} projected
+                </p>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData}>
