@@ -33,6 +33,7 @@ interface CartRow extends PharmacyCartItem {
   // across multiple batches) is only known once checkout runs and is shown in the receipt toast.
   previewBatchNumber?: string;
   previewExpiryDate?: string;
+  scheduleClass?: string | null;
 }
 
 export const PharmacyRetailDashboard: React.FC = () => {
@@ -50,6 +51,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
   const [registeredPatientId, setRegisteredPatientId] = useState<string | null>(null);
   const [isRegisteringPatient, setIsRegisteringPatient] = useState(false);
 
+  const [prescriberRef, setPrescriberRef] = useState('');
   const [settlementMode, setSettlementMode] = useState<PharmacySettlementMode>('DIRECT_CASH');
   const [paymentMode, setPaymentMode] = useState('CASH');
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -148,6 +150,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
       gstPercent: item.gstSlabPercent || 0,
       previewBatchNumber,
       previewExpiryDate,
+      scheduleClass: item.scheduleClass,
     };
 
     setCart(prev => [...prev, newRow]);
@@ -220,6 +223,8 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
     return { subtotal, tax, gross, finalTotal };
   }, [cart, discountAmount]);
+
+  const cartHasScheduledDrug = cart.some(c => !!c.scheduleClass);
 
   const isMobileValid = /^\d{10}$/.test(walkInContact);
 
@@ -330,6 +335,10 @@ export const PharmacyRetailDashboard: React.FC = () => {
       toast.error('A registered/admitted patient is required to post to the admission day bill');
       return;
     }
+    if (cartHasScheduledDrug && !prescriberRef.trim()) {
+      toast.error('Cart has a scheduled drug (H/H1/X) — enter the prescriber name/reg. no.');
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -338,6 +347,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
         patientId: registeredPatientId ?? undefined,
         walkInName: registeredPatientId ? undefined : walkInName,
         walkInContact: registeredPatientId ? undefined : walkInContact,
+        prescriberRef: prescriberRef.trim() || undefined,
         settlementMode,
         items: cart.map(c => ({
           inventoryItemId: c.inventoryItemId,
@@ -374,6 +384,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
         setSearchResults([]);
         setSearchTerm('');
         setDiscountAmount(0);
+        setPrescriberRef('');
       } else {
         toast.error(response.message || 'Checkout failed');
       }
@@ -485,7 +496,14 @@ export const PharmacyRetailDashboard: React.FC = () => {
                       <TableRow key={item.id}>
                         <TableCell>
                           <div className="font-medium">{item.itemName}</div>
-                          <div className="text-xs text-gray-500">{item.category}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            {item.category}
+                            {item.scheduleClass && (
+                              <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-semibold">
+                                Sch. {item.scheduleClass}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {item.previewBatchNumber ? (
@@ -595,6 +613,22 @@ export const PharmacyRetailDashboard: React.FC = () => {
               </div>
             </section>
 
+            {cartHasScheduledDrug && (
+              <section className="space-y-2">
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <label className="text-xs font-medium text-purple-800">
+                    Prescriber Name / Reg. No. (required — cart has a Schedule H/H1/X drug)
+                  </label>
+                  <Input
+                    className="mt-1 bg-white"
+                    placeholder="Dr. Name / Reg. No."
+                    value={prescriberRef}
+                    onChange={(e) => setPrescriberRef(e.target.value)}
+                  />
+                </div>
+              </section>
+            )}
+
             <section className="space-y-4">
               <div className="flex items-center space-x-2 text-primary font-medium">
                 <CreditCard className="h-5 w-5" />
@@ -667,7 +701,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
             <Button
               className="w-full h-14 text-lg font-bold shadow-lg"
               size="lg"
-              disabled={cart.length === 0 || isProcessing}
+              disabled={cart.length === 0 || isProcessing || (cartHasScheduledDrug && !prescriberRef.trim())}
               onClick={handleCheckout}
             >
               {isProcessing

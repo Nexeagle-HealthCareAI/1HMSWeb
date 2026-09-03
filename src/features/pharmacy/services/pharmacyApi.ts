@@ -24,6 +24,9 @@ export interface PharmacyRetailCheckoutRequest {
   walkInName?: string;
   walkInContact?: string;
   prescribingDoctorId?: string;
+  // Required whenever the cart contains a scheduled drug (H/H1/X) — a doctor name/reg number,
+  // enforced server-side by the same regulated-drug guard narcotics/H1 dispensing already uses.
+  prescriberRef?: string;
   items: PharmacyCartItem[];
   totalAmount: number;
   discountAmount: number;
