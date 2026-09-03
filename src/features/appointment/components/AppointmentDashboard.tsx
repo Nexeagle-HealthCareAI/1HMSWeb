@@ -98,7 +98,6 @@ import { RowSkeletonList } from '@/components/ui/skeletons';
 import { AppointmentDetail, appointmentApi, ConsultTimelineResponse } from '../services/appointmentApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
-import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
 import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
 import { doctorFeeService } from '@/features/hospital/services/doctorFeeService';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
@@ -170,9 +169,6 @@ export const AppointmentDashboard = () => {
   const [doctorFeeMap, setDoctorFeeMap] = useState<Record<string, number>>({});
   const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string; doctorId?: string }>({ open: false });
   const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
-  const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
-  const [patientProfileId, setPatientProfileId] = useState<string | null>(null);
-  const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
   const [showConfirmPreAppointmentDialog, setShowConfirmPreAppointmentDialog] = useState(false);
@@ -233,12 +229,6 @@ export const AppointmentDashboard = () => {
       appointmentId: appointment.appointmentId,
       doctorId: appointment.doctorId,
     });
-  };
-
-  const handlePatientClick = (appointment: AppointmentDetail) => {
-    setPatientProfileId(appointment.patientId);
-    setPatientProfileName(appointment.patientFullName);
-    setShowPatientProfileModal(true);
   };
 
   const handleLabAttachmentsChange = (next: string[]) => {
@@ -1848,8 +1838,7 @@ export const AppointmentDashboard = () => {
                             {/* Patient ID */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div
-                                onClick={() => handlePatientClick(appointment)}
-                                className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-800 border border-brand-100 dark:border-zinc-700 px-2 py-1 rounded shadow-sm text-[10px] sm:text-xs font-mono font-bold text-brand-700 dark:text-brand-300 cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-900/50 hover:border-brand-300 dark:hover:border-brand-600 transition-all hover:scale-105"
+                                className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-800 border border-brand-100 dark:border-zinc-700 px-2 py-1 rounded shadow-sm text-[10px] sm:text-xs font-mono font-bold text-brand-700 dark:text-brand-300"
                               >
                                 <User className="h-3 w-3" />
                                 <span>{appointment.patientId}</span>
@@ -1858,7 +1847,7 @@ export const AppointmentDashboard = () => {
 
                             {/* Patient Name */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              <div className="min-w-0 cursor-pointer" onClick={() => handlePatientClick(appointment)}>
+                              <div className="min-w-0">
                                 <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors drop-shadow-sm">
                                   {appointment.patientFullName?.split('-')[0].trim()}
                                 </div>
@@ -2153,8 +2142,7 @@ export const AppointmentDashboard = () => {
                           {/* Main Row */}
                           <div className="flex gap-3 relative z-10">
                             {/* Avatar */}
-                            <div 
-                              onClick={() => handlePatientClick(appointment)}
+                            <div
                               className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-100 to-brand-200 dark:from-brand-900 dark:to-brand-800 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-lg shadow-sm shrink-0 mt-0.5 border border-white dark:border-zinc-700"
                             >
                               {appointment.patientFullName.charAt(0).toUpperCase()}
@@ -2163,7 +2151,7 @@ export const AppointmentDashboard = () => {
                             {/* Content */}
                             <div className="flex-1 min-w-0 flex flex-col">
                               {/* Top Row: Name and Time */}
-                              <div className="flex justify-between items-start gap-2" onClick={() => handlePatientClick(appointment)}>
+                              <div className="flex justify-between items-start gap-2">
                                 <div className="font-bold text-slate-900 dark:text-slate-100 text-[15px] truncate leading-tight">
                                   {appointment.patientFullName}
                                 </div>
@@ -2171,14 +2159,14 @@ export const AppointmentDashboard = () => {
                               </div>
                               
                               {/* Middle Row: Token & Mobile */}
-                              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500" onClick={() => handlePatientClick(appointment)}>
+                              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500">
                                 <span className="font-mono font-medium text-brand-600 dark:text-brand-400">#{appointment.token?.tokenNumber || 'NA'}</span>
                                 <span className="text-slate-300">•</span>
                                 <span className="truncate">{appointment.patientMobile}</span>
                               </div>
 
                               {/* Status Badge */}
-                              <div className="mt-1.5 scale-[0.8] origin-left pointer-events-none" onClick={() => handlePatientClick(appointment)}>
+                              <div className="mt-1.5 scale-[0.8] origin-left pointer-events-none">
                                 {getStatusBadge(appointment.finalStatusCode, appointment)}
                               </div>
 
@@ -2795,14 +2783,6 @@ export const AppointmentDashboard = () => {
           </>
         )}
       </AnimatePresence>
-
-      <PatientProfileModal
-        isOpen={showPatientProfileModal}
-        onClose={() => setShowPatientProfileModal(false)}
-        hospitalId={hospitalId || ''}
-        patientId={patientProfileId || ''}
-        patientName={patientProfileName}
-      />
 
       <TokenPrintModal
         open={tokenPrintOpen}
