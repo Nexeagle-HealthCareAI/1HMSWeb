@@ -68,9 +68,18 @@ export interface BatchItem {
     manufactureDate?: string | null;
     expiryDate?: string | null;
     unitCost?: number | null;
+    mrp?: number | null; // maps to backend's `Mrp` property, camelCased
+    barcodeValue?: string | null;
     receivedQty: number;
     remainingQty: number;
     status: 'ACTIVE' | 'EXHAUSTED' | 'EXPIRED' | 'QUARANTINED' | 'RECALLED';
+}
+
+export interface BatchByBarcodeResult {
+    found: boolean;
+    inventoryItemId: string;
+    itemName?: string | null;
+    batch?: BatchItem | null;
 }
 
 export interface RecordMovementInput {
@@ -213,6 +222,11 @@ export const inventoryApi = {
                 params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, activeOnly: opts.activeOnly ?? true },
             })
             .then(r => r.batches ?? []),
+
+    getBatchByBarcode: (barcodeValue: string, opts: { storeId?: string } = {}, hospitalId?: string): Promise<BatchByBarcodeResult> =>
+        ipdApiClient.get<BatchByBarcodeResult>('/inventory/batches/by-barcode', {
+            params: { hospitalId: hospitalIdOrThrow(hospitalId), barcodeValue, storeId: opts.storeId },
+        }),
 
     createBatch: (input: {
         inventoryItemId: string; storeId: string; batchNumber: string; manufactureDate?: string;

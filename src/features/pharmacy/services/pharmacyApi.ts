@@ -8,6 +8,8 @@ export interface PharmacyCartItem {
   discountPercent: number;
 }
 
+export type PharmacySettlementMode = 'DIRECT_CASH' | 'POST_TO_ADMISSION_DAY_BILL';
+
 export interface PharmacyRetailCheckoutRequest {
   storeId: string;
   patientId?: string;
@@ -19,6 +21,16 @@ export interface PharmacyRetailCheckoutRequest {
   discountAmount: number;
   paidAmount: number;
   paymentMode?: string;
+  settlementMode?: PharmacySettlementMode;
+}
+
+export interface AllocatedBatchLine {
+  inventoryItemId: string;
+  batchId: string;
+  batchNumber?: string;
+  expiryDate?: string;
+  mrp?: number;
+  allocatedQty: number;
 }
 
 export interface PharmacyRetailCheckoutResponse {
@@ -28,6 +40,7 @@ export interface PharmacyRetailCheckoutResponse {
   chargeEventId: string;
   invoiceId: string;
   invoiceNo: string;
+  allocatedBatches: AllocatedBatchLine[];
 }
 
 export const pharmacyApi = {
