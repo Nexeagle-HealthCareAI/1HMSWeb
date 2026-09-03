@@ -1,4 +1,12 @@
 import { axiosInstance as api } from '@/services/axiosClient';
+import { ipdApiClient } from '@/services/ipdApiClient';
+import { useAuthStore } from '@/store/authStore';
+
+const hospitalIdOrThrow = (override?: string) => {
+  const id = override ?? useAuthStore.getState().getHospitalId();
+  if (!id) throw new Error('Hospital ID is not available on the current user session.');
+  return id;
+};
 
 export interface PharmacyCartItem {
   inventoryItemId: string;
@@ -43,9 +51,41 @@ export interface PharmacyRetailCheckoutResponse {
   allocatedBatches: AllocatedBatchLine[];
 }
 
+export interface PharmacyPrintSettings {
+  configured: boolean;
+  tradeName?: string;
+  dl20BNumber?: string;
+  dl21BNumber?: string;
+  fssaiNumber?: string;
+  pharmacistName?: string;
+  pharmacistRegNo?: string;
+  returnPolicyText?: string;
+  showVerificationQr: boolean;
+  hospitalGstin?: string;
+}
+
+export interface UpsertPharmacyPrintSettingsInput {
+  tradeName?: string;
+  dl20BNumber?: string;
+  dl21BNumber?: string;
+  fssaiNumber?: string;
+  pharmacistName?: string;
+  pharmacistRegNo?: string;
+  returnPolicyText?: string;
+  showVerificationQr: boolean;
+}
+
 export const pharmacyApi = {
   checkout: async (hospitalId: string, request: PharmacyRetailCheckoutRequest): Promise<PharmacyRetailCheckoutResponse> => {
     const response = await api.post<PharmacyRetailCheckoutResponse>(`/v1/PharmacyRetail/${hospitalId}/checkout`, request);
     return response.data;
-  }
+  },
+
+  getPrintSettings: (hospitalId?: string): Promise<PharmacyPrintSettings> =>
+    ipdApiClient.get<PharmacyPrintSettings>('/pharmacy-settings/print', {
+      params: { hospitalId: hospitalIdOrThrow(hospitalId) },
+    }),
+
+  upsertPrintSettings: (input: UpsertPharmacyPrintSettingsInput, hospitalId?: string) =>
+    ipdApiClient.put('/pharmacy-settings/print', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 };

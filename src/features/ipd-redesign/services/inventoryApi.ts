@@ -82,6 +82,38 @@ export interface BatchByBarcodeResult {
     batch?: BatchItem | null;
 }
 
+export type ExpiryBucket = 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED';
+
+export interface NearExpiryBatch {
+    batchId: string;
+    inventoryItemId: string;
+    itemName?: string | null;
+    genericName?: string | null;
+    storeId: string;
+    storeName?: string | null;
+    vendorId?: string | null;
+    vendorName?: string | null;
+    batchNumber: string;
+    expiryDate?: string | null;
+    daysToExpiry?: number | null;
+    bucket: ExpiryBucket;
+    remainingQty: number;
+    mrp?: number | null;
+}
+
+export interface DrugScheduleRegisterEntryItem {
+    registerEntryId: string;
+    itemName?: string | null;
+    batchNumber?: string | null;
+    storeName?: string | null;
+    scheduleClass: string;
+    qty: number;
+    patientId?: string | null;
+    prescriberRef?: string | null;
+    dispensedBy?: string | null;
+    recordedAt: string;
+}
+
 export interface RecordMovementInput {
     inventoryItemId: string;
     movementType: 'RECEIVE' | 'ISSUE' | 'RETURN' | 'ADJUST_IN' | 'ADJUST_OUT';
@@ -227,6 +259,20 @@ export const inventoryApi = {
         ipdApiClient.get<BatchByBarcodeResult>('/inventory/batches/by-barcode', {
             params: { hospitalId: hospitalIdOrThrow(hospitalId), barcodeValue, storeId: opts.storeId },
         }),
+
+    getNearExpiryReport: (opts: { storeId?: string; vendorId?: string; bucket?: string } = {}, hospitalId?: string): Promise<NearExpiryBatch[]> =>
+        ipdApiClient
+            .get<{ batches?: NearExpiryBatch[] }>('/inventory/expiry/near-expiry-report', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, vendorId: opts.vendorId, bucket: opts.bucket },
+            })
+            .then(r => r.batches ?? []),
+
+    getScheduleRegister: (opts: { inventoryItemId?: string; scheduleClass?: string } = {}, hospitalId?: string): Promise<DrugScheduleRegisterEntryItem[]> =>
+        ipdApiClient
+            .get<{ entries?: DrugScheduleRegisterEntryItem[] }>('/inventory/schedule-register', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), inventoryItemId: opts.inventoryItemId, scheduleClass: opts.scheduleClass },
+            })
+            .then(r => r.entries ?? []),
 
     createBatch: (input: {
         inventoryItemId: string; storeId: string; batchNumber: string; manufactureDate?: string;

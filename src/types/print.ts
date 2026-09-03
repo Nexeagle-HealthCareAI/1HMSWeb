@@ -255,6 +255,44 @@ export interface SurgeryCasePrintData {
     itemsUsed: { itemName: string; category: string; qty: number; lotNumber?: string | null; serialNumber?: string | null }[];
 }
 
+export interface PharmacyPrintFields {
+    tradeName?: string;
+    dl20BNumber?: string;
+    dl21BNumber?: string;
+    fssaiNumber?: string;
+    pharmacistName?: string;
+    pharmacistRegNo?: string;
+    returnPolicyText?: string;
+}
+
+export interface PharmacyReceiptLine {
+    srNo: number;
+    itemName: string;
+    batchNumber?: string;
+    expiryDate?: string;   // MM/YY display
+    hsnSacCode?: string;
+    qty: number;
+    mrp?: number;
+    discountAmount: number;
+    gstPercent: number;
+    total: number;
+}
+
+export interface PharmacyReceiptPrintData {
+    invoiceNo: string;
+    date: string;
+    patientName: string;
+    patientId?: string;
+    mobile?: string;
+    items: PharmacyReceiptLine[];
+    subTotal: number;
+    discountTotal: number;
+    taxTotal: number;
+    grandTotal: number;
+    amountPaid: number;
+    paymentMode: string;
+}
+
 export interface LedgerEntry {
     date: string;
     particulars: string;

@@ -3,16 +3,23 @@ import { useAuthStore } from '@/store';
 import { inventoryApi, InventoryItem } from '@/features/ipd-redesign/services/inventoryApi';
 import { storeService } from '@/features/hospital/services/storeService';
 import { patientService } from '@/features/billing/services/patientService';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
+import { buildPharmacyReceiptThermal80 } from '@/printTemplates/pharmacyReceiptThermal80';
+import { openPrintHtml } from '@/utils/printUtils';
 import { pharmacyApi, PharmacyCartItem, PharmacySettlementMode, AllocatedBatchLine } from '../services/pharmacyApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, CreditCard, X } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { LoadEPrescriptionModal, MappedPrescriptionItem } from './LoadEPrescriptionModal';
+import { NearExpiryReport } from './NearExpiryReport';
+import { DrugScheduleRegister } from './DrugScheduleRegister';
+import { PharmacyPrintSettingsDialog } from './PharmacyPrintSettingsDialog';
 
 interface CartRow extends PharmacyCartItem {
   id: string; // unique row id
@@ -51,6 +58,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
   const [storeId, setStoreId] = useState<string | null>(null);
 
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [isPrintSettingsOpen, setIsPrintSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -247,6 +255,71 @@ export const PharmacyRetailDashboard: React.FC = () => {
     setSettlementMode('DIRECT_CASH');
   };
 
+  const printReceipt = async (
+    invoiceNo: string,
+    allocatedBatches: AllocatedBatchLine[],
+    checkedOutCart: CartRow[],
+    patientLabel: { name: string; id?: string; mobile?: string },
+    paidAmount: number,
+  ) => {
+    if (!hospitalId) return;
+    try {
+      const [hospital, pharmacySettings] = await Promise.all([
+        hospitalApi.getHospitalById(hospitalId),
+        pharmacyApi.getPrintSettings(hospitalId),
+      ]);
+      const printSettings = buildPrintSettingsFromHospital(hospital);
+
+      const itemsByCartId = new Map(checkedOutCart.map(c => [c.inventoryItemId, c]));
+      const lines = (allocatedBatches.length > 0 ? allocatedBatches : checkedOutCart.map(c => ({
+        inventoryItemId: c.inventoryItemId, batchId: '', batchNumber: undefined, expiryDate: undefined, mrp: undefined, allocatedQty: c.qty,
+      }))).map((alloc, idx) => {
+        const cartRow = itemsByCartId.get(alloc.inventoryItemId);
+        return {
+          srNo: idx + 1,
+          itemName: cartRow?.itemName ?? 'Item',
+          batchNumber: alloc.batchNumber,
+          expiryDate: alloc.expiryDate ? new Date(alloc.expiryDate).toLocaleDateString('en-IN', { month: '2-digit', year: '2-digit' }) : undefined,
+          qty: alloc.allocatedQty,
+          mrp: alloc.mrp ?? cartRow?.rate,
+          discountAmount: cartRow ? (cartRow.qty * cartRow.rate) * (cartRow.discountPercent / 100) : 0,
+          gstPercent: cartRow?.gstPercent ?? 0,
+          total: (alloc.mrp ?? cartRow?.rate ?? 0) * alloc.allocatedQty,
+        };
+      });
+
+      const html = buildPharmacyReceiptThermal80(
+        {
+          invoiceNo,
+          date: new Date().toISOString(),
+          patientName: patientLabel.name || 'Walk-in Customer',
+          patientId: patientLabel.id,
+          mobile: patientLabel.mobile,
+          items: lines,
+          subTotal: cartTotals.subtotal,
+          discountTotal: discountAmount,
+          taxTotal: cartTotals.tax,
+          grandTotal: cartTotals.finalTotal,
+          amountPaid: paidAmount,
+          paymentMode,
+        },
+        printSettings,
+        {
+          tradeName: pharmacySettings.tradeName,
+          dl20BNumber: pharmacySettings.dl20BNumber,
+          dl21BNumber: pharmacySettings.dl21BNumber,
+          fssaiNumber: pharmacySettings.fssaiNumber,
+          pharmacistName: pharmacySettings.pharmacistName,
+          pharmacistRegNo: pharmacySettings.pharmacistRegNo,
+          returnPolicyText: pharmacySettings.returnPolicyText,
+        },
+      );
+      openPrintHtml(html);
+    } catch {
+      toast.error('Checkout succeeded, but the receipt could not be printed.');
+    }
+  };
+
   const handleCheckout = async () => {
     if (!hospitalId || !storeId) return;
     if (cart.length === 0) {
@@ -285,6 +358,17 @@ export const PharmacyRetailDashboard: React.FC = () => {
             ? `Posted to admission day bill.${batchSummary}`
             : `Checkout successful! Invoice: ${response.invoiceNo}${batchSummary}`
         );
+
+        if (settlementMode === 'DIRECT_CASH') {
+          printReceipt(
+            response.invoiceNo,
+            response.allocatedBatches,
+            cart,
+            { name: walkInName || 'Walk-in Customer', id: registeredPatientId ?? undefined, mobile: walkInContact },
+            cartTotals.finalTotal,
+          );
+        }
+
         setCart([]);
         clearPatient();
         setSearchResults([]);
@@ -307,10 +391,17 @@ export const PharmacyRetailDashboard: React.FC = () => {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Pharmacy Retail</h1>
           <p className="text-sm text-muted-foreground">Point of Sale & Medicine Management</p>
         </div>
-        <TabsList className="bg-slate-100 dark:bg-slate-800">
-          <TabsTrigger value="pos">Retail POS</TabsTrigger>
-          <TabsTrigger value="catalog">Medicine Catalog</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center space-x-3">
+          <TabsList className="bg-slate-100 dark:bg-slate-800">
+            <TabsTrigger value="pos">Retail POS</TabsTrigger>
+            <TabsTrigger value="catalog">Medicine Catalog</TabsTrigger>
+            <TabsTrigger value="near-expiry">Near Expiry</TabsTrigger>
+            <TabsTrigger value="h1-register">H1 Register</TabsTrigger>
+          </TabsList>
+          <Button variant="outline" size="icon" title="Pharmacy Bill Settings" onClick={() => setIsPrintSettingsOpen(true)}>
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <TabsContent value="pos" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex">
@@ -596,11 +687,24 @@ export const PharmacyRetailDashboard: React.FC = () => {
         </div>
       </TabsContent>
 
+      <TabsContent value="near-expiry" className="flex-1 overflow-y-auto mt-0">
+        <NearExpiryReport />
+      </TabsContent>
+
+      <TabsContent value="h1-register" className="flex-1 overflow-y-auto mt-0">
+        <DrugScheduleRegister />
+      </TabsContent>
+
       <LoadEPrescriptionModal
         isOpen={isPrescriptionModalOpen}
         onClose={() => setIsPrescriptionModalOpen(false)}
         hospitalId={hospitalId!}
         onLoadCart={handleLoadPrescriptionCart}
+      />
+
+      <PharmacyPrintSettingsDialog
+        isOpen={isPrintSettingsOpen}
+        onClose={() => setIsPrintSettingsOpen(false)}
       />
     </Tabs>
   );
