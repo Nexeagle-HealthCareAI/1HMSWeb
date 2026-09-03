@@ -301,3 +301,47 @@ export interface LedgerEntry {
     credit: number;
     balance: number;
 }
+
+export interface PharmacyCreditNoteLine {
+    srNo: number;
+    itemName: string;
+    batchNumber: string;
+    expiryDate?: string;
+    returnedQty: number;
+    unitPrice: number;
+    refundAmount: number;
+}
+
+export interface PharmacyCreditNotePrintData {
+    returnNo: string;
+    returnedAt: string;
+    invoiceNo: string;
+    patientName?: string;
+    patientId?: string;
+    items: PharmacyCreditNoteLine[];
+    totalRefundAmount: number;
+    refundMode?: string;
+    notes?: string;
+    returnedBy?: string;
+}
+
+export interface PharmacyDebitNoteLine {
+    srNo: number;
+    itemName: string;
+    batchNumber: string;
+    expiryDate?: string;
+    qty: number;
+    unitCost: number;
+    lineValue: number;
+}
+
+export interface PharmacyDebitNotePrintData {
+    returnNoteNo: string;
+    generatedAt: string;
+    vendorName: string;
+    items: PharmacyDebitNoteLine[];
+    totalQty: number;
+    totalValue: number;
+    notes?: string;
+    generatedBy?: string;
+}

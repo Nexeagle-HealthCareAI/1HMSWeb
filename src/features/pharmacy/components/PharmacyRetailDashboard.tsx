@@ -12,7 +12,7 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, RotateCcw, Truck, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -22,6 +22,9 @@ const TABS = [
     { id: 'near-expiry', label: 'Near Expiry', description: 'Track expiring batches', icon: Clock },
     { id: 'h1-register', label: 'H1 Register', description: 'Schedule H1 drugs register', icon: FileText },
     { id: 'reorder', label: 'Reorder', description: 'Stock reorder suggestions', icon: Lightbulb },
+    { id: 'returns', label: 'Returns', description: 'Patient return / restock', icon: RotateCcw },
+    { id: 'rtv', label: 'RTV', description: 'Return to vendor', icon: Truck },
+    { id: 'analytics', label: 'Analytics', description: 'Sales, ABC, GST, expiry-loss', icon: BarChart3 },
 ] as const;
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -32,6 +35,9 @@ import { DrugScheduleRegister } from './DrugScheduleRegister';
 import { PharmacyPrintSettingsDialog } from './PharmacyPrintSettingsDialog';
 import { BulkImportDialog } from './BulkImportDialog';
 import { ReorderThresholdSuggestions } from './ReorderThresholdSuggestions';
+import { PatientReturnFlow } from './PatientReturnFlow';
+import { VendorReturnRTV } from './VendorReturnRTV';
+import { PharmacyAnalyticsDashboard } from './PharmacyAnalyticsDashboard';
 
 interface CartRow extends PharmacyCartItem {
   id: string; // unique row id
@@ -846,6 +852,18 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
       <TabsContent value="reorder" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <ReorderThresholdSuggestions />
+      </TabsContent>
+
+      <TabsContent value="returns" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+        <PatientReturnFlow />
+      </TabsContent>
+
+      <TabsContent value="rtv" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+        <VendorReturnRTV />
+      </TabsContent>
+
+      <TabsContent value="analytics" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+        <PharmacyAnalyticsDashboard />
       </TabsContent>
 
       <LoadEPrescriptionModal
