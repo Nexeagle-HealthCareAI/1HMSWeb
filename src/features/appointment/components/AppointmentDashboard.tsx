@@ -2246,20 +2246,6 @@ export const AppointmentDashboard = () => {
                   )}
                 </div>
 
-                {/* User Guide */}
-                <div className="mt-4 px-4 py-3 bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-brand-700 dark:text-brand-300">
-                    <div className="flex items-center gap-1.5">
-                      <User className="h-4 w-4" />
-                      <span className="font-medium">{t('appointmentDashboard.quickTip.title')}</span>
-                    </div>
-                    <span>
-                      {t('appointmentDashboard.quickTip.description', {
-                        defaultValue: 'Click on any Patient ID to view the patient\'s complete profile and medical history',
-                      })}
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
           )}

@@ -486,6 +486,12 @@ export interface BillingAiInsightsResponse {
     success: boolean;
     message?: string;
     data?: {
+        predictedTomorrowRevenue: number;
+        predictedTomorrowExpense: number;
+        predictedTomorrowNet: number;
+        predictedNext7DayRevenue: number;
+        predictedNext7DayExpense: number;
+        predictedNext7DayNet: number;
         predictedNext30DayRevenue: number;
         predictedNext30DayExpense: number;
         predictedNext30DayNet: number;

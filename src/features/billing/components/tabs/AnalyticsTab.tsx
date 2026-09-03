@@ -251,6 +251,34 @@ const AiPredictivePanel: React.FC = () => {
                 <p className="text-sm text-slate-700">{data.outlook}</p>
             </Card>
 
+            <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Revenue forecast</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                    <KpiStat
+                        label="Tomorrow"
+                        amount={data.predictedTomorrowRevenue}
+                        format={inr}
+                        icon={<TrendingUp className="h-5 w-5 text-brand-600" />}
+                        tone="from-brand-50 to-brand-100/50 text-brand-900"
+                    />
+                    <KpiStat
+                        label="Next 7 days"
+                        amount={data.predictedNext7DayRevenue}
+                        format={inr}
+                        icon={<TrendingUp className="h-5 w-5 text-violet-600" />}
+                        tone="from-violet-50 to-violet-100/50 text-violet-900"
+                    />
+                    <KpiStat
+                        label="Next 30 days"
+                        amount={data.predictedNext30DayRevenue}
+                        format={inr}
+                        hint={`${data.monthOverMonthRevenueChangePercent >= 0 ? '+' : ''}${data.monthOverMonthRevenueChangePercent}% vs prior 30 days`}
+                        icon={<TrendingUp className="h-5 w-5 text-emerald-600" />}
+                        tone="from-emerald-50 to-teal-100/50 text-emerald-900"
+                    />
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 <KpiStat
                     label="Predicted 30-day revenue"

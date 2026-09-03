@@ -668,13 +668,6 @@
       "future": "No future appointments found",
       "adjustFilters": "Try adjusting your search terms or doctor filter"
     },
-    "quickTip": {
-      "title": "Quick Tip:",
-      "description": "Click on any Patient ID to view the patient's complete profile and medical history"
-    },
-    "tooltip": {
-      "viewProfile": "Click to view profile"
-    },
     "actionButtons": {
       "vitals": "Vitals",
       "preparing": "Preparing",
