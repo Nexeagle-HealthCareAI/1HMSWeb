@@ -470,6 +470,9 @@ export interface BillingAnalyticsSummaryResponse {
         netAmount: number;
         revenueByCategory: CategoryBreakdownItem[];
         expenseByCategory: CategoryBreakdownItem[];
+        // Same revenue, rolled up into OPD/IPD/LAB/PHARMACY (+ OTHER for anything unclassifiable) --
+        // see BillingDepartmentClassifier.cs server-side for how a charge lands in one of these.
+        revenueByDepartment: CategoryBreakdownItem[];
         dailyTrend: DailyTrendPoint[];
     };
 }
