@@ -8,10 +8,11 @@ import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocu
 import { buildPharmacyReceiptThermal80 } from '@/printTemplates/pharmacyReceiptThermal80';
 import { openPrintHtml } from '@/utils/printUtils';
 import { pharmacyApi, PharmacyCartItem, PharmacySettlementMode, AllocatedBatchLine } from '../services/pharmacyApi';
+import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +21,8 @@ import { LoadEPrescriptionModal, MappedPrescriptionItem } from './LoadEPrescript
 import { NearExpiryReport } from './NearExpiryReport';
 import { DrugScheduleRegister } from './DrugScheduleRegister';
 import { PharmacyPrintSettingsDialog } from './PharmacyPrintSettingsDialog';
+import { BulkImportDialog } from './BulkImportDialog';
+import { ReorderThresholdSuggestions } from './ReorderThresholdSuggestions';
 
 interface CartRow extends PharmacyCartItem {
   id: string; // unique row id
@@ -61,6 +64,12 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [isPrintSettingsOpen, setIsPrintSettingsOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
+  // 1-click generic switcher — which out-of-stock item's alternates are currently expanded.
+  const [substitutesFor, setSubstitutesFor] = useState<string | null>(null);
+  const [substitutes, setSubstitutes] = useState<SubstituteItem[]>([]);
+  const [isLoadingSubstitutes, setIsLoadingSubstitutes] = useState(false);
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -86,6 +95,41 @@ export const PharmacyRetailDashboard: React.FC = () => {
       toast.error('Search failed');
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleFindSubstitutes = async (item: InventoryItem) => {
+    if (!hospitalId) return;
+    if (substitutesFor === item.inventoryItemId) {
+      setSubstitutesFor(null);
+      return;
+    }
+    setSubstitutesFor(item.inventoryItemId);
+    setIsLoadingSubstitutes(true);
+    try {
+      const result = await pharmacyCatalogApi.getSubstitutes(item.inventoryItemId, storeId ?? undefined, hospitalId);
+      if (!result.hasComposition) {
+        toast.error(`${item.itemName} has no salt composition linked — cannot find alternates.`);
+        setSubstitutes([]);
+      } else if (result.alternates.length === 0) {
+        toast.error('No in-stock alternates found for this composition.');
+        setSubstitutes([]);
+      } else {
+        setSubstitutes(result.alternates);
+      }
+    } catch {
+      toast.error('Could not fetch alternates.');
+    } finally {
+      setIsLoadingSubstitutes(false);
+    }
+  };
+
+  const handleAddSubstitute = async (alt: SubstituteItem) => {
+    const items = await inventoryApi.getItems({}, hospitalId!);
+    const fullItem = items.find(i => i.inventoryItemId === alt.inventoryItemId);
+    if (fullItem) {
+      addToCart(fullItem);
+      setSubstitutesFor(null);
     }
   };
 
@@ -408,7 +452,11 @@ export const PharmacyRetailDashboard: React.FC = () => {
             <TabsTrigger value="catalog">Medicine Catalog</TabsTrigger>
             <TabsTrigger value="near-expiry">Near Expiry</TabsTrigger>
             <TabsTrigger value="h1-register">H1 Register</TabsTrigger>
+            <TabsTrigger value="reorder">Reorder Suggestions</TabsTrigger>
           </TabsList>
+          <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)}>
+            Bulk Import
+          </Button>
           <Button variant="outline" size="icon" title="Pharmacy Bill Settings" onClick={() => setIsPrintSettingsOpen(true)}>
             <Settings className="h-4 w-4" />
           </Button>
@@ -449,21 +497,51 @@ export const PharmacyRetailDashboard: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {searchResults.map(item => (
-                      <TableRow key={item.inventoryItemId}>
-                        <TableCell className="font-mono text-xs">{item.itemCode}</TableCell>
-                        <TableCell className="font-medium">{item.itemName}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.currentStock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {item.currentStock} {item.unit}
-                          </span>
-                        </TableCell>
-                        <TableCell>₹{item.defaultRate?.toFixed(2) || '0.00'}</TableCell>
-                        <TableCell>
-                          <Button size="sm" onClick={() => addToCart(item)} disabled={item.currentStock <= 0}>
-                            Add
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                      <React.Fragment key={item.inventoryItemId}>
+                        <TableRow>
+                          <TableCell className="font-mono text-xs">{item.itemCode}</TableCell>
+                          <TableCell className="font-medium">{item.itemName}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.currentStock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {item.currentStock} {item.unit}
+                            </span>
+                          </TableCell>
+                          <TableCell>₹{item.defaultRate?.toFixed(2) || '0.00'}</TableCell>
+                          <TableCell className="space-x-1 whitespace-nowrap">
+                            <Button size="sm" onClick={() => addToCart(item)} disabled={item.currentStock <= 0}>
+                              Add
+                            </Button>
+                            {item.currentStock <= 0 && (
+                              <Button size="sm" variant="outline" className="text-amber-700 border-amber-300" onClick={() => handleFindSubstitutes(item)}>
+                                <Lightbulb className="h-3.5 w-3.5 mr-1" />
+                                Alt.
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {substitutesFor === item.inventoryItemId && (
+                          <TableRow className="bg-amber-50">
+                            <TableCell colSpan={5}>
+                              {isLoadingSubstitutes ? (
+                                <span className="text-xs text-muted-foreground">Finding in-stock alternatives...</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-2 py-1">
+                                  {substitutes.map(alt => (
+                                    <button
+                                      key={alt.inventoryItemId}
+                                      onClick={() => handleAddSubstitute(alt)}
+                                      className="text-xs px-2 py-1 rounded-md bg-white border border-amber-300 hover:bg-amber-100 flex items-center gap-1"
+                                    >
+                                      <span className="font-medium">{alt.itemName}</span>
+                                      <span className="text-gray-500">{alt.stockAtStore} in stock @ ₹{alt.defaultRate?.toFixed(2) ?? '—'}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -729,6 +807,10 @@ export const PharmacyRetailDashboard: React.FC = () => {
         <DrugScheduleRegister />
       </TabsContent>
 
+      <TabsContent value="reorder" className="flex-1 overflow-y-auto mt-0">
+        <ReorderThresholdSuggestions />
+      </TabsContent>
+
       <LoadEPrescriptionModal
         isOpen={isPrescriptionModalOpen}
         onClose={() => setIsPrescriptionModalOpen(false)}
@@ -739,6 +821,12 @@ export const PharmacyRetailDashboard: React.FC = () => {
       <PharmacyPrintSettingsDialog
         isOpen={isPrintSettingsOpen}
         onClose={() => setIsPrintSettingsOpen(false)}
+      />
+
+      <BulkImportDialog
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onImported={() => { /* stock now reflects in the next search/add */ }}
       />
     </Tabs>
   );

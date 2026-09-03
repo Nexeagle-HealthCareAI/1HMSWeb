@@ -17,6 +17,7 @@ export interface InventoryItem {
     itemName: string;
     genericName?: string | null;
     manufacturer?: string | null;
+    saltCompositionId?: string | null;
     category: InventoryCategory;
     unit: string;
     defaultRate?: number | null;
@@ -42,6 +43,7 @@ export interface UpsertInventoryItemInput {
     itemName: string;
     genericName?: string;
     manufacturer?: string;
+    saltCompositionId?: string | null;
     category: InventoryCategory;
     unit?: string;
     defaultRate?: number;
@@ -99,6 +101,41 @@ export interface NearExpiryBatch {
     bucket: ExpiryBucket;
     remainingQty: number;
     mrp?: number | null;
+}
+
+export interface BulkImportPreviewRow {
+    rowIndex: number;
+    isValid: boolean;
+    errorMessage?: string | null;
+    storeCode?: string | null;
+    itemCode?: string | null;
+    batchNumber?: string | null;
+    manufactureDate?: string | null;
+    expiryDate?: string | null;
+    unitCost?: number | null;
+    mrp?: number | null;
+    barcodeValue?: string | null;
+    receivedQty: number;
+}
+
+export interface BulkImportPreviewResult {
+    success: boolean;
+    message?: string | null;
+    unrecognizedColumns: string[];
+    rows: BulkImportPreviewRow[];
+}
+
+export interface ReorderThresholdSuggestion {
+    inventoryItemId: string;
+    itemName: string;
+    unit: string;
+    trailing4WeekIssuedQty: number;
+    weeklyAverageConsumption: number;
+    currentMinStockLevel: number;
+    currentMaxStockLevel?: number | null;
+    suggestedMinStockLevel: number;
+    suggestedMaxStockLevel: number;
+    isBelowSuggestedMin: boolean;
 }
 
 export interface DrugScheduleRegisterEntryItem {
@@ -282,6 +319,25 @@ export const inventoryApi = {
 
     bulkUploadBatches: (input: { rows: any[] }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/batches/bulk', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
+    previewBulkImport: (file: File, hospitalId?: string): Promise<BulkImportPreviewResult> => {
+        const formData = new FormData();
+        formData.append('hospitalId', hospitalIdOrThrow(hospitalId));
+        formData.append('file', file);
+        return ipdApiClient.post<BulkImportPreviewResult>('/inventory/batches/bulk-import/preview', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+    },
+
+    getReorderThresholdSuggestions: (opts: { storeId?: string; bufferMultiplier?: number } = {}, hospitalId?: string): Promise<ReorderThresholdSuggestion[]> =>
+        ipdApiClient
+            .get<{ suggestions?: ReorderThresholdSuggestion[] }>('/inventory/reorder-threshold-suggestions', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, bufferMultiplier: opts.bufferMultiplier },
+            })
+            .then(r => r.suggestions ?? []),
+
+    acceptThresholdSuggestion: (input: { inventoryItemId: string; minStockLevel: number; maxStockLevel: number }, hospitalId?: string) =>
+        ipdApiClient.post('/inventory/reorder-threshold-suggestions/accept', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
     recordMovement: (input: RecordMovementInput, hospitalId?: string) =>
         ipdApiClient.post('/inventory/items/movement', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),

@@ -21,6 +21,7 @@ import {
 } from '@/features/ipd-redesign/services/inventoryApi';
 import { ReceiveStockDialog } from '@/features/ipd-redesign/components/ReceiveStockDialog';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
+import { pharmacyCatalogApi, type SaltComposition } from '@/features/pharmacy/services/pharmacyCatalogApi';
 
 /* ─────────────────── constants ─────────────────── */
 
@@ -127,9 +128,11 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
     const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
     const [receiveItemId, setReceiveItemId] = useState<string | undefined>(undefined);
     const [boardStores, setBoardStores] = useState<StoreItem[]>([]);
+    const [saltCompositions, setSaltCompositions] = useState<SaltComposition[]>([]);
 
     useEffect(() => {
         storeService.getStores().then(setBoardStores).catch(() => { /* non-fatal */ });
+        pharmacyCatalogApi.getSaltCompositions().then(setSaltCompositions).catch(() => { /* non-fatal */ });
     }, []);
 
     const handleAddStock = (item: InventoryItem, e: React.MouseEvent) => {
@@ -204,6 +207,7 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
                 itemName: item.itemName,
                 genericName: item.genericName ?? undefined,
                 manufacturer: item.manufacturer ?? undefined,
+                saltCompositionId: item.saltCompositionId ?? undefined,
                 category: item.category,
                 unit: item.unit,
                 defaultRate: item.defaultRate ?? undefined,
@@ -240,6 +244,7 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
                 itemName: editingItem.itemName!.trim(),
                 genericName: editingItem.genericName,
                 manufacturer: editingItem.manufacturer,
+                saltCompositionId: editingItem.saltCompositionId,
                 category: (editingItem.category ?? 'CONSUMABLE') as InventoryCategory,
                 unit: editingItem.unit || 'PCS',
                 defaultRate: editingItem.defaultRate,
@@ -617,6 +622,18 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
                                         <div className="grid gap-1.5 col-span-2 sm:col-span-1">
                                             <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Manufacturer <span className="text-[9px] text-muted-foreground font-normal lowercase">(optional)</span></Label>
                                             <Input className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all" value={editingItem.manufacturer ?? ''} onChange={e => setEditingItem(p => ({ ...p!, manufacturer: e.target.value }))} />
+                                        </div>
+                                        <div className="grid gap-1.5 col-span-2 sm:col-span-1">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Salt Composition <span className="text-[9px] text-muted-foreground font-normal lowercase">(for generic substitution)</span></Label>
+                                            <Select value={editingItem.saltCompositionId ?? 'NONE'} onValueChange={v => setEditingItem(p => ({ ...p!, saltCompositionId: v === 'NONE' ? undefined : v }))}>
+                                                <SelectTrigger className="w-full h-10 mt-1 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"><SelectValue placeholder="None" /></SelectTrigger>
+                                                <SelectContent className="max-h-64 overflow-y-auto rounded-xl">
+                                                    <SelectItem value="NONE">None</SelectItem>
+                                                    {saltCompositions.map(sc => (
+                                                        <SelectItem key={sc.saltCompositionId} value={sc.saltCompositionId}>{sc.displayName}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div className="grid gap-1.5 col-span-2 sm:col-span-1">
                                             <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Category</Label>

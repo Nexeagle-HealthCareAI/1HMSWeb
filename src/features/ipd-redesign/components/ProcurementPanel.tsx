@@ -195,7 +195,7 @@ export const ProcurementPanel: React.FC = () => {
     // --- Receive (GRN) dialog ---
     const [receiveTarget, setReceiveTarget] = useState<PurchaseOrderItem | null>(null);
     const [receiveStoreId, setReceiveStoreId] = useState('');
-    const [receiveLines, setReceiveLines] = useState<(PurchaseOrderLineItem & { batchNumber: string; expiryDate: string; receiveQty: string })[]>([]);
+    const [receiveLines, setReceiveLines] = useState<(PurchaseOrderLineItem & { batchNumber: string; expiryDate: string; receiveQty: string; freeQty: string })[]>([]);
     const [receiveBusy, setReceiveBusy] = useState(false);
 
     const openReceive = async (po: PurchaseOrderItem) => {
@@ -205,7 +205,7 @@ export const ProcurementPanel: React.FC = () => {
             const detail = await procurementApi.getPurchaseOrderDetail(po.purchaseOrderId);
             setReceiveLines(detail.lines
                 .filter(l => l.receivedQty < l.qty)
-                .map(l => ({ ...l, batchNumber: '', expiryDate: '', receiveQty: String(l.qty - l.receivedQty) })));
+                .map(l => ({ ...l, batchNumber: '', expiryDate: '', receiveQty: String(l.qty - l.receivedQty), freeQty: '0' })));
         } catch {
             setReceiveLines([]);
         }
@@ -233,6 +233,7 @@ export const ProcurementPanel: React.FC = () => {
                     expiryDate: l.expiryDate || undefined,
                     qty: Number(l.receiveQty),
                     rate: l.rate,
+                    freeQty: Number(l.freeQty) || 0,
                 })),
             });
             toast({ title: 'Goods receipt recorded' });
@@ -530,12 +531,13 @@ export const ProcurementPanel: React.FC = () => {
                                 </div>
                                 <div className="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {receiveLines.map((line, idx) => (
-                                        <div key={line.purchaseOrderLineId} className="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center text-xs border-b border-slate-100 dark:border-zinc-850 pb-3 pt-1">
+                                        <div key={line.purchaseOrderLineId} className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-center text-xs border-b border-slate-100 dark:border-zinc-850 pb-3 pt-1">
                                             <span className="font-semibold text-slate-800 dark:text-zinc-200 truncate sm:col-span-1">{itemsById.get(line.inventoryItemId)?.itemName ?? 'Item'}</span>
                                             <Input placeholder="Batch #" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1" value={line.batchNumber} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, batchNumber: e.target.value } : l))} />
                                             <Input type="date" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1" value={line.expiryDate} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, expiryDate: e.target.value } : l))} />
-                                            <Input type="number" min={0} max={line.qty - line.receivedQty} className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1 font-mono" value={line.receiveQty} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, receiveQty: e.target.value } : l))} />
-                                            <span className="text-slate-400 sm:col-span-1 text-[11px]">of {line.qty - line.receivedQty} pending</span>
+                                            <Input type="number" min={0} max={line.qty - line.receivedQty} placeholder="Billed Qty" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1 font-mono" value={line.receiveQty} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, receiveQty: e.target.value } : l))} />
+                                            <Input type="number" min={0} placeholder="Free Qty" title="Trade scheme free units (e.g. 10+1)" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:col-span-1 font-mono" value={line.freeQty} onChange={e => setReceiveLines(receiveLines.map((l, i) => i === idx ? { ...l, freeQty: e.target.value } : l))} />
+                                            <span className="text-slate-400 sm:col-span-1 text-[11px]">of {line.qty - line.receivedQty} pending{Number(line.freeQty) > 0 ? ` (+${line.freeQty} free)` : ''}</span>
                                         </div>
                                     ))}
                                     {receiveLines.length === 0 && <p className="text-xs text-slate-400 py-4 text-center">Nothing pending on this PO.</p>}
