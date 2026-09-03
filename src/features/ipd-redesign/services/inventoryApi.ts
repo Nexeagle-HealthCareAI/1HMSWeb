@@ -230,7 +230,7 @@ export const inventoryApi = {
 
     createBatch: (input: {
         inventoryItemId: string; storeId: string; batchNumber: string; manufactureDate?: string;
-        expiryDate?: string; unitCost?: number; receivedQty: number;
+        expiryDate?: string; unitCost?: number; mrp?: number; barcodeValue?: string; receivedQty: number;
     }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/batches', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
