@@ -296,14 +296,17 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
     try {
       // IPD bills against the admission itself (PathologyAutoBillingHelper resolves its encounter
       // server-side, same as ClinicalOrderCommandHandlers' lab orders) -- no encounterId needed.
-      // OPD attaches to the patient's open OPD visit (their consultation's own invoice). Walk-in/
-      // Emergency have no such visit to attach to -- reuse their open Lab visit if one exists,
-      // else create one right now, same "New Lab Invoice" flow PathologyBillingTab.tsx already
-      // uses, so the order always has something to bill against instead of the pathologist having
-      // to separately create an invoice afterward.
+      // OPD attaches to the patient's open OPD visit (their consultation's own invoice) when one
+      // exists. Walk-in/Emergency have no such visit to attach to -- reuse their open Lab visit if
+      // one exists, else create one right now, same "New Lab Invoice" flow PathologyBillingTab.tsx
+      // already uses. OPD with NO open visit falls through to that identical Lab-visit fallback
+      // instead of silently going unbilled -- a patient picked as "OPD" with no actual open visit
+      // is functionally a walk-in for billing purposes (confirmed real case: a brand-new patient
+      // with zero encounters, ordered as OPD, produced a "billing skipped" warning with no invoice
+      // anywhere -- this makes that scenario bill correctly instead).
       let billingEncounterId: string | undefined;
-      if (orderSourceType === 'OPD') {
-        billingEncounterId = selectedOpdEncounterId ?? undefined;
+      if (orderSourceType === 'OPD' && selectedOpdEncounterId) {
+        billingEncounterId = selectedOpdEncounterId;
       } else if (orderSourceType !== 'IPD') {
         billingEncounterId = selectedLabEncounterId ?? undefined;
         if (!billingEncounterId) {
@@ -496,7 +499,11 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                     <p className="text-xs text-amber-600/70">Checking billing visit...</p>
                   ) : orderSourceType === 'OPD' ? (
                     opdVisits.length === 0 ? (
-                      <p className="text-xs text-amber-600">No active OPD visit found — this order won't auto-bill.</p>
+                      labVisits.length === 0 ? (
+                        <p className="text-xs text-emerald-600 font-medium">No active OPD visit — a new Lab visit will be created for billing instead.</p>
+                      ) : (
+                        <p className="text-xs text-emerald-600 font-medium">No active OPD visit — billing to existing Lab visit: {labVisits[0].invoiceNo ?? 'Draft'}</p>
+                      )
                     ) : opdVisits.length === 1 ? (
                       <p className="text-xs text-emerald-600 font-medium">Billing to OPD visit: {opdVisits[0].invoiceNo ?? 'Draft'}</p>
                     ) : (
