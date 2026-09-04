@@ -267,14 +267,24 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
     return () => { cancelled = true; };
   }, [orderSourceType, selectedPatient, hospitalId]);
 
-  // Unchecking a test that already has a generated report needs a second confirming click --
-  // removing it deletes that report (and its result) server-side, so the first click just arms a
-  // warning instead of silently discarding it.
+  // Unchecking a test that already has real lab work against it (a collected sample, an entered
+  // result, or a generated report) needs a second confirming click -- the backend hard-deletes the
+  // line AND its result unconditionally, so the first click just arms a warning instead of
+  // silently discarding physical work that already happened.
+  const removalWarning = (testId: string): string | null => {
+    const line = existingLinesByTestId[testId];
+    if (!line) return null;
+    if (line.report) return "This test's report already exists -- click the warning icon again to remove it and delete that report.";
+    if (line.result) return "A result has already been entered for this test -- click the warning icon again to remove it and delete that result.";
+    if (line.status && line.status !== 'PENDING') return "This test's sample has already been collected -- click the warning icon again to remove it and discard that sample record.";
+    return null;
+  };
+
   const toggleTest = (testId: string) => {
     const isSelected = selectedTestIds.includes(testId);
     if (isSelected) {
-      const hasReport = !!existingLinesByTestId[testId]?.report;
-      if (hasReport && !testIdsPendingRemovalConfirm.includes(testId)) {
+      const warning = removalWarning(testId);
+      if (warning && !testIdsPendingRemovalConfirm.includes(testId)) {
         setTestIdsPendingRemovalConfirm(prev => [...prev, testId]);
         return;
       }
@@ -470,7 +480,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                             </button>
                           </div>
                           {pendingConfirm && (
-                            <p className="px-3 pb-2 text-[10px] text-red-600 font-medium">This test's report already exists -- click the warning icon again to remove it and delete that report.</p>
+                            <p className="px-3 pb-2 text-[10px] text-red-600 font-medium">{removalWarning(id)}</p>
                           )}
                         </div>
                       );
