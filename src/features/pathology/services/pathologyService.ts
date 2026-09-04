@@ -60,6 +60,16 @@ export interface PathologyOrderLineDto {
   parameterSchemaJson?: string;
   sampleBarcode?: string | null;
   sampleCollectedAt?: string | null;
+  // Outsourcing -- isOutsourced/defaultExternalLabId come from this line's test master; the rest is
+  // this line's own send/receive tracking. See ExternalLabActions.tsx.
+  isOutsourced: boolean;
+  defaultExternalLabId?: string | null;
+  externalLabId?: string | null;
+  externalLabName?: string | null;
+  sentToExternalLabAt?: string | null;
+  externalLabRefNo?: string | null;
+  externalLabReceivedAt?: string | null;
+  externalLabCost?: number | null;
   result?: PathologyResultDto;
   // This line's own report -- each test line gets its own independent report rather than sharing
   // one report for the whole order. Null until a report has been generated for this test.
@@ -128,6 +138,9 @@ export interface PathologyTestMaster {
   containerType?: string;
   parameterSchemaJson?: string;
   defaultTemplateId?: string;
+  isOutsourced: boolean;
+  defaultExternalLabId?: string | null;
+  costPrice?: number | null;
   isActive: boolean;
   sortOrder: number;
 }
@@ -141,12 +154,37 @@ export interface CreatePathologyTestRequest {
   containerType?: string;
   parameterSchemaJson?: string;
   defaultTemplateId?: string;
+  isOutsourced?: boolean;
+  defaultExternalLabId?: string | null;
+  costPrice?: number | null;
   isActive: boolean;
   sortOrder: number;
 }
 
 export interface UpdatePathologyTestRequest extends CreatePathologyTestRequest {
   testId: string;
+}
+
+export interface PathologyExternalLab {
+  externalLabId: string;
+  labName: string;
+  contactPerson?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  accreditationNo?: string | null;
+  isActive: boolean;
+}
+
+export interface UpsertPathologyExternalLabRequest {
+  externalLabId?: string;
+  labName: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  accreditationNo?: string;
+  isActive: boolean;
 }
 
 export interface PathologyReportTemplate {
@@ -251,6 +289,16 @@ export const pathologyService = {
     return response.data.success;
   },
 
+  sendToExternalLab: async (hospitalId: string, orderId: string, orderLineId: string, externalLabId?: string, externalLabRefNo?: string): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/send-to-external-lab`, { externalLabId, externalLabRefNo });
+    return response.data.success;
+  },
+
+  receiveExternalLabResult: async (hospitalId: string, orderId: string, orderLineId: string): Promise<boolean> => {
+    const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/receive-external-result`, {});
+    return response.data.success;
+  },
+
   saveOrderReportFields: async (hospitalId: string, orderId: string, reportFieldValuesJson: string): Promise<boolean> => {
     const response = await api.post<{ success: boolean }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report-fields`, { reportFieldValuesJson });
     return response.data.success;
@@ -296,6 +344,17 @@ export const pathologyService = {
 
   updateTest: async (hospitalId: string, testId: string, request: UpdatePathologyTestRequest): Promise<boolean> => {
     const response = await api.put<boolean>(`/api/v1/PathologyCatalog/${hospitalId}/${testId}`, request);
+    return response.data;
+  },
+
+  // External Labs
+  getExternalLabs: async (hospitalId: string, includeInactive = false): Promise<PathologyExternalLab[]> => {
+    const response = await api.get<{ labs: PathologyExternalLab[] }>(`/api/v1/PathologyCatalog/${hospitalId}/external-labs?includeInactive=${includeInactive}`);
+    return response.data.labs;
+  },
+
+  upsertExternalLab: async (hospitalId: string, request: UpsertPathologyExternalLabRequest): Promise<{ success: boolean; message?: string; externalLabId?: string }> => {
+    const response = await api.post<{ success: boolean; message?: string; externalLabId?: string }>(`/api/v1/PathologyCatalog/${hospitalId}/external-labs`, request);
     return response.data;
   },
 

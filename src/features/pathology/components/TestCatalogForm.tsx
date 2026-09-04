@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/store';
-import { pathologyService, PathologyTestMaster } from '../services/pathologyService';
+import { pathologyService, PathologyTestMaster, PathologyExternalLab } from '../services/pathologyService';
 import { ipdBillingService, ChargeMaster } from '@/features/billing/services/ipdBillingService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,8 +51,9 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
   const [parameters, setParameters] = useState<ParameterDef[]>([]);
   const [chargeMasters, setChargeMasters] = useState<ChargeMaster[]>([]);
   const [loadingCharges, setLoadingCharges] = useState(false);
+  const [externalLabs, setExternalLabs] = useState<PathologyExternalLab[]>([]);
 
-  const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, reset, setValue, watch, formState: { errors } } = useForm({
     defaultValues: {
       testCode: '',
       testName: '',
@@ -61,10 +62,23 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
       containerType: '',
       chargeId: '',
       rate: '',
+      isOutsourced: false,
+      defaultExternalLabId: '',
+      costPrice: '',
       isActive: true,
       sortOrder: 0
     }
   });
+  const isOutsourced = watch('isOutsourced');
+
+  // External labs a test can be routed to when outsourced -- kept lightweight (name only in this
+  // picker); full CRUD lives in ExternalLabsManager.
+  useEffect(() => {
+    if (!isOpen || !hospitalId) return;
+    let cancelled = false;
+    pathologyService.getExternalLabs(hospitalId).then(labs => { if (!cancelled) setExternalLabs(labs); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [isOpen, hospitalId]);
 
   // Chargeable items an admin can link this test to for auto-billing (CreatePathologyOrderHandler
   // and the IPD ClinicalOrder dual-write both match on PathologyTestMaster.ChargeId).
@@ -105,6 +119,9 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
         containerType: test.containerType || '',
         chargeId: test.chargeId || '',
         rate: '',
+        isOutsourced: test.isOutsourced,
+        defaultExternalLabId: test.defaultExternalLabId || '',
+        costPrice: test.costPrice != null ? String(test.costPrice) : '',
         isActive: test.isActive,
         sortOrder: test.sortOrder
       });
@@ -213,6 +230,8 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
         ...data,
         chargeId: resolvedChargeId,
         rate: undefined,
+        defaultExternalLabId: data.isOutsourced && data.defaultExternalLabId ? data.defaultExternalLabId : undefined,
+        costPrice: data.isOutsourced ? toNum(data.costPrice) : undefined,
         parameterSchemaJson: JSON.stringify({
           params: parameters.map((p, index) => ({
             name: p.name,
@@ -337,6 +356,51 @@ export const TestCatalogForm: React.FC<TestCatalogFormProps> = ({ test, isOpen, 
                 )}
               />
               <Label>Active</Label>
+            </div>
+
+            <div className="col-span-2 border-t pt-4 mt-2 space-y-3">
+              <div className="flex items-center space-x-2">
+                <Controller
+                  name="isOutsourced"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+                <Label>This test is processed by an external lab</Label>
+              </div>
+              {isOutsourced && (
+                <div className="grid grid-cols-2 gap-4 pl-1">
+                  <div className="space-y-2">
+                    <Label>Default External Lab</Label>
+                    <Controller
+                      name="defaultExternalLabId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value || 'none'} onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pick routing default" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Choose at send time</SelectItem>
+                            {externalLabs.map(l => (
+                              <SelectItem key={l.externalLabId} value={l.externalLabId}>{l.labName}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hospital Cost (₹)</Label>
+                    <Input type="number" step="0.01" min="0" {...register('costPrice')} placeholder="What the external lab charges us" />
+                  </div>
+                  <p className="col-span-2 text-xs text-gray-500 -mt-1">
+                    Patient billing is unaffected — the patient is still charged the Rate above. This cost is
+                    only for the hospital's own margin visibility on outsourced tests.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

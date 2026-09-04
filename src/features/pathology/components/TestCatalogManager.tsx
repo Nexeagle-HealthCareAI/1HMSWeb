@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Edit2 } from 'lucide-react';
+import { Plus, Search, Edit2, Building2 } from 'lucide-react';
 import { TestCatalogForm } from './TestCatalogForm';
+import { ExternalLabsManager } from './ExternalLabsManager';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export const TestCatalogManager: React.FC = () => {
@@ -18,6 +19,7 @@ export const TestCatalogManager: React.FC = () => {
   const [sampleTypeFilter, setSampleTypeFilter] = useState('ALL');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTest, setEditingTest] = useState<PathologyTestMaster | null>(null);
+  const [isLabsManagerOpen, setIsLabsManagerOpen] = useState(false);
 
   const fetchTests = async () => {
     if (!hospitalId) return;
@@ -99,9 +101,14 @@ export const TestCatalogManager: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" /> Add Test
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsLabsManagerOpen(true)}>
+            <Building2 className="mr-2 h-4 w-4" /> External Labs
+          </Button>
+          <Button onClick={handleAddNew}>
+            <Plus className="mr-2 h-4 w-4" /> Add Test
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-md overflow-hidden bg-white dark:bg-slate-900">
@@ -113,6 +120,7 @@ export const TestCatalogManager: React.FC = () => {
               <TableHead>Category</TableHead>
               <TableHead>Sample Type</TableHead>
               <TableHead className="text-right">Price</TableHead>
+              <TableHead>Routing</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
@@ -120,13 +128,13 @@ export const TestCatalogManager: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   <LoadingSpinner />
                 </TableCell>
               </TableRow>
             ) : filteredTests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={8} className="h-24 text-center text-gray-500">
                   No tests found.
                 </TableCell>
               </TableRow>
@@ -140,6 +148,13 @@ export const TestCatalogManager: React.FC = () => {
                   <TableCell className="text-right font-mono">
                     {test.price != null ? `₹${test.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (
                       <span className="text-gray-400">Not priced</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {test.isOutsourced ? (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Outsourced</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">In-house</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -167,6 +182,8 @@ export const TestCatalogManager: React.FC = () => {
           onSuccess={handleFormSuccess}
         />
       )}
+
+      <ExternalLabsManager isOpen={isLabsManagerOpen} onClose={() => setIsLabsManagerOpen(false)} />
     </div>
   );
 };

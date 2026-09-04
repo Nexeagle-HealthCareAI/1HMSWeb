@@ -100,6 +100,9 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sampleBarcode, setSampleBarcode] = useState('');
   const [isCollectingSample, setIsCollectingSample] = useState(false);
+  const [externalLabRefNo, setExternalLabRefNo] = useState('');
+  const [isSendingToExternalLab, setIsSendingToExternalLab] = useState(false);
+  const [isReceivingExternalResult, setIsReceivingExternalResult] = useState(false);
   const previouslyCriticalRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -239,6 +242,40 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     }
   };
 
+  const handleSendToExternalLab = async () => {
+    setIsSendingToExternalLab(true);
+    try {
+      const success = await pathologyService.sendToExternalLab(hospitalId, orderId, orderLine.orderLineId, undefined, externalLabRefNo.trim() || undefined);
+      if (!success) {
+        toast.error('Could not send to the external lab', { description: 'The sample may not be collected yet, or no default external lab is set for this test.' });
+        return;
+      }
+      toast.success('Sent to external lab');
+      onSuccess();
+    } catch {
+      toast.error('Could not send to the external lab');
+    } finally {
+      setIsSendingToExternalLab(false);
+    }
+  };
+
+  const handleReceiveExternalResult = async () => {
+    setIsReceivingExternalResult(true);
+    try {
+      const success = await pathologyService.receiveExternalLabResult(hospitalId, orderId, orderLine.orderLineId);
+      if (!success) {
+        toast.error('Could not mark the result received');
+        return;
+      }
+      toast.success('Result marked received -- enter the values below');
+      onSuccess();
+    } catch {
+      toast.error('Could not mark the result received');
+    } finally {
+      setIsReceivingExternalResult(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -277,12 +314,21 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
           <div>
             <CardTitle className="text-lg">{orderLine.testName} ({orderLine.testCode})</CardTitle>
             <CardDescription>
-              Status: {orderLine.status.replace('_', ' ')}
+              Status: {orderLine.status.replace(/_/g, ' ')}
               {orderLine.sampleCollectedAt && (
                 <span className="ml-1">
                   · Sample collected {new Date(orderLine.sampleCollectedAt).toLocaleString()}
                   {orderLine.sampleBarcode ? ` (${orderLine.sampleBarcode})` : ''}
                 </span>
+              )}
+              {orderLine.isOutsourced && orderLine.sentToExternalLabAt && (
+                <span className="ml-1">
+                  · Sent to {orderLine.externalLabName ?? 'external lab'} {new Date(orderLine.sentToExternalLabAt).toLocaleString()}
+                  {orderLine.externalLabRefNo ? ` (Ref ${orderLine.externalLabRefNo})` : ''}
+                </span>
+              )}
+              {orderLine.isOutsourced && orderLine.externalLabCost != null && (
+                <span className="ml-1 text-amber-700 dark:text-amber-400">· Cost ₹{orderLine.externalLabCost.toFixed(2)}</span>
               )}
             </CardDescription>
           </div>
@@ -302,6 +348,30 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
             />
             <Button type="button" size="sm" onClick={handleCollectSample} disabled={isCollectingSample}>
               {isCollectingSample ? 'Marking...' : 'Mark Sample Collected'}
+            </Button>
+          </div>
+        )}
+        {orderLine.isOutsourced && orderLine.status === 'SAMPLE_COLLECTED' && (
+          <div className="flex items-center gap-2 pt-3">
+            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium shrink-0">Outsourced</span>
+            <Input
+              value={externalLabRefNo}
+              onChange={(e) => setExternalLabRefNo(e.target.value)}
+              placeholder="External lab ref. no. (optional)"
+              className="h-9 max-w-xs"
+            />
+            <Button type="button" size="sm" onClick={handleSendToExternalLab} disabled={isSendingToExternalLab}>
+              {isSendingToExternalLab ? 'Sending...' : 'Send to External Lab'}
+            </Button>
+          </div>
+        )}
+        {orderLine.isOutsourced && orderLine.status === 'SENT_TO_EXTERNAL_LAB' && (
+          <div className="flex items-center gap-2 pt-3">
+            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium shrink-0">
+              Awaiting {orderLine.externalLabName ?? 'external lab'}
+            </span>
+            <Button type="button" size="sm" onClick={handleReceiveExternalResult} disabled={isReceivingExternalResult}>
+              {isReceivingExternalResult ? 'Marking...' : 'Mark Result Received'}
             </Button>
           </div>
         )}
