@@ -91,7 +91,6 @@ const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPrevie
 const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
 const PathologyDashboard = lazy(() => import('@/features/pathology/components/PathologyDashboard').then(module => ({ default: module.PathologyDashboard })));
 const PathologyOrderDetailPage = lazy(() => import('@/features/pathology/pages/PathologyOrderDetailPage').then(module => ({ default: module.default })));
-const PathologyNewOrderPage = lazy(() => import('@/features/pathology/pages/PathologyNewOrderPage').then(module => ({ default: module.default })));
 const PharmacyRetailDashboard = lazy(() => import('@/features/pharmacy/components/PharmacyRetailDashboard').then(module => ({ default: module.PharmacyRetailDashboard })));
 const HrDashboardPage = lazy(() => import('@/features/hr/pages/HrDashboardPage').then(module => ({ default: module.HrDashboardPage })));
 
@@ -451,17 +450,6 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredPermissions={getRequiredPermissions('/pathology')}>
                   <MainLayout>
                     <PathologyDashboard />
-                  </MainLayout>
-                </RouteGuard>
-              }
-            />
-
-            <Route
-              path="/pathology/orders/new"
-              element={
-                <RouteGuard requiredPermissions={getRequiredPermissions('/pathology/orders/new')}>
-                  <MainLayout>
-                    <PathologyNewOrderPage />
                   </MainLayout>
                 </RouteGuard>
               }

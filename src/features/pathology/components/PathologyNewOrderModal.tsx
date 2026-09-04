@@ -876,8 +876,14 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                   </div>
                 ) : (() => {
                   const filteredTests = testCatalog.filter(t =>
-                    t.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
-                    t.testCode.toLowerCase().includes(testSearchQuery.toLowerCase())
+                    // A retired test stays selectable here otherwise -- the catalog endpoint
+                    // returns inactive tests too (needed for TestCatalogManager to show/toggle
+                    // them), so ordering must filter isActive itself rather than assume the list
+                    // is already narrowed. A test already on this order (edit mode) stays visible
+                    // even if since deactivated, so its existing line can still be seen/removed.
+                    (t.isActive || !!existingLinesByTestId[t.testId]) &&
+                    (t.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
+                    t.testCode.toLowerCase().includes(testSearchQuery.toLowerCase()))
                   );
                   return filteredTests.length === 0 ? (
                     <div className="p-4 text-center text-slate-500 text-xs">No tests matching "{testSearchQuery}".</div>
