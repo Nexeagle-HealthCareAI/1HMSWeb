@@ -48,7 +48,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientMobile, setNewPatientMobile] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
-  const [newPatientGender, setNewPatientGender] = useState<'Male' | 'Female'>('Male');
+  const [newPatientGender, setNewPatientGender] = useState<'Male' | 'Female' | ''>('');
   const [newPatientGuardian, setNewPatientGuardian] = useState('');
   const [isRegisteringPatient, setIsRegisteringPatient] = useState(false);
   const [testCatalog, setTestCatalog] = useState<PathologyTestMaster[]>([]);
@@ -95,7 +95,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
     setPatientQuery('');
     setPatientResults([]);
     setPatientMode('search');
-    setNewPatientName(''); setNewPatientMobile(''); setNewPatientAge(''); setNewPatientGender('Male'); setNewPatientGuardian('');
+    setNewPatientName(''); setNewPatientMobile(''); setNewPatientAge(''); setNewPatientGender(''); setNewPatientGuardian('');
     setTestSearchQuery('');
     setSelectedTestIds([]);
     setOrderNotes('');
@@ -171,14 +171,17 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
     if (!hospitalId || isRegisteringPatient) return;
     const name = newPatientName.trim();
     const mobile = newPatientMobile.trim();
+    const ageValue = newPatientAge.trim();
     if (!name) { toast.error('Name is required'); return; }
     if (!/^\d{10}$/.test(mobile)) { toast.error('Enter a valid 10-digit mobile number'); return; }
+    if (!ageValue || Number(ageValue) <= 0) { toast.error('Age is required'); return; }
+    if (!newPatientGender) { toast.error('Gender is required'); return; }
     setIsRegisteringPatient(true);
     try {
       const patient = await patientService.registerWalkIn(hospitalId, {
         fullName: name,
         mobile,
-        age: newPatientAge ? Number(newPatientAge) : undefined,
+        age: Number(ageValue),
         sex: newPatientGender,
         guardianName: newPatientGuardian.trim() || undefined,
       });
@@ -656,11 +659,11 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                         <Input value={newPatientMobile} onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className="h-8 text-xs bg-white" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-slate-700 font-semibold">Age</Label>
+                        <Label className="text-[10px] text-slate-700 font-semibold">Age <span className="text-red-500">*</span></Label>
                         <Input type="number" min={0} value={newPatientAge} onChange={(e) => setNewPatientAge(e.target.value)} placeholder="e.g. 34" className="h-8 text-xs bg-white" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-slate-700 font-semibold">Gender</Label>
+                        <Label className="text-[10px] text-slate-700 font-semibold">Gender <span className="text-red-500">*</span></Label>
                         <div className="flex gap-1 h-8">
                           {(['Male', 'Female'] as const).map(g => (
                             <Button key={g} type="button" variant={newPatientGender === g ? 'default' : 'outline'} onClick={() => setNewPatientGender(g)} className={`flex-1 h-8 text-[10px] ${newPatientGender === g ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}>
