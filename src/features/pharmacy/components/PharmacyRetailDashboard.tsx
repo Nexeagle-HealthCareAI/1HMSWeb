@@ -12,13 +12,14 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, RotateCcw, Truck, BarChart3 } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, RotateCcw, Truck, BarChart3, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const TABS = [
     { id: 'pos', label: 'Retail POS', description: 'Point of Sale & Checkout', icon: ShoppingCart },
     { id: 'catalog', label: 'Medicine Catalog', description: 'Manage drugs & inventory', icon: Package },
+    { id: 'billing-history', label: 'Billing History', description: 'All pharmacy bills — day/range/all', icon: Receipt },
     { id: 'near-expiry', label: 'Near Expiry', description: 'Track expiring batches', icon: Clock },
     { id: 'h1-register', label: 'H1 Register', description: 'Schedule H1 drugs register', icon: FileText },
     { id: 'reorder', label: 'Reorder', description: 'Stock reorder suggestions', icon: Lightbulb },
@@ -38,6 +39,7 @@ import { ReorderThresholdSuggestions } from './ReorderThresholdSuggestions';
 import { PatientReturnFlow } from './PatientReturnFlow';
 import { VendorReturnRTV } from './VendorReturnRTV';
 import { PharmacyAnalyticsDashboard } from './PharmacyAnalyticsDashboard';
+import { PharmacyBillingHistory } from './PharmacyBillingHistory';
 
 interface CartRow extends PharmacyCartItem {
   id: string; // unique row id
@@ -506,7 +508,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
         </div>
 
         <div className="flex-1 mt-3 overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border shadow-sm">
-          <TabsContent value="pos" className="h-full m-0 data-[state=inactive]:hidden flex flex-col data-[state=active]:flex">
+          <TabsContent value="pos" className="h-full m-0 data-[state=inactive]:hidden flex flex-col lg:flex-row data-[state=active]:flex">
         {/* Left Pane: Search & Cart */}
         <div className="flex-1 flex flex-col border-r bg-white dark:bg-slate-900 overflow-hidden">
 
@@ -840,6 +842,10 @@ export const PharmacyRetailDashboard: React.FC = () => {
         <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
           <ItemMaster fixedCategory="DRUG" />
         </div>
+      </TabsContent>
+
+      <TabsContent value="billing-history" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+        <PharmacyBillingHistory />
       </TabsContent>
 
       <TabsContent value="near-expiry" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">

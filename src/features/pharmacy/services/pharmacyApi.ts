@@ -78,6 +78,27 @@ export interface UpsertPharmacyPrintSettingsInput {
   showVerificationQr: boolean;
 }
 
+export interface PharmacyBillRow {
+  invoiceId: string;
+  invoiceNo?: string;
+  invoiceDate: string;
+  patientId?: string;
+  patientName?: string;
+  sourceModule: string;
+  itemCount: number;
+  totalQty: number;
+  netAmount: number;
+  paymentMode?: string;
+  processedBy?: string;
+  statusCode?: string;
+}
+
+export interface PharmacyBillingHistoryResponse {
+  bills: PharmacyBillRow[];
+  totalAmount: number;
+  totalBills: number;
+}
+
 export const pharmacyApi = {
   checkout: async (hospitalId: string, request: PharmacyRetailCheckoutRequest): Promise<PharmacyRetailCheckoutResponse> => {
     const response = await api.post<PharmacyRetailCheckoutResponse>(`/v1/PharmacyRetail/${hospitalId}/checkout`, request);
@@ -91,4 +112,14 @@ export const pharmacyApi = {
 
   upsertPrintSettings: (input: UpsertPharmacyPrintSettingsInput, hospitalId?: string) =>
     ipdApiClient.put('/pharmacy-settings/print', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
+  // fromDate/toDate omitted entirely => unbounded "all time" list.
+  getBillingHistory: (fromDate?: Date, toDate?: Date, hospitalId?: string): Promise<PharmacyBillingHistoryResponse> =>
+    ipdApiClient.get<PharmacyBillingHistoryResponse>('/pharmacy-billing/history', {
+      params: {
+        hospitalId: hospitalIdOrThrow(hospitalId),
+        fromDate: fromDate ? fromDate.toISOString().slice(0, 10) : undefined,
+        toDate: toDate ? toDate.toISOString().slice(0, 10) : undefined,
+      },
+    }),
 };
