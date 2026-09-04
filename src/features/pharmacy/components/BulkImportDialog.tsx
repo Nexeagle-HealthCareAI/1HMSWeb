@@ -232,7 +232,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Bulk Stock Import</DialogTitle>
         </DialogHeader>
@@ -290,81 +290,90 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
                 Not found in this file: {unrecognizedColumns.join(', ')} — rows relying on these were left blank for those fields.
               </p>
             )}
-            <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="w-36">Store</TableHead>
-                    <TableHead className="w-44">Item</TableHead>
-                    <TableHead className="w-32">Batch No.</TableHead>
-                    <TableHead className="w-32">Mfg Date</TableHead>
-                    <TableHead className="w-32">Expiry</TableHead>
-                    <TableHead className="w-20">Qty</TableHead>
-                    <TableHead className="w-24">Cost</TableHead>
-                    <TableHead className="w-24">MRP</TableHead>
-                    <TableHead className="w-28">Barcode</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <div className="border border-slate-300 rounded-sm overflow-auto shadow-inner bg-white relative max-h-[60vh] custom-scrollbar">
+              <table className="w-full text-sm border-collapse text-slate-800">
+                <thead className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-300 shadow-sm">
+                  <tr className="text-left font-semibold text-slate-600">
+                    <th className="border-r border-slate-300 p-2 text-xs w-36 whitespace-nowrap">Store</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-48 whitespace-nowrap">Item</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-32 whitespace-nowrap">Batch No.</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-32 whitespace-nowrap">Mfg Date</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-32 whitespace-nowrap">Expiry</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-20 whitespace-nowrap">Qty</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-24 whitespace-nowrap">Cost</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-24 whitespace-nowrap">MRP</th>
+                    <th className="border-r border-slate-300 p-2 text-xs w-32 whitespace-nowrap">Barcode</th>
+                    <th className="border-r border-slate-300 p-2 text-xs whitespace-nowrap">Notes</th>
+                    <th className="p-2 text-xs w-10 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody>
                   {rows.map(r => (
-                    <TableRow key={r.id} className={cn(!r.isValid && 'bg-red-50', r.isValid && r.existingBatchWarning && 'bg-amber-50')}>
-                      <TableCell>
+                    <tr key={r.id} className={cn(
+                      'border-b border-slate-200 transition-colors group',
+                      !r.isValid ? 'bg-red-50/80 hover:bg-red-50' : r.existingBatchWarning ? 'bg-amber-50/80 hover:bg-amber-50' : 'hover:bg-blue-50/30'
+                    )}>
+                      <td className="border-r border-slate-200 p-0 relative">
                         <Select value={r.storeId} onValueChange={v => updateRow(r.id, { storeId: v })}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Store" /></SelectTrigger>
+                          <SelectTrigger className="h-9 w-full border-0 rounded-none shadow-none focus:ring-2 focus:ring-inset focus:ring-brand-500 bg-transparent px-2 text-xs">
+                            <SelectValue placeholder="Store" />
+                          </SelectTrigger>
                           <SelectContent>
                             {stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
                         <Select value={r.inventoryItemId} onValueChange={v => updateRow(r.id, { inventoryItemId: v })}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Item" /></SelectTrigger>
+                          <SelectTrigger className="h-9 w-full border-0 rounded-none shadow-none focus:ring-2 focus:ring-inset focus:ring-brand-500 bg-transparent px-2 text-xs truncate">
+                            <SelectValue placeholder="Item" />
+                          </SelectTrigger>
                           <SelectContent className="max-h-64">
                             {items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName} ({i.itemCode})</SelectItem>)}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input className="h-8 text-xs" value={r.batchNumber} onChange={e => updateRow(r.id, { batchNumber: e.target.value })} placeholder="Batch no." />
-                      </TableCell>
-                      <TableCell>
-                        <Input type="date" className="h-8 text-xs" value={r.manufactureDate} onChange={e => updateRow(r.id, { manufactureDate: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        <Input type="date" className="h-8 text-xs" value={r.expiryDate} onChange={e => updateRow(r.id, { expiryDate: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" min="0" className="h-8 text-xs" value={r.receivedQty} onChange={e => updateRow(r.id, { receivedQty: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" min="0" className="h-8 text-xs" value={r.unitCost} onChange={e => updateRow(r.id, { unitCost: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" min="0" className="h-8 text-xs" value={r.mrp} onChange={e => updateRow(r.id, { mrp: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        <Input className="h-8 text-xs" value={r.barcodeValue} onChange={e => updateRow(r.id, { barcodeValue: e.target.value })} />
-                      </TableCell>
-                      <TableCell className="text-xs max-w-[220px]">
-                        {r.errorMessage && <div className="text-red-700">{r.errorMessage}</div>}
-                        {r.existingBatchWarning && (
-                          <div className="flex items-start gap-1 text-amber-700">
-                            <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                            <span>{r.existingBatchWarning}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(r.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 font-mono uppercase" value={r.batchNumber} onChange={e => updateRow(r.id, { batchNumber: e.target.value })} placeholder="Batch" />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input type="date" className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500" value={r.manufactureDate} onChange={e => updateRow(r.id, { manufactureDate: e.target.value })} />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input type="date" className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500" value={r.expiryDate} onChange={e => updateRow(r.id, { expiryDate: e.target.value })} />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input type="number" min="0" className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 text-right font-mono" value={r.receivedQty} onChange={e => updateRow(r.id, { receivedQty: e.target.value })} placeholder="0" />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input type="number" min="0" step="0.01" className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 text-right font-mono" value={r.unitCost} onChange={e => updateRow(r.id, { unitCost: e.target.value })} placeholder="0.00" />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input type="number" min="0" step="0.01" className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 text-right font-mono" value={r.mrp} onChange={e => updateRow(r.id, { mrp: e.target.value })} placeholder="0.00" />
+                      </td>
+                      <td className="border-r border-slate-200 p-0 relative">
+                        <input className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 font-mono" value={r.barcodeValue} onChange={e => updateRow(r.id, { barcodeValue: e.target.value })} placeholder="Scan" />
+                      </td>
+                      <td className="border-r border-slate-200 p-2 align-middle bg-slate-50/50">
+                        <div className="text-[10px] leading-tight max-w-[200px]">
+                          {r.errorMessage && <span className="text-red-600 font-medium">{r.errorMessage}</span>}
+                          {r.existingBatchWarning && (
+                            <span className="flex items-start gap-1 text-amber-700 mt-0.5">
+                              <Info className="h-3 w-3 shrink-0" />
+                              {r.existingBatchWarning}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-0 text-center align-middle bg-slate-50/50">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm hover:bg-red-100 hover:text-red-600 opacity-20 group-hover:opacity-100 transition-opacity mx-auto" onClick={() => removeRow(r.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           </div>
         )}

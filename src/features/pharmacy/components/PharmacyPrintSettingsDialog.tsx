@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -78,11 +78,11 @@ export const PharmacyPrintSettingsDialog: React.FC<PharmacyPrintSettingsDialogPr
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Pharmacy Bill Layout & Statutory Fields</DialogTitle>
-        </DialogHeader>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto shadow-2xl">
+        <SheetHeader>
+          <SheetTitle className="text-xl font-bold bg-gradient-to-r from-brand-600 to-violet-600 bg-clip-text text-transparent">Pharmacy Bill Settings</SheetTitle>
+        </SheetHeader>
 
         {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
@@ -94,12 +94,12 @@ export const PharmacyPrintSettingsDialog: React.FC<PharmacyPrintSettingsDialogPr
               </p>
             )}
             {field('tradeName', 'Pharmacy Trade Name', 'e.g. 1HMS Pharmacy & Healthcare Store')}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field('dl20BNumber', 'Drug License (Form 20B)')}
               {field('dl21BNumber', 'Drug License (Form 21B)')}
             </div>
             {field('fssaiNumber', 'FSSAI License Number')}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field('pharmacistName', 'Registered Pharmacist Name')}
               {field('pharmacistRegNo', 'Pharmacist Registration No.')}
             </div>
@@ -116,13 +116,13 @@ export const PharmacyPrintSettingsDialog: React.FC<PharmacyPrintSettingsDialogPr
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving || isLoading}>
-            {isSaving ? 'Saving...' : 'Save'}
+        <SheetFooter className="mt-8 flex flex-row gap-2 justify-end sm:justify-end">
+          <Button variant="outline" className="rounded-xl w-full sm:w-auto" onClick={onClose}>Cancel</Button>
+          <Button className="rounded-xl w-full sm:w-auto bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700" onClick={handleSave} disabled={isSaving || isLoading}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };

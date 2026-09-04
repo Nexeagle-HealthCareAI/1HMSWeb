@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
 import { NursingStationScreen } from '../screens/NursingStationScreen';
 import { NurseWardRoster } from '@/features/hospital/components/masters/NurseWardRoster';
+import { VisualNurseRosterBoard } from '@/features/hospital/components/masters/VisualNurseRosterBoard';
+import { CalendarDays } from 'lucide-react';
 
 const NursingStationPage: React.FC = () => {
     const navigate = useNavigate();
@@ -26,7 +28,7 @@ const NursingStationPage: React.FC = () => {
                     </div>
                 </div>
                 {canManageRoster && (
-                    <TabsList className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full sm:w-64 border-0 shadow-none shrink-0">
+                    <TabsList className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm h-auto w-full sm:w-96 border-0 shadow-none shrink-0">
                         <TabsTrigger
                             value="station"
                             className="flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white px-1 select-none whitespace-normal flex-1"
@@ -35,11 +37,18 @@ const NursingStationPage: React.FC = () => {
                             <span className="text-[9px] font-bold tracking-wide leading-tight">My Patients</span>
                         </TabsTrigger>
                         <TabsTrigger
+                            value="visual-roster"
+                            className="flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white px-1 select-none whitespace-normal flex-1"
+                        >
+                            <CalendarDays className="h-5 w-5 mb-1 shrink-0" />
+                            <span className="text-[9px] font-bold tracking-wide leading-tight">Bed Board</span>
+                        </TabsTrigger>
+                        <TabsTrigger
                             value="roster"
                             className="flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white px-1 select-none whitespace-normal flex-1"
                         >
                             <Users className="h-5 w-5 mb-1 shrink-0" />
-                            <span className="text-[9px] font-bold tracking-wide leading-tight">Roster</span>
+                            <span className="text-[9px] font-bold tracking-wide leading-tight">Roster List</span>
                         </TabsTrigger>
                     </TabsList>
                 )}
@@ -53,14 +62,24 @@ const NursingStationPage: React.FC = () => {
                 </TabsContent>
 
                 {canManageRoster && (
-                    <TabsContent value="roster" className="absolute inset-0 mt-0 overflow-hidden border-none focus-visible:ring-0">
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}
-                            className="h-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800 overflow-hidden shadow-md"
-                        >
-                            <NurseWardRoster />
-                        </motion.div>
-                    </TabsContent>
+                    <>
+                        <TabsContent value="visual-roster" className="absolute inset-0 mt-0 overflow-hidden border-none focus-visible:ring-0">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }}
+                                className="h-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800 overflow-hidden shadow-md"
+                            >
+                                <VisualNurseRosterBoard />
+                            </motion.div>
+                        </TabsContent>
+                        <TabsContent value="roster" className="absolute inset-0 mt-0 overflow-hidden border-none focus-visible:ring-0">
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}
+                                className="h-full bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/60 dark:border-zinc-800 overflow-hidden shadow-md"
+                            >
+                                <NurseWardRoster />
+                            </motion.div>
+                        </TabsContent>
+                    </>
                 )}
             </div>
         </Tabs>

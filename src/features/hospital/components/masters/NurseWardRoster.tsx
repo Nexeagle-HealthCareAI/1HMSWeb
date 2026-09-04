@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, X, Loader2, RefreshCw, AlertCircle, Archive, UserRound, Clock } from 'lucide-react';
+import { Search, Plus, X, Loader2, RefreshCw, AlertCircle, Archive, UserRound, Clock, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,8 +17,9 @@ import {
     type HospitalNurseItem,
     type WardListItem,
 } from '@/features/ipd-redesign/services/nursingStationApi';
-
-const SHIFT_OPTIONS = ['MORNING', 'EVENING', 'NIGHT'] as const;
+} from '@/features/ipd-redesign/services/nursingStationApi';
+import { shiftApi, type ShiftItem } from '@/features/ipd-redesign/services/shiftApi';
+import { ShiftSettingsSheet } from '@/features/ipd-redesign/components/ShiftSettingsSheet';
 
 const SHIFT_COLORS: Record<string, string> = {
     MORNING: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-800',
@@ -49,6 +50,7 @@ export const NurseWardRoster: React.FC = () => {
     const [roster, setRoster] = useState<NurseRosterItem[]>([]);
     const [nurses, setNurses] = useState<HospitalNurseItem[]>([]);
     const [wards, setWards] = useState<WardListItem[]>([]);
+    const [shiftConfig, setShiftConfig] = useState<ShiftItem[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -59,6 +61,7 @@ export const NurseWardRoster: React.FC = () => {
     const [shiftFilter, setShiftFilter] = useState('ALL');
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [newAssignment, setNewAssignment] = useState<NewAssignment>(emptyAssignment);
     const [isSaving, setIsSaving] = useState(false);
     const [releasingId, setReleasingId] = useState<string | null>(null);
@@ -68,14 +71,16 @@ export const NurseWardRoster: React.FC = () => {
         if (silent) setRefreshing(true); else setLoading(true);
         setLoadError(null);
         try {
-            const [rosterRes, nursesRes, wardsRes] = await Promise.all([
+            const [rosterRes, nursesRes, wardsRes, shiftsRes] = await Promise.all([
                 nursingStationApi.listRoster({ activeOnly: true }, hospitalId),
                 nursingStationApi.listNurses(hospitalId),
                 nursingStationApi.listWards(hospitalId),
+                shiftApi.getShifts(hospitalId),
             ]);
             setRoster(rosterRes);
             setNurses(nursesRes);
             setWards(wardsRes);
+            setShiftConfig(shiftsRes);
         } catch (e: any) {
             setLoadError(e?.message ?? 'Failed to load the nurse roster');
         } finally {
@@ -107,7 +112,12 @@ export const NurseWardRoster: React.FC = () => {
     }, [filteredRoster]);
 
     const handleOpenDrawer = () => {
-        setNewAssignment({ ...emptyAssignment, wardCode: wards[0]?.wardCode ?? '', nurseUserId: nurses[0]?.userId ?? '' });
+        setNewAssignment({ 
+            ...emptyAssignment, 
+            wardCode: wards[0]?.wardCode ?? '', 
+            nurseUserId: nurses[0]?.userId ?? '',
+            shiftCode: shiftConfig[0]?.shiftCode ?? ''
+        });
         setIsDrawerOpen(true);
     };
 
@@ -179,15 +189,19 @@ export const NurseWardRoster: React.FC = () => {
                         <SelectTrigger className="h-10 rounded-xl w-full sm:w-[140px]"><SelectValue placeholder="All shifts" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="ALL">All shifts</SelectItem>
-                            {SHIFT_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            {shiftConfig.sort((a, b) => a.sortOrder - b.sortOrder).map(s => <SelectItem key={s.shiftCode} value={s.shiftCode}>{s.label}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="h-10 rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+                        <Settings className="h-4 w-4 text-slate-500 mr-1.5" />
+                        <span className="text-slate-600 hidden sm:inline">Shift Settings</span>
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => loadAll(true)} disabled={refreshing || loading} className="h-10 rounded-xl gap-1.5 border-slate-200 text-slate-700 font-bold px-4">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button onClick={handleOpenDrawer} disabled={wards.length === 0 || nurses.length === 0} className="h-10 rounded-xl flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 shadow-md shadow-brand-500/20">
+                    <Button onClick={handleOpenDrawer} disabled={wards.length === 0 || nurses.length === 0 || shiftConfig.length === 0} className="h-10 rounded-xl flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 shadow-md shadow-brand-500/20">
                         <Plus className="h-4 w-4" /> Assign Nurse
                     </Button>
                 </div>
@@ -231,7 +245,7 @@ export const NurseWardRoster: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 shrink-0">
-                                                    <Badge variant="outline" className={cn('text-[10px] font-bold uppercase tracking-wider rounded-full px-2.5 py-0.5', SHIFT_COLORS[row.shiftCode])}>
+                                                    <Badge variant="outline" className={cn('text-[10px] font-bold uppercase tracking-wider rounded-full px-2.5 py-0.5', SHIFT_COLORS[row.shiftCode] || 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700')}>
                                                         {row.shiftCode}
                                                     </Badge>
                                                     <Button
@@ -315,7 +329,7 @@ export const NurseWardRoster: React.FC = () => {
                                     <Select value={newAssignment.shiftCode} onValueChange={v => setNewAssignment(p => ({ ...p, shiftCode: v }))}>
                                         <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            {SHIFT_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                            {shiftConfig.sort((a, b) => a.sortOrder - b.sortOrder).map(s => <SelectItem key={s.shiftCode} value={s.shiftCode}>{s.label}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -354,6 +368,13 @@ export const NurseWardRoster: React.FC = () => {
                 </AnimatePresence>,
                 document.body
             )}
+            
+            <ShiftSettingsSheet
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
+                hospitalId={hospitalId}
+                onShiftsChanged={() => loadAll(true)}
+            />
         </div>
     );
 };
