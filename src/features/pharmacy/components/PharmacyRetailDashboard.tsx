@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store';
 import { inventoryApi, InventoryItem } from '@/features/ipd-redesign/services/inventoryApi';
 import { storeService } from '@/features/hospital/services/storeService';
 import { patientService } from '@/features/billing/services/patientService';
+import { Patient } from '@/features/billing/types';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
 import { buildPharmacyReceiptThermal80 } from '@/printTemplates/pharmacyReceiptThermal80';
@@ -12,7 +13,7 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, RotateCcw, Truck, BarChart3, Receipt } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, RotateCcw, Truck, BarChart3, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -65,10 +66,18 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
   const [cart, setCart] = useState<CartRow[]>([]);
 
-  // Customer / walk-in
-  const [walkInName, setWalkInName] = useState('');
-  const [walkInContact, setWalkInContact] = useState('');
-  const [registeredPatientId, setRegisteredPatientId] = useState<string | null>(null);
+  // Customer / patient identification — mandatory before checkout (no more anonymous cash
+  // sales; scheduled-drug dispenses need a traceable recipient). Mirrors the search-or-register
+  // pattern already proven in PathologyNewOrderModal.tsx.
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientMode, setPatientMode] = useState<'search' | 'register'>('search');
+  const [patientQuery, setPatientQuery] = useState('');
+  const [patientResults, setPatientResults] = useState<Patient[]>([]);
+  const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+  const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientMobile, setNewPatientMobile] = useState('');
+  const [newPatientAge, setNewPatientAge] = useState('');
+  const [newPatientGender, setNewPatientGender] = useState<'Male' | 'Female'>('Male');
   const [isRegisteringPatient, setIsRegisteringPatient] = useState(false);
 
   const [prescriberRef, setPrescriberRef] = useState('');
@@ -247,7 +256,10 @@ export const PharmacyRetailDashboard: React.FC = () => {
       toast.error('No matched items could be loaded automatically');
     }
 
-    setRegisteredPatientId(newPatientId);
+    // LoadEPrescriptionModal only supplies a bare patient ID (no name/mobile) — printReceipt's
+    // own `name || 'Walk-in Customer'` fallback still covers this blank-name case, matching
+    // today's existing behavior for this path.
+    setSelectedPatient({ id: newPatientId, patientId: newPatientId, name: '', mobile: '', age: 0, sex: 'M' });
   };
 
   const updateQty = (id: string, qty: number) => {
@@ -287,25 +299,50 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
   const cartHasScheduledDrug = cart.some(c => !!c.scheduleClass);
 
-  const isMobileValid = /^\d{10}$/.test(walkInContact);
+  const isNewPatientMobileValid = /^\d{10}$/.test(newPatientMobile);
 
-  const handleRegisterWalkIn = async () => {
+  const searchPatients = async (queryToSearch: string) => {
+    if (!queryToSearch.trim()) return;
+    setIsSearchingPatients(true);
+    try {
+      const results = await patientService.searchPatients(queryToSearch.trim(), 'name');
+      setPatientResults(results);
+    } catch {
+      toast.error('Patient search failed');
+    } finally {
+      setIsSearchingPatients(false);
+    }
+  };
+
+  useEffect(() => {
+    if (patientMode !== 'search' || !patientQuery.trim()) {
+      setPatientResults([]);
+      return;
+    }
+    const timer = setTimeout(() => searchPatients(patientQuery), 400);
+    return () => clearTimeout(timer);
+  }, [patientQuery, patientMode]);
+
+  const handleRegisterPatient = async () => {
     if (!hospitalId) return;
-    if (!walkInName.trim()) {
+    const name = newPatientName.trim();
+    if (!name) {
       toast.error('Enter the patient name');
       return;
     }
-    if (!isMobileValid) {
+    if (!isNewPatientMobileValid) {
       toast.error('Enter a valid 10-digit mobile number');
       return;
     }
     setIsRegisteringPatient(true);
     try {
       const patient = await patientService.registerWalkIn(hospitalId, {
-        fullName: walkInName.trim(),
-        mobile: walkInContact,
+        fullName: name,
+        mobile: newPatientMobile,
+        age: newPatientAge ? Number(newPatientAge) : undefined,
+        sex: newPatientGender,
       });
-      setRegisteredPatientId(patient.patientId);
+      setSelectedPatient(patient);
       toast.success(`Registered ${patient.name}`);
     } catch (error: any) {
       toast.error(error?.message || 'Could not register patient');
@@ -315,10 +352,15 @@ export const PharmacyRetailDashboard: React.FC = () => {
   };
 
   const clearPatient = () => {
-    setRegisteredPatientId(null);
-    setWalkInName('');
-    setWalkInContact('');
-    setSettlementMode('DIRECT_CASH');
+    setSelectedPatient(null);
+    setPatientMode('search');
+    setPatientQuery('');
+    setPatientResults([]);
+    setNewPatientName('');
+    setNewPatientMobile('');
+    setNewPatientAge('');
+    setNewPatientGender('Male');
+    setSettlementMode('DIRECT_CASH'); // POST_TO_ADMISSION_DAY_BILL requires a patient — reset if cleared while active
   };
 
   const printReceipt = async (
@@ -392,8 +434,8 @@ export const PharmacyRetailDashboard: React.FC = () => {
       toast.error('Cart is empty');
       return;
     }
-    if (settlementMode === 'POST_TO_ADMISSION_DAY_BILL' && !registeredPatientId) {
-      toast.error('A registered/admitted patient is required to post to the admission day bill');
+    if (!selectedPatient) {
+      toast.error('Select or register a patient before checkout.');
       return;
     }
     if (cartHasScheduledDrug && !prescriberRef.trim()) {
@@ -405,9 +447,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
     try {
       const response = await pharmacyApi.checkout(hospitalId, {
         storeId: storeId,
-        patientId: registeredPatientId ?? undefined,
-        walkInName: registeredPatientId ? undefined : walkInName,
-        walkInContact: registeredPatientId ? undefined : walkInContact,
+        patientId: selectedPatient.patientId,
         prescriberRef: prescriberRef.trim() || undefined,
         settlementMode,
         items: cart.map(c => ({
@@ -435,7 +475,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
             response.invoiceNo,
             response.allocatedBatches,
             cart,
-            { name: walkInName || 'Walk-in Customer', id: registeredPatientId ?? undefined, mobile: walkInContact },
+            { name: selectedPatient.name, id: selectedPatient.patientId, mobile: selectedPatient.mobile },
             cartTotals.finalTotal,
           );
         }
@@ -689,45 +729,135 @@ export const PharmacyRetailDashboard: React.FC = () => {
                 <h3>Customer Details</h3>
               </div>
               <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border">
-                {registeredPatientId ? (
+                {selectedPatient ? (
                   <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-3">
-                    <div>
-                      <div className="text-sm font-medium text-green-800">{walkInName || 'Patient registered'}</div>
-                      <div className="text-xs text-green-700">{walkInContact}</div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold shrink-0 text-sm">
+                        {(selectedPatient.name || '?').charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-green-800 truncate">{selectedPatient.name || 'Patient'}</div>
+                        <div className="text-xs text-green-700 truncate">
+                          {selectedPatient.patientId}{selectedPatient.mobile ? ` • ${selectedPatient.mobile}` : ''}
+                        </div>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={clearPatient}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={clearPatient}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Name</label>
-                      <Input
-                        placeholder="Customer Name"
-                        value={walkInName}
-                        onChange={(e) => setWalkInName(e.target.value)}
-                        className="mt-1 bg-white dark:bg-slate-900"
-                      />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPatientMode('search')}
+                        className={cn(
+                          'flex flex-col items-center gap-1 py-2 rounded-lg border-2 transition-all',
+                          patientMode === 'search' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/40'
+                        )}
+                      >
+                        <User className="h-4 w-4" />
+                        <span className="text-[11px] font-semibold">Registered</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPatientMode('register')}
+                        className={cn(
+                          'flex flex-col items-center gap-1 py-2 rounded-lg border-2 transition-all',
+                          patientMode === 'register' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/40'
+                        )}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        <span className="text-[11px] font-semibold">Walk-in / New</span>
+                      </button>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Mobile Number</label>
-                      <Input
-                        placeholder="10-digit mobile"
-                        value={walkInContact}
-                        onChange={(e) => setWalkInContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        className="mt-1 bg-white dark:bg-slate-900"
-                        inputMode="numeric"
-                      />
-                    </div>
-                    <Button
-                      className="w-full text-xs"
-                      size="sm"
-                      onClick={handleRegisterWalkIn}
-                      disabled={isRegisteringPatient || !walkInName.trim() || !isMobileValid}
-                    >
-                      {isRegisteringPatient ? 'Registering...' : 'Register Patient'}
-                    </Button>
+
+                    {patientMode === 'search' ? (
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Search name, mobile or patient ID..."
+                          value={patientQuery}
+                          onChange={(e) => setPatientQuery(e.target.value)}
+                          className="bg-white dark:bg-slate-900"
+                        />
+                        {isSearchingPatients && <p className="text-xs text-gray-400">Searching...</p>}
+                        {patientResults.length > 0 && (
+                          <div className="border rounded-md max-h-40 overflow-y-auto divide-y bg-white dark:bg-slate-900">
+                            {patientResults.map(p => (
+                              <div
+                                key={p.patientId}
+                                className="p-2 cursor-pointer hover:bg-primary/5 flex items-center justify-between"
+                                onClick={() => { setSelectedPatient(p); setPatientResults([]); setPatientQuery(''); }}
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-sm font-medium truncate">{p.name}</div>
+                                  <div className="text-[11px] text-gray-500">{p.patientId} • {p.mobile}</div>
+                                </div>
+                                <Button variant="ghost" size="sm" className="h-6 text-xs shrink-0">Select</Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Name*</label>
+                          <Input
+                            value={newPatientName}
+                            onChange={(e) => setNewPatientName(e.target.value)}
+                            placeholder="Patient Name"
+                            className="mt-1 bg-white dark:bg-slate-900"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Mobile*</label>
+                            <Input
+                              value={newPatientMobile}
+                              onChange={(e) => setNewPatientMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              placeholder="10-digit"
+                              className="mt-1 bg-white dark:bg-slate-900"
+                              inputMode="numeric"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Age</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={newPatientAge}
+                              onChange={(e) => setNewPatientAge(e.target.value)}
+                              placeholder="Optional"
+                              className="mt-1 bg-white dark:bg-slate-900"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          {(['Male', 'Female'] as const).map(g => (
+                            <Button
+                              key={g}
+                              type="button"
+                              size="sm"
+                              variant={newPatientGender === g ? 'default' : 'outline'}
+                              onClick={() => setNewPatientGender(g)}
+                              className="flex-1 text-xs h-8"
+                            >
+                              {g}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          className="w-full text-xs"
+                          size="sm"
+                          onClick={handleRegisterPatient}
+                          disabled={isRegisteringPatient || !newPatientName.trim() || !isNewPatientMobileValid}
+                        >
+                          {isRegisteringPatient ? 'Registering...' : 'Register Patient'}
+                        </Button>
+                      </div>
+                    )}
                   </>
                 )}
                 <Button variant="outline" className="w-full text-xs" size="sm" onClick={() => setIsPrescriptionModalOpen(true)}>
@@ -793,7 +923,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="DIRECT_CASH">Settle at Counter</SelectItem>
-                    <SelectItem value="POST_TO_ADMISSION_DAY_BILL" disabled={!registeredPatientId}>
+                    <SelectItem value="POST_TO_ADMISSION_DAY_BILL" disabled={!selectedPatient}>
                       Post to IPD Admission Bill
                     </SelectItem>
                   </SelectContent>
@@ -824,7 +954,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
             <Button
               className="w-full h-14 text-lg font-bold shadow-lg"
               size="lg"
-              disabled={cart.length === 0 || isProcessing || (cartHasScheduledDrug && !prescriberRef.trim())}
+              disabled={cart.length === 0 || isProcessing || !selectedPatient || (cartHasScheduledDrug && !prescriberRef.trim())}
               onClick={handleCheckout}
             >
               {isProcessing

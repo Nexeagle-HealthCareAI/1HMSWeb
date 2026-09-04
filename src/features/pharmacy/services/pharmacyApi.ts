@@ -20,9 +20,9 @@ export type PharmacySettlementMode = 'DIRECT_CASH' | 'POST_TO_ADMISSION_DAY_BILL
 
 export interface PharmacyRetailCheckoutRequest {
   storeId: string;
-  patientId?: string;
-  walkInName?: string;
-  walkInContact?: string;
+  // Required — must resolve to a real PatientRegistration (searched or quick-registered).
+  // Enforced both client-side (Pay button disabled) and server-side (handler rejects a blank one).
+  patientId: string;
   prescribingDoctorId?: string;
   // Required whenever the cart contains a scheduled drug (H/H1/X) — a doctor name/reg number,
   // enforced server-side by the same regulated-drug guard narcotics/H1 dispensing already uses.
@@ -101,7 +101,7 @@ export interface PharmacyBillingHistoryResponse {
 
 export const pharmacyApi = {
   checkout: async (hospitalId: string, request: PharmacyRetailCheckoutRequest): Promise<PharmacyRetailCheckoutResponse> => {
-    const response = await api.post<PharmacyRetailCheckoutResponse>(`/v1/PharmacyRetail/${hospitalId}/checkout`, request);
+    const response = await api.post<PharmacyRetailCheckoutResponse>(`/api/v1/PharmacyRetail/${hospitalId}/checkout`, request);
     return response.data;
   },
 
