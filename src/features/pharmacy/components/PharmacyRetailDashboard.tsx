@@ -14,22 +14,32 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, Boxes, RotateCcw, Truck, BarChart3, Receipt, Inbox, AlertTriangle } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, Boxes, RotateCcw, Truck, BarChart3, Receipt, Inbox, AlertTriangle, Layers, ShieldCheck, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+// Top-level strip stays short — related destinations are nested as sub-tabs inside "Inventory" and
+// "Returns" instead of each getting their own slot in the outer TabsList.
 const TABS = [
     { id: 'pos', label: 'Retail POS', description: 'Point of Sale & Checkout', icon: ShoppingCart },
-    { id: 'catalog', label: 'Medicine Catalog', description: 'Manage drugs & inventory', icon: Package },
+    { id: 'inventory', label: 'Inventory', description: 'Catalog, stock/batches, near-expiry, reorder & incoming requests', icon: Layers },
     { id: 'billing-history', label: 'Billing History', description: 'All pharmacy bills — day/range/all', icon: Receipt },
-    { id: 'requests', label: 'Requests', description: 'Incoming stock requests from OT/ICU/wards', icon: Inbox },
-    { id: 'stock-batches', label: 'Stock / Batches', description: 'Browse & verify all current stock', icon: Boxes },
-    { id: 'near-expiry', label: 'Near Expiry', description: 'Track expiring batches', icon: Clock },
-    { id: 'h1-register', label: 'H1 Register', description: 'Schedule H1 drugs register', icon: FileText },
-    { id: 'reorder', label: 'Reorder', description: 'Stock reorder suggestions', icon: Lightbulb },
-    { id: 'returns', label: 'Returns', description: 'Patient return / restock', icon: RotateCcw },
-    { id: 'rtv', label: 'RTV', description: 'Return to vendor', icon: Truck },
+    { id: 'compliance', label: 'Compliance', description: 'Schedule H1 drugs register', icon: ShieldCheck },
+    { id: 'returns', label: 'Returns', description: 'Patient returns & return-to-vendor', icon: Undo2 },
     { id: 'analytics', label: 'Analytics', description: 'Sales, ABC, GST, expiry-loss', icon: BarChart3 },
+] as const;
+
+const INVENTORY_SUBTABS = [
+    { id: 'catalog', label: 'Medicine Catalog', icon: Package },
+    { id: 'stock-batches', label: 'Stock / Batches', icon: Boxes },
+    { id: 'near-expiry', label: 'Near Expiry', icon: Clock },
+    { id: 'reorder', label: 'Reorder', icon: Lightbulb },
+    { id: 'requests', label: 'Requests', icon: Inbox },
+] as const;
+
+const RETURNS_SUBTABS = [
+    { id: 'returns-patient', label: 'Patient Returns', icon: RotateCcw },
+    { id: 'returns-rtv', label: 'RTV (Return to Vendor)', icon: Truck },
 ] as const;
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -101,6 +111,8 @@ export const PharmacyRetailDashboard: React.FC = () => {
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [isPrintSettingsOpen, setIsPrintSettingsOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [inventorySubTab, setInventorySubTab] = useState<typeof INVENTORY_SUBTABS[number]['id']>('catalog');
+  const [returnsSubTab, setReturnsSubTab] = useState<typeof RETURNS_SUBTABS[number]['id']>('returns-patient');
 
   // 1-click generic switcher — which out-of-stock item's alternates are currently expanded.
   const [substitutesFor, setSubstitutesFor] = useState<string | null>(null);
@@ -549,9 +561,6 @@ export const PharmacyRetailDashboard: React.FC = () => {
                     </div>
                     {/* Actions */}
                     <div className="flex items-center space-x-2 shrink-0">
-                      <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8">
-                        Bulk Import
-                      </Button>
                       <Button variant="outline" size="icon" title="Pharmacy Bill Settings" onClick={() => setIsPrintSettingsOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8 w-8">
                         <Settings className="h-4 w-4" />
                       </Button>
@@ -570,7 +579,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
                             )}
                             title={t.description}
                         >
-                            {t.id === 'requests' && pendingRequestCount > 0 && (
+                            {t.id === 'inventory' && pendingRequestCount > 0 && (
                                 <span className="absolute top-1 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                                     {pendingRequestCount}
                                 </span>
@@ -1017,9 +1026,44 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
       </TabsContent>
 
-      <TabsContent value="catalog" className="h-full m-0 data-[state=inactive]:hidden flex flex-col data-[state=active]:flex p-4">
-        <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-          <ItemMaster fixedCategory="DRUG" />
+      <TabsContent value="inventory" className="h-full m-0 data-[state=inactive]:hidden flex flex-col data-[state=active]:flex overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 border-b shrink-0">
+          <div className="flex gap-1 overflow-x-auto custom-scrollbar">
+            {INVENTORY_SUBTABS.map(st => (
+              <button
+                key={st.id}
+                onClick={() => setInventorySubTab(st.id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors relative',
+                  inventorySubTab === st.id ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                )}
+              >
+                <st.icon className="h-3.5 w-3.5" />
+                {st.label}
+                {st.id === 'requests' && pendingRequestCount > 0 && (
+                  <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                    {pendingRequestCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="h-8 shrink-0">
+            Bulk Import
+          </Button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {inventorySubTab === 'catalog' && (
+            <div className="h-full p-4">
+              <div className="h-full min-h-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                <ItemMaster fixedCategory="DRUG" />
+              </div>
+            </div>
+          )}
+          {inventorySubTab === 'stock-batches' && <StockBatchesView />}
+          {inventorySubTab === 'near-expiry' && <NearExpiryReport />}
+          {inventorySubTab === 'reorder' && <ReorderThresholdSuggestions />}
+          {inventorySubTab === 'requests' && <PharmacyIncomingRequestsView pharmacyStoreId={storeId} />}
         </div>
       </TabsContent>
 
@@ -1027,32 +1071,30 @@ export const PharmacyRetailDashboard: React.FC = () => {
         <PharmacyBillingHistory />
       </TabsContent>
 
-      <TabsContent value="requests" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
-        <PharmacyIncomingRequestsView pharmacyStoreId={storeId} />
-      </TabsContent>
-
-      <TabsContent value="stock-batches" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
-        <StockBatchesView />
-      </TabsContent>
-
-      <TabsContent value="near-expiry" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
-        <NearExpiryReport />
-      </TabsContent>
-
-      <TabsContent value="h1-register" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+      <TabsContent value="compliance" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <DrugScheduleRegister />
       </TabsContent>
 
-      <TabsContent value="reorder" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
-        <ReorderThresholdSuggestions />
-      </TabsContent>
-
-      <TabsContent value="returns" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
-        <PatientReturnFlow />
-      </TabsContent>
-
-      <TabsContent value="rtv" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
-        <VendorReturnRTV />
+      <TabsContent value="returns" className="h-full m-0 data-[state=inactive]:hidden flex flex-col data-[state=active]:flex overflow-hidden">
+        <div className="flex gap-1 px-4 pt-3 pb-2 border-b shrink-0 overflow-x-auto custom-scrollbar">
+          {RETURNS_SUBTABS.map(st => (
+            <button
+              key={st.id}
+              onClick={() => setReturnsSubTab(st.id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors',
+                returnsSubTab === st.id ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              )}
+            >
+              <st.icon className="h-3.5 w-3.5" />
+              {st.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {returnsSubTab === 'returns-patient' && <PatientReturnFlow />}
+          {returnsSubTab === 'returns-rtv' && <VendorReturnRTV />}
+        </div>
       </TabsContent>
 
       <TabsContent value="analytics" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
