@@ -75,6 +75,10 @@ export interface BatchItem {
     receivedQty: number;
     remainingQty: number;
     status: 'ACTIVE' | 'EXHAUSTED' | 'EXPIRED' | 'QUARANTINED' | 'RECALLED';
+    // Only populated by getAllBatches — every other caller already knows the item from context.
+    inventoryItemId?: string | null;
+    itemName?: string | null;
+    itemCode?: string | null;
 }
 
 export interface BatchByBarcodeResult {
@@ -107,6 +111,9 @@ export interface BulkImportPreviewRow {
     rowIndex: number;
     isValid: boolean;
     errorMessage?: string | null;
+    // Non-blocking — set alongside isValid=true when the batch number already exists for the
+    // item+store (same expiry = will top up; different expiry = possible typo, still importable).
+    existingBatchWarning?: string | null;
     storeCode?: string | null;
     itemCode?: string | null;
     batchNumber?: string | null;
@@ -328,6 +335,15 @@ export const inventoryApi = {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
     },
+
+    // Flat, hospital-wide "everything currently in stock" view — backs the Batches tab and the
+    // duplicate-check lookups in the bulk-entry grid / single quick-add dialog.
+    getAllBatches: (opts: { storeId?: string; search?: string; activeOnly?: boolean } = {}, hospitalId?: string): Promise<BatchItem[]> =>
+        ipdApiClient
+            .get<{ batches?: BatchItem[] }>('/inventory/batches', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, search: opts.search, activeOnly: opts.activeOnly ?? true },
+            })
+            .then(r => r.batches ?? []),
 
     getReorderThresholdSuggestions: (opts: { storeId?: string; bufferMultiplier?: number } = {}, hospitalId?: string): Promise<ReorderThresholdSuggestion[]> =>
         ipdApiClient

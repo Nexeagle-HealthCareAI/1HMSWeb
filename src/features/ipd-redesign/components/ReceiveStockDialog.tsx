@@ -32,6 +32,9 @@ export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardS
     const [expiryDate, setExpiryDate] = useState('');
     const [unitCost, setUnitCost] = useState('');
     const [busy, setBusy] = useState(false);
+    // Informational only — the backend already merges into a matching batch (same item+store+batch
+    // number+expiry) rather than creating a duplicate, so this just previews that outcome.
+    const [duplicateBatchNote, setDuplicateBatchNote] = useState<string | null>(null);
 
     const singleStore = boardStores.length === 1 ? boardStores[0] : null;
 
@@ -44,6 +47,7 @@ export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardS
         setBatchNumber('');
         setExpiryDate('');
         setUnitCost('');
+        setDuplicateBatchNote(null);
 
         setLoadingItems(true);
         inventoryApi.getItems({ activeOnly: true })
@@ -52,6 +56,30 @@ export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardS
             .finally(() => setLoadingItems(false));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
+
+    // Preview the merge the backend will do (BatchCommandHandlers) — same item+store+batch
+    // number+expiry tops up the existing batch instead of creating a duplicate row.
+    useEffect(() => {
+        if (!open || !storeId || !inventoryItemId || !batchNumber.trim()) {
+            setDuplicateBatchNote(null);
+            return;
+        }
+        const timer = setTimeout(() => {
+            inventoryApi.getBatches(inventoryItemId, { storeId })
+                .then(batches => {
+                    const match = batches.find(b => b.batchNumber.trim().toLowerCase() === batchNumber.trim().toLowerCase());
+                    if (!match) { setDuplicateBatchNote(null); return; }
+                    const sameExpiry = (match.expiryDate ? match.expiryDate.slice(0, 10) : '') === expiryDate;
+                    setDuplicateBatchNote(
+                        sameExpiry
+                            ? `Batch already exists — ${match.remainingQty} on hand${match.expiryDate ? `, expires ${new Date(match.expiryDate).toLocaleDateString('en-IN')}` : ''}. This will add to it.`
+                            : `Batch "${batchNumber.trim()}" already exists with a DIFFERENT expiry (${match.expiryDate ? new Date(match.expiryDate).toLocaleDateString('en-IN') : 'none set'}) — check for a typo.`
+                    );
+                })
+                .catch(() => setDuplicateBatchNote(null));
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [open, storeId, inventoryItemId, batchNumber, expiryDate]);
 
     const selectedItem = useMemo(() => items.find(i => i.inventoryItemId === inventoryItemId), [items, inventoryItemId]);
 
@@ -211,6 +239,11 @@ export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardS
                                                 <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Unit Cost (₹)</Label>
                                                 <Input type="number" min="0" value={unitCost} onChange={e => setUnitCost(e.target.value)} placeholder="0.00" className="h-9 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm hover:border-slate-300 dark:hover:border-zinc-700 transition-all focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 font-mono" />
                                             </div>
+                                            {duplicateBatchNote && (
+                                                <div className="sm:col-span-2 text-[11px] leading-snug rounded-xl px-3 py-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300">
+                                                    {duplicateBatchNote}
+                                                </div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}

@@ -13,7 +13,7 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, RotateCcw, Truck, BarChart3, Receipt } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, Boxes, RotateCcw, Truck, BarChart3, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -21,6 +21,7 @@ const TABS = [
     { id: 'pos', label: 'Retail POS', description: 'Point of Sale & Checkout', icon: ShoppingCart },
     { id: 'catalog', label: 'Medicine Catalog', description: 'Manage drugs & inventory', icon: Package },
     { id: 'billing-history', label: 'Billing History', description: 'All pharmacy bills — day/range/all', icon: Receipt },
+    { id: 'stock-batches', label: 'Stock / Batches', description: 'Browse & verify all current stock', icon: Boxes },
     { id: 'near-expiry', label: 'Near Expiry', description: 'Track expiring batches', icon: Clock },
     { id: 'h1-register', label: 'H1 Register', description: 'Schedule H1 drugs register', icon: FileText },
     { id: 'reorder', label: 'Reorder', description: 'Stock reorder suggestions', icon: Lightbulb },
@@ -33,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { LoadEPrescriptionModal, MappedPrescriptionItem } from './LoadEPrescriptionModal';
 import { NearExpiryReport } from './NearExpiryReport';
+import { StockBatchesView } from './StockBatchesView';
 import { DrugScheduleRegister } from './DrugScheduleRegister';
 import { PharmacyPrintSettingsDialog } from './PharmacyPrintSettingsDialog';
 import { BulkImportDialog } from './BulkImportDialog';
@@ -976,6 +978,10 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
       <TabsContent value="billing-history" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <PharmacyBillingHistory />
+      </TabsContent>
+
+      <TabsContent value="stock-batches" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+        <StockBatchesView />
       </TabsContent>
 
       <TabsContent value="near-expiry" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">

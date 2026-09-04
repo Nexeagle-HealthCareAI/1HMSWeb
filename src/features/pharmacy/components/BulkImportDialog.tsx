@@ -1,12 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { inventoryApi, BulkImportPreviewRow } from '@/features/ipd-redesign/services/inventoryApi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { inventoryApi, BulkImportPreviewRow, BatchItem, InventoryItem } from '@/features/ipd-redesign/services/inventoryApi';
+import { storeService, StoreItem } from '@/features/hospital/services/storeService';
 import { useAuthStore } from '@/store';
 import { toast } from 'sonner';
-import { UploadCloud, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, Loader2, AlertTriangle, CheckCircle2, Info, Plus, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface BulkImportDialogProps {
   isOpen: boolean;
@@ -14,12 +18,124 @@ interface BulkImportDialogProps {
   onImported: () => void;
 }
 
+// One row in the editable review grid, regardless of whether it came from a parsed file or was
+// typed in manually — both funnel through the same validation, duplicate-check, and commit path.
+interface EditableRow {
+  id: string;
+  storeId: string;
+  inventoryItemId: string;
+  batchNumber: string;
+  manufactureDate: string; // yyyy-mm-dd, '' if unset
+  expiryDate: string;
+  unitCost: string;
+  mrp: string;
+  barcodeValue: string;
+  receivedQty: string;
+  isValid: boolean;
+  errorMessage: string | null;
+  existingBatchWarning: string | null;
+}
+
+let rowIdCounter = 0;
+const newRowId = () => `row-${++rowIdCounter}-${Date.now()}`;
+
+const toDateInputValue = (iso?: string | null): string => (iso ? iso.slice(0, 10) : '');
+
+const blankRow = (): EditableRow => ({
+  id: newRowId(),
+  storeId: '',
+  inventoryItemId: '',
+  batchNumber: '',
+  manufactureDate: '',
+  expiryDate: '',
+  unitCost: '',
+  mrp: '',
+  barcodeValue: '',
+  receivedQty: '',
+  isValid: false,
+  errorMessage: null,
+  existingBatchWarning: null,
+});
+
 export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, onImported }) => {
   const hospitalId = useAuthStore(state => state.hospitalId);
-  const [rows, setRows] = useState<BulkImportPreviewRow[]>([]);
+  const [mode, setMode] = useState<'file' | 'manual'>('file');
+  const [rows, setRows] = useState<EditableRow[]>([]);
   const [unrecognizedColumns, setUnrecognizedColumns] = useState<string[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
+
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [allBatches, setAllBatches] = useState<BatchItem[]>([]);
+
+  useEffect(() => {
+    if (!isOpen || !hospitalId) return;
+    setMode('file');
+    setRows([]);
+    setUnrecognizedColumns([]);
+    Promise.all([
+      storeService.getStores(hospitalId),
+      inventoryApi.getItems({ activeOnly: true }, hospitalId),
+      inventoryApi.getAllBatches({}, hospitalId),
+    ]).then(([s, i, b]) => {
+      setStores(s);
+      setItems(i);
+      setAllBatches(b);
+    }).catch(() => toast.error('Could not load stores/items for the import grid'));
+  }, [isOpen, hospitalId]);
+
+  const storeByCode = useMemo(() => new Map(stores.map(s => [s.storeCode.toUpperCase(), s])), [stores]);
+  const itemByCode = useMemo(() => new Map(items.map(i => [i.itemCode.toUpperCase(), i])), [items]);
+
+  // Re-run whenever a row's own fields change — mirrors the same required-field rules
+  // PreviewBulkImportHandler/BulkBatchCommandHandlers enforce server-side, so a row that passes
+  // here won't be rejected at commit.
+  const validateRow = useCallback((row: EditableRow): { isValid: boolean; errorMessage: string | null } => {
+    const errors: string[] = [];
+    if (!row.storeId) errors.push('Store is required.');
+    if (!row.inventoryItemId) errors.push('Item is required.');
+    if (!row.batchNumber.trim()) errors.push('Batch number is required.');
+    const qty = Number(row.receivedQty);
+    if (!row.receivedQty || Number.isNaN(qty) || qty <= 0) errors.push('Quantity must be a positive number.');
+    return { isValid: errors.length === 0, errorMessage: errors.length > 0 ? errors.join(' ') : null };
+  }, []);
+
+  // Non-blocking preview of the merge the backend will do (BatchCommandHandlers/BulkBatchCommandHandlers)
+  // — same item+store+batch number+expiry tops up the existing batch instead of creating a duplicate.
+  const checkDuplicate = useCallback((row: EditableRow): string | null => {
+    if (!row.storeId || !row.inventoryItemId || !row.batchNumber.trim()) return null;
+    const match = allBatches.find(b =>
+      b.storeId === row.storeId &&
+      b.inventoryItemId === row.inventoryItemId &&
+      b.batchNumber.trim().toLowerCase() === row.batchNumber.trim().toLowerCase()
+    );
+    if (!match) return null;
+    const sameExpiry = toDateInputValue(match.expiryDate) === row.expiryDate;
+    return sameExpiry
+      ? `Already exists — ${match.remainingQty} on hand. Will add to it.`
+      : `Exists with a DIFFERENT expiry (${match.expiryDate ? new Date(match.expiryDate).toLocaleDateString('en-IN') : 'none'}) — check for a typo.`;
+  }, [allBatches]);
+
+  const updateRow = useCallback((id: string, patch: Partial<EditableRow>) => {
+    setRows(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const next = { ...r, ...patch };
+      const { isValid, errorMessage } = validateRow(next);
+      next.isValid = isValid;
+      next.errorMessage = errorMessage;
+      next.existingBatchWarning = checkDuplicate(next);
+      return next;
+    }));
+  }, [validateRow, checkDuplicate]);
+
+  const removeRow = useCallback((id: string) => {
+    setRows(prev => prev.filter(r => r.id !== id));
+  }, []);
+
+  const addManualRow = useCallback(() => {
+    setRows(prev => [...prev, blankRow()]);
+  }, []);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -32,7 +148,32 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
         toast.error(result.message || 'Could not parse the file');
         return;
       }
-      setRows(result.rows);
+      const mapped: EditableRow[] = result.rows.map((r: BulkImportPreviewRow) => {
+        const store = r.storeCode ? storeByCode.get(r.storeCode.toUpperCase()) : undefined;
+        const item = r.itemCode ? itemByCode.get(r.itemCode.toUpperCase()) : undefined;
+        const row: EditableRow = {
+          id: newRowId(),
+          storeId: store?.storeId ?? '',
+          inventoryItemId: item?.inventoryItemId ?? '',
+          batchNumber: r.batchNumber ?? '',
+          manufactureDate: toDateInputValue(r.manufactureDate),
+          expiryDate: toDateInputValue(r.expiryDate),
+          unitCost: r.unitCost != null ? String(r.unitCost) : '',
+          mrp: r.mrp != null ? String(r.mrp) : '',
+          barcodeValue: r.barcodeValue ?? '',
+          receivedQty: r.receivedQty ? String(r.receivedQty) : '',
+          isValid: r.isValid,
+          errorMessage: r.errorMessage ?? null,
+          existingBatchWarning: r.existingBatchWarning ?? null,
+        };
+        // The file parser only matched by code text — re-validate against the loaded store/item
+        // lists too, so a code that parsed but doesn't resolve to a real store/item still blocks.
+        const { isValid, errorMessage } = validateRow(row);
+        row.isValid = row.isValid && isValid;
+        row.errorMessage = row.errorMessage ?? errorMessage;
+        return row;
+      });
+      setRows(mapped);
       setUnrecognizedColumns(result.unrecognizedColumns);
       toast.success(result.message || 'File parsed');
     } catch (e: any) {
@@ -40,7 +181,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
     } finally {
       setIsParsing(false);
     }
-  }, [hospitalId]);
+  }, [hospitalId, storeByCode, itemByCode, validateRow]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -56,17 +197,21 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
     setIsCommitting(true);
     try {
       const response: any = await inventoryApi.bulkUploadBatches({
-        rows: validRows.map(r => ({
-          storeCode: r.storeCode,
-          itemCode: r.itemCode,
-          batchNumber: r.batchNumber,
-          manufactureDate: r.manufactureDate,
-          expiryDate: r.expiryDate,
-          unitCost: r.unitCost,
-          mrp: r.mrp,
-          barcodeValue: r.barcodeValue,
-          receivedQty: r.receivedQty,
-        })),
+        rows: validRows.map(r => {
+          const store = stores.find(s => s.storeId === r.storeId);
+          const item = items.find(i => i.inventoryItemId === r.inventoryItemId);
+          return {
+            storeCode: store?.storeCode,
+            itemCode: item?.itemCode,
+            batchNumber: r.batchNumber.trim(),
+            manufactureDate: r.manufactureDate || undefined,
+            expiryDate: r.expiryDate || undefined,
+            unitCost: r.unitCost ? Number(r.unitCost) : undefined,
+            mrp: r.mrp ? Number(r.mrp) : undefined,
+            barcodeValue: r.barcodeValue.trim() || undefined,
+            receivedQty: Number(r.receivedQty),
+          };
+        }),
       }, hospitalId);
       if (response?.success !== false) {
         toast.success(response?.message || `Imported ${validRows.length} batches`);
@@ -83,14 +228,27 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
     }
   };
 
+  const showGrid = mode === 'manual' || rows.length > 0;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Bulk Stock Import (Excel / CSV)</DialogTitle>
+          <DialogTitle>Bulk Stock Import</DialogTitle>
         </DialogHeader>
 
-        {rows.length === 0 ? (
+        {!showGrid && (
+          <div className="flex gap-2 mb-2">
+            <Button variant={mode === 'file' ? 'default' : 'outline'} size="sm" onClick={() => setMode('file')}>
+              Upload File
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setMode('manual'); setRows([blankRow()]); }}>
+              Enter Manually
+            </Button>
+          </div>
+        )}
+
+        {!showGrid ? (
           <div
             {...getRootProps()}
             className={`flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center py-16 cursor-pointer transition-colors ${
@@ -115,43 +273,94 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-4 text-sm">
                 <span className="flex items-center gap-1 text-green-700"><CheckCircle2 className="h-4 w-4" />{validRows.length} valid</span>
                 {invalidCount > 0 && <span className="flex items-center gap-1 text-red-700"><AlertTriangle className="h-4 w-4" />{invalidCount} need correction</span>}
               </div>
-              <Button variant="outline" size="sm" onClick={() => setRows([])}>Upload a different file</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={addManualRow}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Row
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setRows([]); setMode('file'); }}>Start Over</Button>
+              </div>
             </div>
             {unrecognizedColumns.length > 0 && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
                 Not found in this file: {unrecognizedColumns.join(', ')} — rows relying on these were left blank for those fields.
               </p>
             )}
-            <div className="border rounded-md overflow-hidden">
+            <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader className="bg-gray-50">
                   <TableRow>
-                    <TableHead>Row</TableHead>
-                    <TableHead>Store</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Batch</TableHead>
-                    <TableHead>Expiry</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Error</TableHead>
+                    <TableHead className="w-36">Store</TableHead>
+                    <TableHead className="w-44">Item</TableHead>
+                    <TableHead className="w-32">Batch No.</TableHead>
+                    <TableHead className="w-32">Mfg Date</TableHead>
+                    <TableHead className="w-32">Expiry</TableHead>
+                    <TableHead className="w-20">Qty</TableHead>
+                    <TableHead className="w-24">Cost</TableHead>
+                    <TableHead className="w-24">MRP</TableHead>
+                    <TableHead className="w-28">Barcode</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map(r => (
-                    <TableRow key={r.rowIndex} className={r.isValid ? '' : 'bg-red-50'}>
-                      <TableCell className="text-xs">{r.rowIndex + 1}</TableCell>
-                      <TableCell className="text-xs">{r.storeCode || '—'}</TableCell>
-                      <TableCell className="text-xs">{r.itemCode || '—'}</TableCell>
-                      <TableCell className="text-xs">{r.batchNumber || '—'}</TableCell>
-                      <TableCell className="text-xs">{r.expiryDate ? new Date(r.expiryDate).toLocaleDateString('en-IN') : '—'}</TableCell>
-                      <TableCell className="text-xs">{r.receivedQty}</TableCell>
-                      <TableCell className="text-xs">{r.unitCost ?? '—'}</TableCell>
-                      <TableCell className="text-xs text-red-700">{r.errorMessage}</TableCell>
+                    <TableRow key={r.id} className={cn(!r.isValid && 'bg-red-50', r.isValid && r.existingBatchWarning && 'bg-amber-50')}>
+                      <TableCell>
+                        <Select value={r.storeId} onValueChange={v => updateRow(r.id, { storeId: v })}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Store" /></SelectTrigger>
+                          <SelectContent>
+                            {stores.map(s => <SelectItem key={s.storeId} value={s.storeId}>{s.storeName}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={r.inventoryItemId} onValueChange={v => updateRow(r.id, { inventoryItemId: v })}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Item" /></SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName} ({i.itemCode})</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Input className="h-8 text-xs" value={r.batchNumber} onChange={e => updateRow(r.id, { batchNumber: e.target.value })} placeholder="Batch no." />
+                      </TableCell>
+                      <TableCell>
+                        <Input type="date" className="h-8 text-xs" value={r.manufactureDate} onChange={e => updateRow(r.id, { manufactureDate: e.target.value })} />
+                      </TableCell>
+                      <TableCell>
+                        <Input type="date" className="h-8 text-xs" value={r.expiryDate} onChange={e => updateRow(r.id, { expiryDate: e.target.value })} />
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" min="0" className="h-8 text-xs" value={r.receivedQty} onChange={e => updateRow(r.id, { receivedQty: e.target.value })} />
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" min="0" className="h-8 text-xs" value={r.unitCost} onChange={e => updateRow(r.id, { unitCost: e.target.value })} />
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" min="0" className="h-8 text-xs" value={r.mrp} onChange={e => updateRow(r.id, { mrp: e.target.value })} />
+                      </TableCell>
+                      <TableCell>
+                        <Input className="h-8 text-xs" value={r.barcodeValue} onChange={e => updateRow(r.id, { barcodeValue: e.target.value })} />
+                      </TableCell>
+                      <TableCell className="text-xs max-w-[220px]">
+                        {r.errorMessage && <div className="text-red-700">{r.errorMessage}</div>}
+                        {r.existingBatchWarning && (
+                          <div className="flex items-start gap-1 text-amber-700">
+                            <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span>{r.existingBatchWarning}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRow(r.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -162,7 +371,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          {rows.length > 0 && (
+          {showGrid && (
             <Button onClick={handleCommit} disabled={validRows.length === 0 || isCommitting}>
               {isCommitting ? 'Importing...' : `Import ${validRows.length} Valid Row${validRows.length === 1 ? '' : 's'}`}
             </Button>
