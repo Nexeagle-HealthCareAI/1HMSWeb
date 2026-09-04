@@ -44,6 +44,9 @@ export const PathologyWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<PathologyOrderDto[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  // Distinct from "no orders" -- a failed fetch left `orders` as whatever it was before (empty on
+  // first load), which without this looked identical to a genuinely empty worklist.
+  const [ordersLoadError, setOrdersLoadError] = useState(false);
   // Shared by both "New Lab Order" and the row-level "Edit Order" action -- orderId unset means
   // create mode, set means edit mode (see PathologyNewOrderModal).
   const [orderModal, setOrderModal] = useState<{ open: boolean; orderId?: string }>({ open: false });
@@ -233,8 +236,10 @@ export const PathologyWorkspace: React.FC = () => {
     try {
       const data = await pathologyService.getOrders(hospitalId);
       setOrders(data);
+      setOrdersLoadError(false);
     } catch (e) {
       console.error("Failed to fetch orders", e);
+      setOrdersLoadError(true);
     } finally {
       setIsLoadingOrders(false);
     }
@@ -521,6 +526,12 @@ export const PathologyWorkspace: React.FC = () => {
               </div>
             </div>
           </>
+        ) : ordersLoadError ? (
+          <div className="p-12 text-center text-destructive flex flex-col items-center gap-3">
+            <AlertTriangle className="h-6 w-6" />
+            <p>Couldn't load orders. Check your connection and try again.</p>
+            <Button variant="outline" size="sm" onClick={fetchOrders}>Retry</Button>
+          </div>
         ) : (
           <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
             <p>No orders found matching the current filters.</p>
