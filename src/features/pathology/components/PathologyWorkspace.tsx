@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pathologyService, PathologyOrderDto } from '../services/pathologyService';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import { getPathologyStatusColor, getPathologySourceColor } from '../utils/patho
 import { format } from 'date-fns';
 import { PathologyNewOrderModal } from './PathologyNewOrderModal';
 import { PathologyTokenPrintModal } from './PathologyTokenPrintModal';
+import { PathologyReportPreviewModal } from './PathologyReportPreviewModal';
+import { buildAllReadyReportsPdf } from '../utils/buildAllReportsPdf';
 import { formatTokenNumber } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -46,6 +48,50 @@ export const PathologyWorkspace: React.FC = () => {
   // create mode, set means edit mode (see PathologyNewOrderModal).
   const [orderModal, setOrderModal] = useState<{ open: boolean; orderId?: string }>({ open: false });
   const [tokenPrintOrder, setTokenPrintOrder] = useState<PathologyOrderDto | null>(null);
+
+  // "View all reports" from the dashboard row -- builds one combined PDF (every test on the order
+  // that already has a report) client-side and reuses the same preview drawer the order detail
+  // page uses for a single report, so Preview/Print/Download behave identically either way.
+  const [isReportsPreviewOpen, setIsReportsPreviewOpen] = useState(false);
+  const [isBuildingReportsPreview, setIsBuildingReportsPreview] = useState(false);
+  const [reportsPreviewUrl, setReportsPreviewUrl] = useState<string | null>(null);
+  const [reportsPreviewError, setReportsPreviewError] = useState<string | null>(null);
+  const [reportsPreviewTitle, setReportsPreviewTitle] = useState('All Reports');
+  const reportsPreviewUrlRef = useRef<string | null>(null);
+  useEffect(() => { reportsPreviewUrlRef.current = reportsPreviewUrl; }, [reportsPreviewUrl]);
+
+  const openAllReportsPreview = async (order: PathologyOrderDto) => {
+    if (!hospitalId) return;
+    setIsReportsPreviewOpen(true);
+    setIsBuildingReportsPreview(true);
+    setReportsPreviewError(null);
+    try {
+      const result = await buildAllReadyReportsPdf(hospitalId, order.orderId);
+      if (!result) {
+        setReportsPreviewError('No generated reports found for this order.');
+        return;
+      }
+      const nextUrl = URL.createObjectURL(result.blob);
+      if (reportsPreviewUrlRef.current) URL.revokeObjectURL(reportsPreviewUrlRef.current);
+      setReportsPreviewUrl(nextUrl);
+      setReportsPreviewTitle(result.reportCount > 1 ? `All Reports — ${order.orderNo} (${result.reportCount})` : `Report — ${order.orderNo}`);
+    } catch (e) {
+      console.error('Failed to build combined report preview', e);
+      setReportsPreviewError('Could not build the report(s) preview.');
+      toast.error('Could not build the report(s) preview.');
+    } finally {
+      setIsBuildingReportsPreview(false);
+    }
+  };
+
+  const handleReportsPreviewOpenChange = (open: boolean) => {
+    setIsReportsPreviewOpen(open);
+    if (!open && reportsPreviewUrlRef.current) {
+      URL.revokeObjectURL(reportsPreviewUrlRef.current);
+      setReportsPreviewUrl(null);
+      setReportsPreviewError(null);
+    }
+  };
 
   // Quick actions -- Mark Sample Collected, Edit Order, Cancel Order -- all reachable straight from
   // the dashboard row instead of requiring a trip into the order detail page first.
@@ -119,8 +165,12 @@ export const PathologyWorkspace: React.FC = () => {
     }
   });
 
-  const [sortColumn, setSortColumn] = useState<keyof PathologyOrderDto | ''>('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  // Defaults to newest-first by order date -- the backend already returns orders this way
+  // (OrderByDescending CreatedAt), but making it an explicit default here means the dashboard
+  // still reliably shows the newest entry first even if that ever changes, and gives the Order
+  // Date column a visible sort indicator instead of an unsorted-looking table.
+  const [sortColumn, setSortColumn] = useState<keyof PathologyOrderDto | ''>('orderDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const handleSort = (column: keyof PathologyOrderDto) => {
     if (sortColumn === column) {
@@ -400,10 +450,15 @@ export const PathologyWorkspace: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {order.reportsReadyCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openAllReportsPreview(order); }}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline underline-offset-2"
+                            title="Preview, print, or download all reports for this order"
+                          >
                             <FileCheck2 className="h-3.5 w-3.5" />
                             {order.reportsReadyCount}/{order.testCount} ready
-                          </span>
+                          </button>
                         ) : (
                           <span className="text-xs text-muted-foreground">Not generated</span>
                         )}
@@ -484,6 +539,16 @@ export const PathologyWorkspace: React.FC = () => {
         open={!!tokenPrintOrder}
         onOpenChange={(open) => { if (!open) setTokenPrintOrder(null); }}
         order={tokenPrintOrder}
+      />
+
+      <PathologyReportPreviewModal
+        open={isReportsPreviewOpen}
+        onOpenChange={handleReportsPreviewOpenChange}
+        previewUrl={reportsPreviewUrl}
+        isLoading={isBuildingReportsPreview}
+        error={reportsPreviewError}
+        fileName={`${reportsPreviewTitle.replace(/[^a-z0-9]+/gi, '-')}.pdf`}
+        title={reportsPreviewTitle}
       />
 
       <Sheet open={!!cancelTarget} onOpenChange={(open) => { if (!open) setCancelTarget(null); }}>

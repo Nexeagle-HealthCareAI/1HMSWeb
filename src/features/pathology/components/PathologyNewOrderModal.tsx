@@ -16,6 +16,10 @@ import { useAuthStore } from '@/store';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
+// Same relation-prefix convention as the OPD registration form (PatientForm.tsx) — kept in sync
+// so a guardian entered here reads the same way everywhere else in the app.
+const GUARDIAN_RELATION_OPTIONS = ['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'];
+
 // Dedicated page for placing a new pathology order, or editing an already-placed one -- a
 // pathologist/technician lands here from the Pathology Lab dashboard's "New Lab Order" button, or
 // from an order row's "Edit Order" action (orderId set). Edit mode reuses every step of the create
@@ -48,8 +52,10 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientMobile, setNewPatientMobile] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
-  const [newPatientGender, setNewPatientGender] = useState<'Male' | 'Female' | ''>('');
+  const [newPatientAgeUnit, setNewPatientAgeUnit] = useState<'Y' | 'M' | 'D'>('Y');
+  const [newPatientGender, setNewPatientGender] = useState<'Male' | 'Female' | 'Other' | ''>('');
   const [newPatientGuardian, setNewPatientGuardian] = useState('');
+  const [newPatientGuardianRelation, setNewPatientGuardianRelation] = useState('C/O');
   const [isRegisteringPatient, setIsRegisteringPatient] = useState(false);
   const [testCatalog, setTestCatalog] = useState<PathologyTestMaster[]>([]);
   const [testSearchQuery, setTestSearchQuery] = useState('');
@@ -95,7 +101,7 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
     setPatientQuery('');
     setPatientResults([]);
     setPatientMode('search');
-    setNewPatientName(''); setNewPatientMobile(''); setNewPatientAge(''); setNewPatientGender(''); setNewPatientGuardian('');
+    setNewPatientName(''); setNewPatientMobile(''); setNewPatientAge(''); setNewPatientAgeUnit('Y'); setNewPatientGender(''); setNewPatientGuardian(''); setNewPatientGuardianRelation('C/O');
     setTestSearchQuery('');
     setSelectedTestIds([]);
     setOrderNotes('');
@@ -182,8 +188,10 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
         fullName: name,
         mobile,
         age: Number(ageValue),
+        ageUnit: newPatientAgeUnit,
         sex: newPatientGender,
         guardianName: newPatientGuardian.trim() || undefined,
+        guardianRelation: newPatientGuardianRelation,
       });
       setSelectedPatient(patient);
       toast.success('Patient registered');
@@ -660,13 +668,20 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] text-slate-700 font-semibold">Age <span className="text-red-500">*</span></Label>
-                        <Input type="number" min={0} value={newPatientAge} onChange={(e) => setNewPatientAge(e.target.value)} placeholder="e.g. 34" className="h-8 text-xs bg-white" />
+                        <div className="flex gap-1">
+                          <Input type="number" min={0} value={newPatientAge} onChange={(e) => setNewPatientAge(e.target.value)} placeholder="e.g. 34" className="h-8 text-xs bg-white flex-1 min-w-0" />
+                          {(['Y', 'M', 'D'] as const).map(u => (
+                            <Button key={u} type="button" variant={newPatientAgeUnit === u ? 'default' : 'outline'} onClick={() => setNewPatientAgeUnit(u)} className={`h-8 w-9 shrink-0 text-[10px] px-0 ${newPatientAgeUnit === u ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}>
+                              {u === 'Y' ? 'Yrs' : u === 'M' ? 'Mon' : 'Days'}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] text-slate-700 font-semibold">Gender <span className="text-red-500">*</span></Label>
                         <div className="flex gap-1 h-8">
-                          {(['Male', 'Female'] as const).map(g => (
-                            <Button key={g} type="button" variant={newPatientGender === g ? 'default' : 'outline'} onClick={() => setNewPatientGender(g)} className={`flex-1 h-8 text-[10px] ${newPatientGender === g ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}>
+                          {(['Male', 'Female', 'Other'] as const).map(g => (
+                            <Button key={g} type="button" variant={newPatientGender === g ? 'default' : 'outline'} onClick={() => setNewPatientGender(g)} className={`flex-1 h-8 text-[10px] px-1 ${newPatientGender === g ? 'bg-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-600'}`}>
                               {g}
                             </Button>
                           ))}
@@ -674,7 +689,18 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] text-slate-700 font-semibold">Guardian (Optional)</Label>
-                        <Input value={newPatientGuardian} onChange={(e) => setNewPatientGuardian(e.target.value)} placeholder="e.g. Father's Name" className="h-8 text-xs bg-white" />
+                        <div className="flex h-8 rounded-md border border-input bg-white overflow-hidden">
+                          <select
+                            value={newPatientGuardianRelation}
+                            onChange={(e) => setNewPatientGuardianRelation(e.target.value)}
+                            className="h-full w-[56px] border-0 border-r border-input px-1 text-[10px] bg-muted/40 focus:outline-none shrink-0"
+                          >
+                            {GUARDIAN_RELATION_OPTIONS.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                          <Input value={newPatientGuardian} onChange={(e) => setNewPatientGuardian(e.target.value)} placeholder="e.g. Father's Name" className="h-8 text-xs bg-white border-0 rounded-none flex-1" />
+                        </div>
                       </div>
                     </div>
                     <Button type="button" className="w-full mt-3 h-8 text-xs font-semibold shadow-sm" onClick={registerWalkInPatient} disabled={isRegisteringPatient}>

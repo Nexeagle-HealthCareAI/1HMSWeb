@@ -34,8 +34,9 @@ export interface RegisterWalkInPatientInput {
     mobile: string;
     age?: number;
     ageUnit?: string;
-    sex?: 'Male' | 'Female';
+    sex?: 'Male' | 'Female' | 'Other';
     guardianName?: string;
+    guardianRelation?: string;
 }
 
 interface RegisterWalkInPatientResponse {
@@ -69,6 +70,7 @@ export const patientService = {
                 ageUnit: patient.ageUnit || 'Y',
                 sex: patient.sex,
                 guardianName: patient.guardianName || undefined,
+                guardianRelation: patient.guardianName ? (patient.guardianRelation || 'C/O') : undefined,
             },
         });
         if (!response.success || !response.patientId) {
