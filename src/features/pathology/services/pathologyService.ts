@@ -30,6 +30,9 @@ export interface CreatePathologyOrderResponse {
   message?: string;
   orderId?: string;
   orderNo?: string;
+  // Set only when auto-billing was enabled but the charge post failed/was skipped -- the order
+  // itself still succeeded, so this is a warning to surface alongside the success toast.
+  billingWarning?: string;
 }
 
 export interface UpdatePathologyOrderRequest {
@@ -253,8 +256,8 @@ export const pathologyService = {
     return response.data.success;
   },
 
-  updateOrder: async (hospitalId: string, orderId: string, request: UpdatePathologyOrderRequest): Promise<{ success: boolean; message?: string }> => {
-    const response = await api.put<{ success: boolean; message?: string }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}`, request);
+  updateOrder: async (hospitalId: string, orderId: string, request: UpdatePathologyOrderRequest): Promise<{ success: boolean; message?: string; billingWarning?: string }> => {
+    const response = await api.put<{ success: boolean; message?: string; billingWarning?: string }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}`, request);
     return response.data;
   },
 

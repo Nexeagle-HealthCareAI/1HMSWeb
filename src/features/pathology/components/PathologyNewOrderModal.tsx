@@ -317,6 +317,9 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
           return;
         }
         toast.success('Order updated');
+        if (response.billingWarning) {
+          toast.warning('Billing needs attention', { description: response.billingWarning, duration: 10000 });
+        }
       } else {
         const response = await pathologyService.createOrder(hospitalId, {
           patientId: selectedPatient.patientId,
@@ -332,6 +335,9 @@ export const PathologyNewOrderModal: React.FC<{ open: boolean; onOpenChange: (o:
           return;
         }
         toast.success('Order placed', { description: response.orderNo });
+        if (response.billingWarning) {
+          toast.warning('Billing needs attention', { description: response.billingWarning, duration: 10000 });
+        }
       }
       onSuccess();
       onOpenChange(false);
