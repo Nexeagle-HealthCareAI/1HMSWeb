@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FieldTranslationTool } from './FieldTranslationTool';
+import { PathologyLabOrderSection } from './PathologyLabOrderSection';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Activity,
@@ -5005,6 +5006,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Lab Tests Section -- places a real PathologyOrder via the same path the Pathology
+                  module's own "New Lab Order" modal uses, so billing behaves identically (charge +
+                  draft invoice, OPD-visit-or-fallback resolution) rather than a separate wiring. */}
+              {resolvedPatientId && renderCollapsibleSection(
+                'labTests',
+                'Lab Tests',
+                <PathologyLabOrderSection
+                  hospitalId={getHospitalId?.() || ''}
+                  patientId={resolvedPatientId}
+                  doctorId={getDoctorId() || undefined}
+                />
               )}
 
               {/* Auto Save Logic - Only active when not loading draft */}
