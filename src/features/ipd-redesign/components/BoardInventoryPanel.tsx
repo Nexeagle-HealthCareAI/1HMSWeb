@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert, AlertTriangle, CircleDashed, ScanLine } from 'lucide-react';
+import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert, AlertTriangle, CircleDashed, ScanLine, Send } from 'lucide-react';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
 import { inventoryApi, type StockOverviewRow, type ExpiryAlertRow, type ReorderAlertRow } from '../services/inventoryApi';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UseStockPopover, type BoardPatientOption } from './UseStockPopover';
 import { ReceiveStockDialog } from './ReceiveStockDialog';
 import { TransferStockDialog } from './TransferStockDialog';
+import { RequestFromPharmacyDialog } from './RequestFromPharmacyDialog';
 
 export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: BoardPatientOption[] }> = ({ boardType, patients }) => {
     const { toast } = useToast();
@@ -19,6 +20,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
     const [searchTerm, setSearchTerm] = useState('');
     const [receiveOpen, setReceiveOpen] = useState(false);
     const [transferOpen, setTransferOpen] = useState(false);
+    const [requestOpen, setRequestOpen] = useState(false);
 
     const load = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -104,6 +106,14 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                 className="h-10 rounded-xl border-slate-205 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 active:scale-[0.98] transition-all"
                             >
                                 <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setRequestOpen(true)}
+                                className="h-10 rounded-xl border-slate-205 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 active:scale-[0.98] transition-all"
+                            >
+                                <Send className="h-3.5 w-3.5 mr-1.5" /> Request from Pharmacy
                             </Button>
                         </div>
                     )}
@@ -214,6 +224,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
 
             <ReceiveStockDialog open={receiveOpen} onOpenChange={setReceiveOpen} boardStores={stores} onSuccess={() => load(true)} />
             <TransferStockDialog open={transferOpen} onOpenChange={setTransferOpen} boardStores={stores} stockByStore={stockRows} onSuccess={() => load(true)} />
+            <RequestFromPharmacyDialog open={requestOpen} onOpenChange={setRequestOpen} boardStores={stores} onSuccess={() => load(true)} />
         </div>
     );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/store';
 import { inventoryApi, InventoryItem } from '@/features/ipd-redesign/services/inventoryApi';
+import { procurementApi } from '@/features/ipd-redesign/services/procurementApi';
 import { storeService } from '@/features/hospital/services/storeService';
 import { patientService } from '@/features/billing/services/patientService';
 import { Patient } from '@/features/billing/types';
@@ -13,7 +14,7 @@ import { pharmacyCatalogApi, SubstituteItem } from '../services/pharmacyCatalogA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, Boxes, RotateCcw, Truck, BarChart3, Receipt } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, User, UserPlus, CreditCard, X, Settings, Lightbulb, Pill, BookOpen, Clock, FileText, Package, Boxes, RotateCcw, Truck, BarChart3, Receipt, Inbox, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -21,6 +22,7 @@ const TABS = [
     { id: 'pos', label: 'Retail POS', description: 'Point of Sale & Checkout', icon: ShoppingCart },
     { id: 'catalog', label: 'Medicine Catalog', description: 'Manage drugs & inventory', icon: Package },
     { id: 'billing-history', label: 'Billing History', description: 'All pharmacy bills — day/range/all', icon: Receipt },
+    { id: 'requests', label: 'Requests', description: 'Incoming stock requests from OT/ICU/wards', icon: Inbox },
     { id: 'stock-batches', label: 'Stock / Batches', description: 'Browse & verify all current stock', icon: Boxes },
     { id: 'near-expiry', label: 'Near Expiry', description: 'Track expiring batches', icon: Clock },
     { id: 'h1-register', label: 'H1 Register', description: 'Schedule H1 drugs register', icon: FileText },
@@ -35,6 +37,7 @@ import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { LoadEPrescriptionModal, MappedPrescriptionItem } from './LoadEPrescriptionModal';
 import { NearExpiryReport } from './NearExpiryReport';
 import { StockBatchesView } from './StockBatchesView';
+import { PharmacyIncomingRequestsView } from './PharmacyIncomingRequestsView';
 import { DrugScheduleRegister } from './DrugScheduleRegister';
 import { PharmacyPrintSettingsDialog } from './PharmacyPrintSettingsDialog';
 import { BulkImportDialog } from './BulkImportDialog';
@@ -89,6 +92,11 @@ export const PharmacyRetailDashboard: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [storeId, setStoreId] = useState<string | null>(null);
+  // Set when no store is typed PHARMACY and we fell back to whatever active store sorted first —
+  // surfaced as a banner instead of staying silent, since every screen keyed off `storeId` (POS,
+  // Stock/Batches, Requests) is silently transacting against the wrong store otherwise.
+  const [usingFallbackStore, setUsingFallbackStore] = useState<{ name: string } | null>(null);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [isPrintSettingsOpen, setIsPrintSettingsOpen] = useState(false);
@@ -103,15 +111,36 @@ export const PharmacyRetailDashboard: React.FC = () => {
     if (!hospitalId) return;
     storeService.getStores(hospitalId)
       .then(stores => {
-        const pharmacyStore = stores.find(s => s.storeType === 'PHARMACY' && s.isActive) ?? stores.find(s => s.isActive);
+        const typedPharmacyStore = stores.find(s => s.storeType === 'PHARMACY' && s.isActive);
+        const pharmacyStore = typedPharmacyStore ?? stores.find(s => s.isActive);
         if (pharmacyStore) {
           setStoreId(pharmacyStore.storeId);
+          setUsingFallbackStore(typedPharmacyStore ? null : { name: pharmacyStore.storeName });
         } else {
           toast.error('No active pharmacy store is configured for this hospital.');
         }
       })
       .catch(() => toast.error('Could not load pharmacy store.'));
   }, [hospitalId]);
+
+  // Lightweight poll for the Requests tab badge — reuses the already-resolved pharmacy storeId,
+  // no second store lookup (PharmacyIncomingRequestsView does its own full fetch once opened).
+  useEffect(() => {
+    if (!hospitalId || !storeId) return;
+    let cancelled = false;
+    const poll = () => {
+      procurementApi.getIndents(undefined, hospitalId)
+        .then(indents => {
+          if (cancelled) return;
+          const pending = indents.filter(i => i.targetStoreId === storeId && (i.status === 'SUBMITTED' || i.status === 'PARTIALLY_ISSUED'));
+          setPendingRequestCount(pending.length);
+        })
+        .catch(() => {});
+    };
+    poll();
+    const interval = setInterval(poll, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [hospitalId, storeId]);
 
   const handleSearch = async () => {
     if (!hospitalId || !searchTerm.trim()) return;
@@ -536,11 +565,16 @@ export const PharmacyRetailDashboard: React.FC = () => {
                             key={t.id}
                             value={t.id}
                             className={cn(
-                                "flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white",
+                                "relative flex flex-col items-center justify-center py-2 text-center rounded-xl transition-all h-auto bg-transparent border-0 text-brand-50 hover:bg-white/10 hover:text-white data-[state=active]:bg-white data-[state=active]:dark:bg-zinc-900 data-[state=active]:text-brand-600 data-[state=active]:dark:text-brand-400 data-[state=active]:shadow-sm data-[state=active]:hover:bg-white",
                                 "px-3 select-none whitespace-normal flex-1 sm:flex-none sm:min-w-[100px]"
                             )}
                             title={t.description}
                         >
+                            {t.id === 'requests' && pendingRequestCount > 0 && (
+                                <span className="absolute top-1 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                                    {pendingRequestCount}
+                                </span>
+                            )}
                             <t.icon className="h-5 w-5 mb-1 shrink-0" />
                             <span className="text-[9px] font-bold tracking-wide leading-tight">{t.label}</span>
                         </TabsTrigger>
@@ -548,6 +582,19 @@ export const PharmacyRetailDashboard: React.FC = () => {
                 </TabsList>
             </div>
         </div>
+
+        {usingFallbackStore && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/40 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              No store is configured as this hospital's Pharmacy — using "<strong>{usingFallbackStore.name}</strong>" instead.
+              Set a store's type to Pharmacy in Store Master to fix this.
+            </span>
+            <button onClick={() => setUsingFallbackStore(null)} className="ml-auto shrink-0 hover:opacity-70" aria-label="Dismiss">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 mt-3 overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border shadow-sm">
           <TabsContent value="pos" className="h-full m-0 data-[state=inactive]:hidden flex flex-col lg:flex-row data-[state=active]:flex">
@@ -978,6 +1025,10 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
       <TabsContent value="billing-history" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
         <PharmacyBillingHistory />
+      </TabsContent>
+
+      <TabsContent value="requests" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
+        <PharmacyIncomingRequestsView pharmacyStoreId={storeId} />
       </TabsContent>
 
       <TabsContent value="stock-batches" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto">
