@@ -356,7 +356,10 @@ export const inventoryApi = {
             })
             .then(r => r.suggestions ?? []),
 
-    acceptThresholdSuggestion: (input: { inventoryItemId: string; minStockLevel: number; maxStockLevel: number }, hospitalId?: string) =>
+    acceptThresholdSuggestion: (
+        input: { inventoryItemId: string; minStockLevel: number; maxStockLevel: number; requestingStoreId?: string },
+        hospitalId?: string
+    ): Promise<{ success: boolean; message?: string; indentId?: string; indentNumber?: string }> =>
         ipdApiClient.post('/inventory/reorder-threshold-suggestions/accept', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
     recordMovement: (input: RecordMovementInput, hospitalId?: string) =>

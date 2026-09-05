@@ -87,7 +87,11 @@ export interface PharmacyBillRow {
   sourceModule: string;
   itemCount: number;
   totalQty: number;
+  // Original gross amount charged — unaffected by any later return.
   netAmount: number;
+  // Sum of any processed returns against this invoice. Was previously invisible: a returned sale
+  // showed its full original netAmount with no indication anything had been refunded.
+  returnedAmount: number;
   paymentMode?: string;
   processedBy?: string;
   statusCode?: string;
@@ -96,6 +100,9 @@ export interface PharmacyBillRow {
 export interface PharmacyBillingHistoryResponse {
   bills: PharmacyBillRow[];
   totalAmount: number;
+  totalReturnedAmount: number;
+  // totalAmount - totalReturnedAmount — what was actually retained after returns.
+  netSalesAmount: number;
   totalBills: number;
 }
 

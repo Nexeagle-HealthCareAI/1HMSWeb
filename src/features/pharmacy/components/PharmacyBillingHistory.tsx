@@ -27,6 +27,8 @@ export const PharmacyBillingHistory: React.FC = () => {
 
   const [bills, setBills] = useState<PharmacyBillRow[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [totalReturnedAmount, setTotalReturnedAmount] = useState(0);
+  const [netSalesAmount, setNetSalesAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const { fromDate, toDate } = useMemo(() => {
@@ -45,6 +47,8 @@ export const PharmacyBillingHistory: React.FC = () => {
       const result = await pharmacyApi.getBillingHistory(fromDate, toDate, hospitalId);
       setBills(result.bills);
       setTotalAmount(result.totalAmount);
+      setTotalReturnedAmount(result.totalReturnedAmount);
+      setNetSalesAmount(result.netSalesAmount);
     } catch {
       toast.error('Could not load the pharmacy billing history.');
     } finally {
@@ -83,7 +87,7 @@ export const PharmacyBillingHistory: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm">
           <div className="flex items-center gap-2 text-xs text-gray-500"><Receipt className="h-3.5 w-3.5" />Total Bills</div>
           <div className="text-xl font-bold mt-1">{bills.length}</div>
@@ -91,6 +95,16 @@ export const PharmacyBillingHistory: React.FC = () => {
         <div className="p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm">
           <div className="flex items-center gap-2 text-xs text-gray-500"><IndianRupee className="h-3.5 w-3.5" />Total Billed</div>
           <div className="text-xl font-bold mt-1">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div className="p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm">
+          <div className="flex items-center gap-2 text-xs text-gray-500"><IndianRupee className="h-3.5 w-3.5" />Returned</div>
+          <div className={`text-xl font-bold mt-1 ${totalReturnedAmount > 0 ? 'text-amber-600' : ''}`}>
+            ₹{totalReturnedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+        <div className="p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm">
+          <div className="flex items-center gap-2 text-xs text-gray-500"><IndianRupee className="h-3.5 w-3.5" />Net Sales</div>
+          <div className="text-xl font-bold mt-1 text-emerald-600">₹{netSalesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
       </div>
 
@@ -110,6 +124,7 @@ export const PharmacyBillingHistory: React.FC = () => {
                 <TableHead>Items</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Returned</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead>Processed By</TableHead>
               </TableRow>
@@ -131,6 +146,9 @@ export const PharmacyBillingHistory: React.FC = () => {
                   <TableCell>{b.itemCount}</TableCell>
                   <TableCell>{b.totalQty}</TableCell>
                   <TableCell className="text-right font-medium">₹{b.netAmount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right text-sm">
+                    {b.returnedAmount > 0 ? <span className="text-amber-600 font-medium">-₹{b.returnedAmount.toFixed(2)}</span> : <span className="text-gray-300">—</span>}
+                  </TableCell>
                   <TableCell className="text-sm">{b.paymentMode ?? '—'}</TableCell>
                   <TableCell className="text-sm text-gray-500">{b.processedBy ?? '—'}</TableCell>
                 </TableRow>
