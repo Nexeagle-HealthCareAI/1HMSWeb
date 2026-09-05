@@ -14,10 +14,13 @@ export interface StyledRun {
     fontSize?: number;          // default inherited from the field's own base size
 }
 
+// Single-quoted (not double) -- runsToHtml below embeds these directly inside a double-quoted
+// HTML style="..." attribute; a double-quoted font name here would terminate that attribute early
+// and corrupt the markup.
 const FONT_FAMILY_CSS: Record<RichFontFamily, string> = {
     Helvetica: 'Helvetica, Arial, sans-serif',
-    TimesRoman: '"Times New Roman", Times, serif',
-    Courier: '"Courier New", Courier, monospace',
+    TimesRoman: "'Times New Roman', Times, serif",
+    Courier: "'Courier New', Courier, monospace",
 };
 
 const CSS_TO_FONT_FAMILY: { match: RegExp; family: RichFontFamily }[] = [
@@ -81,7 +84,11 @@ export function htmlToRuns(container: HTMLElement): StyledRun[] {
             if (runs.length > 0) runs.push({ text: '\n' });
         }
 
-        const inlineColor = el.style?.color || null;
+        // document.execCommand('foreColor') (RichTextField's color swatches) produces a legacy
+        // <font color="#hex"> element, not a style="color:..." span -- el.style.color only ever
+        // reflects the latter, so without this branch every color choice silently vanished on save.
+        const fontColorAttr = tag === 'font' ? el.getAttribute('color') : null;
+        const inlineColor = el.style?.color || fontColorAttr || null;
         const inlineFontFamily = el.style?.fontFamily || null;
         const inlineFontSize = el.style?.fontSize || null;
         if (inlineColor) next = { ...next, color: rgbToHex(inlineColor) ?? next.color };
