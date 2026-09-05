@@ -155,3 +155,172 @@ export function plainTextToRuns(text: string): StyledRun[] {
 export function runsToPlainText(runs: StyledRun[]): string {
     return runs.map(r => (r.text === '\n' ? '\n' : r.text)).join('');
 }
+
+// --- Block layer (bullet/numbered lists, paragraph alignment) -------------------------------
+// Bold/italic/color/font are character-run properties (StyledRun, above); a bullet marker or "this
+// paragraph is centered" is a block/paragraph property, which a flat run array has no way to
+// express. StyledBlock wraps StyledRun[] with that block-level metadata. Every existing consumer
+// of a keyword's ContentJson goes through parseKeywordContent (below), which transparently
+// upgrades the old flat StyledRun[] shape (still used by every keyword saved before this) into a
+// single-block-per-line StyledBlock[] -- so nothing already saved needs to change or breaks.
+export type BlockAlign = 'left' | 'center' | 'right';
+
+export interface StyledBlock {
+    runs: StyledRun[];
+    align?: BlockAlign;                                    // default 'left'
+    list?: { type: 'bullet' | 'number'; index?: number };  // index set for 'number', at parse time
+}
+
+function readAlign(el: HTMLElement): BlockAlign | undefined {
+    const ta = el.style?.textAlign;
+    if (ta === 'center' || ta === 'right' || ta === 'left') return ta;
+    return undefined;
+}
+
+// document.execCommand('insertUnorderedList'/'insertOrderedList'), when applied to a selection that
+// doesn't start at the very first line, sometimes wraps the produced <ul>/<ol> in a <div> rather
+// than leaving it as a direct child (verified empirically against Chrome) -- unwrap that one level
+// so the list is still recognized as a list, not misread as an ordinary paragraph block.
+function unwrapSoleListChild(el: HTMLElement): HTMLElement {
+    if ((el.tagName === 'DIV' || el.tagName === 'P') && el.children.length === 1) {
+        const only = el.children[0];
+        if (only.tagName === 'UL' || only.tagName === 'OL') return only as HTMLElement;
+    }
+    return el;
+}
+
+// The only place HTML is ever parsed into blocks -- same trust boundary as htmlToRuns (RichTextField's
+// own output only; paste is forced to plain text).
+export function htmlToBlocks(container: HTMLElement): StyledBlock[] {
+    const blocks: StyledBlock[] = [];
+    let pending: Node[] = [];
+
+    // Bare top-level text/inline nodes (the un-wrapped first line, before Enter has ever been
+    // pressed) accumulate here until a real block element ends the implicit first block.
+    const flushPending = () => {
+        if (pending.length === 0) return;
+        const wrapper = document.createElement('div');
+        for (const n of pending) wrapper.appendChild(n.cloneNode(true));
+        blocks.push({ runs: htmlToRuns(wrapper) });
+        pending = [];
+    };
+
+    const pushListBlocks = (listEl: HTMLElement) => {
+        const type: 'bullet' | 'number' = listEl.tagName === 'OL' ? 'number' : 'bullet';
+        let index = 0;
+        for (const li of Array.from(listEl.children)) {
+            if (li.tagName !== 'LI') continue;
+            index += 1;
+            blocks.push({
+                runs: htmlToRuns(li as HTMLElement),
+                align: readAlign(li as HTMLElement),
+                list: type === 'number' ? { type, index } : { type },
+            });
+        }
+    };
+
+    for (const child of Array.from(container.childNodes)) {
+        if (child.nodeType === Node.ELEMENT_NODE) {
+            const rawEl = child as HTMLElement;
+            const rawTag = rawEl.tagName.toLowerCase();
+            if (rawTag === 'div' || rawTag === 'p' || rawTag === 'ul' || rawTag === 'ol') {
+                flushPending();
+                const el = unwrapSoleListChild(rawEl);
+                const tag = el.tagName.toLowerCase();
+                if (tag === 'ul' || tag === 'ol') {
+                    pushListBlocks(el);
+                } else {
+                    const runs = htmlToRuns(el);
+                    // Skip a genuinely empty trailing line (e.g. a stray <div><br></div>) rather
+                    // than saving a meaningless blank block, but never drop the very first block --
+                    // an intentionally-empty field should still round-trip as one empty block.
+                    if (runs.length > 0 || blocks.length === 0) {
+                        blocks.push({ runs, align: readAlign(el) });
+                    }
+                }
+                continue;
+            }
+        }
+        pending.push(child);
+    }
+    flushPending();
+
+    return blocks.length > 0 ? blocks : [{ runs: [] }];
+}
+
+// The reverse of htmlToBlocks -- used to rehydrate a saved keyword back into the editor, and to
+// build the HTML fragment a keyword expands to at insertion time. Consecutive same-type list blocks
+// share one wrapping <ul>/<ol>, matching what the browser itself produces, so a round trip through
+// here and back through htmlToBlocks is stable.
+export function blocksToHtml(blocks: StyledBlock[]): string {
+    const parts: string[] = [];
+    let i = 0;
+    while (i < blocks.length) {
+        const block = blocks[i];
+        if (block.list) {
+            const type = block.list.type;
+            const tag = type === 'number' ? 'ol' : 'ul';
+            const items: string[] = [];
+            while (i < blocks.length && blocks[i].list?.type === type) {
+                const b = blocks[i];
+                const styleAttr = b.align && b.align !== 'left' ? ` style="text-align:${b.align}"` : '';
+                items.push(`<li${styleAttr}>${runsToHtml(b.runs)}</li>`);
+                i += 1;
+            }
+            parts.push(`<${tag}>${items.join('')}</${tag}>`);
+            continue;
+        }
+        const styleAttr = block.align && block.align !== 'left' ? ` style="text-align:${block.align}"` : '';
+        const inner = runsToHtml(block.runs);
+        // Keep the very first plain, left-aligned block bare (no wrapping <div>) -- the overwhelming
+        // majority of keywords are one plain line, and this keeps their HTML identical to what the
+        // editor itself produces for a freshly-typed single line.
+        parts.push(i === 0 && !styleAttr ? inner : `<div${styleAttr}>${inner}</div>`);
+        i += 1;
+    }
+    return parts.join('');
+}
+
+export function blocksToPlainText(blocks: StyledBlock[]): string {
+    return blocks
+        .map(b => (b.list ? (b.list.type === 'number' ? `${b.list.index}. ` : '• ') : '') + runsToPlainText(b.runs))
+        .join('\n');
+}
+
+function isLegacyRunArray(parsed: unknown): parsed is StyledRun[] {
+    return Array.isArray(parsed) && parsed.every(item => item && typeof item === 'object' && 'text' in item);
+}
+
+// The one place any stored keyword ContentJson is ever turned into blocks. Transparently upgrades
+// every keyword saved before this feature (a flat StyledRun[] JSON array) into StyledBlock[] by
+// splitting on '\n' run boundaries -- lossless, and reproduces exactly how that content already
+// rendered.
+export function parseKeywordContent(json: string): StyledBlock[] {
+    if (!json) return [{ runs: [] }];
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(json);
+    } catch {
+        return [{ runs: plainTextToRuns(json) }];
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) return [{ runs: [] }];
+    if (isLegacyRunArray(parsed)) {
+        const blocks: StyledBlock[] = [];
+        let current: StyledRun[] = [];
+        for (const run of parsed) {
+            if (run.text === '\n') {
+                blocks.push({ runs: current });
+                current = [];
+            } else {
+                current.push(run);
+            }
+        }
+        blocks.push({ runs: current });
+        return blocks;
+    }
+    return parsed as StyledBlock[];
+}
+
+export function stringifyKeywordContent(blocks: StyledBlock[]): string {
+    return JSON.stringify(blocks);
+}

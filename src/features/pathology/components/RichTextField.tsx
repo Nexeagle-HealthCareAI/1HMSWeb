@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Bold, Italic } from 'lucide-react';
+import { Bold, Italic, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { htmlToRuns, type RichFontFamily, type StyledRun } from '../utils/richText';
+import { htmlToBlocks, type RichFontFamily, type StyledBlock } from '../utils/richText';
 
 const COLOR_SWATCHES: { label: string; value: string }[] = [
     { label: 'Default', value: '' },
@@ -22,7 +22,7 @@ const FONT_SIZE_OPTIONS = [8, 9, 10, 11, 12, 14, 16];
 
 interface RichTextFieldProps {
     value: string;                                    // HTML string (the persisted format)
-    onChange: (html: string, runs: StyledRun[]) => void;
+    onChange: (html: string, blocks: StyledBlock[]) => void;
     placeholder?: string;
     showToolbar?: boolean;                             // default true
     minHeight?: string;
@@ -60,7 +60,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
         if (!ref.current) return;
         const html = ref.current.innerHTML;
         lastEmittedHtml.current = html;
-        onChange(html, htmlToRuns(ref.current));
+        onChange(html, htmlToBlocks(ref.current));
     }, [onChange]);
 
     const exec = (command: string, arg?: string) => {
@@ -177,6 +177,28 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
                             style={{ backgroundColor: c.value || '#94a3b8' }}
                         />
                     ))}
+                    <div className="w-px h-5 bg-border mx-1" />
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertUnorderedList')}
+                        className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted" title="Bullet list">
+                        <List className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}
+                        className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted" title="Numbered list">
+                        <ListOrdered className="h-3.5 w-3.5" />
+                    </button>
+                    <div className="w-px h-5 bg-border mx-1" />
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('justifyLeft')}
+                        className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted" title="Align left">
+                        <AlignLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('justifyCenter')}
+                        className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted" title="Align center">
+                        <AlignCenter className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('justifyRight')}
+                        className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted" title="Align right">
+                        <AlignRight className="h-3.5 w-3.5" />
+                    </button>
                     <div className="w-px h-5 bg-border mx-1" />
                     <Select onValueChange={(v) => wrapSelection(`font-family:${v === 'TimesRoman' ? '"Times New Roman", Times, serif' : v === 'Courier' ? '"Courier New", monospace' : 'Helvetica, Arial, sans-serif'}`)}>
                         <SelectTrigger className="h-7 w-[110px] text-xs"><SelectValue placeholder="Font" /></SelectTrigger>

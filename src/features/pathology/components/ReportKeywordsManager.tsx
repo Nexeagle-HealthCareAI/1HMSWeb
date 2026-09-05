@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Plus, Edit2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextField } from './RichTextField';
-import { runsToHtml, runsToPlainText, type StyledRun } from '../utils/richText';
+import { blocksToHtml, blocksToPlainText, parseKeywordContent, stringifyKeywordContent, type StyledBlock } from '../utils/richText';
 
 const GLOBAL_SCOPE = '__global__';
 
@@ -21,7 +21,7 @@ type EditingKeyword = {
   testId?: string;   // GLOBAL_SCOPE sentinel or a real testId, resolved to null/testId on save
   keyword: string;
   html: string;
-  runs: StyledRun[];
+  blocks: StyledBlock[];
   isActive: boolean;
 };
 
@@ -64,17 +64,16 @@ export const ReportKeywordsManager: React.FC = () => {
     return keywords.filter(k => k.testId === scopeFilter);
   }, [keywords, scopeFilter]);
 
-  const openNew = () => setEditing({ testId: GLOBAL_SCOPE, keyword: '', html: '', runs: [], isActive: true });
+  const openNew = () => setEditing({ testId: GLOBAL_SCOPE, keyword: '', html: '', blocks: [], isActive: true });
 
   const openEdit = (k: PathologyReportKeyword) => {
-    let runs: StyledRun[] = [];
-    try { runs = JSON.parse(k.contentJson); } catch { runs = []; }
+    const blocks = parseKeywordContent(k.contentJson);
     setEditing({
       keywordId: k.keywordId,
       testId: k.testId ?? GLOBAL_SCOPE,
       keyword: k.keyword,
-      html: runsToHtml(runs),
-      runs,
+      html: blocksToHtml(blocks),
+      blocks,
       isActive: k.isActive,
     });
   };
@@ -84,7 +83,7 @@ export const ReportKeywordsManager: React.FC = () => {
       toast.error('Keyword name is required');
       return;
     }
-    if (editing.runs.length === 0 || runsToPlainText(editing.runs).trim().length === 0) {
+    if (editing.blocks.length === 0 || blocksToPlainText(editing.blocks).trim().length === 0) {
       toast.error('The paragraph cannot be empty');
       return;
     }
@@ -94,7 +93,7 @@ export const ReportKeywordsManager: React.FC = () => {
         keywordId: editing.keywordId,
         testId: editing.testId === GLOBAL_SCOPE ? null : editing.testId,
         keyword: editing.keyword.trim(),
-        contentJson: JSON.stringify(editing.runs),
+        contentJson: stringifyKeywordContent(editing.blocks),
         isActive: editing.isActive,
       });
       if (!res.success) throw new Error(res.message);
@@ -141,9 +140,7 @@ export const ReportKeywordsManager: React.FC = () => {
       ) : (
         <div className="border rounded-md divide-y bg-white dark:bg-slate-900">
           {filteredKeywords.map(k => {
-            let runs: StyledRun[] = [];
-            try { runs = JSON.parse(k.contentJson); } catch { runs = []; }
-            const preview = runsToPlainText(runs).replace(/\n/g, ' ');
+            const preview = blocksToPlainText(parseKeywordContent(k.contentJson)).replace(/\n/g, ' ');
             return (
               <div key={k.keywordId} className="flex items-center justify-between gap-3 p-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -199,11 +196,11 @@ export const ReportKeywordsManager: React.FC = () => {
                 <Label>Paragraph *</Label>
                 <RichTextField
                   value={editing.html}
-                  onChange={(html, runs) => setEditing(p => p && ({ ...p, html, runs }))}
+                  onChange={(html, blocks) => setEditing(p => p && ({ ...p, html, blocks }))}
                   placeholder="Type the paragraph this keyword expands to..."
                   minHeight="140px"
                 />
-                <p className="text-[11px] text-muted-foreground">Select text, then apply Bold/Italic/Color/Font/Size from the toolbar.</p>
+                <p className="text-[11px] text-muted-foreground">Select text, then apply Bold/Italic/Color/Font/Size/List/Align from the toolbar.</p>
               </div>
               <div className="flex items-center space-x-2 pt-2">
                 <Switch checked={editing.isActive} onCheckedChange={(v) => setEditing(p => p && ({ ...p, isActive: v }))} />

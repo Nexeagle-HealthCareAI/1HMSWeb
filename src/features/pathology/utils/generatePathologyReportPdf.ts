@@ -2,7 +2,7 @@ import { PDFDocument, PDFFont, PDFPage, PDFEmbeddedPage, StandardFonts, rgb, RGB
 import { PathologyResultFlag } from './resultFlagCalculator';
 import { generateDefaultLetterheadTemplate, DefaultLetterheadHospitalInfo } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
 import { PathologyLetterheadMode } from '../services/pathologyService';
-import { htmlToRuns, type RichFontFamily, type StyledRun } from './richText';
+import { htmlToBlocks, type RichFontFamily, type StyledRun, type StyledBlock, type BlockAlign } from './richText';
 
 const MM_TO_PT = 72 / 25.4;
 const mmToPt = (value: number) => value * MM_TO_PT;
@@ -70,13 +70,13 @@ function hexToRgb(hex: string): RGB | null {
 
 // A stored report value is an HTML string produced by RichTextField (see OrderResultEntry.tsx) --
 // or, for any report authored before this feature existed, a plain string with no tags at all,
-// which htmlToRuns resolves to a single unstyled run. Either way this is the one place a value
-// gets turned into drawable runs; no caller needs its own conversion step.
-function valueToRuns(value: string): StyledRun[] {
-  if (typeof document === 'undefined') return value ? [{ text: value }] : [];
+// which htmlToBlocks resolves to a single left-aligned, no-list block. Either way this is the one
+// place a value gets turned into drawable blocks; no caller needs its own conversion step.
+function valueToBlocks(value: string): StyledBlock[] {
+  if (typeof document === 'undefined') return value ? [{ runs: [{ text: value }] }] : [];
   const div = document.createElement('div');
   div.innerHTML = value;
-  return htmlToRuns(div);
+  return htmlToBlocks(div);
 }
 
 export interface PathologyReportPdfParameter {
@@ -91,7 +91,8 @@ export interface PathologyReportPdfParameter {
 // Notes plus any hospital-added custom fields) both use this shape; there's no bespoke drawer per
 // field since they're all just narrative label+value pairs, in whatever order the hospital's
 // Report Fields layout configured (see pathologyFieldLayoutApi.ts). `value` may contain
-// RichTextField's HTML markup (bold/italic/color/font/size) -- see valueToRuns above.
+// RichTextField's HTML markup (bold/italic/color/font/size/lists/alignment) -- see valueToBlocks
+// above.
 export interface PathologyReportPdfField {
   label: string;
   value: string;
@@ -266,65 +267,89 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   };
   const resolveColor = (run: StyledRun, fallback: RGB): RGB => (run.color && hexToRgb(run.color)) || fallback;
 
-  // Mixed-font/size/color word-wrap -- each word is measured and drawn with its OWN run's
-  // resolved font/size (falling back to baseSize/baseColor/Helvetica for a run with no explicit
-  // style), rather than one plain wrapText(...) call per section. An explicit '\n' run (a <br> or
-  // block-boundary from htmlToRuns) forces a hard line break instead of participating in wrapping.
-  const drawStyledRuns = (
-    runs: StyledRun[],
+  // pt-hanging indent for a bullet/number marker -- continuation lines of a wrapped list item start
+  // here, under the item's own text, not under the marker.
+  const BULLET_INDENT = 14;
+
+  interface Word { text: string; font: PDFFont; size: number; color: RGB; width: number }
+
+  // Mixed-font/size/color word-wrap, one block (paragraph/list-item) at a time -- each word is
+  // measured and drawn with its OWN run's resolved font/size (falling back to baseSize/baseColor/
+  // Helvetica for a run with no explicit style). An explicit '\n' run (a <br> within one block)
+  // forces a hard line break instead of participating in wrapping. A block's `list` draws a marker
+  // before its first wrapped line only (hanging indent); its `align` positions each wrapped line's
+  // starting x within the available width, computed from that line's own total rendered width.
+  const drawStyledBlocks = (
+    blocks: StyledBlock[],
     opts: { x?: number; baseSize?: number; baseColor?: RGB; gapAfter?: number } = {},
   ) => {
     const x0 = opts.x ?? margins.left;
     const baseSize = opts.baseSize ?? 9.5;
     const baseColor = opts.baseColor ?? COLORS.text;
-    const maxWidth = PAGE_WIDTH - margins.right - x0;
 
-    interface Word { text: string; font: PDFFont; size: number; color: RGB; width: number }
-    const tokens: (Word | 'break')[] = [];
-    for (const run of runs) {
-      if (run.text === '\n') { tokens.push('break'); continue; }
-      const font = resolveFont(run);
-      const size = run.fontSize ?? baseSize;
-      const color = resolveColor(run, baseColor);
-      for (const w of run.text.split(/\s+/).filter(Boolean)) {
-        tokens.push({ text: w, font, size, color, width: font.widthOfTextAtSize(w, size) });
+    for (const block of blocks) {
+      const indent = block.list ? BULLET_INDENT : 0;
+      const blockX = x0 + indent;
+      const maxWidth = PAGE_WIDTH - margins.right - blockX;
+      const align: BlockAlign = block.align ?? 'left';
+      const marker = block.list ? (block.list.type === 'number' ? `${block.list.index}.` : '•') : null;
+
+      const tokens: (Word | 'break')[] = [];
+      for (const run of block.runs) {
+        if (run.text === '\n') { tokens.push('break'); continue; }
+        const font = resolveFont(run);
+        const size = run.fontSize ?? baseSize;
+        const color = resolveColor(run, baseColor);
+        for (const w of run.text.split(/\s+/).filter(Boolean)) {
+          tokens.push({ text: w, font, size, color, width: font.widthOfTextAtSize(w, size) });
+        }
       }
+      if (tokens.length === 0 && !marker) continue;
+
+      let line: Word[] = [];
+      let lineWidth = 0;
+      let lineMaxSize = baseSize;
+      let firstLineOfBlock = true;
+      const spaceWidth = (w: Word) => w.font.widthOfTextAtSize(' ', w.size);
+
+      const flush = () => {
+        if (line.length === 0 && !(firstLineOfBlock && marker)) return;
+        ensureRoom(lineMaxSize + 4);
+        let startX = blockX;
+        if (align === 'center') startX = blockX + Math.max(0, (maxWidth - lineWidth) / 2);
+        else if (align === 'right') startX = blockX + Math.max(0, maxWidth - lineWidth);
+        if (firstLineOfBlock && marker) {
+          const markerFont = line[0]?.font ?? resolveFont({ text: '' });
+          const markerSize = line[0]?.size ?? baseSize;
+          page.drawText(marker, { x: x0, y: cursorY, size: markerSize, font: markerFont, color: baseColor });
+        }
+        let x = startX;
+        for (const w of line) {
+          page.drawText(w.text, { x, y: cursorY, size: w.size, font: w.font, color: w.color });
+          x += w.width + spaceWidth(w);
+        }
+        cursorY -= lineMaxSize + 4;
+        line = [];
+        lineWidth = 0;
+        lineMaxSize = baseSize;
+        firstLineOfBlock = false;
+      };
+
+      for (const tok of tokens) {
+        if (tok === 'break') { flush(); continue; }
+        const addWidth = (line.length > 0 ? spaceWidth(tok) : 0) + tok.width;
+        if (line.length > 0 && lineWidth + addWidth > maxWidth) {
+          flush();
+          line.push(tok);
+          lineWidth = tok.width;
+        } else {
+          line.push(tok);
+          lineWidth += addWidth;
+        }
+        lineMaxSize = Math.max(lineMaxSize, tok.size);
+      }
+      flush();
     }
-    if (tokens.length === 0) return;
-
-    let line: Word[] = [];
-    let lineWidth = 0;
-    let lineMaxSize = baseSize;
-    const spaceWidth = (w: Word) => w.font.widthOfTextAtSize(' ', w.size);
-
-    const flush = () => {
-      if (line.length === 0) return;
-      ensureRoom(lineMaxSize + 4);
-      let x = x0;
-      for (const w of line) {
-        page.drawText(w.text, { x, y: cursorY, size: w.size, font: w.font, color: w.color });
-        x += w.width + spaceWidth(w);
-      }
-      cursorY -= lineMaxSize + 4;
-      line = [];
-      lineWidth = 0;
-      lineMaxSize = baseSize;
-    };
-
-    for (const tok of tokens) {
-      if (tok === 'break') { flush(); continue; }
-      const addWidth = (line.length > 0 ? spaceWidth(tok) : 0) + tok.width;
-      if (line.length > 0 && lineWidth + addWidth > maxWidth) {
-        flush();
-        line.push(tok);
-        lineWidth = tok.width;
-      } else {
-        line.push(tok);
-        lineWidth += addWidth;
-      }
-      lineMaxSize = Math.max(lineMaxSize, tok.size);
-    }
-    flush();
 
     if (opts.gapAfter) cursorY -= opts.gapAfter;
   };
@@ -355,14 +380,20 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   drawLine(`Report No: ${data.reportNo}`, { gapAfter: 12 });
 
   // --- Generic label+value section, shared by report-level fields and each line's note fields --
-  // `value` may be RichTextField's HTML (bold/italic/color/font/size) or a plain legacy string;
-  // valueToRuns handles both identically.
+  // `value` may be RichTextField's HTML (bold/italic/color/font/size/lists/alignment) or a plain
+  // legacy string; valueToBlocks handles both identically. The "Label: " prefix is prepended to the
+  // first block's own runs (not a separate block) so it stays on the same line/list-marker as the
+  // value's first line.
   const drawSection = (label: string, value: string) => {
     const plainCheck = value.replace(/<[^>]+>/g, '').trim();
     if (!plainCheck) return;
     ensureRoom(20);
-    const runs = valueToRuns(value);
-    drawStyledRuns([{ text: `${label}: ` }, ...runs], { baseSize: 9, baseColor: COLORS.muted, gapAfter: 3 });
+    const blocks = valueToBlocks(value);
+    const labelRun: StyledRun = { text: `${label}: ` };
+    const withLabel: StyledBlock[] = blocks.length > 0
+      ? [{ ...blocks[0], runs: [labelRun, ...blocks[0].runs] }, ...blocks.slice(1)]
+      : [{ runs: [labelRun] }];
+    drawStyledBlocks(withLabel, { baseSize: 9, baseColor: COLORS.muted, gapAfter: 3 });
   };
 
   // --- Report-level fields (Clinical History, Comments, ...) ---

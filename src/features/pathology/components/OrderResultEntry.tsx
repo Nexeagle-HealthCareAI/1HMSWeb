@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Zap, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RichTextField } from './RichTextField';
-import { runsToHtml, type StyledRun } from '../utils/richText';
+import { blocksToHtml, parseKeywordContent, type StyledBlock } from '../utils/richText';
 
 interface OrderResultEntryProps {
   hospitalId: string;
@@ -107,17 +107,17 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const previouslyCriticalRef = useRef<Set<string>>(new Set());
   // Keyword -> formatted paragraph lookup for this test (its own keywords + every global one) --
   // see RichTextField's onEnterWord / ReportKeywordsManager.tsx for where these are authored.
-  const [keywordMap, setKeywordMap] = useState<Map<string, StyledRun[]>>(new Map());
+  const [keywordMap, setKeywordMap] = useState<Map<string, StyledBlock[]>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
     pathologyService.getReportKeywords(hospitalId, orderLine.testId)
       .then(list => {
         if (cancelled) return;
-        const map = new Map<string, StyledRun[]>();
+        const map = new Map<string, StyledBlock[]>();
         for (const k of list) {
           if (!k.isActive) continue;
-          try { map.set(k.keyword.toLowerCase(), JSON.parse(k.contentJson)); } catch { /* skip malformed */ }
+          map.set(k.keyword.toLowerCase(), parseKeywordContent(k.contentJson));
         }
         setKeywordMap(map);
       })
@@ -126,9 +126,9 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   }, [hospitalId, orderLine.testId]);
 
   const handleEnterWord = (word: string, insertAtCaret: (html: string) => void): boolean => {
-    const runs = keywordMap.get(word.toLowerCase());
-    if (!runs) return false;
-    insertAtCaret(runsToHtml(runs));
+    const blocks = keywordMap.get(word.toLowerCase());
+    if (!blocks) return false;
+    insertAtCaret(blocksToHtml(blocks));
     return true;
   };
 
