@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Plus, Receipt, CreditCard, Loader2, Printer, FlaskConical, ChevronLeft, ChevronRight,
+    Search, ChevronDown, FileText, ReceiptText,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -14,8 +16,11 @@ import { AddChargesModal } from '@/features/billing/components/AddChargesModal';
 import { AddPaymentDialog } from '@/features/billing/components/dialogs/AddPaymentDialog';
 import { LoadingState, EmptyState, ErrorState } from '@/features/billing/components/StatePanel';
 import { inr } from '@/features/billing/utils/money';
-import { mapEventsToInvoiceData, buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
+import { mapEventsToInvoiceData, mapEventsToReceiptData, buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
 import { buildInvoiceA4 } from '@/printTemplates/invoiceA4';
+import { buildInvoiceThermal80 } from '@/printTemplates/invoiceThermal80';
+import { buildReceiptA4 } from '@/printTemplates/receiptA4';
+import { buildReceiptThermal80 } from '@/printTemplates/receiptThermal80';
 import { openPrintHtml } from '@/utils/printUtils';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { useAuthStore } from '@/store/authStore';
@@ -44,16 +49,10 @@ const mapStatus = (s?: string | null, isCancelled?: boolean): VisitStatus => {
     return 'OPEN';
 };
 
-const statusBadgeClass = (status: VisitStatus) => cn(
-    'text-[10px] h-5 px-2 shrink-0 font-semibold rounded-full',
-    status === 'FINAL' && 'border-emerald-300 text-emerald-700 bg-emerald-50',
-    status === 'CANCELLED' && 'border-slate-300 text-slate-500 bg-slate-50',
-    status === 'OPEN' && 'border-amber-300 text-amber-700 bg-amber-50',
-);
-
 interface RowDetail {
     particulars: string[];
     discountTotal: number;
+    hasPayments: boolean;
 }
 
 export const PathologyBillingTab: React.FC = () => {
@@ -115,12 +114,14 @@ export const PathologyBillingTab: React.FC = () => {
                 try {
                     const res = await ipdBillingService.getEncounterEvents(r.id, r.patientId);
                     const charges = res?.success ? (res.data?.charges ?? []) : [];
+                    const payments = res?.success ? (res.data?.payments ?? []) : [];
                     return [r.id, {
                         particulars: charges.map(c => c.displayName ?? c.categoryCode ?? 'Charge'),
                         discountTotal: charges.reduce((s, c) => s + (c.discountAmount ?? 0), 0),
+                        hasPayments: payments.length > 0,
                     }];
                 } catch {
-                    return [r.id, { particulars: [], discountTotal: 0 }];
+                    return [r.id, { particulars: [], discountTotal: 0, hasPayments: false }];
                 }
             }));
             // Merge rather than replace -- otherwise paging back to an already-fetched page would
@@ -179,26 +180,36 @@ export const PathologyBillingTab: React.FC = () => {
         return dayDate === todayKey ? 'Today' : format(new Date(dayDate), 'dd MMM yyyy');
     }, [dateMode, dayDate, rangeStart, rangeEnd]);
 
+    // ─── Search -- filters by patient name/ID only (not particulars: those are fetched per-page,
+    // see below, so they aren't reliably available for rows outside the current page). ─────
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchedRecent = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return dateFilteredRecent;
+        return dateFilteredRecent.filter(r =>
+            r.patientName.toLowerCase().includes(q) || r.patientIdDisplay.toLowerCase().includes(q));
+    }, [dateFilteredRecent, searchQuery]);
+
     // ─── Pagination -- same "Showing A-B of N" + Prev/Next convention as PathologyWorkspace.tsx's
     // orders table, fixed at 10 rows/page. ─────
     const itemsPerPage = 10;
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = Math.max(1, Math.ceil(dateFilteredRecent.length / itemsPerPage));
+    const totalPages = Math.max(1, Math.ceil(searchedRecent.length / itemsPerPage));
     const paginatedRecent = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;
-        return dateFilteredRecent.slice(start, start + itemsPerPage);
+        return searchedRecent.slice(start, start + itemsPerPage);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateFilteredRecent, currentPage]);
+    }, [searchedRecent, currentPage]);
 
     // Only the visible page's rows need their particulars/discount fetched -- cheaper than
     // fetching every row in the whole (unpaginated) list up front, and re-runs as the user pages.
     useEffect(() => { loadRowDetails(paginatedRecent); }, [paginatedRecent, loadRowDetails]);
 
-    // Jump back to page 1 whenever the visible set changes shape, so a filter/date change or a
-    // fresh load never strands the user on a now-empty page.
+    // Jump back to page 1 whenever the visible set changes shape, so a filter/search/date change
+    // or a fresh load never strands the user on a now-empty page.
     useEffect(() => {
         setCurrentPage(1);
-    }, [dateMode, dayDate, rangeStart, rangeEnd, recent]);
+    }, [dateMode, dayDate, rangeStart, rangeEnd, searchQuery, recent]);
 
     // ─── Row-level actions: Add Charges / Take Payment / Print fire straight from the Actions
     // column -- one row per bill, no dropdown/expand step. `actingRow` is whichever row the two
@@ -222,7 +233,9 @@ export const PathologyBillingTab: React.FC = () => {
         loadRecent(true);
     };
 
-    const handlePrintRow = async (row: Visit) => {
+    // Invoice covers everything billed on this encounter; Receipt covers the latest payment
+    // received against it -- both available in A4 (full sheet) or Thermal (80mm receipt printer).
+    const handlePrint = async (row: Visit, doc: 'invoice' | 'receipt', mode: 'a4' | 'thermal') => {
         setPrintingRowId(row.id);
         try {
             const hospitalId = useAuthStore.getState().getHospitalId();
@@ -231,12 +244,19 @@ export const PathologyBillingTab: React.FC = () => {
                 hospitalApi.getHospitalById(hospitalId),
             ]);
             if (!events.success || !events.data) throw new Error(events.message ?? 'Could not load this bill.');
-            const invoiceData = mapEventsToInvoiceData(events.data, {
-                patientName: row.patientName,
-                patientId: row.patientIdDisplay,
-            });
+            const ctx = { patientName: row.patientName, patientId: row.patientIdDisplay };
             const settings = buildPrintSettingsFromHospital(hospital);
-            const html = buildInvoiceA4(invoiceData, settings);
+            let html: string;
+            if (doc === 'invoice') {
+                const data = mapEventsToInvoiceData(events.data, ctx);
+                html = mode === 'thermal' ? buildInvoiceThermal80(data, settings) : buildInvoiceA4(data, settings);
+            } else {
+                if (!events.data.payments || events.data.payments.length === 0) {
+                    throw new Error('No payment has been recorded against this bill yet.');
+                }
+                const data = mapEventsToReceiptData(events.data, ctx);
+                html = mode === 'thermal' ? buildReceiptThermal80(data, settings) : buildReceiptA4(data, settings);
+            }
             openPrintHtml(html);
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Could not print', description: e?.message ?? '' });
@@ -293,22 +313,33 @@ export const PathologyBillingTab: React.FC = () => {
 
             {/* ── Recent Transactions ── */}
             <Card className="shadow-sm border-slate-200/80">
-                <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0 border-b border-slate-100">
-                    <div>
+                <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0 border-b border-slate-100 gap-4">
+                    <div className="min-w-0">
                         <CardTitle className="text-base font-bold text-slate-800">Recent Transactions</CardTitle>
                         <p className="text-xs text-slate-400 mt-0.5">One row per bill — act on it directly, no need to open it first.</p>
                     </div>
-                    <Button size="sm" className="gap-1.5 shadow-sm" onClick={() => setShowNewBillDrawer(true)}>
-                        <Plus className="h-3.5 w-3.5" /> New Bill
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <Input
+                                placeholder="Search patient…"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-8 h-9 w-48 text-sm"
+                            />
+                        </div>
+                        <Button size="sm" className="gap-1.5 shadow-sm" onClick={() => setShowNewBillDrawer(true)}>
+                            <Plus className="h-3.5 w-3.5" /> New Bill
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     {recentLoading ? (
                         <div className="p-6"><LoadingState rows={4} /></div>
                     ) : recentError ? (
                         <div className="p-6"><ErrorState message={recentError} onRetry={() => loadRecent()} /></div>
-                    ) : dateFilteredRecent.length === 0 ? (
-                        <div className="p-6"><EmptyState icon={<Receipt className="h-6 w-6" />} title="No transactions in this range." /></div>
+                    ) : searchedRecent.length === 0 ? (
+                        <div className="p-6"><EmptyState icon={<Receipt className="h-6 w-6" />} title={searchQuery ? 'No bills match your search.' : 'No transactions in this range.'} /></div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -320,7 +351,6 @@ export const PathologyBillingTab: React.FC = () => {
                                         <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Net Amount</th>
                                         <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Discount</th>
                                         <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Balance</th>
-                                        <th className="text-left font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Status</th>
                                         <th className="text-left font-bold px-5 py-3 text-[10px] uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -372,9 +402,6 @@ export const PathologyBillingTab: React.FC = () => {
                                                         ? <span className="text-rose-600 font-bold">{inr(row.balance ?? 0)}</span>
                                                         : <span className="text-emerald-600 font-semibold">Paid</span>}
                                                 </td>
-                                                <td className="px-4 py-3.5">
-                                                    <Badge variant="outline" className={statusBadgeClass(row.status)}>{row.status}</Badge>
-                                                </td>
                                                 <td className="px-5 py-3.5">
                                                     <div className="flex items-center gap-1.5">
                                                         <Button
@@ -391,13 +418,31 @@ export const PathologyBillingTab: React.FC = () => {
                                                         >
                                                             <CreditCard className="h-3 w-3" /> Take Payment
                                                         </Button>
-                                                        <Button
-                                                            size="sm" variant="ghost" className="h-8 px-2.5 text-[11px] gap-1 rounded-lg text-slate-500 hover:text-slate-800"
-                                                            disabled={isPrinting}
-                                                            onClick={() => handlePrintRow(row)}
-                                                        >
-                                                            {isPrinting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />} Print
-                                                        </Button>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    size="sm" variant="ghost" className="h-8 px-2.5 text-[11px] gap-1 rounded-lg text-slate-500 hover:text-slate-800"
+                                                                    disabled={isPrinting}
+                                                                >
+                                                                    {isPrinting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />} Print <ChevronDown className="h-3 w-3" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handlePrint(row, 'invoice', 'a4')}>
+                                                                    <FileText className="h-3.5 w-3.5 mr-2" /> Invoice (A4)
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handlePrint(row, 'invoice', 'thermal')}>
+                                                                    <Printer className="h-3.5 w-3.5 mr-2" /> Invoice (Thermal)
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem disabled={!detail?.hasPayments} onClick={() => handlePrint(row, 'receipt', 'a4')}>
+                                                                    <ReceiptText className="h-3.5 w-3.5 mr-2" /> Payment Receipt (A4)
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem disabled={!detail?.hasPayments} onClick={() => handlePrint(row, 'receipt', 'thermal')}>
+                                                                    <Printer className="h-3.5 w-3.5 mr-2" /> Payment Receipt (Thermal)
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -407,10 +452,10 @@ export const PathologyBillingTab: React.FC = () => {
                             </table>
                         </div>
                     )}
-                    {!recentLoading && !recentError && dateFilteredRecent.length > 0 && (
+                    {!recentLoading && !recentError && searchedRecent.length > 0 && (
                         <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
                             <div className="truncate">
-                                Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, dateFilteredRecent.length)} of {dateFilteredRecent.length}
+                                Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, searchedRecent.length)} of {searchedRecent.length}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                                 <Button
