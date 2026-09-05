@@ -1,9 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight, Camera, Upload, ArrowLeft } from 'lucide-react';
+import { Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight, Camera, Upload, ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
 import { inventoryApi, type InventoryBoard, type UnifiedStockVisibility } from '../services/inventoryApi';
 import { equipmentApi, type EquipmentItem } from '../services/equipmentApi';
 import { ProcurementPanel } from '../components/ProcurementPanel';
@@ -51,6 +54,15 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [tab, setTab] = useState<Tab>('stock');
 
+    // Stock-by-store table: search/filter/sort state.
+    const [stockSearch, setStockSearch] = useState('');
+    const [stockStoreFilter, setStockStoreFilter] = useState('ALL');
+    type StockSortKey = 'itemName' | 'storeName' | 'qtyOnHand';
+    const [stockSort, setStockSort] = useState<{ key: StockSortKey; dir: 'asc' | 'desc' }>({ key: 'itemName', dir: 'asc' });
+    const toggleStockSort = (key: StockSortKey) => {
+        setStockSort(prev => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
+    };
+
     const load = (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
         Promise.all([inventoryApi.getBoard(), equipmentApi.getEquipment({ dueOnly: true })])
@@ -72,10 +84,29 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
 
 
 
-    const storeGroups = board.stockByStore.reduce<Record<string, typeof board.stockByStore>>((acc, r) => {
-        (acc[r.storeName] ??= []).push(r);
-        return acc;
-    }, {});    const SIDEBAR_ITEMS: { id: Tab; label: string; icon: React.ElementType; badge?: React.ReactNode }[] = [
+    const stockStoreNames = useMemo(
+        () => Array.from(new Set(board.stockByStore.map(r => r.storeName))).sort(),
+        [board.stockByStore]
+    );
+    const lowStockItemIds = useMemo(
+        () => new Set(board.reorderAlerts.map(a => a.inventoryItemId)),
+        [board.reorderAlerts]
+    );
+    const filteredSortedStock = useMemo(() => {
+        const search = stockSearch.trim().toLowerCase();
+        let rows = board.stockByStore.filter(r =>
+            (!search || r.itemName.toLowerCase().includes(search) || r.category.toLowerCase().includes(search)) &&
+            (stockStoreFilter === 'ALL' || r.storeName === stockStoreFilter)
+        );
+        rows = [...rows].sort((a, b) => {
+            const dir = stockSort.dir === 'asc' ? 1 : -1;
+            if (stockSort.key === 'qtyOnHand') return (a.qtyOnHand - b.qtyOnHand) * dir;
+            return a[stockSort.key].localeCompare(b[stockSort.key]) * dir;
+        });
+        return rows;
+    }, [board.stockByStore, stockSearch, stockStoreFilter, stockSort]);
+
+    const SIDEBAR_ITEMS: { id: Tab; label: string; icon: React.ElementType; badge?: React.ReactNode }[] = [
         { id: 'stock', label: 'Stock by Store', icon: Warehouse },
         { id: 'items', label: 'Item Master', icon: Package2 },
         { id: 'transfer', label: 'Transfer Stock', icon: ArrowLeftRight },
@@ -200,29 +231,77 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                     ) : (
                         <SubscriptionReadOnlyOverlay featureLabel="Managing inventory" className="h-full">
                             {tab === 'stock' && (
-                                Object.keys(storeGroups).length === 0 ? (
-                                    <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 text-center text-sm text-slate-400 mx-auto w-full max-w-2xl shadow-md">
+                                board.stockByStore.length === 0 ? (
+                                    <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 text-center text-sm text-slate-400 mx-auto w-full max-w-4xl shadow-md">
                                         No stock on hand yet. Receive stock via a batch to see it here.
                                     </div>
                                ) : (
-                                    <div className="space-y-4">
-                                        {Object.entries(storeGroups).map(([storeName, rows]) => (
-                                            <Card key={storeName} className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-md hover:shadow-lg transition-all mx-auto w-full max-w-2xl">
-                                                <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-3">{storeName}</h2>
-                                                <div className="space-y-1.5">
-                                                    {rows.map(r => (
-                                                        <div key={`${r.inventoryItemId}-${r.storeId}`} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/10 hover:border-slate-200 dark:hover:border-zinc-800 transition-all">
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm truncate">{r.itemName}</span>
-                                                                <Badge variant="outline" className="text-[9px] font-bold uppercase shrink-0 rounded-full">{r.category}</Badge>
-                                                            </div>
-                                                            <span className="text-sm font-mono font-bold text-slate-900 dark:text-zinc-100 shrink-0">{r.qtyOnHand.toLocaleString('en-IN')} {r.unit}</span>
-                                                        </div>
+                                    <Card className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-md mx-auto w-full max-w-4xl overflow-hidden">
+                                        <div className="flex flex-col sm:flex-row gap-2 p-4 border-b border-slate-100 dark:border-zinc-850">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                                <Input
+                                                    placeholder="Search item or category..."
+                                                    value={stockSearch}
+                                                    onChange={e => setStockSearch(e.target.value)}
+                                                    className="pl-9 h-9 text-sm"
+                                                />
+                                            </div>
+                                            <Select value={stockStoreFilter} onValueChange={setStockStoreFilter}>
+                                                <SelectTrigger className="h-9 w-full sm:w-[200px] text-sm"><SelectValue placeholder="Store" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="ALL">All Stores</SelectItem>
+                                                    {stockStoreNames.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            <button className="flex items-center gap-1 font-bold uppercase text-[10px] tracking-wider" onClick={() => toggleStockSort('itemName')}>
+                                                                Item <ArrowUpDown className="h-3 w-3" />
+                                                            </button>
+                                                        </TableHead>
+                                                        <TableHead>Category</TableHead>
+                                                        <TableHead>
+                                                            <button className="flex items-center gap-1 font-bold uppercase text-[10px] tracking-wider" onClick={() => toggleStockSort('storeName')}>
+                                                                Store <ArrowUpDown className="h-3 w-3" />
+                                                            </button>
+                                                        </TableHead>
+                                                        <TableHead className="text-right">
+                                                            <button className="flex items-center gap-1 ml-auto font-bold uppercase text-[10px] tracking-wider" onClick={() => toggleStockSort('qtyOnHand')}>
+                                                                Qty on Hand <ArrowUpDown className="h-3 w-3" />
+                                                            </button>
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {filteredSortedStock.length === 0 ? (
+                                                        <TableRow><TableCell colSpan={4} className="h-20 text-center text-sm text-slate-400">No items match this search.</TableCell></TableRow>
+                                                    ) : filteredSortedStock.map(r => (
+                                                        <TableRow key={`${r.inventoryItemId}-${r.storeId}`}>
+                                                            <TableCell className="font-semibold text-slate-800 dark:text-zinc-200">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {r.itemName}
+                                                                    {lowStockItemIds.has(r.inventoryItemId) && (
+                                                                        <span className="relative flex h-2 w-2 shrink-0" title="Low stock hospital-wide (this store may still have plenty)">
+                                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase rounded-full">{r.category}</Badge></TableCell>
+                                                            <TableCell className="text-slate-600 dark:text-zinc-400">{r.storeName}</TableCell>
+                                                            <TableCell className="text-right font-mono font-bold text-slate-900 dark:text-zinc-100">{r.qtyOnHand.toLocaleString('en-IN')} {r.unit}</TableCell>
+                                                        </TableRow>
                                                     ))}
-                                                </div>
-                                            </Card>
-                                        ))}
-                                    </div>
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </Card>
                                 )
                             )}
 
