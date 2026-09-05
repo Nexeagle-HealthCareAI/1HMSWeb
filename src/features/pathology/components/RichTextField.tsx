@@ -63,9 +63,34 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
         onChange(html, htmlToBlocks(ref.current));
     }, [onChange]);
 
+    // Chrome, when justify* promotes a still-bare (never wrapped in a block yet) first line into
+    // its own block for the very first time, sometimes also wraps that line's text in a
+    // <span style="font-size:...;color:..."> that merely restates the editor's own ambient
+    // computed style -- not anything the user asked for. Only strip a span when doing so has zero
+    // visual effect (its values already match what would render without it), so a genuine,
+    // deliberately-chosen color/size is never touched.
+    const stripAmbientStyleArtifact = () => {
+        const container = ref.current;
+        if (!container) return;
+        const computed = window.getComputedStyle(container);
+        for (const span of Array.from(container.getElementsByTagName('span'))) {
+            const parent = span.parentElement;
+            if (!parent || parent.childNodes.length !== 1) continue;
+            const styleProps = Array.from(span.style).filter(Boolean);
+            if (styleProps.length === 0 || !styleProps.every(p => p === 'font-size' || p === 'color')) continue;
+            const sizeOk = !span.style.fontSize || span.style.fontSize === computed.fontSize;
+            const colorOk = !span.style.color || span.style.color === computed.color;
+            if (sizeOk && colorOk) {
+                while (span.firstChild) parent.insertBefore(span.firstChild, span);
+                parent.removeChild(span);
+            }
+        }
+    };
+
     const exec = (command: string, arg?: string) => {
         ref.current?.focus();
         document.execCommand(command, false, arg);
+        if (command.startsWith('justify')) stripAmbientStyleArtifact();
         emitChange();
     };
 
