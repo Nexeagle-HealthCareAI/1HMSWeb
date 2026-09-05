@@ -68,6 +68,36 @@ export interface ReceiveBloodBagInput {
     unitRate?: number;
 }
 
+export interface BloodBankInventoryRow {
+    bloodBagId: string;
+    bagNumber: string;
+    component: BloodComponent;
+    bloodGroup: BloodGroup;
+    volumeMl: number;
+    collectedAt: string;
+    expiresAt: string;
+    storageLocation?: string | null;
+    status: BloodBagStatus;
+    reservedForPatientId?: string | null;
+    reservedForPatientName?: string | null;
+    discardReason?: string | null;
+    discardedAt?: string | null;
+}
+
+export interface BloodBankLedgerRow {
+    transfusionEventId: string;
+    bagNumber: string;
+    component: BloodComponent;
+    bloodGroup: BloodGroup;
+    patientId?: string | null;
+    patientName?: string | null;
+    startedAt: string;
+    volumeGivenMl: number;
+    reaction: TransfusionReaction;
+    administeredBy: string;
+    witnessName: string;
+}
+
 export interface RecordTransfusionInput {
     bloodBagId: string;
     admissionId: string;
@@ -96,6 +126,16 @@ export const bloodBankApi = {
                 params: { hospitalId: hospitalIdOrThrow(hospitalId) },
             })
             .then(r => ({ reservedBags: r.reservedBags ?? [], transfusions: r.transfusions ?? [] })),
+
+    getInventory: (status?: BloodBagStatus, hospitalId?: string): Promise<BloodBankInventoryRow[]> =>
+        ipdApiClient
+            .get<{ bags?: BloodBankInventoryRow[] }>('/blood-bank/inventory', { params: { hospitalId: hospitalIdOrThrow(hospitalId), status } })
+            .then(r => r.bags ?? []),
+
+    getLedger: (hospitalId?: string): Promise<BloodBankLedgerRow[]> =>
+        ipdApiClient
+            .get<{ transfusions?: BloodBankLedgerRow[] }>('/blood-bank/ledger', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .then(r => r.transfusions ?? []),
 
     receiveBag: async (input: ReceiveBloodBagInput, hospitalId?: string) => {
         try {

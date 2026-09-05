@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Plus, Receipt, CreditCard, Loader2, ChevronDown, Printer,
+    Plus, Receipt, CreditCard, Loader2, Printer, FlaskConical,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-import { ipdBillingService, type BillingChargeRow, type BillingPaymentRow } from '@/features/billing/services/ipdBillingService';
+import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { AddChargesModal } from '@/features/billing/components/AddChargesModal';
 import { AddPaymentDialog } from '@/features/billing/components/dialogs/AddPaymentDialog';
 import { LoadingState, EmptyState, ErrorState } from '@/features/billing/components/StatePanel';
@@ -45,53 +45,16 @@ const mapStatus = (s?: string | null, isCancelled?: boolean): VisitStatus => {
 };
 
 const statusBadgeClass = (status: VisitStatus) => cn(
-    'text-[10px] h-5 px-1.5 shrink-0',
+    'text-[10px] h-5 px-2 shrink-0 font-semibold rounded-full',
     status === 'FINAL' && 'border-emerald-300 text-emerald-700 bg-emerald-50',
     status === 'CANCELLED' && 'border-slate-300 text-slate-500 bg-slate-50',
     status === 'OPEN' && 'border-amber-300 text-amber-700 bg-amber-50',
 );
 
-// Charges + payments interleaved chronologically (oldest first) -- feeds each Recent Transactions
-// row's inline-expanded view-only ledger.
-const interleaveLedger = (charges: BillingChargeRow[], payments: BillingPaymentRow[]) => {
-    const c = charges.map(c => ({ kind: 'charge' as const, ts: c.serviceDate, c }));
-    const p = payments.map(p => ({ kind: 'payment' as const, ts: p.createdDateTime, p }));
-    return [...c, ...p].sort((a, b) => (a.ts ?? '').localeCompare(b.ts ?? ''));
-};
-
-const LedgerRowsTable: React.FC<{ rows: ReturnType<typeof interleaveLedger> }> = ({ rows }) => (
-    <div className="border rounded-xl overflow-x-auto max-h-96 overflow-y-auto">
-        <table className="w-full text-xs">
-            <thead className="bg-slate-50 text-slate-500 sticky top-0">
-                <tr>
-                    <th className="text-left font-semibold px-3 py-2">Date</th>
-                    <th className="text-left font-semibold px-3 py-2">Particular</th>
-                    <th className="text-right font-semibold px-3 py-2">Charge</th>
-                    <th className="text-right font-semibold px-3 py-2">Paid</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center text-slate-400 py-8">No charges or payments yet.</td></tr>
-                ) : rows.map(row => row.kind === 'charge' ? (
-                    <tr key={`c-${row.c.chargeEventId}`} className="border-t border-slate-100">
-                        <td className="px-3 py-2 text-slate-500">{formatIst(row.c.serviceDate)}</td>
-                        <td className="px-3 py-2 text-slate-800">{row.c.displayName ?? row.c.categoryCode ?? 'Charge'}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-slate-800">{inr(row.c.netAmount)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-slate-300">—</td>
-                    </tr>
-                ) : (
-                    <tr key={`p-${row.p.paymentId}`} className="border-t border-slate-100">
-                        <td className="px-3 py-2 text-slate-500">{formatIst(row.p.createdDateTime)}</td>
-                        <td className="px-3 py-2 text-slate-800">{row.p.paymentDescription ?? row.p.paymentMode ?? 'Payment'}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-slate-300">—</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-emerald-700">{inr(row.p.amount)}</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+interface RowDetail {
+    particulars: string[];
+    discountTotal: number;
+}
 
 export const PathologyBillingTab: React.FC = () => {
     const { toast } = useToast();
@@ -135,6 +98,36 @@ export const PathologyBillingTab: React.FC = () => {
     }, []);
 
     useEffect(() => { loadRecent(); }, [loadRecent]);
+
+    // ─── Per-row line items (Particulars) + discount -- the dashboard summary only carries
+    // net/paid/due totals, so each row's actual charge list is fetched separately once the row
+    // list itself settles. Keyed by encounterId; re-fetched whenever `recent` changes. ─────
+    const [rowDetails, setRowDetails] = useState<Record<string, RowDetail>>({});
+    const [detailsLoading, setDetailsLoading] = useState(false);
+
+    const loadRowDetails = useCallback(async (rows: Visit[]) => {
+        if (rows.length === 0) { setRowDetails({}); return; }
+        setDetailsLoading(true);
+        try {
+            const entries = await Promise.all(rows.map(async (r): Promise<[string, RowDetail]> => {
+                try {
+                    const res = await ipdBillingService.getEncounterEvents(r.id, r.patientId);
+                    const charges = res?.success ? (res.data?.charges ?? []) : [];
+                    return [r.id, {
+                        particulars: charges.map(c => c.displayName ?? c.categoryCode ?? 'Charge'),
+                        discountTotal: charges.reduce((s, c) => s + (c.discountAmount ?? 0), 0),
+                    }];
+                } catch {
+                    return [r.id, { particulars: [], discountTotal: 0 }];
+                }
+            }));
+            setRowDetails(Object.fromEntries(entries));
+        } finally {
+            setDetailsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { loadRowDetails(recent); }, [recent, loadRowDetails]);
 
     // ─── Date filter for the Overview KPIs + Recent Transactions list ─────
     const [dateMode, setDateMode] = useState<PathologyBillingDateMode>('all');
@@ -184,9 +177,9 @@ export const PathologyBillingTab: React.FC = () => {
         return dayDate === todayKey ? 'Today' : format(new Date(dayDate), 'dd MMM yyyy');
     }, [dateMode, dayDate, rangeStart, rangeEnd]);
 
-    // ─── Row-level actions: Add Charges / Take Payment fire straight from the Actions column,
-    // no expand-first step required. `actingRow` is whichever row those two dialogs are currently
-    // open for. ─────
+    // ─── Row-level actions: Add Charges / Take Payment / Print fire straight from the Actions
+    // column -- one row per bill, no dropdown/expand step. `actingRow` is whichever row the two
+    // dialogs are currently open for. ─────
     const [actingRow, setActingRow] = useState<Visit | null>(null);
     const [actingAddCharge, setActingAddCharge] = useState(false);
     const [actingAddPayment, setActingAddPayment] = useState(false);
@@ -228,44 +221,6 @@ export const PathologyBillingTab: React.FC = () => {
             setPrintingRowId(null);
         }
     };
-
-    // ─── Recent Transactions: inline-expand a row for a read-only look at its ledger --
-    // the encounterId + patientId are already on the row, so this skips a round-trip to a
-    // separate patient-search panel entirely. ─────
-    const [expandedRow, setExpandedRow] = useState<Visit | null>(null);
-    const [expandedEvents, setExpandedEvents] = useState<{ charges: BillingChargeRow[]; payments: BillingPaymentRow[]; netBalance: number } | null>(null);
-    const [expandedLoading, setExpandedLoading] = useState(false);
-    const [expandedError, setExpandedError] = useState<string | null>(null);
-
-    const loadExpandedEvents = useCallback(async (row: Visit) => {
-        setExpandedLoading(true);
-        setExpandedError(null);
-        try {
-            const res = await ipdBillingService.getEncounterEvents(row.id, row.patientId);
-            if (!res?.success) throw new Error(res?.message ?? 'Could not load ledger');
-            setExpandedEvents(res.data as any ?? null);
-        } catch (e: any) {
-            setExpandedError(e?.message ?? 'Failed to load ledger');
-        } finally {
-            setExpandedLoading(false);
-        }
-    }, []);
-
-    const toggleExpandRow = (row: Visit) => {
-        if (expandedRow?.id === row.id) {
-            setExpandedRow(null);
-            setExpandedEvents(null);
-            return;
-        }
-        setExpandedRow(row);
-        setExpandedEvents(null);
-        loadExpandedEvents(row);
-    };
-
-    const expandedLedgerRows = useMemo(
-        () => interleaveLedger(expandedEvents?.charges ?? [], expandedEvents?.payments ?? []),
-        [expandedEvents],
-    );
 
     // ─── New Bill: a side drawer for patient selection (search or add manually) that creates a
     // fresh LAB encounter, then chains straight into the existing AddChargesModal for test
@@ -314,102 +269,115 @@ export const PathologyBillingTab: React.FC = () => {
             />
 
             {/* ── Recent Transactions ── */}
-            <Card>
-                <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-base">Recent Transactions</CardTitle>
-                    <Button size="sm" className="gap-1.5" onClick={() => setShowNewBillDrawer(true)}>
+            <Card className="shadow-sm border-slate-200/80">
+                <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0 border-b border-slate-100">
+                    <div>
+                        <CardTitle className="text-base font-bold text-slate-800">Recent Transactions</CardTitle>
+                        <p className="text-xs text-slate-400 mt-0.5">One row per bill — act on it directly, no need to open it first.</p>
+                    </div>
+                    <Button size="sm" className="gap-1.5 shadow-sm" onClick={() => setShowNewBillDrawer(true)}>
                         <Plus className="h-3.5 w-3.5" /> New Bill
                     </Button>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     {recentLoading ? (
-                        <LoadingState rows={4} />
+                        <div className="p-6"><LoadingState rows={4} /></div>
                     ) : recentError ? (
-                        <ErrorState message={recentError} onRetry={() => loadRecent()} />
+                        <div className="p-6"><ErrorState message={recentError} onRetry={() => loadRecent()} /></div>
                     ) : dateFilteredRecent.length === 0 ? (
-                        <EmptyState icon={<Receipt className="h-6 w-6" />} title="No transactions in this range." />
+                        <div className="p-6"><EmptyState icon={<Receipt className="h-6 w-6" />} title="No transactions in this range." /></div>
                     ) : (
-                        <div className="border rounded-xl overflow-x-auto">
-                            <table className="w-full text-xs">
-                                <thead className="bg-slate-50 text-slate-500">
-                                    <tr>
-                                        <th className="w-6 px-3 py-2" />
-                                        <th className="text-left font-semibold px-3 py-2">Patient</th>
-                                        <th className="text-left font-semibold px-3 py-2">Date</th>
-                                        <th className="text-right font-semibold px-3 py-2">Billed</th>
-                                        <th className="text-right font-semibold px-3 py-2">Balance</th>
-                                        <th className="text-left font-semibold px-3 py-2">Status</th>
-                                        <th className="text-left font-semibold px-3 py-2">Actions</th>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-slate-50/80 text-slate-400">
+                                        <th className="text-left font-bold px-5 py-3 text-[10px] uppercase tracking-wider">Date</th>
+                                        <th className="text-left font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Patient</th>
+                                        <th className="text-left font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Particulars</th>
+                                        <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Net Amount</th>
+                                        <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Discount</th>
+                                        <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Balance</th>
+                                        <th className="text-left font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Status</th>
+                                        <th className="text-left font-bold px-5 py-3 text-[10px] uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-slate-100">
                                     {dateFilteredRecent.map(row => {
-                                        const isExpanded = expandedRow?.id === row.id;
                                         const isPrinting = printingRowId === row.id;
                                         const isCancelled = row.status === 'CANCELLED';
+                                        const detail = rowDetails[row.id];
                                         return (
-                                            <React.Fragment key={row.id}>
-                                                <tr className="border-t border-slate-100 hover:bg-slate-50">
-                                                    <td className="px-3 py-2 text-slate-400 cursor-pointer" onClick={() => toggleExpandRow(row)}>
-                                                        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isExpanded && 'rotate-180')} />
-                                                    </td>
-                                                    <td className="px-3 py-2 cursor-pointer" onClick={() => toggleExpandRow(row)}>
-                                                        <span className="font-semibold text-slate-800">{row.patientName}</span>
-                                                        <span className="text-slate-400 font-mono ml-1.5">{row.patientIdDisplay}</span>
-                                                    </td>
-                                                    <td className="px-3 py-2 text-slate-500">{formatIst(row.date)}</td>
-                                                    <td className="px-3 py-2 text-right tabular-nums text-slate-800">{inr(row.totalDebit ?? 0)}</td>
-                                                    <td className={cn('px-3 py-2 text-right tabular-nums', (row.balance ?? 0) > 0 ? 'text-rose-600 font-semibold' : 'text-slate-500')}>{inr(row.balance ?? 0)}</td>
-                                                    <td className="px-3 py-2">
-                                                        <Badge variant="outline" className={statusBadgeClass(row.status)}>{row.status}</Badge>
-                                                    </td>
-                                                    <td className="px-3 py-2">
-                                                        <div className="flex items-center gap-1">
-                                                            <Button
-                                                                size="sm" variant="outline" className="h-7 px-2 text-[11px] gap-1"
-                                                                disabled={isCancelled}
-                                                                onClick={() => openAddCharge(row)}
-                                                            >
-                                                                <Plus className="h-3 w-3" /> Add Charges
-                                                            </Button>
-                                                            <Button
-                                                                size="sm" variant="outline" className="h-7 px-2 text-[11px] gap-1"
-                                                                disabled={isCancelled}
-                                                                onClick={() => openAddPayment(row)}
-                                                            >
-                                                                <CreditCard className="h-3 w-3" /> Take Payment
-                                                            </Button>
-                                                            <Button
-                                                                size="sm" variant="ghost" className="h-7 px-2 text-[11px] gap-1"
-                                                                disabled={isPrinting}
-                                                                onClick={() => handlePrintRow(row)}
-                                                            >
-                                                                {isPrinting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />} Print
-                                                            </Button>
+                                            <tr key={row.id} className="hover:bg-slate-50/60 transition-colors align-top">
+                                                <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{formatIst(row.date)}</td>
+                                                <td className="px-4 py-3.5">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="h-8 w-8 rounded-full bg-cyan-50 flex items-center justify-center text-xs font-bold text-cyan-700 border border-cyan-200 shrink-0">
+                                                            {row.patientName.charAt(0)}
                                                         </div>
-                                                    </td>
-                                                </tr>
-                                                {isExpanded && (
-                                                    <tr className="border-t border-slate-100 bg-slate-50/60">
-                                                        <td colSpan={7} className="px-3 py-3">
-                                                            {expandedLoading ? (
-                                                                <LoadingState rows={2} />
-                                                            ) : expandedError ? (
-                                                                <ErrorState message={expandedError} onRetry={() => loadExpandedEvents(row)} />
-                                                            ) : (
-                                                                <div className="space-y-2.5">
-                                                                    {(expandedEvents?.netBalance ?? 0) > 0 && (
-                                                                        <p className="text-[11px] font-semibold text-rose-600">
-                                                                            Due: {inr(expandedEvents?.netBalance ?? 0)}
-                                                                        </p>
-                                                                    )}
-                                                                    <LedgerRowsTable rows={expandedLedgerRows} />
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
+                                                        <div className="min-w-0">
+                                                            <p className="font-semibold text-slate-800 truncate">{row.patientName}</p>
+                                                            <p className="text-slate-400 font-mono text-[11px]">{row.patientIdDisplay}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 max-w-[260px]">
+                                                    {!detail && detailsLoading ? (
+                                                        <span className="text-slate-300 text-xs">Loading…</span>
+                                                    ) : !detail || detail.particulars.length === 0 ? (
+                                                        <span className="text-slate-300 text-xs">—</span>
+                                                    ) : (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {detail.particulars.map((name, i) => (
+                                                                <span
+                                                                    key={i}
+                                                                    className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100 px-2 py-0.5 text-[10px] font-medium"
+                                                                >
+                                                                    <FlaskConical className="h-2.5 w-2.5" /> {name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-right tabular-nums font-bold text-slate-800 whitespace-nowrap">{inr(row.totalDebit ?? 0)}</td>
+                                                <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                                                    {detail && detail.discountTotal > 0
+                                                        ? <span className="text-amber-600 font-semibold">−{inr(detail.discountTotal)}</span>
+                                                        : <span className="text-slate-300">—</span>}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                                                    {(row.balance ?? 0) > 0
+                                                        ? <span className="text-rose-600 font-bold">{inr(row.balance ?? 0)}</span>
+                                                        : <span className="text-emerald-600 font-semibold">Paid</span>}
+                                                </td>
+                                                <td className="px-4 py-3.5">
+                                                    <Badge variant="outline" className={statusBadgeClass(row.status)}>{row.status}</Badge>
+                                                </td>
+                                                <td className="px-5 py-3.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Button
+                                                            size="sm" variant="outline" className="h-8 px-2.5 text-[11px] gap-1 rounded-lg"
+                                                            disabled={isCancelled}
+                                                            onClick={() => openAddCharge(row)}
+                                                        >
+                                                            <Plus className="h-3 w-3" /> Add Charges
+                                                        </Button>
+                                                        <Button
+                                                            size="sm" variant="outline" className="h-8 px-2.5 text-[11px] gap-1 rounded-lg"
+                                                            disabled={isCancelled}
+                                                            onClick={() => openAddPayment(row)}
+                                                        >
+                                                            <CreditCard className="h-3 w-3" /> Take Payment
+                                                        </Button>
+                                                        <Button
+                                                            size="sm" variant="ghost" className="h-8 px-2.5 text-[11px] gap-1 rounded-lg text-slate-500 hover:text-slate-800"
+                                                            disabled={isPrinting}
+                                                            onClick={() => handlePrintRow(row)}
+                                                        >
+                                                            {isPrinting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />} Print
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         );
                                     })}
                                 </tbody>

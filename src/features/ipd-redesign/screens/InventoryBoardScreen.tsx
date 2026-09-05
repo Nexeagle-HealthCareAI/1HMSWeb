@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 import { Card } from '@/components/ui/card';
 import { formatIstDateTime } from '../utils/istDate';
+import { BloodBankManagementPanel } from '../components/BloodBankManagementPanel';
 
 interface Props {
     onBack: () => void;
@@ -74,7 +75,7 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
     useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        if ((tab !== 'bloodbank' && tab !== 'cssd') || unifiedLoaded) return;
+        if (tab !== 'cssd' || unifiedLoaded) return;
         setUnifiedLoading(true);
         inventoryApi.getUnifiedStock()
             .then(u => { setUnified(u); setUnifiedLoaded(true); })
@@ -414,35 +415,7 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
 
                             {tab === 'compliance' && <NarcoticCompliancePanel />}
 
-                            {tab === 'bloodbank' && (
-                                unifiedLoading ? (
-                                    <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-md mx-auto w-full max-w-2xl rounded-2xl">
-                                            <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-3 flex items-center gap-1.5">
-                                                <Droplet className="h-4 w-4 text-rose-500" /> Blood Bank Units
-                                            </h2>
-                                            {unified.bloodByStore.length === 0 ? (
-                                                <p className="text-sm text-slate-400 text-center py-4">No blood units recorded.</p>
-                                            ) : (
-                                                <div className="space-y-1.5">
-                                                    {unified.bloodByStore.map((r, i) => (
-                                                        <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/10 hover:border-slate-200 dark:hover:border-zinc-800 transition-all flex-wrap">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm">{r.storeName}</span>
-                                                                <Badge variant="outline" className="text-[9px] font-bold rounded-full">{r.component} &middot; {r.bloodGroup.replace('_', ' ')}</Badge>
-                                                                <Badge variant="outline" className="text-[9px] font-bold rounded-full">{r.status}</Badge>
-                                                            </div>
-                                                            <span className="text-xs font-mono font-bold text-slate-900 dark:text-zinc-100">{r.bagCount} bag(s) &middot; {r.totalVolumeMl.toLocaleString('en-IN')} mL</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </Card>
-                                    </div>
-                                )
-                            )}
+                            {tab === 'bloodbank' && <BloodBankManagementPanel />}
 
                             {tab === 'cssd' && (
                                 unifiedLoading ? (
