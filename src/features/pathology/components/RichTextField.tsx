@@ -42,7 +42,9 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
     value, onChange, placeholder, showToolbar = true, minHeight = '80px', className, onEnterWord,
 }) => {
     const ref = useRef<HTMLDivElement>(null);
-    const lastEmittedHtml = useRef<string>(value);
+    // null (never a real HTML string) so the mount run below always hydrates the DOM at least
+    // once, even when `value` starts out non-empty (e.g. opening the editor on an existing record).
+    const lastEmittedHtml = useRef<string | null>(null);
 
     // Only push the `value` prop into the DOM when it changed from OUTSIDE this component (e.g.
     // loading a different record) -- never on our own onChange round-trip, which would otherwise
