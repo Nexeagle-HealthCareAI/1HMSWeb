@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store';
 import { pathologyService } from '../services/pathologyService';
 import { hospitalApi, HospitalData } from '@/features/hospital/services/hospitalApi';
-import { Loader2, UserCheck, Globe } from 'lucide-react';
+import { Loader2, UserCheck, Globe, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Lab-wide identity/sign-off settings (moved out of ReportLetterheadConfig.tsx into its own nav
@@ -40,6 +40,7 @@ export const LabSettingsPanel: React.FC = () => {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [testCategoriesInput, setTestCategoriesInput] = useState('');
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -81,6 +82,30 @@ export const LabSettingsPanel: React.FC = () => {
   const hospitalAddressPlaceholder = hospitalProfile
     ? [hospitalProfile.location, hospitalProfile.city, [hospitalProfile.state, hospitalProfile.pincode].filter(Boolean).join(' - ')].filter(Boolean).join(', ')
     : '';
+
+  // Reads the browser's own GPS/network location (a permission prompt on first use) rather than
+  // requiring the lab to look up and manually type coordinates -- most people configuring this from
+  // the lab itself, so the device's current position is the right pin almost every time.
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Location detection is not supported by this browser');
+      return;
+    }
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(String(position.coords.latitude));
+        setLongitude(String(position.coords.longitude));
+        toast.success('Location detected', { description: 'Latitude/Longitude filled in below -- remember to Save Changes.' });
+        setIsDetectingLocation(false);
+      },
+      (error) => {
+        toast.error('Could not detect location', { description: error.message || 'Check your browser\'s location permission for this site.' });
+        setIsDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handleSave = async () => {
     if (!hospitalId) return;
@@ -272,15 +297,32 @@ export const LabSettingsPanel: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground -mt-2">Used for search on Doctor Dekho -- leave blank to use your hospital's own city/state/pincode.</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="lab-lat">Latitude</Label>
-              <Input id="lab-lat" type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Optional" />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label>GPS Location</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={handleUseCurrentLocation}
+                disabled={isDetectingLocation}
+              >
+                <LocateFixed className="h-3.5 w-3.5" />
+                {isDetectingLocation ? 'Detecting...' : 'Use my current location'}
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lab-lng">Longitude</Label>
-              <Input id="lab-lng" type="number" step="any" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Optional" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="lab-lat" className="text-xs text-muted-foreground font-normal">Latitude</Label>
+                <Input id="lab-lat" type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Optional" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lab-lng" className="text-xs text-muted-foreground font-normal">Longitude</Label>
+                <Input id="lab-lng" type="number" step="any" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Optional" />
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground">Powers "Get Directions" on your lab's public page. You can also type coordinates manually.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="test-categories">Test Categories</Label>
