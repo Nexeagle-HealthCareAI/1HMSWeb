@@ -72,14 +72,18 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
     const stripAmbientStyleArtifact = () => {
         const container = ref.current;
         if (!container) return;
-        const computed = window.getComputedStyle(container);
+        const containerComputed = window.getComputedStyle(container);
         for (const span of Array.from(container.getElementsByTagName('span'))) {
             const parent = span.parentElement;
             if (!parent || parent.childNodes.length !== 1) continue;
             const styleProps = Array.from(span.style).filter(Boolean);
             if (styleProps.length === 0 || !styleProps.every(p => p === 'font-size' || p === 'color')) continue;
-            const sizeOk = !span.style.fontSize || span.style.fontSize === computed.fontSize;
-            const colorOk = !span.style.color || span.style.color === computed.color;
+            // Compare resolved computed values, not the raw inline-style strings -- the artifact's
+            // span writes "0.875rem" while getComputedStyle always normalizes to "14px", so a naive
+            // string comparison never matches even when the two are visually identical.
+            const spanComputed = window.getComputedStyle(span);
+            const sizeOk = !span.style.fontSize || spanComputed.fontSize === containerComputed.fontSize;
+            const colorOk = !span.style.color || spanComputed.color === containerComputed.color;
             if (sizeOk && colorOk) {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
