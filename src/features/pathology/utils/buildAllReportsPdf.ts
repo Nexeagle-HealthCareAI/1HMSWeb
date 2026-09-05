@@ -3,6 +3,7 @@ import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { generatePathologyReportPdf, PathologyReportPdfLine, PathologyReportPdfData } from './generatePathologyReportPdf';
 import { resolveRange } from './resultFlagCalculator';
 import { parseReportFieldLayout, type PathologyFieldConfigItem } from '../services/pathologyFieldLayoutApi';
+import { resolvePathologyBranding } from './resolvePathologyBranding';
 
 // Deliberately duplicates (rather than extracts/shares) the equivalent per-line-report logic in
 // PathologyOrderDetailPage.tsx (buildPdfLine/resolveReportPdfData) — that page's version is
@@ -97,19 +98,9 @@ const resolveOrderReportsPdfData = async (
     letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
     letterheadTemplateUrl: defaultTemplate?.headerBlobPath ?? null,
     letterheadMargins,
-    hospitalBranding: hospital && {
-      name: hospital.name,
-      location: hospital.location,
-      city: hospital.city,
-      state: hospital.state,
-      pincode: hospital.pincode,
-      contact: hospital.contact,
-      alternateContact: hospital.alternateContact,
-      email: hospital.email,
-      website: hospital.website,
-      registrationNumber: hospital.registrationNumber,
-      nabhNumber: hospital.nabhNumber,
-    },
+    hospitalBranding: resolvePathologyBranding(hospital, labConfig),
+    technicianName: labConfig?.technicianName ?? null,
+    pathologistName: labConfig?.pathologistName ?? null,
   };
 };
 

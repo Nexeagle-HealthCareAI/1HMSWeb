@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Printer, Hotel, Stethoscope, MoreVertical, PackageCheck, PenLine, Ban, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, FileCheck2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Printer, Hotel, Stethoscope, MoreVertical, PackageCheck, PenLine, Ban, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { PathologyDashboardOverview, PathologyDateMode } from './PathologyDashboardOverview';
 import { getPathologyStatusColor, getPathologySourceColor } from '../utils/pathologyStatusColor';
@@ -39,11 +39,23 @@ const SortableHeader = ({ column, label, sortColumn, sortDirection, onSort, alig
   );
 };
 
-export const PathologyWorkspace: React.FC = () => {
+interface PathologyWorkspaceProps {
+  // Lets the "Complete Lab Setup" banner jump straight to the Letterhead tab (where the new Lab
+  // Identity & Sign-off card lives) -- omitted, the banner still explains what to do, just without
+  // a one-click shortcut.
+  onNavigateToLetterhead?: () => void;
+}
+
+export const PathologyWorkspace: React.FC<PathologyWorkspaceProps> = ({ onNavigateToLetterhead }) => {
   const hospitalId = useAuthStore(state => state.hospitalId);
   const navigate = useNavigate();
   const [orders, setOrders] = useState<PathologyOrderDto[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  // Gates "New Lab Order" -- null while unknown (assume open so the button isn't disabled during
+  // the initial fetch), false once we know TechnicianName is missing. Nothing else in the system
+  // provides a fallback for "who's accountable for this lab's reports," so this is the one field
+  // that blocks starting new work (see ReportLetterheadConfig.tsx's Lab Identity & Sign-off card).
+  const [isLabSetupComplete, setIsLabSetupComplete] = useState<boolean | null>(null);
   // Distinct from "no orders" -- a failed fetch left `orders` as whatever it was before (empty on
   // first load), which without this looked identical to a genuinely empty worklist.
   const [ordersLoadError, setOrdersLoadError] = useState(false);
@@ -230,6 +242,15 @@ export const PathologyWorkspace: React.FC = () => {
     if (hospitalId) fetchOrders();
   }, [hospitalId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!hospitalId) return;
+    let cancelled = false;
+    pathologyService.getLabConfig(hospitalId)
+      .then(config => { if (!cancelled) setIsLabSetupComplete(!!config.technicianName?.trim()); })
+      .catch(() => { if (!cancelled) setIsLabSetupComplete(true); }); // fetch failure shouldn't block ordering
+    return () => { cancelled = true; };
+  }, [hospitalId]);
+
   const fetchOrders = async () => {
     if (!hospitalId) return;
     setIsLoadingOrders(true);
@@ -297,8 +318,25 @@ export const PathologyWorkspace: React.FC = () => {
     }
   };
 
+  const labSetupIncomplete = isLabSetupComplete === false;
+
   return (
     <div className="flex flex-col gap-6 h-full">
+      {labSetupIncomplete && (
+        <div className="flex items-center justify-between gap-3 flex-wrap rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+          <div className="flex items-center gap-2.5">
+            <UserCheck className="h-4.5 w-4.5 shrink-0" />
+            <p className="text-sm font-medium">
+              Complete Lab Setup — Technician Name is required before creating new orders.
+            </p>
+          </div>
+          {onNavigateToLetterhead && (
+            <Button size="sm" variant="outline" className="border-amber-400 text-amber-900 hover:bg-amber-100" onClick={onNavigateToLetterhead}>
+              Configure now
+            </Button>
+          )}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-bold text-slate-800">Orders Dashboard</h2>
@@ -307,7 +345,8 @@ export const PathologyWorkspace: React.FC = () => {
         <Button
           size="lg"
           onClick={() => setOrderModal({ open: true })}
-          disabled={!hospitalId}
+          disabled={!hospitalId || labSetupIncomplete}
+          title={labSetupIncomplete ? 'Set a Technician Name in Letterhead settings before creating new orders' : undefined}
           className="gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md hover:shadow-lg transition-all px-6"
         >
           <Plus className="h-5 w-5" /> New Lab Order

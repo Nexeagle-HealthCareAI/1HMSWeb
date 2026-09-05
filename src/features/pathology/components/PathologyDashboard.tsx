@@ -28,6 +28,7 @@ const AUTO_BILLING_LABELS: Record<string, string> = {
 
 export const PathologyDashboard: React.FC = () => {
   const [autoBillingMode, setAutoBillingMode] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('workspace');
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +44,7 @@ export const PathologyDashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-3 sm:px-6 pt-2 pb-4 gap-4 overflow-visible lg:overflow-hidden">
-      <Tabs defaultValue="workspace" className="flex flex-col flex-1 min-h-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
         {/* Header Card (Unified Theme & Layout matching IPD, Appointment & Billing Dashboards) */}
         <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden shrink-0 mb-1">
             {/* Decorative flare */}
@@ -93,7 +94,7 @@ export const PathologyDashboard: React.FC = () => {
 
         <div className="flex-1 mt-3 overflow-auto">
           <TabsContent value="workspace" className="h-full m-0 data-[state=inactive]:hidden">
-            <PathologyWorkspace />
+            <PathologyWorkspace onNavigateToLetterhead={() => setActiveTab('letterhead')} />
           </TabsContent>
           <TabsContent value="billing" className="h-full m-0 data-[state=inactive]:hidden">
             <PathologyBillingTab />

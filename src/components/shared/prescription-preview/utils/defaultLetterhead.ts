@@ -56,6 +56,11 @@ export interface GenerateDefaultLetterheadOptions {
   layout?: TemplateBoundLayoutConfig;
   hospital?: DefaultLetterheadHospitalInfo | null;
   doctor?: DefaultLetterheadDoctorInfo | null;
+  // Repeats the header's Reg No/NABH line in the footer too -- off by default so prescription and
+  // discharge-summary letterheads render exactly as before; pathology reports opt in (Indian
+  // diagnostic-lab norms expect the registration number legible on every printed page, not just
+  // wherever the header happens to land after pagination).
+  showRegistrationInFooter?: boolean;
 }
 
 const truncateToWidth = (text: string, font: PDFFont, size: number, maxWidth: number) => {
@@ -79,6 +84,7 @@ export const generateDefaultLetterheadTemplate = async ({
   layout = FALLBACK_LAYOUT,
   hospital,
   doctor,
+  showRegistrationInFooter,
 }: GenerateDefaultLetterheadOptions): Promise<File> => {
   const doc = await PDFDocument.create();
   const page = doc.addPage([A4_WIDTH_PT, A4_HEIGHT_PT]);
@@ -183,7 +189,8 @@ export const generateDefaultLetterheadTemplate = async ({
   drawStackedLines(footerStartY, footerFloorY, 'left', maxTextWidth, [
     addressLine ? { text: addressLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 11 } : null,
     contactLine ? { text: contactLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 11 } : null,
-    emailWebLine ? { text: emailWebLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 0 } : null,
+    emailWebLine ? { text: emailWebLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: showRegistrationInFooter && accreditationLine ? 11 : 0 } : null,
+    showRegistrationInFooter && accreditationLine ? { text: accreditationLine, font: regularFont, size: 8, color: TEXT_LIGHT, gap: 0 } : null,
   ]);
 
   const bytes = await doc.save();

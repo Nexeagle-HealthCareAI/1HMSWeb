@@ -143,6 +143,13 @@ export interface PathologyReportPdfData {
   // Hospital branding fields for the SYSTEM_DEFAULT branch -- same shape prescription/discharge
   // already feed into generateDefaultLetterheadTemplate.
   hospitalBranding?: DefaultLetterheadHospitalInfo | null;
+
+  // Static, lab-wide manual sign-off labels (LabConfiguration.TechnicianName/PathologistName) --
+  // not a per-report workflow (see the removed sign-off pipeline this does NOT resurrect). Drawn
+  // once at the end of the whole document. PathologistName is commonly blank (many labs have no
+  // in-house pathologist) and simply omits that line rather than printing it empty.
+  technicianName?: string | null;
+  pathologistName?: string | null;
 }
 
 const resolveMargins = (margins: PathologyReportPdfMargins | null | undefined) => ({
@@ -187,6 +194,7 @@ async function resolveLetterheadBackground(
     const defaultFile = await generateDefaultLetterheadTemplate({
       layout: { margins, headerHeight: 20, footerHeight: 15, overflowStrategy: 'reuse-template' },
       hospital: data.hospitalBranding,
+      showRegistrationInFooter: true,
     });
     const bytes = new Uint8Array(await defaultFile.arrayBuffer());
     return await embedFromBytes(bytes);
@@ -441,6 +449,34 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
       }
     }
     cursorY -= 10;
+  }
+
+  // --- Sign-off (Technician / Pathologist) -----------------------------------------------------
+  // Static, lab-wide printed labels (LabConfiguration.TechnicianName/PathologistName) -- not the
+  // removed per-report sign-off workflow. Drawn once at the end of the whole document (a report is
+  // signed once, not per printed page). PathologistName is commonly blank and simply omits that
+  // column rather than printing an empty one; if both are blank, no block is drawn at all.
+  const technicianName = data.technicianName?.trim();
+  const pathologistName = data.pathologistName?.trim();
+  if (technicianName || pathologistName) {
+    ensureRoom(46);
+    cursorY -= 10;
+    page.drawLine({
+      start: { x: margins.left, y: cursorY }, end: { x: PAGE_WIDTH - margins.right, y: cursorY },
+      thickness: 0.5, color: COLORS.border,
+    });
+    cursorY -= 16;
+    const signOffColWidth = contentWidth / 2;
+    if (technicianName) {
+      page.drawText('Technician', { x: margins.left, y: cursorY, size: 8, font: regularFont, color: COLORS.muted });
+      page.drawText(technicianName, { x: margins.left, y: cursorY - 12, size: 10, font: boldFont, color: COLORS.text });
+    }
+    if (pathologistName) {
+      const x = margins.left + signOffColWidth;
+      page.drawText('Pathologist', { x, y: cursorY, size: 8, font: regularFont, color: COLORS.muted });
+      page.drawText(pathologistName, { x, y: cursorY - 12, size: 10, font: boldFont, color: COLORS.text });
+    }
+    cursorY -= 12;
   }
 
   const pdfBytes = await doc.save();

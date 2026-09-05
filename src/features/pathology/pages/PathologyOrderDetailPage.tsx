@@ -24,6 +24,7 @@ import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { usePathologyReportFieldLayout } from '../hooks/usePathologyReportFieldLayout';
 import type { PathologyFieldConfigItem } from '../services/pathologyFieldLayoutApi';
 import { getPathologyStatusColor } from '../utils/pathologyStatusColor';
+import { resolvePathologyBranding } from '../utils/resolvePathologyBranding';
 
 // Dedicated page for one pathology order -- a pathologist/technician lands here from the
 // Pathology Lab dashboard's order cards to fill in per-test results, report-level fields, and
@@ -288,19 +289,9 @@ const PathologyOrderDetailPage: React.FC = () => {
       letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
       letterheadTemplateUrl: defaultTemplate?.headerBlobPath ?? null,
       letterheadMargins,
-      hospitalBranding: hospital && {
-        name: hospital.name,
-        location: hospital.location,
-        city: hospital.city,
-        state: hospital.state,
-        pincode: hospital.pincode,
-        contact: hospital.contact,
-        alternateContact: hospital.alternateContact,
-        email: hospital.email,
-        website: hospital.website,
-        registrationNumber: hospital.registrationNumber,
-        nabhNumber: hospital.nabhNumber,
-      },
+      hospitalBranding: resolvePathologyBranding(hospital, labConfig),
+      technicianName: labConfig?.technicianName ?? null,
+      pathologistName: labConfig?.pathologistName ?? null,
     };
   };
 

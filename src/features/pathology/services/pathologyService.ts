@@ -12,6 +12,15 @@ export interface LabConfiguration {
   // { reportFields: PathologyFieldConfigItem[]; lineFields: PathologyFieldConfigItem[] } --
   // see pathologyFieldLayoutApi.ts for the parsed shape.
   reportFieldLayoutJson?: string;
+  // The lab's own identity for its report letterhead -- overrides the hospital's generic
+  // name/address/registration number when set; falls back to the Hospital record when blank (see
+  // resolvePathologyBranding.ts). TechnicianName has no such fallback anywhere in the system, so
+  // it's what PathologyDashboard.tsx gates new-order creation on.
+  labName?: string;
+  labAddress?: string;
+  labRegistrationNumber?: string;
+  technicianName?: string;
+  pathologistName?: string;
 }
 
 export interface CreatePathologyOrderRequest {
@@ -260,6 +269,11 @@ export interface UpdateLabConfigRequest {
   defaultReportFooterText?: string;
   letterheadMode: PathologyLetterheadMode;
   reportFieldLayoutJson?: string;
+  labName?: string;
+  labAddress?: string;
+  labRegistrationNumber?: string;
+  technicianName?: string;
+  pathologistName?: string;
 }
 
 export interface PathologyReportReadyDto {

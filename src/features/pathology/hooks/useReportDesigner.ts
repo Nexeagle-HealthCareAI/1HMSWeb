@@ -7,6 +7,7 @@ import { pathologyService, PathologyReportTemplate, PathologyLetterheadMode } fr
 import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
 import { generatePathologyReportPdf } from '../utils/generatePathologyReportPdf';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { resolvePathologyBranding } from '../utils/resolvePathologyBranding';
 
 export interface MarginConfig {
   top: number;
@@ -340,7 +341,10 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
   const generatePreview = useCallback(async (letterheadMode: PathologyLetterheadMode) => {
     setIsGeneratingPreview(true);
     try {
-      const hospital = hospitalId ? await hospitalApi.getHospitalById(hospitalId).catch(() => null) : null;
+      const [hospital, labConfig] = await Promise.all([
+        hospitalId ? hospitalApi.getHospitalById(hospitalId).catch(() => null) : Promise.resolve(null),
+        hospitalId ? pathologyService.getLabConfig(hospitalId).catch(() => null) : Promise.resolve(null),
+      ]);
       const now = new Date().toISOString();
 
       const blob = await generatePathologyReportPdf({
@@ -372,19 +376,9 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
         letterheadMode,
         letterheadTemplateUrl: reportTemplate?.headerBlobPath ?? null,
         letterheadMargins: layoutMargins,
-        hospitalBranding: hospital && {
-          name: hospital.name,
-          location: hospital.location,
-          city: hospital.city,
-          state: hospital.state,
-          pincode: hospital.pincode,
-          contact: hospital.contact,
-          alternateContact: hospital.alternateContact,
-          email: hospital.email,
-          website: hospital.website,
-          registrationNumber: hospital.registrationNumber,
-          nabhNumber: hospital.nabhNumber,
-        },
+        hospitalBranding: resolvePathologyBranding(hospital, labConfig),
+        technicianName: labConfig?.technicianName ?? null,
+        pathologistName: labConfig?.pathologistName ?? null,
       });
 
       const url = URL.createObjectURL(blob);
