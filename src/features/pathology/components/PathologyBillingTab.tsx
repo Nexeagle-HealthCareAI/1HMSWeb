@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Plus, Receipt, CreditCard, Loader2, Printer, FlaskConical,
+    Plus, Receipt, CreditCard, Loader2, Printer, FlaskConical, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -100,8 +100,10 @@ export const PathologyBillingTab: React.FC = () => {
     useEffect(() => { loadRecent(); }, [loadRecent]);
 
     // ─── Per-row line items (Particulars) + discount -- the dashboard summary only carries
-    // net/paid/due totals, so each row's actual charge list is fetched separately once the row
-    // list itself settles. Keyed by encounterId; re-fetched whenever `recent` changes. ─────
+    // net/paid/due totals, so each row's actual charge list is fetched separately. Only the
+    // current page's rows are fetched (see the pagination section below), not the whole list.
+    // Keyed by encounterId; entries persist across page changes so paging back doesn't re-flash
+    // "Loading…" for rows already fetched. ─────
     const [rowDetails, setRowDetails] = useState<Record<string, RowDetail>>({});
     const [detailsLoading, setDetailsLoading] = useState(false);
 
@@ -121,13 +123,13 @@ export const PathologyBillingTab: React.FC = () => {
                     return [r.id, { particulars: [], discountTotal: 0 }];
                 }
             }));
-            setRowDetails(Object.fromEntries(entries));
+            // Merge rather than replace -- otherwise paging back to an already-fetched page would
+            // flash "Loading…" again for rows whose details we already have.
+            setRowDetails(prev => ({ ...prev, ...Object.fromEntries(entries) }));
         } finally {
             setDetailsLoading(false);
         }
     }, []);
-
-    useEffect(() => { loadRowDetails(recent); }, [recent, loadRowDetails]);
 
     // ─── Date filter for the Overview KPIs + Recent Transactions list ─────
     const [dateMode, setDateMode] = useState<PathologyBillingDateMode>('all');
@@ -176,6 +178,27 @@ export const PathologyBillingTab: React.FC = () => {
         const todayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         return dayDate === todayKey ? 'Today' : format(new Date(dayDate), 'dd MMM yyyy');
     }, [dateMode, dayDate, rangeStart, rangeEnd]);
+
+    // ─── Pagination -- same "Showing A-B of N" + Prev/Next convention as PathologyWorkspace.tsx's
+    // orders table, fixed at 10 rows/page. ─────
+    const itemsPerPage = 10;
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil(dateFilteredRecent.length / itemsPerPage));
+    const paginatedRecent = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return dateFilteredRecent.slice(start, start + itemsPerPage);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dateFilteredRecent, currentPage]);
+
+    // Only the visible page's rows need their particulars/discount fetched -- cheaper than
+    // fetching every row in the whole (unpaginated) list up front, and re-runs as the user pages.
+    useEffect(() => { loadRowDetails(paginatedRecent); }, [paginatedRecent, loadRowDetails]);
+
+    // Jump back to page 1 whenever the visible set changes shape, so a filter/date change or a
+    // fresh load never strands the user on a now-empty page.
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [dateMode, dayDate, rangeStart, rangeEnd, recent]);
 
     // ─── Row-level actions: Add Charges / Take Payment / Print fire straight from the Actions
     // column -- one row per bill, no dropdown/expand step. `actingRow` is whichever row the two
@@ -291,7 +314,7 @@ export const PathologyBillingTab: React.FC = () => {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-slate-50/80 text-slate-400">
-                                        <th className="text-left font-bold px-5 py-3 text-[10px] uppercase tracking-wider">Date</th>
+                                        <th className="text-left font-bold px-5 py-3 text-[10px] uppercase tracking-wider">Date (IST)</th>
                                         <th className="text-left font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Patient</th>
                                         <th className="text-left font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Particulars</th>
                                         <th className="text-right font-bold px-4 py-3 text-[10px] uppercase tracking-wider">Net Amount</th>
@@ -302,7 +325,7 @@ export const PathologyBillingTab: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {dateFilteredRecent.map(row => {
+                                    {paginatedRecent.map(row => {
                                         const isPrinting = printingRowId === row.id;
                                         const isCancelled = row.status === 'CANCELLED';
                                         const detail = rowDetails[row.id];
@@ -382,6 +405,32 @@ export const PathologyBillingTab: React.FC = () => {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+                    {!recentLoading && !recentError && dateFilteredRecent.length > 0 && (
+                        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
+                            <div className="truncate">
+                                Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, dateFilteredRecent.length)} of {dateFilteredRecent.length}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                    variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <div className="px-2 font-bold bg-white border rounded-lg tabular-nums whitespace-nowrap">
+                                    {currentPage} / {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg"
+                                    disabled={currentPage >= totalPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </CardContent>
