@@ -15,6 +15,7 @@ import { BulkStockUpload } from '../components/BulkStockUpload';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 import { Card } from '@/components/ui/card';
+import { formatIstDateTime } from '../utils/istDate';
 
 interface Props {
     onBack: () => void;
