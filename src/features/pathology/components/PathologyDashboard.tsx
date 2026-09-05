@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube } from 'lucide-react';
+import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { PathologyBillingTab } from './PathologyBillingTab';
 import { PathologyWorkspace } from './PathologyWorkspace';
 import { TestCatalogManager } from './TestCatalogManager';
@@ -14,7 +15,30 @@ const TABS = [
     { id: 'letterhead', label: 'Letterhead', description: 'Report letterhead designer', icon: LayoutTemplate },
 ] as const;
 
+// Mirrors BillingPolicyConfig.tsx's LAB_PATH_TRIGGER_OPTIONS labels (plus ON_SAMPLE_COLLECTION,
+// which the backend honors -- CollectPathologySampleHandler.cs -- but that settings screen
+// doesn't currently expose as a selectable option).
+const AUTO_BILLING_LABELS: Record<string, string> = {
+    ON_ORDER: 'On Order Placement',
+    ON_SAMPLE_COLLECTION: 'On Sample Collection',
+    ON_REPORT_APPROVAL: 'On Report Approval',
+};
+
 export const PathologyDashboard: React.FC = () => {
+  const [autoBillingMode, setAutoBillingMode] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    ipdBillingService.getPolicy()
+      .then((res: any) => {
+        if (cancelled || res?.success === false) return;
+        const trigger = res?.data?.labPathTrigger;
+        setAutoBillingMode(trigger && trigger !== 'OFF' ? trigger : null);
+      })
+      .catch(() => { /* silent -- the header badge is a convenience, not load-bearing */ });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-3 sm:px-6 pt-2 pb-4 gap-4 overflow-visible lg:overflow-hidden">
       <Tabs defaultValue="workspace" className="flex flex-col flex-1 min-h-0">
@@ -30,7 +54,17 @@ export const PathologyDashboard: React.FC = () => {
                         <TestTube className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0">
-                        <h1 className="text-xl font-bold tracking-tight">Pathology Lab</h1>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-xl font-bold tracking-tight">Pathology Lab</h1>
+                            {autoBillingMode && (
+                                <span
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-400/20 text-emerald-100 border border-emerald-300/30"
+                                    title={`Lab charges post automatically: ${AUTO_BILLING_LABELS[autoBillingMode] ?? autoBillingMode}`}
+                                >
+                                    <Zap className="h-2.5 w-2.5" /> Auto-Billing: {AUTO_BILLING_LABELS[autoBillingMode] ?? autoBillingMode}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[11px] text-brand-100 mt-0.5">Manage orders and results.</p>
                     </div>
                 </div>
