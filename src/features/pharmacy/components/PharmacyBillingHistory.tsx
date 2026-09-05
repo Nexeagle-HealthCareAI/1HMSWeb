@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Receipt, IndianRupee, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Receipt, IndianRupee, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 type DateMode = 'ALL' | 'DAY' | 'RANGE';
@@ -29,6 +30,9 @@ export const PharmacyBillingHistory: React.FC = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [totalReturnedAmount, setTotalReturnedAmount] = useState(0);
   const [netSalesAmount, setNetSalesAmount] = useState(0);
+  const [totalBills, setTotalBills] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const [isLoading, setIsLoading] = useState(false);
 
   const { fromDate, toDate } = useMemo(() => {
@@ -44,19 +48,23 @@ export const PharmacyBillingHistory: React.FC = () => {
     if (!hospitalId) return;
     setIsLoading(true);
     try {
-      const result = await pharmacyApi.getBillingHistory(fromDate, toDate, hospitalId);
+      const result = await pharmacyApi.getBillingHistory(fromDate, toDate, hospitalId, page, pageSize);
       setBills(result.bills);
       setTotalAmount(result.totalAmount);
       setTotalReturnedAmount(result.totalReturnedAmount);
       setNetSalesAmount(result.netSalesAmount);
+      setTotalBills(result.totalBills);
     } catch {
       toast.error('Could not load the pharmacy billing history.');
     } finally {
       setIsLoading(false);
     }
-  }, [hospitalId, fromDate, toDate]);
+  }, [hospitalId, fromDate, toDate, page]);
 
   useEffect(() => { load(); }, [load]);
+  // Any filter change (date mode/range) should always jump back to page 1 -- staying on, say,
+  // page 4 of a stale filter would otherwise show a confusing empty page.
+  useEffect(() => { setPage(1); }, [dateMode, dayDate, rangeStart, rangeEnd]);
 
   return (
     <div className="p-4 space-y-4">
@@ -155,6 +163,24 @@ export const PharmacyBillingHistory: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          {totalBills > pageSize && (
+            <div className="flex items-center justify-between px-4 py-2.5 border-t bg-gray-50/50 dark:bg-slate-800/30">
+              <p className="text-xs text-muted-foreground">
+                Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span>
+                {'–'}
+                <span className="font-medium">{Math.min(page * pageSize, totalBills)}</span> of{' '}
+                <span className="font-medium">{totalBills}</span> bills
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 px-2" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="outline" size="sm" className="h-7 px-2" disabled={page * pageSize >= totalBills} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

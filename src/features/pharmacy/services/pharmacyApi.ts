@@ -103,7 +103,10 @@ export interface PharmacyBillingHistoryResponse {
   totalReturnedAmount: number;
   // totalAmount - totalReturnedAmount — what was actually retained after returns.
   netSalesAmount: number;
+  // Every total above reflects the full filtered date range, not just the current page in `bills`.
   totalBills: number;
+  pageNumber: number;
+  pageSize: number;
 }
 
 export const pharmacyApi = {
@@ -120,13 +123,17 @@ export const pharmacyApi = {
   upsertPrintSettings: (input: UpsertPharmacyPrintSettingsInput, hospitalId?: string) =>
     ipdApiClient.put('/pharmacy-settings/print', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
-  // fromDate/toDate omitted entirely => unbounded "all time" list.
-  getBillingHistory: (fromDate?: Date, toDate?: Date, hospitalId?: string): Promise<PharmacyBillingHistoryResponse> =>
+  // fromDate/toDate omitted entirely => unbounded "all time" list (still paginated server-side).
+  getBillingHistory: (
+    fromDate?: Date, toDate?: Date, hospitalId?: string, pageNumber = 1, pageSize = 50
+  ): Promise<PharmacyBillingHistoryResponse> =>
     ipdApiClient.get<PharmacyBillingHistoryResponse>('/pharmacy-billing/history', {
       params: {
         hospitalId: hospitalIdOrThrow(hospitalId),
         fromDate: fromDate ? fromDate.toISOString().slice(0, 10) : undefined,
         toDate: toDate ? toDate.toISOString().slice(0, 10) : undefined,
+        pageNumber,
+        pageSize,
       },
     }),
 };

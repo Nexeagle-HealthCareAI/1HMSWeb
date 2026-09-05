@@ -50,7 +50,26 @@ export const ReorderThresholdSuggestions: React.FC = () => {
         maxStockLevel: s.suggestedMaxStockLevel,
         requestingStoreId: requestingStoreId || undefined,
       }, hospitalId);
-      toast.success(response.message || `Updated Min/Max for ${s.itemName}`);
+      // The stock request (if one was raised) is a real Indent now and isn't undone here -- Undo
+      // only reverts the threshold numbers themselves, using the pre-accept values this row already
+      // had loaded, back to exactly what they were.
+      toast.success(response.message || `Updated Min/Max for ${s.itemName}`, {
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              await inventoryApi.acceptThresholdSuggestion({
+                inventoryItemId: s.inventoryItemId,
+                minStockLevel: s.currentMinStockLevel,
+                maxStockLevel: s.currentMaxStockLevel ?? s.currentMinStockLevel,
+              }, hospitalId);
+              toast.success(`Reverted thresholds for ${s.itemName}`);
+            } catch {
+              toast.error('Could not revert thresholds');
+            }
+          },
+        },
+      });
       setSuggestions(prev => prev.filter(x => x.inventoryItemId !== s.inventoryItemId));
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Could not update thresholds');
