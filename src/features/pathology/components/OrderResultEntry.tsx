@@ -5,11 +5,12 @@ import type { PathologyFieldConfigItem } from '../services/pathologyFieldLayoutA
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Zap, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { RichTextField } from './RichTextField';
+import { runsToHtml, type StyledRun } from '../utils/richText';
 
 interface OrderResultEntryProps {
   hospitalId: string;
@@ -104,6 +105,32 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const [isSendingToExternalLab, setIsSendingToExternalLab] = useState(false);
   const [isReceivingExternalResult, setIsReceivingExternalResult] = useState(false);
   const previouslyCriticalRef = useRef<Set<string>>(new Set());
+  // Keyword -> formatted paragraph lookup for this test (its own keywords + every global one) --
+  // see RichTextField's onEnterWord / ReportKeywordsManager.tsx for where these are authored.
+  const [keywordMap, setKeywordMap] = useState<Map<string, StyledRun[]>>(new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    pathologyService.getReportKeywords(hospitalId, orderLine.testId)
+      .then(list => {
+        if (cancelled) return;
+        const map = new Map<string, StyledRun[]>();
+        for (const k of list) {
+          if (!k.isActive) continue;
+          try { map.set(k.keyword.toLowerCase(), JSON.parse(k.contentJson)); } catch { /* skip malformed */ }
+        }
+        setKeywordMap(map);
+      })
+      .catch(() => { /* keyword expansion is a convenience, not load-bearing for result entry */ });
+    return () => { cancelled = true; };
+  }, [hospitalId, orderLine.testId]);
+
+  const handleEnterWord = (word: string, insertAtCaret: (html: string) => void): boolean => {
+    const runs = keywordMap.get(word.toLowerCase());
+    if (!runs) return false;
+    insertAtCaret(runsToHtml(runs));
+    return true;
+  };
 
   useEffect(() => {
     try {
@@ -179,10 +206,11 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   const renderLineFieldInput = (field: PathologyFieldConfigItem) => {
     if (field.key === 'interpretation') {
       return (
-        <Textarea
+        <RichTextField
           value={interpretation}
-          onChange={(e) => setInterpretation(e.target.value)}
-          placeholder="Add any specific observations..."
+          onChange={(html) => setInterpretation(html)}
+          onEnterWord={handleEnterWord}
+          placeholder="Add any specific observations... (type a keyword and press Enter to expand it)"
         />
       );
     }
@@ -190,7 +218,14 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
     switch (field.type) {
       case 'paragraph':
-        return <Textarea value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} placeholder={field.label} />;
+        return (
+          <RichTextField
+            value={value}
+            onChange={(html) => handleLineFieldChange(field.key, html)}
+            onEnterWord={handleEnterWord}
+            placeholder={field.label}
+          />
+        );
       case 'number':
         return <Input type="number" value={value} onChange={(e) => handleLineFieldChange(field.key, e.target.value)} placeholder={field.label} />;
       case 'date':

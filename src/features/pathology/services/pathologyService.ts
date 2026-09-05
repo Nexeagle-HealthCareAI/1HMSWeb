@@ -165,6 +165,23 @@ export interface UpdatePathologyTestRequest extends CreatePathologyTestRequest {
   testId: string;
 }
 
+export interface PathologyReportKeyword {
+  keywordId: string;
+  testId?: string | null;
+  testName?: string | null;
+  keyword: string;
+  contentJson: string;
+  isActive: boolean;
+}
+
+export interface UpsertPathologyReportKeywordRequest {
+  keywordId?: string;
+  testId?: string | null;
+  keyword: string;
+  contentJson: string;
+  isActive: boolean;
+}
+
 export interface PathologyExternalLab {
   externalLabId: string;
   labName: string;
@@ -355,6 +372,21 @@ export const pathologyService = {
 
   upsertExternalLab: async (hospitalId: string, request: UpsertPathologyExternalLabRequest): Promise<{ success: boolean; message?: string; externalLabId?: string }> => {
     const response = await api.post<{ success: boolean; message?: string; externalLabId?: string }>(`/api/v1/PathologyCatalog/${hospitalId}/external-labs`, request);
+    return response.data;
+  },
+
+  // Report Keywords -- omit testId for the management "list everything" view; pass a real testId
+  // to get that test's own keywords plus every global one, as OrderResultEntry.tsx needs.
+  getReportKeywords: async (hospitalId: string, testId?: string, includeInactive = false): Promise<PathologyReportKeyword[]> => {
+    const params = new URLSearchParams();
+    if (testId) params.append('testId', testId);
+    params.append('includeInactive', String(includeInactive));
+    const response = await api.get<{ keywords: PathologyReportKeyword[] }>(`/api/v1/PathologyCatalog/${hospitalId}/report-keywords?${params.toString()}`);
+    return response.data.keywords;
+  },
+
+  upsertReportKeyword: async (hospitalId: string, request: UpsertPathologyReportKeywordRequest): Promise<{ success: boolean; message?: string; keywordId?: string }> => {
+    const response = await api.post<{ success: boolean; message?: string; keywordId?: string }>(`/api/v1/PathologyCatalog/${hospitalId}/report-keywords`, request);
     return response.data;
   },
 

@@ -2,6 +2,7 @@ import { PDFDocument, PDFFont, PDFPage, PDFEmbeddedPage, StandardFonts, rgb, RGB
 import { PathologyResultFlag } from './resultFlagCalculator';
 import { generateDefaultLetterheadTemplate, DefaultLetterheadHospitalInfo } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
 import { PathologyLetterheadMode } from '../services/pathologyService';
+import { htmlToRuns, type RichFontFamily, type StyledRun } from './richText';
 
 const MM_TO_PT = 72 / 25.4;
 const mmToPt = (value: number) => value * MM_TO_PT;
@@ -38,6 +39,46 @@ const flagSuffix = (flag: PathologyResultFlag): string => {
   }
 };
 
+// All 12 StandardFonts combinations needed to draw a StyledRun (richText.ts) -- Helvetica/
+// TimesRoman/Courier x regular/bold/italic/bold-italic. All are built into pdf-lib with no font
+// files to embed, which is exactly why richText.ts's formatting model is constrained to these
+// three families: what's authored on screen is guaranteed drawable here, not an approximation.
+const FONT_VARIANTS: Record<RichFontFamily, { regular: StandardFonts; bold: StandardFonts; italic: StandardFonts; boldItalic: StandardFonts }> = {
+  Helvetica: { regular: StandardFonts.Helvetica, bold: StandardFonts.HelveticaBold, italic: StandardFonts.HelveticaOblique, boldItalic: StandardFonts.HelveticaBoldOblique },
+  TimesRoman: { regular: StandardFonts.TimesRoman, bold: StandardFonts.TimesRomanBold, italic: StandardFonts.TimesRomanItalic, boldItalic: StandardFonts.TimesRomanBoldItalic },
+  Courier: { regular: StandardFonts.Courier, bold: StandardFonts.CourierBold, italic: StandardFonts.CourierOblique, boldItalic: StandardFonts.CourierBoldOblique },
+};
+
+async function embedAllFonts(doc: PDFDocument): Promise<Map<string, PDFFont>> {
+  const map = new Map<string, PDFFont>();
+  for (const family of Object.keys(FONT_VARIANTS) as RichFontFamily[]) {
+    const v = FONT_VARIANTS[family];
+    map.set(`${family}|false|false`, await doc.embedFont(v.regular));
+    map.set(`${family}|true|false`, await doc.embedFont(v.bold));
+    map.set(`${family}|false|true`, await doc.embedFont(v.italic));
+    map.set(`${family}|true|true`, await doc.embedFont(v.boldItalic));
+  }
+  return map;
+}
+
+function hexToRgb(hex: string): RGB | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+// A stored report value is an HTML string produced by RichTextField (see OrderResultEntry.tsx) --
+// or, for any report authored before this feature existed, a plain string with no tags at all,
+// which htmlToRuns resolves to a single unstyled run. Either way this is the one place a value
+// gets turned into drawable runs; no caller needs its own conversion step.
+function valueToRuns(value: string): StyledRun[] {
+  if (typeof document === 'undefined') return value ? [{ text: value }] : [];
+  const div = document.createElement('div');
+  div.innerHTML = value;
+  return htmlToRuns(div);
+}
+
 export interface PathologyReportPdfParameter {
   name: string;
   unit?: string;
@@ -49,7 +90,8 @@ export interface PathologyReportPdfParameter {
 // A generic label+value section -- report-level fields and per-line note fields (Interpretation /
 // Notes plus any hospital-added custom fields) both use this shape; there's no bespoke drawer per
 // field since they're all just narrative label+value pairs, in whatever order the hospital's
-// Report Fields layout configured (see pathologyFieldLayoutApi.ts).
+// Report Fields layout configured (see pathologyFieldLayoutApi.ts). `value` may contain
+// RichTextField's HTML markup (bold/italic/color/font/size) -- see valueToRuns above.
 export interface PathologyReportPdfField {
   label: string;
   value: string;
@@ -163,6 +205,7 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   const doc = await PDFDocument.create();
   const regularFont = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontMap = await embedAllFonts(doc);
 
   const background = await resolveLetterheadBackground(doc, data);
   const margins = resolveMargins(data.letterheadMargins);
@@ -217,6 +260,75 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     cursorY -= size + (opts.gapAfter ?? 4);
   };
 
+  const resolveFont = (run: StyledRun): PDFFont => {
+    const family = run.fontFamily ?? 'Helvetica';
+    return fontMap.get(`${family}|${!!run.bold}|${!!run.italic}`) ?? regularFont;
+  };
+  const resolveColor = (run: StyledRun, fallback: RGB): RGB => (run.color && hexToRgb(run.color)) || fallback;
+
+  // Mixed-font/size/color word-wrap -- each word is measured and drawn with its OWN run's
+  // resolved font/size (falling back to baseSize/baseColor/Helvetica for a run with no explicit
+  // style), rather than one plain wrapText(...) call per section. An explicit '\n' run (a <br> or
+  // block-boundary from htmlToRuns) forces a hard line break instead of participating in wrapping.
+  const drawStyledRuns = (
+    runs: StyledRun[],
+    opts: { x?: number; baseSize?: number; baseColor?: RGB; gapAfter?: number } = {},
+  ) => {
+    const x0 = opts.x ?? margins.left;
+    const baseSize = opts.baseSize ?? 9.5;
+    const baseColor = opts.baseColor ?? COLORS.text;
+    const maxWidth = PAGE_WIDTH - margins.right - x0;
+
+    interface Word { text: string; font: PDFFont; size: number; color: RGB; width: number }
+    const tokens: (Word | 'break')[] = [];
+    for (const run of runs) {
+      if (run.text === '\n') { tokens.push('break'); continue; }
+      const font = resolveFont(run);
+      const size = run.fontSize ?? baseSize;
+      const color = resolveColor(run, baseColor);
+      for (const w of run.text.split(/\s+/).filter(Boolean)) {
+        tokens.push({ text: w, font, size, color, width: font.widthOfTextAtSize(w, size) });
+      }
+    }
+    if (tokens.length === 0) return;
+
+    let line: Word[] = [];
+    let lineWidth = 0;
+    let lineMaxSize = baseSize;
+    const spaceWidth = (w: Word) => w.font.widthOfTextAtSize(' ', w.size);
+
+    const flush = () => {
+      if (line.length === 0) return;
+      ensureRoom(lineMaxSize + 4);
+      let x = x0;
+      for (const w of line) {
+        page.drawText(w.text, { x, y: cursorY, size: w.size, font: w.font, color: w.color });
+        x += w.width + spaceWidth(w);
+      }
+      cursorY -= lineMaxSize + 4;
+      line = [];
+      lineWidth = 0;
+      lineMaxSize = baseSize;
+    };
+
+    for (const tok of tokens) {
+      if (tok === 'break') { flush(); continue; }
+      const addWidth = (line.length > 0 ? spaceWidth(tok) : 0) + tok.width;
+      if (line.length > 0 && lineWidth + addWidth > maxWidth) {
+        flush();
+        line.push(tok);
+        lineWidth = tok.width;
+      } else {
+        line.push(tok);
+        lineWidth += addWidth;
+      }
+      lineMaxSize = Math.max(lineMaxSize, tok.size);
+    }
+    flush();
+
+    if (opts.gapAfter) cursorY -= opts.gapAfter;
+  };
+
   // --- Header ---
   // A resolved background (custom template or system-default) already carries its own hospital
   // identity in the reserved margin band -- drawing the plain-text header on top of it would
@@ -242,13 +354,15 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   drawLine(`Order No: ${data.orderNo}  |  Order Date: ${new Date(data.orderDate).toLocaleString()}`, { gapAfter: 3 });
   drawLine(`Report No: ${data.reportNo}`, { gapAfter: 12 });
 
-  // --- Generic label+value section, shared by report-level fields and each line's note fields ---
+  // --- Generic label+value section, shared by report-level fields and each line's note fields --
+  // `value` may be RichTextField's HTML (bold/italic/color/font/size) or a plain legacy string;
+  // valueToRuns handles both identically.
   const drawSection = (label: string, value: string) => {
-    if (!value.trim()) return;
+    const plainCheck = value.replace(/<[^>]+>/g, '').trim();
+    if (!plainCheck) return;
     ensureRoom(20);
-    for (const wrapped of wrapText(`${label}: ${value}`, regularFont, 9, contentWidth)) {
-      drawLine(wrapped, { size: 9, color: COLORS.muted, gapAfter: 3 });
-    }
+    const runs = valueToRuns(value);
+    drawStyledRuns([{ text: `${label}: ` }, ...runs], { baseSize: 9, baseColor: COLORS.muted, gapAfter: 3 });
   };
 
   // --- Report-level fields (Clinical History, Comments, ...) ---

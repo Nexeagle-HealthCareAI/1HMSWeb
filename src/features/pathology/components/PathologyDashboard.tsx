@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube, Zap } from 'lucide-react';
+import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube, Zap, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { PathologyBillingTab } from './PathologyBillingTab';
 import { PathologyWorkspace } from './PathologyWorkspace';
 import { TestCatalogManager } from './TestCatalogManager';
 import { ReportLetterheadConfig } from './ReportLetterheadConfig';
+import { ReportKeywordsManager } from './ReportKeywordsManager';
 
 const TABS = [
     { id: 'workspace', label: 'Workspace', description: 'Manage orders & results', icon: Microscope },
     { id: 'billing', label: 'Billing', description: 'Invoices & collections', icon: IndianRupee },
     { id: 'catalog', label: 'Test Catalog', description: 'Test master, ranges & pricing', icon: FlaskConical },
+    { id: 'keywords', label: 'Keywords', description: 'Reusable formatted report paragraphs', icon: Sparkles },
     { id: 'letterhead', label: 'Letterhead', description: 'Report letterhead designer', icon: LayoutTemplate },
 ] as const;
 
@@ -102,6 +104,9 @@ export const PathologyDashboard: React.FC = () => {
               <p className="text-sm text-muted-foreground">Manage your pathology test master list, normal ranges, and pricing linkage.</p>
             </div>
             <TestCatalogManager />
+          </TabsContent>
+          <TabsContent value="keywords" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
+            <ReportKeywordsManager />
           </TabsContent>
           <TabsContent value="letterhead" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
             <div className="mb-4">
