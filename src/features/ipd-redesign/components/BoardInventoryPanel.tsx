@@ -150,7 +150,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                             <div className="flex items-center gap-1.5">
                                                 <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-200">{row.itemName}</h3>
                                                 {reorderAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
-                                                    <span className="relative flex h-2 w-2">
+                                                    <span className="relative flex h-2 w-2" title="Low stock hospital-wide (this store may still have plenty)">
                                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                                     </span>
@@ -195,7 +195,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                             <div className="flex items-center gap-2">
                                                 <span>{row.itemName}</span>
                                                 {reorderAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
-                                                    <span className="relative flex h-2 w-2" title="Low Stock">
+                                                    <span className="relative flex h-2 w-2" title="Low stock hospital-wide (this store may still have plenty)">
                                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                                     </span>

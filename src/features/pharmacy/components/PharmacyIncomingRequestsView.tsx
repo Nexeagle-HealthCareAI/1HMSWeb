@@ -75,10 +75,11 @@ export const PharmacyIncomingRequestsView: React.FC<{ pharmacyStoreId: string | 
       const detail = await procurementApi.getIndentDetail(indent.indentId, hospitalId);
       setIssueDetail(detail);
 
+      const batchLists = await Promise.all(
+        detail.lines.map(line => inventoryApi.getBatches(line.inventoryItemId, { storeId: pharmacyStoreId }, hospitalId))
+      );
       const batchesMap: Record<string, BatchItem[]> = {};
-      for (const line of detail.lines) {
-        batchesMap[line.inventoryItemId] = await inventoryApi.getBatches(line.inventoryItemId, { storeId: pharmacyStoreId }, hospitalId);
-      }
+      detail.lines.forEach((line, idx) => { batchesMap[line.inventoryItemId] = batchLists[idx]; });
       setAvailableBatches(batchesMap);
 
       const remainingLines = detail.lines.filter(l => l.qty > l.issuedQty);
