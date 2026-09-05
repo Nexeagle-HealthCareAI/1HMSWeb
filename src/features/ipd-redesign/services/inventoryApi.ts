@@ -116,6 +116,10 @@ export interface BulkImportPreviewRow {
     existingBatchWarning?: string | null;
     storeCode?: string | null;
     itemCode?: string | null;
+    itemName?: string | null;
+    // True when itemCode doesn't exist in the catalogue yet but itemName was supplied -- the
+    // commit step will create the medicine automatically instead of rejecting the row.
+    willCreateItem?: boolean;
     batchNumber?: string | null;
     manufactureDate?: string | null;
     expiryDate?: string | null;

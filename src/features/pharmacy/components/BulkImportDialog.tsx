@@ -24,6 +24,12 @@ interface EditableRow {
   id: string;
   storeId: string;
   inventoryItemId: string;
+  // Free-typed item code -- used for lookup/display, and for auto-creating a new medicine when
+  // inventoryItemId isn't matched (see itemName below). Kept separate from inventoryItemId so a
+  // row can identify an item that doesn't exist in the catalogue yet.
+  itemCode: string;
+  // Required only when inventoryItemId is unmatched -- becomes the new item's name.
+  itemName: string;
   batchNumber: string;
   manufactureDate: string; // yyyy-mm-dd, '' if unset
   expiryDate: string;
@@ -45,6 +51,8 @@ const blankRow = (): EditableRow => ({
   id: newRowId(),
   storeId: '',
   inventoryItemId: '',
+  itemCode: '',
+  itemName: '',
   batchNumber: '',
   manufactureDate: '',
   expiryDate: '',
@@ -94,7 +102,10 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
   const validateRow = useCallback((row: EditableRow): { isValid: boolean; errorMessage: string | null } => {
     const errors: string[] = [];
     if (!row.storeId) errors.push('Store is required.');
-    if (!row.inventoryItemId) errors.push('Item is required.');
+    if (!row.inventoryItemId) {
+      if (!row.itemCode.trim()) errors.push('Item code is required.');
+      else if (!row.itemName.trim()) errors.push('Item name is required to create this new medicine.');
+    }
     if (!row.batchNumber.trim()) errors.push('Batch number is required.');
     const qty = Number(row.receivedQty);
     if (!row.receivedQty || Number.isNaN(qty) || qty <= 0) errors.push('Quantity must be a positive number.');
@@ -155,6 +166,8 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
           id: newRowId(),
           storeId: store?.storeId ?? '',
           inventoryItemId: item?.inventoryItemId ?? '',
+          itemCode: item?.itemCode ?? r.itemCode ?? '',
+          itemName: item?.itemName ?? r.itemName ?? '',
           batchNumber: r.batchNumber ?? '',
           manufactureDate: toDateInputValue(r.manufactureDate),
           expiryDate: toDateInputValue(r.expiryDate),
@@ -189,11 +202,14 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
   // store/item code when one is already loaded, so it's an actually-importable row, not just a
   // placeholder the user has to fully rewrite.
   const downloadTemplate = () => {
-    const headers = ['Store Code', 'Item Code', 'Batch No', 'Mfg Date', 'Expiry Date', 'Qty', 'Rate', 'MRP', 'Barcode'];
+    const headers = ['Store Code', 'Item Code', 'Item Name', 'Batch No', 'Mfg Date', 'Expiry Date', 'Qty', 'Rate', 'MRP', 'Barcode'];
     const exampleStore = stores[0]?.storeCode ?? 'PHARM01';
     const exampleItem = items[0]?.itemCode ?? 'DRG-PARA-500';
-    const example = [exampleStore, exampleItem, 'B12345', '2026-01-15', '2027-01-15', '100', '8.50', '12.00', '8901234567890'];
-    const csv = [headers, example].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    // Two example rows: one for an item already in the catalogue (Item Name can be left blank),
+    // one for a brand-new medicine (Item Name required -- it gets created automatically on import).
+    const existingRow = [exampleStore, exampleItem, '', 'B12345', '2026-01-15', '2027-01-15', '100', '8.50', '12.00', '8901234567890'];
+    const newItemRow = [exampleStore, 'DRG-NEWMED-100', 'New Medicine 100mg', 'B12346', '2026-01-15', '2027-01-15', '50', '5.00', '7.50', ''];
+    const csv = [headers, existingRow, newItemRow].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -224,7 +240,10 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
           const item = items.find(i => i.inventoryItemId === r.inventoryItemId);
           return {
             storeCode: store?.storeCode,
-            itemCode: item?.itemCode,
+            itemCode: item?.itemCode ?? r.itemCode.trim(),
+            // Only meaningful when the item isn't matched yet -- the backend creates a new
+            // medicine from it in that case; ignored otherwise.
+            itemName: item ? undefined : r.itemName.trim(),
             batchNumber: r.batchNumber.trim(),
             manufactureDate: r.manufactureDate || undefined,
             expiryDate: r.expiryDate || undefined,
@@ -236,7 +255,9 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
         }),
       }, hospitalId);
       if (response?.success !== false) {
-        toast.success(response?.message || `Imported ${validRows.length} batches`);
+        toast.success(response?.message || `Imported ${validRows.length} batches`, {
+          description: response?.createdItemCount > 0 ? `${response.createdItemCount} new medicine(s) added to the catalogue.` : undefined,
+        });
         setRows([]);
         onImported();
         onClose();
@@ -293,7 +314,10 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
                 <UploadCloud className="h-10 w-10 text-gray-400 mb-3" />
                 <p className="text-sm font-medium">Drag & drop a .csv or .xlsx file, or click to browse</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Columns recognized: Store Code, Item Code, Batch No, Mfg/Exp Date, Qty, Rate, MRP, Barcode — header spelling is flexible.
+                  Columns recognized: Store Code, Item Code, Item Name, Batch No, Mfg/Exp Date, Qty, Rate, MRP, Barcode — header spelling is flexible.
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  New medicine? Add its name in the Item Name column and it's created automatically — no need to add it to the catalogue first.
                 </p>
               </>
             )}
@@ -350,15 +374,44 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="border-r border-slate-200 p-0 relative">
-                        <Select value={r.inventoryItemId} onValueChange={v => updateRow(r.id, { inventoryItemId: v })}>
-                          <SelectTrigger className="h-9 w-full border-0 rounded-none shadow-none focus:ring-2 focus:ring-inset focus:ring-brand-500 bg-transparent px-2 text-xs truncate">
+                      <td className="border-r border-slate-200 p-1 relative align-top">
+                        <Select
+                          value={r.inventoryItemId || '__NEW__'}
+                          onValueChange={v => {
+                            if (v === '__NEW__') {
+                              updateRow(r.id, { inventoryItemId: '' });
+                            } else {
+                              const matched = items.find(i => i.inventoryItemId === v);
+                              updateRow(r.id, { inventoryItemId: v, itemCode: matched?.itemCode ?? '', itemName: matched?.itemName ?? '' });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-full border-0 rounded-none shadow-none focus:ring-2 focus:ring-inset focus:ring-brand-500 bg-transparent px-2 text-xs truncate">
                             <SelectValue placeholder="Item" />
                           </SelectTrigger>
                           <SelectContent className="max-h-64">
+                            <SelectItem value="__NEW__">+ New medicine (type below)</SelectItem>
                             {items.map(i => <SelectItem key={i.inventoryItemId} value={i.inventoryItemId}>{i.itemName} ({i.itemCode})</SelectItem>)}
                           </SelectContent>
                         </Select>
+                        {!r.inventoryItemId && (
+                          <div className="flex gap-1 px-1 pb-1">
+                            <input
+                              className="w-16 h-7 px-1.5 text-[10px] bg-amber-50 border border-amber-200 rounded outline-none focus:ring-1 focus:ring-brand-500 font-mono uppercase"
+                              value={r.itemCode}
+                              onChange={e => updateRow(r.id, { itemCode: e.target.value.toUpperCase() })}
+                              placeholder="Code"
+                              title="New item code"
+                            />
+                            <input
+                              className="flex-1 h-7 px-1.5 text-[10px] bg-amber-50 border border-amber-200 rounded outline-none focus:ring-1 focus:ring-brand-500 min-w-0"
+                              value={r.itemName}
+                              onChange={e => updateRow(r.id, { itemName: e.target.value })}
+                              placeholder="New medicine name"
+                              title="Will be added to the catalogue"
+                            />
+                          </div>
+                        )}
                       </td>
                       <td className="border-r border-slate-200 p-0 relative">
                         <input className="w-full h-9 px-2 text-xs bg-transparent border-0 outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 font-mono uppercase" value={r.batchNumber} onChange={e => updateRow(r.id, { batchNumber: e.target.value })} placeholder="Batch" />
