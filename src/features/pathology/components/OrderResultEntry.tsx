@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { PathologyOrderLineDto, pathologyService } from '../services/pathologyService';
 import { calculateResultFlag, resolveRange, PathologyResultFlag } from '../utils/resultFlagCalculator';
 import type { PathologyFieldConfigItem } from '../services/pathologyFieldLayoutApi';
@@ -7,10 +7,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Zap, AlertTriangle } from 'lucide-react';
+import { Zap, AlertTriangle, Check, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RichTextField } from './RichTextField';
 import { blocksToHtml, parseKeywordContent, type StyledBlock } from '../utils/richText';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
+
+// Reported to the parent (PathologyOrderDetailPage.tsx) via onSaveStateChange so a single
+// page-level status readout/Save button can reflect whichever test-line tab is active, without
+// lifting this component's own state up.
+export type OrderResultEntrySaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+
+export interface OrderResultEntryHandle {
+  // Saves immediately, bypassing the debounce. Defaults to a user-visible save (toast + parent
+  // refresh) -- pass { silent: true } for a background flush (e.g. before switching tabs) that
+  // shouldn't announce itself.
+  saveNow: (opts?: { silent?: boolean }) => Promise<void>;
+}
 
 interface OrderResultEntryProps {
   hospitalId: string;
@@ -23,6 +39,7 @@ interface OrderResultEntryProps {
   // come from here; this component only fills in *values*.
   lineFields: PathologyFieldConfigItem[];
   onSuccess: () => void;
+  onSaveStateChange?: (state: OrderResultEntrySaveState) => void;
 }
 
 interface TestParam {
@@ -88,9 +105,14 @@ const FLAG_LABELS: Record<PathologyResultFlag, string> = {
   CRITICAL_LOW: '▼ CRITICAL',
 };
 
-export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
-  hospitalId, orderId, orderLine, patientAgeYears, patientGender, lineFields, onSuccess
-}) => {
+// How long to wait after the last keystroke before autosaving -- long enough not to spam the
+// server while someone is actively typing a single value, short enough that a pause between
+// fields (or leaving the tab open) still lands within a couple of seconds.
+const AUTOSAVE_DEBOUNCE_MS = 1500;
+
+export const OrderResultEntry = forwardRef<OrderResultEntryHandle, OrderResultEntryProps>(({
+  hospitalId, orderId, orderLine, patientAgeYears, patientGender, lineFields, onSuccess, onSaveStateChange,
+}, ref) => {
   const [params, setParams] = useState<TestParam[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   // Values for every configured line field except the built-in "interpretation" (which keeps its
@@ -108,6 +130,28 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
   // Keyword -> formatted paragraph lookup for this test (its own keywords + every global one) --
   // see RichTextField's onEnterWord / ReportKeywordsManager.tsx for where these are authored.
   const [keywordMap, setKeywordMap] = useState<Map<string, StyledBlock[]>>(new Map());
+
+  // --- Autosave -----------------------------------------------------------------------------
+  // No field-level save button anymore -- every edit debounce-saves itself, and the page's top
+  // banner (PathologyOrderDetailPage.tsx) shows one shared status readout + a manual Save button
+  // wired to `saveNow` below. `isDirty` is the one thing every edit handler sets; the prop-resync
+  // effect (loading a line, or a fresh save landing back from the server) clears it again.
+  const [isDirty, setIsDirty] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Normally AUTOSAVE_DEBOUNCE_MS; Autofill Normals sets this to 0 so its own save fires on the
+  // very next effect pass instead of waiting out the usual debounce window.
+  const nextAutosaveDelayRef = useRef(AUTOSAVE_DEBOUNCE_MS);
+
+  // --- Autofill Normals guard ----------------------------------------------------------------
+  // autofillApplied just drives the button's "applied" (green) look. manuallyEditedSinceAutofill
+  // disables the button entirely once a parameter value has been hand-typed, so a stray click
+  // can't clobber a technician's correction -- only Reset (with a type-to-confirm dialog) clears
+  // it. Neither persists across tabs/lines: both reset to false on mount, matching this
+  // component's existing full-remount-per-tab model.
+  const [autofillApplied, setAutofillApplied] = useState(false);
+  const [manuallyEditedSinceAutofill, setManuallyEditedSinceAutofill] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -169,6 +213,12 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
       console.error("Failed to parse schema or values", e);
     }
     previouslyCriticalRef.current = new Set();
+    // A freshly loaded/re-synced line always starts clean -- this IS the saved state, not an edit.
+    setIsDirty(false);
+    onSaveStateChange?.('idle');
+    setAutofillApplied(false);
+    setManuallyEditedSinceAutofill(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderLine]);
 
   const flags = useMemo(() => {
@@ -197,10 +247,18 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
 
   const handleValueChange = (paramName: string, value: string) => {
     setValues(prev => ({ ...prev, [paramName]: value }));
+    setIsDirty(true);
+    setManuallyEditedSinceAutofill(true);
   };
 
   const handleLineFieldChange = (key: string, value: string) => {
     setLineFieldValues(prev => ({ ...prev, [key]: value }));
+    setIsDirty(true);
+  };
+
+  const handleInterpretationChange = (html: string) => {
+    setInterpretation(html);
+    setIsDirty(true);
   };
 
   const renderLineFieldInput = (field: PathologyFieldConfigItem) => {
@@ -208,7 +266,7 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
       return (
         <RichTextField
           value={interpretation}
-          onChange={(html) => setInterpretation(html)}
+          onChange={handleInterpretationChange}
           onEnterWord={handleEnterWord}
           placeholder="Add any specific observations... (type a keyword and press Enter to expand it)"
         />
@@ -250,6 +308,10 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     }
   };
 
+  // Fills every schema param that has a configured default, then saves immediately (not waiting
+  // for the usual debounce) -- an explicit click is exactly the moment a fresh, unambiguous save
+  // is wanted. Uses setValues' OWN setter (not handleValueChange), so this never trips the
+  // manual-edit guard below -- clicking Autofill is not "manually editing."
   const handleAutofillNormals = () => {
     const filled: Record<string, string> = { ...values };
     for (const param of params) {
@@ -258,6 +320,9 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
       }
     }
     setValues(filled);
+    setAutofillApplied(true);
+    setIsDirty(true);
+    nextAutosaveDelayRef.current = 0;
   };
 
   const handleCollectSample = async () => {
@@ -311,8 +376,17 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
     }
   };
 
-  const handleSubmit = async () => {
+  // The one place results actually reach the server -- called by the debounced autosave effect,
+  // by Autofill Normals, and (via saveNow/the imperative handle) by the page-level Save button and
+  // the tab-switch flush. `silent` suppresses the toast (autosave/flush shouldn't announce
+  // themselves); `refresh` calls onSuccess() to refetch the whole order -- deliberately left off
+  // for plain autosave so a refetch landing mid-keystroke can't resync this component's local
+  // state out from under whatever the technician is still typing.
+  const save = async (opts?: { silent?: boolean; refresh?: boolean }) => {
+    const silent = opts?.silent ?? true;
+    const refresh = opts?.refresh ?? false;
     setIsSubmitting(true);
+    onSaveStateChange?.('saving');
     try {
       // Schema-driven values plus every configured line field except "interpretation" (which has
       // its own dedicated param below) -- field definitions come from the hospital's saved layout,
@@ -326,26 +400,59 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
         resultValuesJson: JSON.stringify(payload),
         interpretation
       });
-      toast.success("Success", {
-        description: "Results saved successfully.",
-      });
-      onSuccess();
+      setIsDirty(false);
+      onSaveStateChange?.('saved');
+      if (!silent) {
+        toast.success("Success", { description: "Results saved successfully." });
+      }
+      if (refresh) {
+        onSuccess();
+      }
     } catch (error) {
-      toast.error("Error", {
-        description: "Failed to save results.",
-      });
+      onSaveStateChange?.('error');
+      if (!silent) {
+        toast.error("Error", { description: "Failed to save results." });
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    saveNow: (opts?: { silent?: boolean }) => save({ silent: opts?.silent ?? false, refresh: true }),
+  }));
+
+  // Debounced autosave -- reschedules on every edit, fires `save()` (silent, no parent refresh)
+  // once things go quiet for AUTOSAVE_DEBOUNCE_MS. Autofill Normals collapses the wait to 0 via
+  // nextAutosaveDelayRef so its own save fires on the very next pass instead.
+  useEffect(() => {
+    if (!isDirty) return;
+    onSaveStateChange?.('dirty');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const delay = nextAutosaveDelayRef.current;
+    nextAutosaveDelayRef.current = AUTOSAVE_DEBOUNCE_MS;
+    debounceRef.current = setTimeout(() => { void save(); }, delay);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, lineFieldValues, interpretation, isDirty]);
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const handleResetConfirm = () => {
+    setManuallyEditedSinceAutofill(false);
+    setAutofillApplied(false);
+    setResetConfirmOpen(false);
+    setResetConfirmText('');
+  };
+
   const isPending = orderLine.status === 'PENDING';
   const hasAutofillableParams = params.some(p => !!p.defaultValue);
+  const autofillLookGreen = autofillApplied && !manuallyEditedSinceAutofill;
 
   return (
     <Card className="mt-4">
       <CardHeader className="bg-muted/30">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <CardTitle className="text-lg">{orderLine.testName} ({orderLine.testCode})</CardTitle>
             <CardDescription>
@@ -368,9 +475,25 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
             </CardDescription>
           </div>
           {hasAutofillableParams && (
-            <Button type="button" variant="outline" size="sm" onClick={handleAutofillNormals}>
-              <Zap className="h-4 w-4 mr-2" /> 1-Click Autofill Normals
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAutofillNormals}
+                disabled={manuallyEditedSinceAutofill || isSubmitting}
+                title={manuallyEditedSinceAutofill ? "Disabled after a manual edit -- click Reset to re-enable." : undefined}
+                className={cn(autofillLookGreen && 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400')}
+              >
+                {autofillLookGreen ? <Check className="h-4 w-4 mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+                {autofillLookGreen ? 'Normals Applied' : '1-Click Autofill Normals'}
+              </Button>
+              {manuallyEditedSinceAutofill && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setResetConfirmOpen(true)}>
+                  <RotateCcw className="h-4 w-4 mr-2" /> Reset
+                </Button>
+              )}
+            </div>
           )}
         </div>
         {isPending && (
@@ -457,13 +580,39 @@ export const OrderResultEntry: React.FC<OrderResultEntryProps> = ({
             {renderLineFieldInput(field)}
           </div>
         ))}
-
-        <div className="flex justify-end pt-4">
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Result'}
-          </Button>
-        </div>
       </CardContent>
+
+      <AlertDialog open={resetConfirmOpen} onOpenChange={(o) => { setResetConfirmOpen(o); if (!o) setResetConfirmText(''); }}>
+        <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
+          <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-brand-600 to-brand-700">
+            <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+              <RotateCcw className="h-5 w-5 text-white" />
+            </div>
+            <AlertDialogTitle className="text-white text-base font-bold">Re-enable Autofill Normals?</AlertDialogTitle>
+          </div>
+          <div className="px-5 py-4 space-y-3">
+            <AlertDialogDescription className="text-sm text-slate-600">
+              You've manually edited a result since last using Autofill, so it's been disabled to protect your entries. Resetting only re-enables the button — it won't change any value you've already typed.
+            </AlertDialogDescription>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Type <span className="font-bold text-slate-900">reset</span> to confirm</label>
+              <Input value={resetConfirmText} onChange={(e) => setResetConfirmText(e.target.value)} placeholder="reset" className="text-sm" />
+            </div>
+          </div>
+          <AlertDialogFooter className="px-5 pb-5 pt-0">
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleResetConfirm(); }}
+              disabled={resetConfirmText.trim().toLowerCase() !== 'reset'}
+              className="rounded-xl"
+            >
+              <RotateCcw className="h-4 w-4 mr-1.5" /> Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
-};
+});
+
+OrderResultEntry.displayName = 'OrderResultEntry';

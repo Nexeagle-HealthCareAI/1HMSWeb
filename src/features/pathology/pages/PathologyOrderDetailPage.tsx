@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck, SlidersHorizontal, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, AlertCircle, FileText, User2, CalendarClock, ReceiptText, ClipboardCheck, SlidersHorizontal, Save, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store';
-import { OrderResultEntry } from '../components/OrderResultEntry';
+import { OrderResultEntry, type OrderResultEntryHandle, type OrderResultEntrySaveState } from '../components/OrderResultEntry';
 import { PathologyReportPreviewModal } from '../components/PathologyReportPreviewModal';
 import { PathologyReportFieldLayoutEditor } from '../components/PathologyReportFieldLayoutEditor';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -58,6 +58,11 @@ const PathologyOrderDetailPage: React.FC = () => {
   // the current order (first load, or a stale id left over from a previously-viewed order), and
   // naturally re-resolves to the updated line object on every refetch of the same order.
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
+  // The active tab's OrderResultEntry results now autosave themselves -- this page only needs an
+  // imperative handle to trigger/await a save (the top banner's Save button, and a flush before
+  // switching tabs) plus the reported status for that same banner's readout.
+  const activeLineRef = useRef<OrderResultEntryHandle>(null);
+  const [resultSaveState, setResultSaveState] = useState<OrderResultEntrySaveState>('idle');
 
   // This order's billing status, once it's known to be attached to a visit (order.encounterId) --
   // the ledger for that encounter, scoped down to this order's own lab-sourced lines, so a tech
@@ -113,6 +118,15 @@ const PathologyOrderDetailPage: React.FC = () => {
       setReportFieldValues({});
     }
   }, [order?.orderId, order?.reportFieldValuesJson]);
+
+  // Flushes any pending debounced save on the currently active line BEFORE switching tabs --
+  // OrderResultEntry fully remounts on tab switch (key={activeLine.orderLineId}), so without this
+  // a save still sitting in its debounce window would be silently discarded. Callers only invoke
+  // this for a tab that isn't already active (see the isActive guard at the call site).
+  const handleTabSwitch = async (lineId: string) => {
+    await activeLineRef.current?.saveNow({ silent: true });
+    setActiveLineId(lineId);
+  };
 
   const handleReportFieldChange = (key: string, value: string) => {
     setReportFieldValues(prev => ({ ...prev, [key]: value }));
@@ -448,6 +462,33 @@ const PathologyOrderDetailPage: React.FC = () => {
                       {order.status.replace('_', ' ')}
                     </Badge>
                   </div>
+
+                  {/* Results now autosave -- this is the one place Save still lives (a deliberate
+                      "save now" for reassurance), plus a live status readout so it's always clear
+                      whether the active test's results are persisted. */}
+                  {activeLine && (
+                    <div className="flex flex-col items-start sm:items-end gap-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button
+                          size="sm" variant="outline"
+                          className="h-8 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
+                          onClick={() => activeLineRef.current?.saveNow()}
+                          disabled={resultSaveState === 'saving'}
+                        >
+                          {resultSaveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                          Save
+                        </Button>
+                        <span className="inline-flex items-center gap-1 text-xs text-brand-100">
+                          {resultSaveState === 'saving' && <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>}
+                          {resultSaveState === 'saved' && <><Check className="h-3 w-3" /> All changes saved</>}
+                          {resultSaveState === 'dirty' && 'Unsaved changes'}
+                          {resultSaveState === 'error' && <span className="text-red-200">Couldn't save — retrying</span>}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-brand-100/80">Changes to results save automatically as you type -- no need to click Save.</p>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-1.5 text-xs text-brand-100 mt-1 sm:mt-0">
                     <ReceiptText className="h-3.5 w-3.5 shrink-0" />
                     {!order.encounterId ? (
@@ -513,7 +554,7 @@ const PathologyOrderDetailPage: React.FC = () => {
                     return (
                       <button
                         key={line.orderLineId}
-                        onClick={() => setActiveLineId(line.orderLineId)}
+                        onClick={() => { if (!isActive) void handleTabSwitch(line.orderLineId); }}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                           isActive ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
@@ -529,6 +570,7 @@ const PathologyOrderDetailPage: React.FC = () => {
               {activeLine ? (
                 <OrderResultEntry
                   key={activeLine.orderLineId}
+                  ref={activeLineRef}
                   hospitalId={hospitalId ?? ''}
                   orderId={order.orderId}
                   orderLine={activeLine}
@@ -536,6 +578,7 @@ const PathologyOrderDetailPage: React.FC = () => {
                   patientGender={order.patientGender}
                   lineFields={lineFields}
                   onSuccess={() => refetch()}
+                  onSaveStateChange={setResultSaveState}
                 />
               ) : (
                 <div className="text-center text-muted-foreground py-8">
