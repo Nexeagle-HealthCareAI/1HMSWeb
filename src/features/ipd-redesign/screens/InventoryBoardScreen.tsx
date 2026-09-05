@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight, Camera, Upload, ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
+import { Warehouse, Loader2, RefreshCw, AlertTriangle, PackageMinus, Clock, HardDrive, Truck, ShieldAlert, Droplet, Package2, ArrowLeftRight, ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
 import { inventoryApi, type InventoryBoard, type UnifiedStockVisibility } from '../services/inventoryApi';
 import { equipmentApi, type EquipmentItem } from '../services/equipmentApi';
 import { ProcurementPanel } from '../components/ProcurementPanel';
@@ -15,11 +15,15 @@ import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { TransferStockPanel } from '../components/TransferStockPanel';
 import { InternalRequestsPanel } from '../components/InternalRequestsPanel';
 import { BulkStockUpload } from '../components/BulkStockUpload';
+import { EquipmentMaintenancePanel } from '../components/EquipmentMaintenancePanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 import { Card } from '@/components/ui/card';
 import { formatIstDateTime } from '../utils/istDate';
 import { BloodBankManagementPanel } from '../components/BloodBankManagementPanel';
+import { InventoryDashboard } from '../components/InventoryDashboard';
+import { CssdBoardScreen } from './CssdBoardScreen';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
     onBack: () => void;
@@ -34,7 +38,7 @@ const TIER_TONE: Record<number, string> = {
     90: 'bg-sky-50 text-sky-700 border-sky-200',
 };
 
-type Tab = 'stock' | 'items' | 'transfer' | 'expiry' | 'reorder' | 'equipment' | 'procurement' | 'compliance' | 'bloodbank' | 'cssd' | 'bulk';
+type Tab = 'overview' | 'stock' | 'items' | 'transfer' | 'alerts' | 'equipment' | 'procurement' | 'compliance' | 'bloodbank' | 'cssd';
 
 /**
  * Inventory Management board — hospital-wide, read-only v1 (stock-by-store overview, expiry
@@ -53,7 +57,10 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [tab, setTab] = useState<Tab>('stock');
+    const [tab, setTab] = useState<Tab>('overview');
+
+    // For the combined Alerts tab
+    const [alertTab, setAlertTab] = useState<'lowstock' | 'expiring'>('lowstock');
 
     // Stock-by-store table: search/filter/sort state.
     const [stockSearch, setStockSearch] = useState('');
@@ -107,21 +114,53 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
         return rows;
     }, [board.stockByStore, stockSearch, stockStoreFilter, stockSort]);
 
-    const SIDEBAR_ITEMS: { id: Tab; label: string; icon: React.ElementType; badge?: React.ReactNode }[] = [
-        { id: 'stock', label: 'Stock by Store', icon: Warehouse },
-        { id: 'items', label: 'Item Master', icon: Package2 },
-        { id: 'transfer', label: 'Transfer Stock', icon: ArrowLeftRight },
-        { id: 'expiry', label: 'Expiry Alerts', icon: Clock, badge: board.expiryAlerts.length > 0 ? <Badge variant="outline" className="ml-auto text-[10px] font-bold bg-white text-brand-600 border-none">{board.expiryAlerts.length}</Badge> : undefined },
-        { id: 'reorder', label: 'Reorder Alerts', icon: PackageMinus, badge: board.reorderAlerts.length > 0 ? <Badge variant="outline" className="ml-auto text-[10px] font-bold bg-white text-brand-600 border-none">{board.reorderAlerts.length}</Badge> : undefined },
-        { id: 'equipment', label: 'Equipment Due', icon: HardDrive, badge: dueEquipment.length > 0 ? <Badge variant="outline" className="ml-auto text-[10px] font-bold bg-white text-brand-600 border-none">{dueEquipment.length}</Badge> : undefined },
-        { id: 'procurement', label: 'Procurement', icon: Truck },
-        { id: 'compliance', label: 'Compliance', icon: ShieldAlert },
-        { id: 'bulk', label: 'Bulk Upload', icon: Upload },
-        { id: 'bloodbank', label: 'Blood Bank', icon: Droplet },
-        { id: 'cssd', label: 'CSSD Instruments', icon: Package2 },
+    const SIDEBAR_GROUPS = [
+        {
+            group: 'Overview',
+            items: [
+                { id: 'overview' as Tab, label: 'Dashboard', icon: Warehouse },
+                { id: 'stock' as Tab, label: 'Current Stock', icon: Package2 },
+            ]
+        },
+        {
+            group: 'Operations',
+            items: [
+                { id: 'transfer' as Tab, label: 'Stock Moves & Requests', icon: ArrowLeftRight },
+                { id: 'procurement' as Tab, label: 'Purchasing & Vendors', icon: Truck },
+                { id: 'items' as Tab, label: 'Catalog & Setup', icon: HardDrive },
+            ]
+        },
+        {
+            group: 'Alerts & Maintenance',
+            items: [
+                { 
+                    id: 'alerts' as Tab, 
+                    label: 'Alerts & Warnings', 
+                    icon: AlertTriangle, 
+                    badge: (board.expiryAlerts.length + board.reorderAlerts.length) > 0 ? 
+                        <Badge variant="outline" className="ml-auto text-[10px] font-bold bg-rose-50 text-rose-600 border-rose-200">{board.expiryAlerts.length + board.reorderAlerts.length}</Badge> : undefined 
+                },
+                { 
+                    id: 'equipment' as Tab, 
+                    label: 'Equipment Maintenance', 
+                    icon: Clock, 
+                    badge: dueEquipment.length > 0 ? 
+                        <Badge variant="outline" className="ml-auto text-[10px] font-bold bg-violet-50 text-violet-600 border-violet-200">{dueEquipment.length}</Badge> : undefined 
+                },
+            ]
+        },
+        {
+            group: 'Specialized Units',
+            items: [
+                { id: 'bloodbank' as Tab, label: 'Blood Bank', icon: Droplet },
+                { id: 'cssd' as Tab, label: 'Sterile Instruments', icon: PackageMinus },
+                { id: 'compliance' as Tab, label: 'Narcotics Log', icon: ShieldAlert },
+            ]
+        }
     ];
 
-    const activeTabTitle = SIDEBAR_ITEMS.find(t => t.id === tab)?.label || 'Inventory';
+    const allSidebarItems = SIDEBAR_GROUPS.flatMap(g => g.items);
+    const activeTabTitle = allSidebarItems.find(t => t.id === tab)?.label || 'Inventory';
 
     return (
         <div className="flex flex-col lg:flex-row h-[calc(100%+3rem)] w-[calc(100%+3rem)] -m-6 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
@@ -139,28 +178,34 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-                    <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-550 uppercase tracking-widest mb-3 px-2 mt-2">Modules</div>
-                    {SIDEBAR_ITEMS.map(item => {
-                        const Icon = item.icon;
-                        const isActive = tab === item.id;
-                        return (
-                            <button 
-                                key={item.id}
-                                onClick={() => setTab(item.id)} 
-                                className={cn(
-                                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.98]',
-                                    isActive 
-                                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' 
-                                        : 'text-slate-600 dark:text-zinc-400 hover:bg-brand-50 dark:hover:bg-zinc-800 hover:text-brand-700 dark:hover:text-zinc-200'
-                                )}
-                            >
-                                <Icon className={cn("h-4 w-4", isActive ? "text-white" : "text-brand-500/70")} /> 
-                                <span className="truncate">{item.label}</span>
-                                {item.badge}
-                            </button>
-                        );
-                    })}
+                <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
+                    {SIDEBAR_GROUPS.map((group, gIdx) => (
+                        <div key={group.group}>
+                            <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-550 uppercase tracking-widest mb-2 px-2">{group.group}</div>
+                            <div className="space-y-1">
+                                {group.items.map(item => {
+                                    const Icon = item.icon;
+                                    const isActive = tab === item.id;
+                                    return (
+                                        <button 
+                                            key={item.id}
+                                            onClick={() => setTab(item.id)} 
+                                            className={cn(
+                                                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.98]',
+                                                isActive 
+                                                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 shadow-sm border border-brand-100 dark:border-brand-900/50' 
+                                                    : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-zinc-200 border border-transparent'
+                                            )}
+                                        >
+                                            <Icon className={cn("h-4 w-4", isActive ? "text-brand-600 dark:text-brand-400" : "text-slate-400")} /> 
+                                            <span className="truncate flex-1 text-left">{item.label}</span>
+                                            {item.badge}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -181,7 +226,7 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                     </Button>
                 </div>
                 <div className="overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex gap-1.5 py-0.5 bg-black/15 dark:bg-black/30 backdrop-blur-sm p-1 rounded-full">
-                    {SIDEBAR_ITEMS.map(item => {
+                    {allSidebarItems.map(item => {
                         const Icon = item.icon;
                         const isActive = tab === item.id;
                         return (
@@ -197,7 +242,7 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                             >
                                 <Icon className="h-3.5 w-3.5" />
                                 <span>{item.label}</span>
-                                {item.badge}
+                                {item.badge && <span className="scale-75 origin-left">{item.badge}</span>}
                             </button>
                         );
                     })}
@@ -207,17 +252,17 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-slate-50/50 dark:bg-slate-950/20">
                 {/* Header (Desktop Only) */}
-                <div className="hidden lg:flex items-center justify-between p-6 bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 text-white shadow-md shadow-brand-500/10 shrink-0 z-10 sticky top-0">
+                <div className="hidden lg:flex items-center justify-between p-6 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-zinc-800 shrink-0 z-10 sticky top-0">
                     <div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight">Inventory Management</h2>
-                        <p className="text-xs text-brand-100 mt-0.5">Manage stocks, store transfers, items, and compliance.</p>
+                        <h2 className="text-2xl font-black text-slate-800 dark:text-zinc-100 tracking-tight">{activeTabTitle}</h2>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Manage and track your hospital's stock and operations.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold" onClick={() => load(true)} disabled={refreshing || loading}>
+                        <Button variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-bold" onClick={() => load(true)} disabled={refreshing || loading}>
                             <RefreshCw className={cn('h-4 w-4 mr-1.5', refreshing && 'animate-spin')} /> Refresh
                         </Button>
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold" onClick={onBack}>
-                            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
+                        <Button variant="outline" size="sm" className="h-9 rounded-xl active:scale-[0.98] transition-all bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-bold" onClick={onBack}>
+                            <ArrowLeft className="h-4 w-4 mr-1.5" /> Exit
                         </Button>
                     </div>
                 </div>
@@ -231,7 +276,20 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                         </div>
                     ) : (
                         <SubscriptionReadOnlyOverlay featureLabel="Managing inventory" className="h-full">
-                            {tab === 'stock' && (
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={tab}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="h-full"
+                                >
+                                    {tab === 'overview' && (
+                                        <InventoryDashboard board={board} dueEquipment={dueEquipment} onNavigate={setTab} />
+                                    )}
+
+                                    {tab === 'stock' && (
                                 board.stockByStore.length === 0 ? (
                                     <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 text-center text-sm text-slate-400 mx-auto w-full max-w-4xl shadow-md">
                                         No stock on hand yet. Receive stock via a batch to see it here.
@@ -256,7 +314,27 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="overflow-x-auto">
+                                        {/* Mobile card list */}
+                                        <div className="md:hidden space-y-2 p-3">
+                                            {filteredSortedStock.length === 0 ? (
+                                                <p className="text-center text-sm text-slate-400 py-6">No items match this search.</p>
+                                            ) : filteredSortedStock.map(r => (
+                                                <div key={`${r.inventoryItemId}-${r.storeId}`} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/10">
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-bold text-sm text-slate-800 dark:text-zinc-200 truncate">{r.itemName}</span>
+                                                            {lowStockItemIds.has(r.inventoryItemId) && (
+                                                                <span className="relative flex h-2 w-2 shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-500 mt-0.5">{r.storeName} · <Badge variant="outline" className="text-[9px] font-bold uppercase rounded-full py-0">{r.category}</Badge></p>
+                                                    </div>
+                                                    <span className="font-black text-sm text-slate-900 dark:text-zinc-100 font-mono shrink-0">{r.qtyOnHand.toLocaleString('en-IN')} <span className="text-xs font-normal text-slate-400">{r.unit}</span></span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {/* Desktop table */}
+                                        <div className="hidden md:block overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>
@@ -306,19 +384,22 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                                 )
                             )}
 
-                            {tab === 'bulk' && <BulkStockUpload onSuccess={() => load(true)} />}
-
                             {tab === 'items' && (
-                                <div className="h-[70vh] rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                                    <ItemMaster />
-                                </div>
+                                <Tabs defaultValue="master" className="max-w-6xl mx-auto space-y-6">
+                                    <TabsList className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-auto flex flex-wrap gap-1 mb-2">
+                                        <TabsTrigger value="master" className="rounded-lg px-4 py-2 data-[state=active]:bg-brand-50 dark:data-[state=active]:bg-brand-950/50 data-[state=active]:text-brand-600 font-bold text-sm flex-1 sm:flex-none">Item Database</TabsTrigger>
+                                        <TabsTrigger value="bulk" className="rounded-lg px-4 py-2 data-[state=active]:bg-brand-50 dark:data-[state=active]:bg-brand-950/50 data-[state=active]:text-brand-600 font-bold text-sm flex-1 sm:flex-none">Bulk Upload</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="master" className="mt-0"><ItemMaster /></TabsContent>
+                                    <TabsContent value="bulk" className="mt-0"><BulkStockUpload onSuccess={() => load(true)} /></TabsContent>
+                                </Tabs>
                             )}
 
                             {tab === 'transfer' && (
                                 <Tabs defaultValue="requests" className="space-y-4">
-                                    <TabsList>
-                                        <TabsTrigger value="requests">Internal Requests</TabsTrigger>
-                                        <TabsTrigger value="manual">Manual Transfer</TabsTrigger>
+                                    <TabsList className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-auto flex flex-wrap gap-1">
+                                        <TabsTrigger value="requests" className="rounded-lg px-4 py-2 data-[state=active]:bg-brand-50 dark:data-[state=active]:bg-brand-950/50 data-[state=active]:text-brand-600 font-bold text-sm flex-1 sm:flex-none">Internal Requests</TabsTrigger>
+                                        <TabsTrigger value="manual" className="rounded-lg px-4 py-2 data-[state=active]:bg-brand-50 dark:data-[state=active]:bg-brand-950/50 data-[state=active]:text-brand-600 font-bold text-sm flex-1 sm:flex-none">Manual Transfer</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="requests" className="mt-0">
                                         <InternalRequestsPanel />
@@ -329,87 +410,146 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
                                 </Tabs>
                             )}
 
-                            {tab === 'expiry' && (
-                                <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-md mx-auto w-full max-w-2xl rounded-2xl">
-                                    <div className="mb-3">
-                                        <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Expiry Alerts</h2>
-                                    </div>
-                                    {board.expiryAlerts.length === 0 ? (
-                                        <p className="text-sm text-slate-400 text-center py-6">No batches expiring within 90 days.</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {board.expiryAlerts.map(a => (
-                                                <div key={a.batchId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/10 hover:border-slate-200 dark:hover:border-zinc-800 transition-all flex-wrap">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                                                        <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm truncate">{a.itemName}</span>
-                                                        <span className="text-xs text-slate-550">Batch {a.batchNumber} &middot; {a.storeName}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <span className="text-xs text-slate-500">{a.remainingQty.toLocaleString('en-IN')} left</span>
-                                                        <Badge variant="outline" className={cn('text-[10px] font-bold rounded-full', TIER_TONE[a.tier])}>
-                                                            {a.daysToExpiry <= 0 ? 'Expired' : `${a.daysToExpiry}d left`} &middot; {formatIstDateTime(a.expiryDate)}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                    {tab === 'alerts' && (
+                                        <div className="max-w-6xl mx-auto space-y-6">
+                                            <Tabs value={alertTab} onValueChange={(v: any) => setAlertTab(v)} className="w-full">
+                                                <TabsList className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-auto inline-flex mb-6">
+                                                    <TabsTrigger value="lowstock" className="rounded-lg px-6 py-2.5 data-[state=active]:bg-brand-50 dark:data-[state=active]:bg-brand-950/50 data-[state=active]:text-brand-600 font-bold">
+                                                        Low Stock Warnings
+                                                    </TabsTrigger>
+                                                    <TabsTrigger value="expiring" className="rounded-lg px-6 py-2.5 data-[state=active]:bg-rose-50 dark:data-[state=active]:bg-rose-950/50 data-[state=active]:text-rose-600 font-bold">
+                                                        Expiry Alerts
+                                                    </TabsTrigger>
+                                                </TabsList>
+                                                
+                                                <TabsContent value="lowstock" className="mt-0">
+                                                    <Card className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-md overflow-hidden">
+                                                        {board.reorderAlerts.length === 0 ? (
+                                                            <div className="p-8 text-center text-sm text-slate-400">Stock levels are healthy. No items below minimum.</div>
+                                                        ) : (
+                                                            <>
+                                                                {/* Mobile cards */}
+                                                                <div className="md:hidden space-y-2 p-3">
+                                                                    {board.reorderAlerts.map(a => (
+                                                                        <div key={a.inventoryItemId} className="p-3 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-950/20">
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <div>
+                                                                                    <p className="font-bold text-sm text-slate-800 dark:text-zinc-200">{a.itemName}</p>
+                                                                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">{a.category}</p>
+                                                                                </div>
+                                                                                <span className="inline-flex items-center bg-amber-100 text-amber-700 font-black px-2.5 py-1 rounded-lg text-sm border border-amber-200/50 shrink-0">
+                                                                                    {a.currentStock} {a.unit}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex gap-4 mt-2 pt-2 border-t border-amber-100 dark:border-amber-900/30 text-xs text-slate-500">
+                                                                                <span>Min: <strong>{a.minStockLevel} {a.unit}</strong></span>
+                                                                                <span>Reorder: <strong>{a.reorderQty} {a.unit}</strong></span>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                {/* Desktop table */}
+                                                                <div className="hidden md:block overflow-x-auto">
+                                                                    <Table>
+                                                                        <TableHeader className="bg-slate-50/50 dark:bg-zinc-950/50">
+                                                                            <TableRow className="border-b border-slate-100 dark:border-zinc-800">
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase">Item</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase text-right">Current</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase text-right">Minimum</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase text-right">Reorder Qty</TableHead>
+                                                                            </TableRow>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            {board.reorderAlerts.map(a => (
+                                                                                <TableRow key={a.inventoryItemId} className="border-b border-slate-50 dark:border-zinc-800/50 hover:bg-slate-50/50 dark:hover:bg-zinc-900">
+                                                                                    <TableCell>
+                                                                                        <div className="font-bold text-slate-800 dark:text-zinc-200">{a.itemName}</div>
+                                                                                        <div className="text-[10px] text-slate-400 mt-0.5">{a.category}</div>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="text-right">
+                                                                                        <span className="inline-flex items-center justify-center bg-amber-50 text-amber-700 font-black px-2.5 py-1 rounded-lg text-sm border border-amber-200/50">
+                                                                                            {a.currentStock} {a.unit}
+                                                                                        </span>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="text-right font-medium text-slate-600">{a.minStockLevel} {a.unit}</TableCell>
+                                                                                    <TableCell className="text-right text-slate-500">{a.reorderQty} {a.unit}</TableCell>
+                                                                                </TableRow>
+                                                                            ))}
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </Card>
+                                                </TabsContent>
+                                                
+                                                <TabsContent value="expiring" className="mt-0">
+                                                    <Card className="rounded-2xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-md overflow-hidden">
+                                                        {board.expiryAlerts.length === 0 ? (
+                                                            <div className="p-8 text-center text-sm text-slate-400">No expiring items found in the upcoming 90 days.</div>
+                                                        ) : (
+                                                            <>
+                                                                {/* Mobile cards */}
+                                                                <div className="md:hidden space-y-2 p-3">
+                                                                    {board.expiryAlerts.map(a => (
+                                                                        <div key={`${a.inventoryItemId}-${a.batchNumber}`} className={cn("p-3 rounded-xl border", TIER_TONE[a.tierDays])}>
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <div className="min-w-0">
+                                                                                    <p className="font-bold text-sm truncate">{a.itemName}</p>
+                                                                                    <p className="text-[10px] mt-0.5 opacity-70">{a.storeName} · Batch: {a.batchNumber}</p>
+                                                                                    <p className="text-[10px] opacity-60">Exp: {formatIstDateTime(a.expiryDate).split(' ')[0]}</p>
+                                                                                </div>
+                                                                                <div className="text-right shrink-0">
+                                                                                    <Badge variant="outline" className={cn("text-xs font-bold", TIER_TONE[a.tierDays])}>{a.daysUntilExpiry}d</Badge>
+                                                                                    <p className="text-[10px] mt-1 opacity-70">Qty: {a.qtyRemaining}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                {/* Desktop table */}
+                                                                <div className="hidden md:block overflow-x-auto">
+                                                                    <Table>
+                                                                        <TableHeader className="bg-slate-50/50 dark:bg-zinc-950/50">
+                                                                            <TableRow className="border-b border-slate-100 dark:border-zinc-800">
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase">Item</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase">Store</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase">Batch</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase text-right">Qty</TableHead>
+                                                                                <TableHead className="font-bold text-slate-600 text-xs uppercase text-right">Expires In</TableHead>
+                                                                            </TableRow>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            {board.expiryAlerts.map(a => (
+                                                                                <TableRow key={`${a.inventoryItemId}-${a.batchNumber}`} className="border-b border-slate-50 dark:border-zinc-800/50 hover:bg-slate-50/50 dark:hover:bg-zinc-900">
+                                                                                    <TableCell className="font-bold text-slate-800 dark:text-zinc-200">{a.itemName}</TableCell>
+                                                                                    <TableCell className="text-slate-600">{a.storeName}</TableCell>
+                                                                                    <TableCell>
+                                                                                        <div className="font-medium">{a.batchNumber}</div>
+                                                                                        <div className="text-[10px] text-slate-400">Exp: {formatIstDateTime(a.expiryDate).split(' ')[0]}</div>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="text-right font-medium text-slate-600">{a.qtyRemaining}</TableCell>
+                                                                                    <TableCell className="text-right">
+                                                                                        <Badge variant="outline" className={cn("px-2 py-0.5", TIER_TONE[a.tierDays])}>
+                                                                                            {a.daysUntilExpiry} days
+                                                                                        </Badge>
+                                                                                    </TableCell>
+                                                                                </TableRow>
+                                                                            ))}
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </Card>
+                                                </TabsContent>
+                                            </Tabs>
                                         </div>
                                     )}
-                                </Card>
-                            )}
 
-                            {tab === 'reorder' && (
-                                <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-md mx-auto w-full max-w-2xl rounded-2xl">
-                                    <div className="mb-3">
-                                        <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Reorder Alerts</h2>
-                                    </div>
-                                    {board.reorderAlerts.length === 0 ? (
-                                        <p className="text-sm text-slate-400 text-center py-6">No items at or below their reorder level.</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {board.reorderAlerts.map(a => (
-                                                <div key={a.inventoryItemId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/10 hover:border-slate-200 dark:hover:border-zinc-800 transition-all flex-wrap">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <PackageMinus className="h-4 w-4 text-rose-500 shrink-0" />
-                                                        <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm truncate">{a.itemName}</span>
-                                                        <Badge variant="outline" className="text-[9px] font-bold uppercase shrink-0 rounded-full">{a.category}</Badge>
-                                                    </div>
-                                                    <div className="text-xs text-slate-550 shrink-0">
-                                                        {a.currentStock.toLocaleString('en-IN')} / min {a.minStockLevel.toLocaleString('en-IN')} {a.unit}
-                                                        {a.reorderQty > 0 && <span className="ml-1.5 font-semibold text-slate-700 dark:text-zinc-300">&middot; reorder {a.reorderQty.toLocaleString('en-IN')}</span>}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </Card>
-                            )}
 
-                            {tab === 'equipment' && (
-                                <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-md mx-auto w-full max-w-2xl rounded-2xl">
-                                    <div className="mb-3">
-                                        <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Equipment Due</h2>
-                                    </div>
-                                    {dueEquipment.length === 0 ? (
-                                        <p className="text-sm text-slate-400 text-center py-6">No equipment due for maintenance/calibration.</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {dueEquipment.map(e => (
-                                                <div key={e.equipmentId} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/10 hover:border-slate-200 dark:hover:border-zinc-800 transition-all flex-wrap">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <HardDrive className="h-4 w-4 text-amber-500 shrink-0" />
-                                                        <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm truncate">{e.name}</span>
-                                                        <span className="text-xs text-slate-550">{e.assetCode} {e.department ? `\u00B7 ${e.department}` : ''}</span>
-                                                    </div>
-                                                    <Badge variant="outline" className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/60 shrink-0 rounded-full">
-                                                        Due {e.nextDueAt ? formatIstDateTime(e.nextDueAt) : ''}
-                                                    </Badge>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </Card>
-                            )}
+                            {tab === 'equipment' && <EquipmentMaintenancePanel />}
+
 
                             {tab === 'procurement' && <ProcurementPanel />}
 
@@ -417,34 +557,9 @@ export const InventoryBoardScreen: React.FC<Props> = ({ onBack }) => {
 
                             {tab === 'bloodbank' && <BloodBankManagementPanel />}
 
-                            {tab === 'cssd' && (
-                                unifiedLoading ? (
-                                    <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-md mx-auto w-full max-w-2xl rounded-2xl">
-                                            <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-3 flex items-center gap-1.5">
-                                                <Package2 className="h-4 w-4 text-violet-500" /> CSSD Instrument Sets
-                                            </h2>
-                                            {unified.cssdByStore.length === 0 ? (
-                                                <p className="text-sm text-slate-400 text-center py-4">No instrument sets recorded.</p>
-                                            ) : (
-                                                <div className="space-y-1.5">
-                                                    {unified.cssdByStore.map((r, i) => (
-                                                        <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/10 hover:border-slate-200 dark:hover:border-zinc-800 transition-all flex-wrap">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-semibold text-slate-800 dark:text-zinc-200 text-sm">{r.storeName}</span>
-                                                                <Badge variant="outline" className="text-[9px] font-bold rounded-full">{r.currentStatus.replace('_', ' ')}</Badge>
-                                                            </div>
-                                                            <span className="text-xs font-mono font-bold text-slate-900 dark:text-zinc-100">{r.setCount} set(s)</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </Card>
-                                    </div>
-                                )
-                            )}
+                            {tab === 'cssd' && <CssdBoardScreen embedded />}
+                                </motion.div>
+                            </AnimatePresence>
                         </SubscriptionReadOnlyOverlay>
                     )}
                 </div>

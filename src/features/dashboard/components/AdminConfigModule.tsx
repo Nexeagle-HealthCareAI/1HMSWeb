@@ -14,6 +14,7 @@ import { EquipmentMaster } from '@/features/hospital/components/masters/Equipmen
 import { VendorMaster } from '@/features/hospital/components/masters/VendorMaster';
 import { DischargeLetterheadConfig } from '@/features/ipd-redesign/components/DischargeLetterheadConfig';
 import { ReportLetterheadConfig } from '@/features/pathology/components/ReportLetterheadConfig';
+import { ConsentTemplateMaster } from '@/features/hospital/components/ConsentTemplateMaster';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
 export const AdminConfigModule = () => {
@@ -93,6 +94,12 @@ export const AdminConfigModule = () => {
             label: 'Vendor Master',
             description: 'Set up suppliers/distributors for procurement',
             icon: Truck,
+        },
+        {
+            id: 'consent-master',
+            label: 'Consent Templates',
+            description: 'Manage legal forms and digital consents',
+            icon: FileText,
         },
     ];
 
@@ -203,6 +210,7 @@ export const AdminConfigModule = () => {
                     {activeTab === 'item-master' && <ItemMaster />}
                     {activeTab === 'equipment-master' && <EquipmentMaster />}
                     {activeTab === 'vendor-master' && <VendorMaster />}
+                    {activeTab === 'consent-master' && <ConsentTemplateMaster />}
                 </SubscriptionReadOnlyOverlay>
             </main>
         </div>
