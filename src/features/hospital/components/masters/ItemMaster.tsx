@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import {
     Search, Plus, Edit2, X, Loader2, RefreshCw, AlertCircle, Archive,
-    Pill, ShieldAlert, Thermometer, PackagePlus, IndianRupee, PackageX, AlertTriangle,
+    Pill, ShieldAlert, Thermometer, PackagePlus,
     ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -192,32 +191,6 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
         });
     }, [filteredItems, sortKey, sortDir]);
 
-    // Stock Overview (Pharmacy's Medicine Catalog usage only, i.e. fixedCategory="DRUG") -- derived
-    // entirely from the items already loaded above, no extra API calls. Gives the pharmacist a
-    // "what needs attention" glance instead of only a bare CRUD grid. Deliberately not shown for
-    // the general (all-category) Item Master usage, where a schedule-class breakdown doesn't apply.
-    const overviewStats = useMemo(() => {
-        const active = items.filter(i => i.isActive);
-        const totalValue = active.reduce((sum, i) => sum + i.currentStock * (i.defaultRate ?? 0), 0);
-        const lowStockItems = active.filter(i => i.currentStock <= i.minStockLevel);
-        const scheduleCounts: Record<string, number> = { 'OTC': 0, 'Sch H': 0, 'Sch H1': 0, 'Sch X': 0, 'Narcotic': 0 };
-        for (const i of active) {
-            scheduleCounts[i.scheduleClass ? SCHEDULE_LABELS[i.scheduleClass] : 'OTC']++;
-        }
-        const topLowStock = [...lowStockItems]
-            .sort((a, b) => (a.currentStock - a.minStockLevel) - (b.currentStock - b.minStockLevel))
-            .slice(0, 8)
-            .map(i => ({ name: i.itemName.length > 16 ? i.itemName.slice(0, 16) + '…' : i.itemName, current: i.currentStock, min: i.minStockLevel }));
-        return {
-            totalActive: active.length,
-            totalValue,
-            lowStockCount: lowStockItems.length,
-            scheduledCount: active.length - scheduleCounts['OTC'],
-            scheduleChartData: Object.entries(scheduleCounts).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value })),
-            topLowStock,
-        };
-    }, [items]);
-
     const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
     const currentPage = Math.min(page, totalPages);
     const pageItems = sortedItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -297,78 +270,8 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
 
     /* ─────────────────── render ─────────────────── */
 
-    const SCHEDULE_CHART_COLORS: Record<string, string> = {
-        'OTC': '#94a3b8', 'Sch H': '#d97706', 'Sch H1': '#ea580c', 'Sch X': '#e11d48', 'Narcotic': '#b91c1c',
-    };
-
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 font-sans relative overflow-hidden">
-
-            {/* ── Stock Overview (Pharmacy's Medicine Catalog only) ── */}
-            {fixedCategory === 'DRUG' && !loading && !loadError && items.length > 0 && (
-                <div className="p-4 sm:p-5 pb-0 space-y-4 shrink-0">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"><Pill className="h-3.5 w-3.5" /> Active Drugs</div>
-                            <div className="text-xl font-bold mt-1 text-slate-800 dark:text-zinc-100">{overviewStats.totalActive}</div>
-                        </div>
-                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"><IndianRupee className="h-3.5 w-3.5" /> Stock Value</div>
-                            <div className="text-xl font-bold mt-1 text-slate-800 dark:text-zinc-100">₹{overviewStats.totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                        </div>
-                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"><PackageX className="h-3.5 w-3.5" /> Low Stock</div>
-                            <div className={cn('text-xl font-bold mt-1', overviewStats.lowStockCount > 0 ? 'text-amber-600' : 'text-slate-800 dark:text-zinc-100')}>{overviewStats.lowStockCount}</div>
-                        </div>
-                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"><ShieldAlert className="h-3.5 w-3.5" /> Scheduled Drugs</div>
-                            <div className="text-xl font-bold mt-1 text-slate-800 dark:text-zinc-100">{overviewStats.scheduledCount}</div>
-                        </div>
-                    </div>
-
-                    {(overviewStats.topLowStock.length > 0 || overviewStats.scheduleChartData.length > 0) && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            {overviewStats.topLowStock.length > 0 && (
-                                <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> Most Understocked Drugs</h3>
-                                    <div className="h-52">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={overviewStats.topLowStock} layout="vertical" margin={{ left: 8, right: 16 }}>
-                                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eef2f7" />
-                                                <XAxis type="number" tick={{ fontSize: 10 }} />
-                                                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
-                                                <Tooltip />
-                                                <Bar dataKey="current" name="Current Stock" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={12} />
-                                                <Bar dataKey="min" name="Min Level" fill="#e2e8f0" radius={[0, 4, 4, 0]} barSize={12} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            )}
-                            {overviewStats.scheduleChartData.length > 0 && (
-                                <div className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Drugs by Schedule Class</h3>
-                                    <div className="h-52">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={overviewStats.scheduleChartData} margin={{ left: -20 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                                                <Tooltip />
-                                                <Bar dataKey="value" name="Drugs" radius={[4, 4, 0, 0]} barSize={32}>
-                                                    {overviewStats.scheduleChartData.map(entry => (
-                                                        <Cell key={entry.name} fill={SCHEDULE_CHART_COLORS[entry.name] ?? '#94a3b8'} />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
 
             {/* ── Toolbar ── */}
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center px-4 py-3 border-b border-slate-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 sticky top-0 z-10 shadow-sm shrink-0">
