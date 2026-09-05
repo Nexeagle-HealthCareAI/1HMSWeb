@@ -277,8 +277,23 @@ export const PathologyBillingTab: React.FC = () => {
         setPendingChargesFor({ encounterId, patientId });
     };
 
-    const handlePendingCharged = () => {
+    const handlePendingCharged = async () => {
+        const target = pendingChargesFor;
         setPendingChargesFor(null);
+        // billing/dashboard (Recent Transactions' data source) only lists encounters that already
+        // have a BillingInvoice row -- a charge with none sits posted-but-invisible indefinitely
+        // (the same gap PathologyAutoBillingHelper.PostChargesAndInvoiceAsync exists to close for
+        // the order-triggered billing path). A brand-new bill's very first charge always hits this,
+        // so create the draft invoice right here rather than leaving it invisible until whatever
+        // eventually finalizes one.
+        if (target) {
+            try {
+                await ipdBillingService.createDraftInvoice({ patientId: target.patientId, encounterId: target.encounterId });
+            } catch {
+                // Charges are already posted and safe -- worst case the bill stays invisible on
+                // this list until a retry; not worth blocking on.
+            }
+        }
         loadRecent(true);
         toast({ title: 'Bill created', description: 'Charges posted for the new lab bill.' });
     };
