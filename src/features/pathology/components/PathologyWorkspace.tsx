@@ -40,13 +40,13 @@ const SortableHeader = ({ column, label, sortColumn, sortDirection, onSort, alig
 };
 
 interface PathologyWorkspaceProps {
-  // Lets the "Complete Lab Setup" banner jump straight to the Letterhead tab (where the new Lab
+  // Lets the "Complete Lab Setup" banner jump straight to the Lab Settings tab (where the Lab
   // Identity & Sign-off card lives) -- omitted, the banner still explains what to do, just without
   // a one-click shortcut.
-  onNavigateToLetterhead?: () => void;
+  onNavigateToLabSettings?: () => void;
 }
 
-export const PathologyWorkspace: React.FC<PathologyWorkspaceProps> = ({ onNavigateToLetterhead }) => {
+export const PathologyWorkspace: React.FC<PathologyWorkspaceProps> = ({ onNavigateToLabSettings }) => {
   const hospitalId = useAuthStore(state => state.hospitalId);
   const navigate = useNavigate();
   const [orders, setOrders] = useState<PathologyOrderDto[]>([]);
@@ -330,8 +330,8 @@ export const PathologyWorkspace: React.FC<PathologyWorkspaceProps> = ({ onNaviga
               Complete Lab Setup — Technician Name is required before creating new orders.
             </p>
           </div>
-          {onNavigateToLetterhead && (
-            <Button size="sm" variant="outline" className="border-amber-400 text-amber-900 hover:bg-amber-100" onClick={onNavigateToLetterhead}>
+          {onNavigateToLabSettings && (
+            <Button size="sm" variant="outline" className="border-amber-400 text-amber-900 hover:bg-amber-100" onClick={onNavigateToLabSettings}>
               Configure now
             </Button>
           )}
@@ -346,7 +346,7 @@ export const PathologyWorkspace: React.FC<PathologyWorkspaceProps> = ({ onNaviga
           size="lg"
           onClick={() => setOrderModal({ open: true })}
           disabled={!hospitalId || labSetupIncomplete}
-          title={labSetupIncomplete ? 'Set a Technician Name in Letterhead settings before creating new orders' : undefined}
+          title={labSetupIncomplete ? 'Set a Technician Name in Lab Settings before creating new orders' : undefined}
           className="gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md hover:shadow-lg transition-all px-6"
         >
           <Plus className="h-5 w-5" /> New Lab Order

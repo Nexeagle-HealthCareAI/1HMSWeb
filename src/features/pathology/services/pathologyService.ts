@@ -21,6 +21,19 @@ export interface LabConfiguration {
   labRegistrationNumber?: string;
   technicianName?: string;
   pathologistName?: string;
+  // Doctor Dekho public listing -- an INDEPENDENT opt-in (doesn't require the hospital itself to be
+  // publicly listed for doctor consultations). See GetPublicLabsHandler.cs.
+  isPubliclyListed?: boolean;
+  publicDescription?: string;
+  publicContactPhone?: string;
+  publicContactEmail?: string;
+  labCity?: string;
+  labState?: string;
+  labPincode?: string;
+  latitude?: number;
+  longitude?: number;
+  // JSON array of free-text category strings, e.g. ["Hematology","Biochemistry"].
+  testCategoriesJson?: string;
 }
 
 export interface CreatePathologyOrderRequest {
@@ -274,6 +287,16 @@ export interface UpdateLabConfigRequest {
   labRegistrationNumber?: string;
   technicianName?: string;
   pathologistName?: string;
+  isPubliclyListed?: boolean;
+  publicDescription?: string;
+  publicContactPhone?: string;
+  publicContactEmail?: string;
+  labCity?: string;
+  labState?: string;
+  labPincode?: string;
+  latitude?: number;
+  longitude?: number;
+  testCategoriesJson?: string;
 }
 
 export interface PathologyReportReadyDto {

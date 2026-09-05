@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube, Zap, Sparkles } from 'lucide-react';
+import { Microscope, IndianRupee, FlaskConical, LayoutTemplate, TestTube, Zap, Sparkles, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 import { PathologyBillingTab } from './PathologyBillingTab';
@@ -8,12 +8,14 @@ import { PathologyWorkspace } from './PathologyWorkspace';
 import { TestCatalogManager } from './TestCatalogManager';
 import { ReportLetterheadConfig } from './ReportLetterheadConfig';
 import { ReportKeywordsManager } from './ReportKeywordsManager';
+import { LabSettingsPanel } from './LabSettingsPanel';
 
 const TABS = [
     { id: 'workspace', label: 'Workspace', description: 'Manage orders & results', icon: Microscope },
     { id: 'billing', label: 'Billing', description: 'Invoices & collections', icon: IndianRupee },
     { id: 'catalog', label: 'Test Catalog', description: 'Test master, ranges & pricing', icon: FlaskConical },
     { id: 'keywords', label: 'Keywords', description: 'Reusable formatted report paragraphs', icon: Sparkles },
+    { id: 'lab-settings', label: 'Lab Settings', description: 'Lab identity, sign-off & online listing', icon: Settings2 },
     { id: 'letterhead', label: 'Letterhead', description: 'Report letterhead designer', icon: LayoutTemplate },
 ] as const;
 
@@ -94,7 +96,7 @@ export const PathologyDashboard: React.FC = () => {
 
         <div className="flex-1 mt-3 overflow-auto">
           <TabsContent value="workspace" className="h-full m-0 data-[state=inactive]:hidden">
-            <PathologyWorkspace onNavigateToLetterhead={() => setActiveTab('letterhead')} />
+            <PathologyWorkspace onNavigateToLabSettings={() => setActiveTab('lab-settings')} />
           </TabsContent>
           <TabsContent value="billing" className="h-full m-0 data-[state=inactive]:hidden">
             <PathologyBillingTab />
@@ -108,6 +110,13 @@ export const PathologyDashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="keywords" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
             <ReportKeywordsManager />
+          </TabsContent>
+          <TabsContent value="lab-settings" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Lab Settings</h2>
+              <p className="text-sm text-muted-foreground">Lab identity, the manual sign-off names printed on reports, and online listing on Doctor Dekho.</p>
+            </div>
+            <LabSettingsPanel />
           </TabsContent>
           <TabsContent value="letterhead" className="h-full m-0 pt-1 data-[state=inactive]:hidden">
             <div className="mb-4">

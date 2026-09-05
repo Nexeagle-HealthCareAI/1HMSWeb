@@ -3,19 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store';
 import { pathologyService, PathologyReportTemplate, PathologyLetterheadMode } from '../services/pathologyService';
-import { hospitalApi, HospitalData } from '@/features/hospital/services/hospitalApi';
 import { PreviewPanel } from '@/features/prescription/components/layout/PreviewPanel';
 import { TemplateUploadSuccessModal } from '@/features/prescription/components/modals/TemplateUploadSuccessModal';
 import { LayoutSaveSuccessModal } from '@/features/prescription/components/modals/LayoutSaveSuccessModal';
 import { useReportDesigner, MarginConfig } from '../hooks/useReportDesigner';
-import { Loader2, FileText, Eye, Plus, Edit2, Sparkles, FileX, Upload, Ruler, UserCheck } from 'lucide-react';
+import { Loader2, FileText, Eye, Plus, Edit2, Sparkles, FileX, Upload, Ruler } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReportTemplateForm } from './ReportTemplateForm';
 
@@ -61,16 +59,6 @@ export const ReportLetterheadConfig: React.FC = () => {
   const [isLoadingMode, setIsLoadingMode] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Lab identity overrides (fall back to the hospital's own profile when blank) + the static
-  // manual sign-off labels printed on every report -- see LabConfiguration.cs.
-  const [labName, setLabName] = useState('');
-  const [labAddress, setLabAddress] = useState('');
-  const [labRegistrationNumber, setLabRegistrationNumber] = useState('');
-  const [technicianName, setTechnicianName] = useState('');
-  const [pathologistName, setPathologistName] = useState('');
-  const [technicianNameTouched, setTechnicianNameTouched] = useState(false);
-  const [hospitalProfile, setHospitalProfile] = useState<HospitalData | null>(null);
-
   const fetchTemplates = async () => {
     if (!hospitalId) return;
     try {
@@ -94,11 +82,6 @@ export const ReportLetterheadConfig: React.FC = () => {
       setIsLoadingMode(true);
       const config = await pathologyService.getLabConfig(hospitalId);
       setLetterheadMode(config.letterheadMode ?? 'SYSTEM_DEFAULT');
-      setLabName(config.labName ?? '');
-      setLabAddress(config.labAddress ?? '');
-      setLabRegistrationNumber(config.labRegistrationNumber ?? '');
-      setTechnicianName(config.technicianName ?? '');
-      setPathologistName(config.pathologistName ?? '');
     } catch (error) {
       console.error('Failed to fetch lab configuration:', error);
     } finally {
@@ -109,17 +92,8 @@ export const ReportLetterheadConfig: React.FC = () => {
   useEffect(() => {
     fetchTemplates();
     fetchMode();
-    if (hospitalId) {
-      hospitalApi.getHospitalById(hospitalId).then(setHospitalProfile).catch(() => {});
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hospitalId]);
-
-  // Same address composition defaultLetterhead.ts's footer uses, so the placeholder shown here
-  // matches exactly what would print if Lab Address is left blank.
-  const hospitalAddressPlaceholder = hospitalProfile
-    ? [hospitalProfile.location, hospitalProfile.city, [hospitalProfile.state, hospitalProfile.pincode].filter(Boolean).join(' - ')].filter(Boolean).join(', ')
-    : '';
 
   const designer = useReportDesigner(selectedTemplateId, hospitalId || undefined);
 
@@ -149,24 +123,16 @@ export const ReportLetterheadConfig: React.FC = () => {
   // margins/typography/overflow strategy (PathologyReportTemplate.layoutJson, via useReportDesigner).
   const handleSaveAll = async () => {
     if (!hospitalId) return;
-    if (!technicianName.trim()) {
-      setTechnicianNameTouched(true);
-      toast.error('Technician Name is required', { description: 'Set who is accountable for reports from this lab before saving.' });
-      return;
-    }
     setIsSaving(true);
     try {
+      // Full read-modify-write -- LabConfiguration's update command overwrites the whole row with
+      // no partial-patch semantics, so every field this screen doesn't itself own (lab identity/
+      // sign-off/public-listing, all edited from the Lab Settings tab instead) must round-trip
+      // through unchanged via this spread rather than being silently blanked out.
       const current = await pathologyService.getLabConfig(hospitalId);
       await pathologyService.updateLabConfig(hospitalId, {
-        autoBillOnOrder: current.autoBillOnOrder,
-        defaultReportHeaderBlob: current.defaultReportHeaderBlob,
-        defaultReportFooterText: current.defaultReportFooterText,
+        ...current,
         letterheadMode,
-        labName: labName.trim() || undefined,
-        labAddress: labAddress.trim() || undefined,
-        labRegistrationNumber: labRegistrationNumber.trim() || undefined,
-        technicianName: technicianName.trim(),
-        pathologistName: pathologistName.trim() || undefined,
       });
       if (selectedTemplateId) {
         await designer.saveLayoutSettings();
@@ -314,82 +280,6 @@ export const ReportLetterheadConfig: React.FC = () => {
                   )}
                 </>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UserCheck className="h-4 w-4" />
-                Lab Identity &amp; Sign-off
-              </CardTitle>
-              <CardDescription>Shown on every generated report when using the system default letterhead.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-name">Lab Name</Label>
-                <Input
-                  id="lab-name"
-                  value={labName}
-                  onChange={(e) => setLabName(e.target.value)}
-                  placeholder={hospitalProfile?.name || 'Lab name'}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave blank to use your hospital's own name{hospitalProfile?.name ? ` (${hospitalProfile.name})` : ''}.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-address">Lab Address</Label>
-                <Textarea
-                  id="lab-address"
-                  value={labAddress}
-                  onChange={(e) => setLabAddress(e.target.value)}
-                  placeholder={hospitalAddressPlaceholder || 'Lab address'}
-                  rows={2}
-                />
-                <p className="text-xs text-muted-foreground">Leave blank to use your hospital's own address.</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-reg">Lab Registration Number</Label>
-                <Input
-                  id="lab-reg"
-                  value={labRegistrationNumber}
-                  onChange={(e) => setLabRegistrationNumber(e.target.value)}
-                  placeholder={hospitalProfile?.registrationNumber || 'Registration number'}
-                />
-                <p className="text-xs text-muted-foreground">Leave blank to use your hospital's own registration number.</p>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-1.5">
-                <Label htmlFor="technician-name">
-                  Technician Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="technician-name"
-                  value={technicianName}
-                  onChange={(e) => setTechnicianName(e.target.value)}
-                  onBlur={() => setTechnicianNameTouched(true)}
-                  placeholder="e.g. Rajesh Kumar"
-                  className={technicianNameTouched && !technicianName.trim() ? 'border-destructive focus-visible:ring-destructive' : ''}
-                />
-                {technicianNameTouched && !technicianName.trim() ? (
-                  <p className="text-xs text-destructive">Required before this lab can start creating new orders.</p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Printed as the manual sign-off name on every report.</p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pathologist-name">Pathologist Name</Label>
-                <Input
-                  id="pathologist-name"
-                  value={pathologistName}
-                  onChange={(e) => setPathologistName(e.target.value)}
-                  placeholder="Optional"
-                />
-                <p className="text-xs text-muted-foreground">Leave blank if no pathologist reviews reports at this lab.</p>
-              </div>
             </CardContent>
           </Card>
 
