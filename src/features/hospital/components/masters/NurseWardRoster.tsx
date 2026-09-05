@@ -17,7 +17,6 @@ import {
     type HospitalNurseItem,
     type WardListItem,
 } from '@/features/ipd-redesign/services/nursingStationApi';
-} from '@/features/ipd-redesign/services/nursingStationApi';
 import { shiftApi, type ShiftItem } from '@/features/ipd-redesign/services/shiftApi';
 import { ShiftSettingsSheet } from '@/features/ipd-redesign/components/ShiftSettingsSheet';
 
