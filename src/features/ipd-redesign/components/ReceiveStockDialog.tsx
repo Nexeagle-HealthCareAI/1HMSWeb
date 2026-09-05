@@ -17,9 +17,13 @@ interface Props {
     onSuccess: () => void;
     /** Pre-select a specific item when opened from Item Master */
     preSelectedItemId?: string;
+    /** Default the store picker to the hospital's PHARMACY-typed store -- set by Pharmacy's
+     *  Medicine Catalog (ItemMaster fixedCategory="DRUG") so a pharmacist doesn't have to hunt for
+     *  "Retail Pharmacy" in the store dropdown every time. */
+    defaultToPharmacyStore?: boolean;
 }
 
-export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardStores, onSuccess, preSelectedItemId }) => {
+export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardStores, onSuccess, preSelectedItemId, defaultToPharmacyStore }) => {
     const { toast } = useToast();
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
@@ -37,10 +41,11 @@ export const ReceiveStockDialog: React.FC<Props> = ({ open, onOpenChange, boardS
     const [duplicateBatchNote, setDuplicateBatchNote] = useState<string | null>(null);
 
     const singleStore = boardStores.length === 1 ? boardStores[0] : null;
+    const pharmacyStore = boardStores.find(s => s.storeType === 'PHARMACY') ?? null;
 
     useEffect(() => {
         if (!open) return;
-        setStoreId(singleStore?.storeId ?? '');
+        setStoreId(singleStore?.storeId ?? (defaultToPharmacyStore ? pharmacyStore?.storeId ?? '' : ''));
         setInventoryItemId(preSelectedItemId ?? '');
         setQty('');
         setShowDetails(false);

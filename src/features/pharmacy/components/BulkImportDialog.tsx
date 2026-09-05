@@ -9,7 +9,7 @@ import { inventoryApi, BulkImportPreviewRow, BatchItem, InventoryItem } from '@/
 import { storeService, StoreItem } from '@/features/hospital/services/storeService';
 import { useAuthStore } from '@/store';
 import { toast } from 'sonner';
-import { UploadCloud, Loader2, AlertTriangle, CheckCircle2, Info, Plus, Trash2 } from 'lucide-react';
+import { UploadCloud, Loader2, AlertTriangle, CheckCircle2, Info, Plus, Trash2, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BulkImportDialogProps {
@@ -183,6 +183,28 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
     }
   }, [hospitalId, storeByCode, itemByCode, validateRow]);
 
+  // Client-side only -- no backend call needed, this just mirrors BulkImportFileParser's own
+  // canonical headers (see HeaderAliases in EasyHMSAPI.Application/Services/BulkImportFileParser.cs)
+  // so a file built from this template is guaranteed to parse cleanly. The example row uses a real
+  // store/item code when one is already loaded, so it's an actually-importable row, not just a
+  // placeholder the user has to fully rewrite.
+  const downloadTemplate = () => {
+    const headers = ['Store Code', 'Item Code', 'Batch No', 'Mfg Date', 'Expiry Date', 'Qty', 'Rate', 'MRP', 'Barcode'];
+    const exampleStore = stores[0]?.storeCode ?? 'PHARM01';
+    const exampleItem = items[0]?.itemCode ?? 'DRG-PARA-500';
+    const example = [exampleStore, exampleItem, 'B12345', '2026-01-15', '2027-01-15', '100', '8.50', '12.00', '8901234567890'];
+    const csv = [headers, example].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'stock_import_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'text/csv': ['.csv'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
@@ -238,12 +260,17 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onCl
         </DialogHeader>
 
         {!showGrid && (
-          <div className="flex gap-2 mb-2">
-            <Button variant={mode === 'file' ? 'default' : 'outline'} size="sm" onClick={() => setMode('file')}>
-              Upload File
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { setMode('manual'); setRows([blankRow()]); }}>
-              Enter Manually
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex gap-2">
+              <Button variant={mode === 'file' ? 'default' : 'outline'} size="sm" onClick={() => setMode('file')}>
+                Upload File
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => { setMode('manual'); setRows([blankRow()]); }}>
+                Enter Manually
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <Download className="h-3.5 w-3.5 mr-1.5" /> Download CSV Template
             </Button>
           </div>
         )}

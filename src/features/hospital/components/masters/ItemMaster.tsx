@@ -748,6 +748,7 @@ export const ItemMaster: React.FC<ItemMasterProps> = ({ fixedCategory }) => {
                 onOpenChange={setReceiveDialogOpen}
                 boardStores={boardStores}
                 preSelectedItemId={receiveItemId}
+                defaultToPharmacyStore={fixedCategory === 'DRUG'}
                 onSuccess={() => { loadItems(true); }}
             />
         </div>
