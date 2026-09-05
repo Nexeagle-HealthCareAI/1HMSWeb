@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Plus, Receipt, CreditCard, Loader2, Printer, FlaskConical, ChevronLeft, ChevronRight,
-    Search, ChevronDown, FileText, ReceiptText,
+    Search, ChevronDown, FileText, ReceiptText, MoreVertical, Pencil, Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +33,7 @@ import type { Visit, VisitStatus } from '@/features/billing/types';
 import { offlineCachedRead } from '@/offline';
 import { PathologyBillingOverview, type PathologyBillingDateMode } from './PathologyBillingOverview';
 import { NewLabBillDrawer } from './NewLabBillDrawer';
+import { EditBillSheet } from './EditBillSheet';
 
 // Render a backend timestamp in IST. Naive (offset-less) timestamps are treated as UTC, since the
 // backend stores UTC -- so they convert correctly to Asia/Kolkata. Copied verbatim from BillingPage.
@@ -53,6 +59,8 @@ interface RowDetail {
     particulars: string[];
     discountTotal: number;
     hasPayments: boolean;
+    invoiceId?: string;
+    invoiceNo?: string;
 }
 
 export const PathologyBillingTab: React.FC = () => {
@@ -115,10 +123,13 @@ export const PathologyBillingTab: React.FC = () => {
                     const res = await ipdBillingService.getEncounterEvents(r.id, r.patientId);
                     const charges = res?.success ? (res.data?.charges ?? []) : [];
                     const payments = res?.success ? (res.data?.payments ?? []) : [];
+                    const invoice = res?.success ? res.data?.currentInvoice : null;
                     return [r.id, {
                         particulars: charges.map(c => c.displayName ?? c.categoryCode ?? 'Charge'),
                         discountTotal: charges.reduce((s, c) => s + (c.discountAmount ?? 0), 0),
                         hasPayments: payments.length > 0,
+                        invoiceId: invoice?.invoiceId,
+                        invoiceNo: invoice?.invoiceNo,
                     }];
                 } catch {
                     return [r.id, { particulars: [], discountTotal: 0, hasPayments: false }];
@@ -231,6 +242,65 @@ export const PathologyBillingTab: React.FC = () => {
     const handleActingPaid = () => {
         setActingAddPayment(false);
         loadRecent(true);
+    };
+
+    // ─── Edit Bill (drill into charge lines) / Cancel Bill (void the whole invoice) -- mirrors
+    // BillingPage.tsx's OPD/IPD ledger patterns exactly against the same already-deployed
+    // endpoints (updateChargeEvent/deleteEvent, billing/delete-invoice). ─────
+    const [editingRow, setEditingRow] = useState<Visit | null>(null);
+    const [cancelTarget, setCancelTarget] = useState<Visit | null>(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelBusy, setCancelBusy] = useState(false);
+
+    const refreshRowDetail = useCallback(async (row: Visit) => {
+        try {
+            const res = await ipdBillingService.getEncounterEvents(row.id, row.patientId);
+            const charges = res?.success ? (res.data?.charges ?? []) : [];
+            const payments = res?.success ? (res.data?.payments ?? []) : [];
+            const invoice = res?.success ? res.data?.currentInvoice : null;
+            setRowDetails(prev => ({
+                ...prev,
+                [row.id]: {
+                    particulars: charges.map(c => c.displayName ?? c.categoryCode ?? 'Charge'),
+                    discountTotal: charges.reduce((s, c) => s + (c.discountAmount ?? 0), 0),
+                    hasPayments: payments.length > 0,
+                    invoiceId: invoice?.invoiceId,
+                    invoiceNo: invoice?.invoiceNo,
+                },
+            }));
+        } catch {
+            // Best-effort refresh -- the row keeps its last-known detail on failure.
+        }
+    }, []);
+
+    const handleBillEdited = () => {
+        if (editingRow) refreshRowDetail(editingRow);
+        loadRecent(true);
+    };
+
+    const handleCancelBill = async () => {
+        const row = cancelTarget;
+        const detail = row ? rowDetails[row.id] : undefined;
+        if (!row || !detail?.invoiceId || cancelBusy) return;
+        setCancelBusy(true);
+        try {
+            const res = await ipdBillingService.deleteInvoice({
+                patientId: row.patientId,
+                encounterId: row.id,
+                invoiceId: detail.invoiceId,
+                reason: cancelReason.trim(),
+            });
+            if (!res?.success) throw new Error(res?.message ?? 'Could not cancel this bill');
+            toast({ title: 'Bill cancelled', description: `${res.chargesVoided ?? 0} charge(s) voided.` });
+            setCancelTarget(null);
+            setCancelReason('');
+            await refreshRowDetail(row);
+            loadRecent(true);
+        } catch (e: any) {
+            toast({ title: 'Could not cancel bill', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setCancelBusy(false);
+        }
     };
 
     // Invoice covers everything billed on this encounter; Receipt covers the latest payment
@@ -443,6 +513,26 @@ export const PathologyBillingTab: React.FC = () => {
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-slate-800">
+                                                                    <MoreVertical className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem disabled={isCancelled} onClick={() => setEditingRow(row)}>
+                                                                    <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Bill
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    disabled={isCancelled || !detail?.invoiceId}
+                                                                    className="text-rose-600 focus:text-rose-600"
+                                                                    onClick={() => setCancelTarget(row)}
+                                                                >
+                                                                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Cancel Bill
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -518,6 +608,42 @@ export const PathologyBillingTab: React.FC = () => {
                     onCharged={handlePendingCharged}
                 />
             )}
+
+            {editingRow && (
+                <EditBillSheet
+                    open={!!editingRow}
+                    onOpenChange={(v) => { if (!v) setEditingRow(null); }}
+                    encounterId={editingRow.id}
+                    patientId={editingRow.patientId}
+                    onChanged={handleBillEdited}
+                />
+            )}
+
+            <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) { setCancelTarget(null); setCancelReason(''); } }}>
+                <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-rose-500 to-rose-600">
+                        <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Trash2 className="h-5 w-5 text-white" />
+                        </div>
+                        <AlertDialogTitle className="text-white text-base font-bold">Cancel this bill?</AlertDialogTitle>
+                    </div>
+                    <div className="px-5 py-4 space-y-3">
+                        <AlertDialogDescription className="text-sm text-slate-600">
+                            This voids every charge on <span className="font-semibold text-slate-800">{cancelTarget?.patientName}</span>'s bill. Any money already collected against it becomes an unallocated credit — it is not automatically refunded.
+                        </AlertDialogDescription>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">Reason <span className="text-rose-500">*</span></label>
+                            <Textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={2} placeholder="Why is this bill being cancelled?" className="text-sm" />
+                        </div>
+                    </div>
+                    <AlertDialogFooter className="px-5 pb-5 pt-0">
+                        <AlertDialogCancel disabled={cancelBusy} className="rounded-xl">Back</AlertDialogCancel>
+                        <AlertDialogAction onClick={(e) => { e.preventDefault(); handleCancelBill(); }} disabled={!cancelReason.trim() || cancelBusy} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
+                            {cancelBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Cancelling…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Cancel Bill</>}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
