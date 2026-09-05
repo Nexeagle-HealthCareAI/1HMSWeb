@@ -1,7 +1,7 @@
 import { PDFDocument, PDFFont, PDFPage, PDFEmbeddedPage, StandardFonts, rgb, RGB } from 'pdf-lib';
 import { PathologyResultFlag } from './resultFlagCalculator';
 import { generateDefaultLetterheadTemplate, DefaultLetterheadHospitalInfo } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
-import { PathologyLetterheadMode } from '../services/pathologyService';
+import { PathologyLetterheadMode, pathologyService } from '../services/pathologyService';
 import { htmlToBlocks, type RichFontFamily, type StyledRun, type StyledBlock, type BlockAlign } from './richText';
 
 const MM_TO_PT = 72 / 25.4;
@@ -19,6 +19,9 @@ const COLORS = {
   normal: rgb(0.07, 0.09, 0.15),
   abnormal: rgb(0.72, 0.45, 0.02), // amber-700
   critical: rgb(0.72, 0.11, 0.11), // red-700
+  // Same teal as the default letterhead's PRIMARY (#0f766e) -- used for field-label headings and
+  // their accent bar, so the report body reads as one consistent brand, not two clashing palettes.
+  accent: rgb(0x0f / 255, 0x76 / 255, 0x6e / 255),
 };
 
 const flagColor = (flag: PathologyResultFlag): RGB =>
@@ -121,6 +124,11 @@ export interface PathologyReportPdfData {
   patientId: string;
   patientAgeYears?: number | null;
   patientGender?: string | null;
+  // Composed "AddressLine, City, State - Pincode" -- omitted from the PDF when blank.
+  patientAddress?: string | null;
+  // Resolved doctor name when this order originated from an OPD prescription or IPD clinical
+  // order -- omitted from the PDF (no "Referred By" line at all) for walk-in/self orders.
+  referredByDoctorName?: string | null;
   lines: PathologyReportPdfLine[];
   // Report-level fields (Clinical History, Comments, ...) -- filled in once for the whole report,
   // drawn after the patient/order info block and before the per-test results. See
@@ -159,17 +167,26 @@ const resolveMargins = (margins: PathologyReportPdfMargins | null | undefined) =
   left: mmToPt(margins?.left ?? DEFAULT_MARGIN_MM),
 });
 
-// Resolves what (if anything) gets drawn as the page background, per LetterheadMode. Returns null
-// for BLANK_PREPRINTED (deliberately nothing) and for the legacy no-mode-supplied case (the caller
-// draws the original hardcoded text header itself instead). A CUSTOM_TEMPLATE that can't be
-// fetched falls back to the same branded default SYSTEM_DEFAULT produces, rather than shipping a
-// blank signed report because of a transient storage/network failure.
+interface ResolvedLetterheadBackground {
+  embedded: PDFEmbeddedPage | null;
+  // The SYSTEM_DEFAULT background reserves margins.bottom + footerHeight (mm) for its own footer
+  // band -- larger than data.letterheadMargins.bottom alone once a taller QR footer is in play.
+  // The caller must not let body content flow below this, or it would draw over the footer
+  // artwork. 0 for every other mode, whose own letterheadMargins already account for their band.
+  minBottomMarginMm: number;
+}
+
+// Resolves what (if anything) gets drawn as the page background, per LetterheadMode. Returns a
+// null embed for BLANK_PREPRINTED (deliberately nothing) and for the legacy no-mode-supplied case
+// (the caller draws the original hardcoded text header itself instead). A CUSTOM_TEMPLATE that
+// can't be fetched falls back to the same branded default SYSTEM_DEFAULT produces, rather than
+// shipping a blank signed report because of a transient storage/network failure.
 async function resolveLetterheadBackground(
   doc: PDFDocument,
   data: PathologyReportPdfData,
-): Promise<PDFEmbeddedPage | null> {
+): Promise<ResolvedLetterheadBackground> {
   const mode = data.letterheadMode;
-  if (!mode || mode === 'BLANK_PREPRINTED') return null;
+  if (!mode || mode === 'BLANK_PREPRINTED') return { embedded: null, minBottomMarginMm: 0 };
 
   const embedFromBytes = async (bytes: Uint8Array) => {
     const [embedded] = await doc.embedPdf(bytes, [0]);
@@ -181,7 +198,7 @@ async function resolveLetterheadBackground(
       const res = await fetch(data.letterheadTemplateUrl);
       if (res.ok) {
         const bytes = new Uint8Array(await res.arrayBuffer());
-        return await embedFromBytes(bytes);
+        return { embedded: await embedFromBytes(bytes), minBottomMarginMm: 0 };
       }
     } catch (err) {
       console.error('Failed to fetch the configured pathology letterhead template, falling back to the system default.', err);
@@ -189,18 +206,29 @@ async function resolveLetterheadBackground(
   }
 
   // SYSTEM_DEFAULT, or CUSTOM_TEMPLATE with no usable template.
+  // The WhatsApp QR is best-effort -- a failed fetch must never block report generation, so it's
+  // guarded the same way previewRenderer.ts/dischargePreviewRenderer.ts guard their own QR fetch.
+  const whatsAppQrImageBytes = await pathologyService.getWhatsAppQrCode()
+    .then((bytes) => new Uint8Array(bytes))
+    .catch(() => undefined);
+
   try {
     const margins = data.letterheadMargins ?? { top: DEFAULT_MARGIN_MM, right: DEFAULT_MARGIN_MM, bottom: DEFAULT_MARGIN_MM, left: DEFAULT_MARGIN_MM };
+    // Taller footer than the shared default (15mm) to fit the QR + caption alongside the
+    // address/contact text -- local to this call site only, prescription/discharge callers are
+    // unaffected.
+    const footerHeightMm = whatsAppQrImageBytes ? 22 : 15;
     const defaultFile = await generateDefaultLetterheadTemplate({
-      layout: { margins, headerHeight: 20, footerHeight: 15, overflowStrategy: 'reuse-template' },
+      layout: { margins, headerHeight: 20, footerHeight: footerHeightMm, overflowStrategy: 'reuse-template' },
       hospital: data.hospitalBranding,
       showRegistrationInFooter: true,
+      whatsAppQrImageBytes,
     });
     const bytes = new Uint8Array(await defaultFile.arrayBuffer());
-    return await embedFromBytes(bytes);
+    return { embedded: await embedFromBytes(bytes), minBottomMarginMm: margins.bottom + footerHeightMm };
   } catch (err) {
     console.error('Failed to generate the default pathology letterhead, continuing with a blank header.', err);
-    return null;
+    return { embedded: null, minBottomMarginMm: 0 };
   }
 }
 
@@ -216,8 +244,11 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontMap = await embedAllFonts(doc);
 
-  const background = await resolveLetterheadBackground(doc, data);
+  const { embedded: background, minBottomMarginMm } = await resolveLetterheadBackground(doc, data);
   const margins = resolveMargins(data.letterheadMargins);
+  if (minBottomMarginMm > 0) {
+    margins.bottom = Math.max(margins.bottom, mmToPt(minBottomMarginMm));
+  }
   const contentWidth = PAGE_WIDTH - margins.left - margins.right;
 
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
@@ -377,31 +408,77 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     cursorY -= 14;
   }
 
-  // --- Patient / order info ---
+  // --- Patient / order info: two columns sharing a top Y -- patient identity on the left,
+  // order/referral details on the right. Each column's own line list may be shorter than the
+  // other's (e.g. no address, or a walk-in order with no referring doctor), so the block's total
+  // height is whichever column ends up taller.
+  interface ColumnTextLine { text: string; font: PDFFont; size: number; color: RGB }
+  const drawTwoColumnBlock = (
+    startY: number,
+    leftX: number, leftWidth: number, leftLines: Array<ColumnTextLine | null>,
+    rightX: number, rightWidth: number, rightLines: Array<ColumnTextLine | null>,
+  ): number => {
+    const drawCol = (x: number, width: number, lines: Array<ColumnTextLine | null>): number => {
+      let y = startY;
+      for (const line of lines) {
+        if (!line) continue;
+        for (const wLine of wrapText(line.text, line.font, line.size, width)) {
+          page.drawText(wLine, { x, y, size: line.size, font: line.font, color: line.color });
+          y -= line.size + 3;
+        }
+      }
+      return y;
+    };
+    return Math.min(drawCol(leftX, leftWidth, leftLines), drawCol(rightX, rightWidth, rightLines));
+  };
+
+  ensureRoom(90);
   const ageGender = [
     data.patientAgeYears != null ? `${data.patientAgeYears}y` : null,
     data.patientGender ?? null,
   ].filter(Boolean).join(' / ');
-  drawLine(`Patient: ${data.patientName}${ageGender ? ` (${ageGender})` : ''}`, { font: boldFont, size: 11, gapAfter: 3 });
-  drawLine(`Patient ID: ${data.patientId}`, { gapAfter: 3 });
-  drawLine(`Order No: ${data.orderNo}  |  Order Date: ${new Date(data.orderDate).toLocaleString()}`, { gapAfter: 3 });
-  drawLine(`Report No: ${data.reportNo}`, { gapAfter: 12 });
+  const leftColX = margins.left;
+  const leftColWidth = contentWidth * 0.52;
+  const rightColX = margins.left + contentWidth * 0.58;
+  const rightColWidth = contentWidth - (rightColX - margins.left);
+
+  const blockBottomY = drawTwoColumnBlock(
+    cursorY,
+    leftColX, leftColWidth, [
+      { text: data.patientName, font: boldFont, size: 11, color: COLORS.text },
+      { text: `ID: ${data.patientId}`, font: regularFont, size: 8.5, color: COLORS.muted },
+      ageGender ? { text: ageGender, font: regularFont, size: 9, color: COLORS.text } : null,
+      data.patientAddress ? { text: data.patientAddress, font: regularFont, size: 8.5, color: COLORS.muted } : null,
+    ],
+    rightColX, rightColWidth, [
+      data.referredByDoctorName ? { text: `Referred By: Dr. ${data.referredByDoctorName}`, font: regularFont, size: 9, color: COLORS.text } : null,
+      { text: `Order Date: ${new Date(data.orderDate).toLocaleString()}`, font: regularFont, size: 9, color: COLORS.text },
+      { text: `Order No: ${data.orderNo}`, font: regularFont, size: 9, color: COLORS.text },
+      { text: `Report No: ${data.reportNo}`, font: regularFont, size: 9, color: COLORS.text },
+    ],
+  );
+  cursorY = blockBottomY - 4;
+  page.drawLine({ start: { x: margins.left, y: cursorY }, end: { x: PAGE_WIDTH - margins.right, y: cursorY }, thickness: 0.5, color: COLORS.border });
+  cursorY -= 12;
 
   // --- Generic label+value section, shared by report-level fields and each line's note fields --
   // `value` may be RichTextField's HTML (bold/italic/color/font/size/lists/alignment) or a plain
-  // legacy string; valueToBlocks handles both identically. The "Label: " prefix is prepended to the
-  // first block's own runs (not a separate block) so it stays on the same line/list-marker as the
-  // value's first line.
+  // legacy string; valueToBlocks handles both identically. The label is drawn as its own bold,
+  // accent-barred heading line (not folded into the value's first run) so a field like
+  // Interpretation reads as a distinct card, matching how the entry form itself already separates
+  // a <Label> from its value control.
+  const SECTION_GAP = 10;
+  const LABEL_VALUE_GAP = 4;
   const drawSection = (label: string, value: string) => {
     const plainCheck = value.replace(/<[^>]+>/g, '').trim();
     if (!plainCheck) return;
-    ensureRoom(20);
+    ensureRoom(28);
+    // Left accent bar beside the label, matching the letterhead's own accent-bar language.
+    page.drawRectangle({ x: margins.left, y: cursorY - 7.5, width: 2, height: 9, color: COLORS.accent });
+    page.drawText(label.toUpperCase(), { x: margins.left + 6, y: cursorY, size: 8.5, font: boldFont, color: COLORS.accent });
+    cursorY -= 8.5 + LABEL_VALUE_GAP;
     const blocks = valueToBlocks(value);
-    const labelRun: StyledRun = { text: `${label}: ` };
-    const withLabel: StyledBlock[] = blocks.length > 0
-      ? [{ ...blocks[0], runs: [labelRun, ...blocks[0].runs] }, ...blocks.slice(1)]
-      : [{ runs: [labelRun] }];
-    drawStyledBlocks(withLabel, { baseSize: 9, baseColor: COLORS.muted, gapAfter: 3 });
+    drawStyledBlocks(blocks, { x: margins.left, baseSize: 9.5, baseColor: COLORS.text, gapAfter: SECTION_GAP });
   };
 
   // --- Report-level fields (Clinical History, Comments, ...) ---
@@ -409,7 +486,7 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     for (const field of data.reportFields) {
       drawSection(field.label, field.value);
     }
-    cursorY -= 8;
+    cursorY -= 4;
   }
 
   // --- Results per test line ---
@@ -434,9 +511,12 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
     for (const p of line.parameters) {
       ensureRoom(14);
       const color = flagColor(p.flag);
+      // Bold only draws attention to an abnormal/critical result -- a NORMAL value stays regular
+      // weight so the eye is drawn straight to what actually needs it.
+      const valueFont = p.flag === 'NORMAL' ? regularFont : boldFont;
       const valueText = `${p.value}${flagSuffix(p.flag)}`;
       page.drawText(p.name, { x: colParam, y: cursorY, size: 9, font: regularFont, color: COLORS.text });
-      page.drawText(valueText, { x: colValue, y: cursorY, size: 9, font: boldFont, color });
+      page.drawText(valueText, { x: colValue, y: cursorY, size: 9, font: valueFont, color });
       page.drawText(p.unit ?? '', { x: colUnit, y: cursorY, size: 9, font: regularFont, color: COLORS.muted });
       page.drawText(p.normalRangeLabel ?? '', { x: colRange, y: cursorY, size: 9, font: regularFont, color: COLORS.muted });
       cursorY -= 14;

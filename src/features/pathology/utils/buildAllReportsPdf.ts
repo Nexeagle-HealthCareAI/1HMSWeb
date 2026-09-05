@@ -93,6 +93,8 @@ const resolveOrderReportsPdfData = async (
     patientId: o.patientId,
     patientAgeYears: o.patientAgeYears,
     patientGender: o.patientGender,
+    patientAddress: o.patientAddress,
+    referredByDoctorName: o.orderedByDoctorName,
     lines: targetLines.map((line) => buildPdfLineForTest(o, line, lineFields)),
     reportFields: reportFieldsForPdf,
     letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',

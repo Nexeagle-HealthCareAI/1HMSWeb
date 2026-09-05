@@ -356,6 +356,8 @@ export const useReportDesigner = (templateId?: string, hospitalId?: string) => {
         patientId: 'PTID00000000',
         patientAgeYears: 35,
         patientGender: 'M',
+        patientAddress: '123 MG Road, Sample Nagar, Karnataka - 560001',
+        referredByDoctorName: 'Sample Referring Doctor',
         reportFields: [
           { label: 'Clinical History', value: 'Sample clinical history text for preview purposes.' },
         ],

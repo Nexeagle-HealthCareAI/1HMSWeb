@@ -2,6 +2,11 @@ import { axiosInstance as api } from '@/services/axiosClient';
 
 export type PathologyLetterheadMode = 'CUSTOM_TEMPLATE' | 'BLANK_PREPRINTED' | 'SYSTEM_DEFAULT';
 
+// GET /public/whatsapp-qr-code's content never varies (see PublicController.cs) -- cached
+// module-wide after the first successful fetch so generating several reports in one batch
+// (buildAllReportsPdf.ts) doesn't refetch the same bytes per report.
+let cachedWhatsAppQrCode: ArrayBuffer | null = null;
+
 export interface LabConfiguration {
   configId?: string;
   hospitalId?: string;
@@ -108,6 +113,12 @@ export interface PathologyOrderDto {
   patientMobile?: string | null;
   patientAgeYears?: number | null;
   patientGender?: string | null;
+  // Composed "AddressLine, City, State - Pincode" from the patient's registration -- null when
+  // they have no address on file.
+  patientAddress?: string | null;
+  // Resolved doctor name when this order originated from an OPD prescription or IPD clinical
+  // order -- null for walk-in/self orders, which have no referring doctor.
+  orderedByDoctorName?: string | null;
   hospitalName?: string | null;
   sourceType?: string | null;
   isStat: boolean;
@@ -470,5 +481,15 @@ export const pathologyService = {
   updateLabConfig: async (hospitalId: string, request: UpdateLabConfigRequest): Promise<boolean> => {
     const response = await api.put<boolean>(`/api/v1/PathologyConfig/${hospitalId}`, request);
     return response.data;
-  }
+  },
+
+  // WhatsApp QR (NexEagle logo centered) for the pathology report footer -- routes to the shared,
+  // platform-wide WhatsApp bot entry point (same one used elsewhere on NexEagle), not a
+  // per-hospital number. See the module-level cache comment above.
+  getWhatsAppQrCode: async (): Promise<ArrayBuffer> => {
+    if (cachedWhatsAppQrCode) return cachedWhatsAppQrCode;
+    const response = await api.get<ArrayBuffer>('/public/whatsapp-qr-code', { responseType: 'arraybuffer' });
+    cachedWhatsAppQrCode = response.data;
+    return response.data;
+  },
 };

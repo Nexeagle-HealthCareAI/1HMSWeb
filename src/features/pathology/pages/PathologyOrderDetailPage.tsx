@@ -284,6 +284,8 @@ const PathologyOrderDetailPage: React.FC = () => {
       patientId: o.patientId,
       patientAgeYears: o.patientAgeYears,
       patientGender: o.patientGender,
+      patientAddress: o.patientAddress,
+      referredByDoctorName: o.orderedByDoctorName,
       lines: buildPdfLine(o, line),
       reportFields: reportFieldsForPdf,
       letterheadMode: labConfig?.letterheadMode ?? 'SYSTEM_DEFAULT',
