@@ -44,7 +44,13 @@ const PathologyOrderDetailPage: React.FC = () => {
   // PathologyReportFieldLayoutEditor.tsx / pathologyFieldLayoutApi.ts.
   const { reportFields, lineFields, refetch: refetchFieldLayout } = usePathologyReportFieldLayout(hospitalId ?? undefined);
   const [reportFieldValues, setReportFieldValues] = useState<Record<string, string>>({});
-  const [isSavingReportFields, setIsSavingReportFields] = useState(false);
+  // Report Details autosaves the same way OrderResultEntry's results do: debounce-save silently
+  // as the user types, report status via reportFieldsSaveState, and reserve a real save (toast +
+  // refetch) for an explicit trigger -- the shared top-banner Save button below drives both this
+  // and the active test line's save together.
+  const [reportFieldsDirty, setReportFieldsDirty] = useState(false);
+  const [reportFieldsSaveState, setReportFieldsSaveState] = useState<OrderResultEntrySaveState>('idle');
+  const reportFieldsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The same field-layout editor Pathology Settings uses (add/reorder/rename custom fields),
   // opened in a dialog here too -- a pathologist filling in a report shouldn't have to leave it to
   // add a field like "Method Used". It manages its own hospitalId/save via useAuthStore, so it's
@@ -117,37 +123,81 @@ const PathologyOrderDetailPage: React.FC = () => {
     } catch {
       setReportFieldValues({});
     }
+    // A freshly loaded/re-synced order always starts clean -- this IS the saved state.
+    setReportFieldsDirty(false);
+    setReportFieldsSaveState('idle');
   }, [order?.orderId, order?.reportFieldValuesJson]);
 
-  // Flushes any pending debounced save on the currently active line BEFORE switching tabs --
-  // OrderResultEntry fully remounts on tab switch (key={activeLine.orderLineId}), so without this
-  // a save still sitting in its debounce window would be silently discarded. Callers only invoke
+  // Flushes any pending debounced save (both the active test line's results AND Report Details)
+  // BEFORE switching tabs -- OrderResultEntry fully remounts on tab switch
+  // (key={activeLine.orderLineId}), and switching also triggers a parent refetch via saveNow's
+  // refresh:true, so without flushing Report Details too, a resync from that refetch could
+  // overwrite Report Details text still sitting in its own debounce window. Callers only invoke
   // this for a tab that isn't already active (see the isActive guard at the call site).
   const handleTabSwitch = async (lineId: string) => {
-    await activeLineRef.current?.saveNow({ silent: true });
+    await Promise.all([
+      activeLineRef.current?.saveNow({ silent: true }),
+      saveReportFields({ silent: true, refresh: false }),
+    ]);
     setActiveLineId(lineId);
   };
 
   const handleReportFieldChange = (key: string, value: string) => {
     setReportFieldValues(prev => ({ ...prev, [key]: value }));
+    setReportFieldsDirty(true);
   };
 
-  const handleSaveReportFields = async () => {
+  // The one place Report Details actually reach the server -- called by the debounced autosave
+  // effect below and (via the shared top-banner Save button) as an explicit save. `silent`
+  // suppresses the toast; `refresh` refetches the whole order -- left off for plain autosave so a
+  // refetch landing mid-keystroke can't resync reportFieldValues out from under active typing.
+  const saveReportFields = async (opts?: { silent?: boolean; refresh?: boolean }) => {
+    const silent = opts?.silent ?? true;
+    const refresh = opts?.refresh ?? false;
     if (!hospitalId || !order) return;
-    setIsSavingReportFields(true);
+    setReportFieldsSaveState('saving');
     try {
       const success = await pathologyService.saveOrderReportFields(hospitalId, order.orderId, JSON.stringify(reportFieldValues));
-      if (!success) {
-        toast.error('Could not save report details');
-        return;
-      }
-      toast.success('Report details saved');
-      await refetch();
+      if (!success) throw new Error('save returned false');
+      setReportFieldsDirty(false);
+      setReportFieldsSaveState('saved');
+      if (!silent) toast.success('Report details saved');
+      if (refresh) await refetch();
     } catch (e) {
-      toast.error('Could not save report details');
-    } finally {
-      setIsSavingReportFields(false);
+      setReportFieldsSaveState('error');
+      if (!silent) toast.error('Could not save report details');
     }
+  };
+
+  // Debounced autosave for Report Details, mirroring OrderResultEntry's own debounce effect.
+  useEffect(() => {
+    if (!reportFieldsDirty) return;
+    setReportFieldsSaveState('dirty');
+    if (reportFieldsDebounceRef.current) clearTimeout(reportFieldsDebounceRef.current);
+    reportFieldsDebounceRef.current = setTimeout(() => { void saveReportFields(); }, 1500);
+    return () => { if (reportFieldsDebounceRef.current) clearTimeout(reportFieldsDebounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportFieldValues, reportFieldsDirty]);
+
+  useEffect(() => () => { if (reportFieldsDebounceRef.current) clearTimeout(reportFieldsDebounceRef.current); }, []);
+
+  // Drives the one shared top-banner Save button/status readout below -- combines the active test
+  // line's save state with Report Details' own, "worse" state winning so the technician sees
+  // whichever part of the page still needs attention.
+  const combinedSaveState: OrderResultEntrySaveState = (() => {
+    const states = [resultSaveState, reportFieldsSaveState];
+    if (states.includes('error')) return 'error';
+    if (states.includes('saving')) return 'saving';
+    if (states.includes('dirty')) return 'dirty';
+    if (states.includes('saved')) return 'saved';
+    return 'idle';
+  })();
+
+  const handleSaveEverything = async () => {
+    await Promise.all([
+      activeLineRef.current?.saveNow(),
+      saveReportFields({ silent: false, refresh: true }),
+    ]);
   };
 
   const renderReportFieldInput = (field: PathologyFieldConfigItem) => {
@@ -463,31 +513,31 @@ const PathologyOrderDetailPage: React.FC = () => {
                     </Badge>
                   </div>
 
-                  {/* Results now autosave -- this is the one place Save still lives (a deliberate
-                      "save now" for reassurance), plus a live status readout so it's always clear
-                      whether the active test's results are persisted. */}
-                  {activeLine && (
-                    <div className="flex flex-col items-start sm:items-end gap-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Button
-                          size="sm" variant="outline"
-                          className="h-8 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
-                          onClick={() => activeLineRef.current?.saveNow()}
-                          disabled={resultSaveState === 'saving'}
-                        >
-                          {resultSaveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-                          Save
-                        </Button>
-                        <span className="inline-flex items-center gap-1 text-xs text-brand-100">
-                          {resultSaveState === 'saving' && <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>}
-                          {resultSaveState === 'saved' && <><Check className="h-3 w-3" /> All changes saved</>}
-                          {resultSaveState === 'dirty' && 'Unsaved changes'}
-                          {resultSaveState === 'error' && <span className="text-red-200">Couldn't save — retrying</span>}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-brand-100/80">Changes to results save automatically as you type -- no need to click Save.</p>
+                  {/* Everything on this page -- Report Details AND the active test's results --
+                      now drafts itself automatically. This is the one place a manual Save still
+                      lives (pure reassurance, not a requirement), plus a live status readout so
+                      it's always clear the draft is safely persisted before Generate/Update
+                      Report is used to actually finalize anything. */}
+                  <div className="flex flex-col items-start sm:items-end gap-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        size="sm" variant="outline"
+                        className="h-8 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
+                        onClick={() => void handleSaveEverything()}
+                        disabled={combinedSaveState === 'saving'}
+                      >
+                        {combinedSaveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                        Save
+                      </Button>
+                      <span className="inline-flex items-center gap-1 text-xs text-brand-100">
+                        {combinedSaveState === 'saving' && <><Loader2 className="h-3 w-3 animate-spin" /> Saving draft…</>}
+                        {combinedSaveState === 'saved' && <><Check className="h-3 w-3" /> Draft saved automatically</>}
+                        {combinedSaveState === 'dirty' && 'Drafting…'}
+                        {combinedSaveState === 'error' && <span className="text-red-200">Couldn't save draft — retrying</span>}
+                      </span>
                     </div>
-                  )}
+                    <p className="text-[11px] text-brand-100/80">Values and notes draft automatically as you type -- no need to click Save. Use Preview/Generate/Update Report (right) when you're ready to finalize.</p>
+                  </div>
 
                   <div className="flex items-center gap-1.5 text-xs text-brand-100 mt-1 sm:mt-0">
                     <ReceiptText className="h-3.5 w-3.5 shrink-0" />
@@ -639,15 +689,6 @@ const PathologyOrderDetailPage: React.FC = () => {
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsFieldEditorOpen(true)}>
                   <SlidersHorizontal className="h-4 w-4" /> Manage Fields
                 </Button>
-                {padFields.length > 0 && (
-                  <Button
-                    variant="outline" className="w-full justify-start gap-2"
-                    onClick={handleSaveReportFields} disabled={isSavingReportFields}
-                  >
-                    {isSavingReportFields ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {isSavingReportFields ? 'Saving...' : 'Save Report Details'}
-                  </Button>
-                )}
               </CardContent>
             </Card>
           </div>
