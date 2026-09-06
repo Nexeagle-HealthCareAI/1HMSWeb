@@ -93,6 +93,10 @@ export interface SubscriptionUsage {
   currentDoctors: number;
   maxBeds: number | null;
   currentBeds: number;
+  // Free-tier monthly quota (IPD admission, OPD appointment confirm/walk-in, pathology order,
+  // pharmacy checkout) -- both null when not on the free tier (an Active/paid plan has no cap).
+  freeTierLimit: number | null;
+  freeTierUsedCount: number | null;
 }
 
 export interface SelectPlanRequest {
@@ -266,7 +270,9 @@ export const subscriptionApi = {
       maxDoctors: response?.maxDoctors ?? null,
       currentDoctors: response?.currentDoctors ?? 0,
       maxBeds: response?.maxBeds ?? null,
-      currentBeds: response?.currentBeds ?? 0
+      currentBeds: response?.currentBeds ?? 0,
+      freeTierLimit: response?.freeTierLimit ?? null,
+      freeTierUsedCount: response?.freeTierUsedCount ?? null
     };
   }
 };
