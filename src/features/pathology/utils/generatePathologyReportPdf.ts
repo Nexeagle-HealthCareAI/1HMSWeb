@@ -451,7 +451,9 @@ export async function generatePathologyReportPdf(data: PathologyReportPdfData): 
       data.patientAddress ? { text: data.patientAddress, font: regularFont, size: 8.5, color: COLORS.muted } : null,
     ],
     rightColX, rightColWidth, [
-      data.referredByDoctorName ? { text: `Referred By: Dr. ${data.referredByDoctorName}`, font: regularFont, size: 9, color: COLORS.text } : null,
+      data.referredByDoctorName
+        ? { text: `Referred By: ${/^dr\.?\s/i.test(data.referredByDoctorName) ? '' : 'Dr. '}${data.referredByDoctorName}`, font: regularFont, size: 9, color: COLORS.text }
+        : null,
       { text: `Order Date: ${new Date(data.orderDate).toLocaleString()}`, font: regularFont, size: 9, color: COLORS.text },
       { text: `Order No: ${data.orderNo}`, font: regularFont, size: 9, color: COLORS.text },
       { text: `Report No: ${data.reportNo}`, font: regularFont, size: 9, color: COLORS.text },
