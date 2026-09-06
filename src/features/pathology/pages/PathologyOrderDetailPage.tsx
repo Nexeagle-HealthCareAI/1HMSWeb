@@ -361,6 +361,23 @@ const PathologyOrderDetailPage: React.FC = () => {
     };
   };
 
+  // Flushes any pending debounced save (both the active line's results AND Report Details) and
+  // returns the freshly-refetched order + that same line -- without this, Preview/Generate/Update
+  // Report could read whatever was last PERSISTED rather than whatever's still sitting in an
+  // in-flight ~1.5s autosave debounce. Concretely: correct a critical value, then immediately click
+  // Generate Report before the debounce fires, and the OLD (possibly falsely-normal) value would
+  // get baked into the finalized, WhatsApp-delivered PDF. Falls back to the given line/current
+  // order if the refetch itself fails, rather than blocking the action entirely.
+  const flushPendingSavesAndGetFreshLine = async (line: PathologyOrderLineDto) => {
+    await Promise.all([
+      activeLineRef.current?.saveNow({ silent: true }),
+      saveReportFields({ silent: true, refresh: false }),
+    ]);
+    const freshOrder = await refetch();
+    const freshLine = freshOrder?.lines.find(l => l.orderLineId === line.orderLineId);
+    return { freshOrder: freshOrder ?? order!, freshLine: freshLine ?? line };
+  };
+
   // Always available, even with zero results entered -- builds and opens the PDF client-side only
   // (no upload, no PathologyReport row required), so a technician can see exactly what this one
   // test's report will look like before anything is saved.
@@ -370,7 +387,8 @@ const PathologyOrderDetailPage: React.FC = () => {
     setPreviewError(null);
     setIsPreviewModalOpen(true);
     try {
-      const data = await resolveReportPdfData(o, line, line.report?.reportNo ?? 'PREVIEW');
+      const { freshOrder, freshLine } = await flushPendingSavesAndGetFreshLine(line);
+      const data = await resolveReportPdfData(freshOrder, freshLine, freshLine.report?.reportNo ?? 'PREVIEW');
       const blob = await generatePathologyReportPdf(data);
       const nextUrl = URL.createObjectURL(blob);
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -426,6 +444,7 @@ const PathologyOrderDetailPage: React.FC = () => {
     if (!hospitalId || !order) return;
     setIsGeneratingReport(true);
     try {
+      await flushPendingSavesAndGetFreshLine(line);
       const response = await pathologyService.generateReport(hospitalId, order.orderId, line.orderLineId, {});
       if (!response.success) {
         toast.error('Could not generate report', { description: response.message });
@@ -652,7 +671,7 @@ const PathologyOrderDetailPage: React.FC = () => {
               <CardContent className="p-4 space-y-2.5">
                 <Button
                   variant="outline" className="w-full justify-start gap-2"
-                  onClick={() => activeLine && previewReport(order, activeLine)} disabled={isPreviewingReport || !activeLine}
+                  onClick={() => activeLine && previewReport(order, activeLine)} disabled={isPreviewingReport || !activeLine || combinedSaveState === 'saving'}
                 >
                   {isPreviewingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                   {isPreviewingReport ? 'Preparing...' : 'Preview Report'}
@@ -660,7 +679,7 @@ const PathologyOrderDetailPage: React.FC = () => {
                 <Button
                   className="w-full justify-start gap-2 bg-brand-600 hover:bg-brand-700 text-white"
                   onClick={() => activeLine && handleGenerateOrUpdateReport(activeLine)}
-                  disabled={!activeLine?.result || isGeneratingReport || isFinalizingPdf}
+                  disabled={!activeLine?.result || isGeneratingReport || isFinalizingPdf || combinedSaveState === 'saving'}
                 >
                   {isGeneratingReport || isFinalizingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                   {isGeneratingReport || isFinalizingPdf

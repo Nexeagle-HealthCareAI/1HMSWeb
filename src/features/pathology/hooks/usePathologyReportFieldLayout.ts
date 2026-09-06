@@ -35,12 +35,14 @@ export const usePathologyReportFieldLayout = (hospitalId?: string) => {
     if (!hospitalId) return false;
     setIsSaving(true);
     try {
+      // Full-row overwrite endpoint (see LabSettingsPanel.tsx / ReportLetterheadConfig.tsx) -- must
+      // spread the freshly-fetched row rather than hand-list a few fields, or every other column
+      // (labName, technicianName, GPS, public listing, ...) silently gets wiped to null. This hook
+      // previously did the latter despite its own doc-comment claiming otherwise -- see the
+      // pathology module audit.
       const current = await pathologyService.getLabConfig(hospitalId);
       const success = await pathologyService.updateLabConfig(hospitalId, {
-        autoBillOnOrder: current.autoBillOnOrder,
-        defaultReportHeaderBlob: current.defaultReportHeaderBlob,
-        defaultReportFooterText: current.defaultReportFooterText,
-        letterheadMode: current.letterheadMode,
+        ...current,
         reportFieldLayoutJson: JSON.stringify(next),
       });
       if (success) setLayout(next);
