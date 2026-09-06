@@ -1,3 +1,4 @@
+import { PDFDocument } from 'pdf-lib';
 import { pathologyService, PathologyOrderDto, PathologyOrderLineDto } from '../services/pathologyService';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { generatePathologyReportPdf, PathologyReportPdfLine, PathologyReportPdfData } from './generatePathologyReportPdf';
@@ -113,10 +114,15 @@ export interface AllReportsPdfResult {
 }
 
 // Builds ONE combined PDF covering every test line on the order that already has a generated
-// report — reuses generatePathologyReportPdf as-is (its `lines` loop already flows multiple tests
-// continuously onto the same document with its own pagination), so this needs no separate
-// PDF-merge step. Returns null when the order has no ready reports at all (caller should have
-// already gated on reportsReadyCount > 0, but this stays defensive against a stale/racing count).
+// report. Each line owns its own independent PathologyReport (its own report number, sign-off,
+// etc. -- see GeneratePathologyReportHandler), so each is rendered as its own COMPLETE report
+// (its own header/footer/patient block/report number, via the exact same generatePathologyReportPdf
+// call the single-report preview uses) rather than flowing every test's results under one shared
+// header -- that previously made a 2-3-report order print as what looked like a single report with
+// extra sections tacked on. The resulting single-report PDFs are then concatenated page-by-page
+// into one combined document, so each report still starts on its own fresh page(s). Returns null
+// when the order has no ready reports at all (caller should have already gated on
+// reportsReadyCount > 0, but this stays defensive against a stale/racing count).
 export const buildAllReadyReportsPdf = async (hospitalId: string, orderId: string): Promise<AllReportsPdfResult | null> => {
   const [order, labConfig] = await Promise.all([
     pathologyService.getOrderById(hospitalId, orderId),
@@ -127,11 +133,21 @@ export const buildAllReadyReportsPdf = async (hospitalId: string, orderId: strin
   if (readyLines.length === 0) return null;
 
   const layout = parseReportFieldLayout(labConfig.reportFieldLayoutJson);
-  const reportNo = readyLines.length === 1
-    ? (readyLines[0].report?.reportNo ?? order.orderNo)
-    : `${order.orderNo} (${readyLines.length} reports)`;
 
-  const data = await resolveOrderReportsPdfData(hospitalId, order, readyLines, layout.reportFields, layout.lineFields, reportNo);
-  const blob = await generatePathologyReportPdf(data);
+  const mergedDoc = await PDFDocument.create();
+  for (const line of readyLines) {
+    const data = await resolveOrderReportsPdfData(
+      hospitalId, order, [line], layout.reportFields, layout.lineFields,
+      line.report?.reportNo ?? order.orderNo,
+    );
+    const reportBlob = await generatePathologyReportPdf(data);
+    const reportBytes = new Uint8Array(await reportBlob.arrayBuffer());
+    const reportDoc = await PDFDocument.load(reportBytes);
+    const copiedPages = await mergedDoc.copyPages(reportDoc, reportDoc.getPageIndices());
+    copiedPages.forEach((page) => mergedDoc.addPage(page));
+  }
+
+  const mergedBytes = await mergedDoc.save();
+  const blob = new Blob([mergedBytes as BlobPart], { type: 'application/pdf' });
   return { blob, order, reportCount: readyLines.length };
 };
