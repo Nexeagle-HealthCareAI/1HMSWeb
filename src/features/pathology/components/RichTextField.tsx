@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Bold, Italic, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { htmlToBlocks, type RichFontFamily, type StyledBlock } from '../utils/richText';
+import { htmlToBlocks, sanitizeHtmlOutput, type RichFontFamily, type StyledBlock } from '../utils/richText';
 
 const COLOR_SWATCHES: { label: string; value: string }[] = [
     { label: 'Default', value: '' },
@@ -51,7 +51,12 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
     // reset the caret to the start on every keystroke.
     useEffect(() => {
         if (ref.current && value !== lastEmittedHtml.current) {
-            ref.current.innerHTML = value;
+            // `value` isn't necessarily this component's own prior output -- it's whatever's
+            // persisted for this field (Interpretation / report field value / keyword expansion),
+            // which could have been written directly via the API. Sanitize before it becomes live
+            // DOM in this contentEditable, or a stored <img onerror=...>/attribute-breakout would
+            // execute in every subsequent viewer's browser.
+            ref.current.innerHTML = sanitizeHtmlOutput(value);
             lastEmittedHtml.current = value;
         }
     }, [value]);
@@ -161,7 +166,10 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
             deleteRange.deleteContents();
 
             const wrapper = document.createElement('span');
-            wrapper.innerHTML = html;
+            // `html` is a keyword's expansion (see richText.ts's blocksToHtml) -- same untrusted-
+            // persisted-content risk as the mount effect above, since a keyword's ContentJson can
+            // also have been written directly via the API.
+            wrapper.innerHTML = sanitizeHtmlOutput(html);
             const frag = document.createDocumentFragment();
             let lastNode: ChildNode | null = null;
             while (wrapper.firstChild) {

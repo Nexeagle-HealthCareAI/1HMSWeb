@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 // Shared rich-text model for pathology report keywords and the report fields they get expanded
 // into. Deliberately NOT arbitrary HTML/CSS -- every field here maps 1:1 to something
 // generatePathologyReportPdf.ts can actually draw with pdf-lib's built-in StandardFonts (12
@@ -129,7 +131,14 @@ export function runsToHtml(runs: StyledRun[]): string {
         if (run.bold) text = `<b>${text}</b>`;
         if (run.italic) text = `<i>${text}</i>`;
         const styles: string[] = [];
-        if (run.color) styles.push(`color:${run.color}`);
+        // Validate against a strict hex-color shape before interpolating into style="..." --
+        // run.color is untrusted (a keyword's ContentJson can be written directly via the API,
+        // bypassing RichTextField's own swatches), and an unvalidated value containing a `"`
+        // breaks out of the attribute (e.g. color: `red" onmouseover="...`) to inject a live
+        // event-handler attribute on the span. sanitizeHtmlOutput below is the second, independent
+        // layer that would still strip such an attribute even if this check were ever bypassed.
+        const safeColor = sanitizeHexColor(run.color);
+        if (safeColor) styles.push(`color:${safeColor}`);
         if (run.fontFamily) styles.push(`font-family:${FONT_FAMILY_CSS[run.fontFamily]}`);
         if (run.fontSize) styles.push(`font-size:${Math.round(run.fontSize / 0.75)}px`); // pt -> px
         if (styles.length > 0) text = `<span style="${styles.join(';')}">${text}</span>`;
@@ -137,11 +146,33 @@ export function runsToHtml(runs: StyledRun[]): string {
     }).join('');
 }
 
+function sanitizeHexColor(color: string | undefined): string | null {
+    if (!color) return null;
+    return /^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/.test(color) ? color : null;
+}
+
 function escapeHtml(text: string): string {
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+// The single sanitization choke point for every stored/authored pathology rich-text HTML string
+// right before it becomes live DOM (RichTextField's contentEditable) or is parsed for PDF drawing
+// (generatePathologyReportPdf's valueToBlocks) -- both call this, never innerHTML directly. Content
+// here isn't only ever this module's own output: report field values / Interpretation strings are
+// plain persisted strings a hospital's staff (or, if EnterPathologyResultHandler/
+// SaveOrderReportFieldsHandler's requests were ever crafted directly against the API rather than
+// through this UI) could have set to arbitrary HTML, and that string gets rendered back into a live
+// contentEditable for every subsequent user who opens the same order. Restricted to exactly the
+// tags/attributes richText.ts itself ever produces -- no img/a/svg/script, no event-handler
+// attributes, no javascript: URLs -- so nothing this app didn't author can execute.
+export function sanitizeHtmlOutput(html: string): string {
+    return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'span', 'div', 'ul', 'ol', 'li', 'br', 'font'],
+        ALLOWED_ATTR: ['style', 'color'],
+    });
 }
 
 // A plain string (pre-existing report values authored before this feature, or a keyword typed but

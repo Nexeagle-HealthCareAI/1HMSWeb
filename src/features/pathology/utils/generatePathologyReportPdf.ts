@@ -2,7 +2,7 @@ import { PDFDocument, PDFFont, PDFPage, PDFEmbeddedPage, StandardFonts, rgb, RGB
 import { PathologyResultFlag } from './resultFlagCalculator';
 import { generateDefaultLetterheadTemplate, DefaultLetterheadHospitalInfo } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
 import { PathologyLetterheadMode, pathologyService } from '../services/pathologyService';
-import { htmlToBlocks, type RichFontFamily, type StyledRun, type StyledBlock, type BlockAlign } from './richText';
+import { htmlToBlocks, sanitizeHtmlOutput, type RichFontFamily, type StyledRun, type StyledBlock, type BlockAlign } from './richText';
 
 const MM_TO_PT = 72 / 25.4;
 const mmToPt = (value: number) => value * MM_TO_PT;
@@ -78,7 +78,10 @@ function hexToRgb(hex: string): RGB | null {
 function valueToBlocks(value: string): StyledBlock[] {
   if (typeof document === 'undefined') return value ? [{ runs: [{ text: value }] }] : [];
   const div = document.createElement('div');
-  div.innerHTML = value;
+  // Same untrusted-persisted-content risk as RichTextField's mount effect -- an <img onerror=...>
+  // parsed via innerHTML can fire even on a detached element in evergreen browsers, so this
+  // element never being attached to the document doesn't make it a safe sink on its own.
+  div.innerHTML = sanitizeHtmlOutput(value);
   return htmlToBlocks(div);
 }
 
