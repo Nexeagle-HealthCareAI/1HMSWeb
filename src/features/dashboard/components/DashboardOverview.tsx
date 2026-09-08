@@ -23,7 +23,7 @@ import {
 import {
   Calendar,
   Users,
-  DollarSign,
+  IndianRupee,
   Star,
   TrendingUp,
   TrendingDown,
@@ -83,7 +83,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         )}
         {renderKPICard(
           t('dashboardOverview.kpi.monthlyRevenue'),
-          <DollarSign className="h-6 w-6 text-primary" />,
+          <IndianRupee className="h-6 w-6 text-primary" />,
           kpiData.monthlyRevenue,
           true
         )}

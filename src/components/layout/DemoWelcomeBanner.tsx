@@ -55,7 +55,7 @@ export const DemoWelcomeBanner: React.FC = () => {
           <Sparkles className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-bold text-gray-900 dark:text-white">Welcome to your 1HMS demo!</h3>
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">Welcome to your 1HMS Flow demo!</h3>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             This is a live, fully working sandbox — nothing you do here affects a real hospital. A few places worth a look:
           </p>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert, AlertTriangle, CircleDashed, ScanLine } from 'lucide-react';
+import { Loader2, Package2, PackagePlus, ArrowLeftRight, ShieldAlert, AlertTriangle, CircleDashed, ScanLine, Send } from 'lucide-react';
 import { storeService, type StoreItem } from '@/features/hospital/services/storeService';
 import { inventoryApi, type StockOverviewRow, type ExpiryAlertRow, type ReorderAlertRow } from '../services/inventoryApi';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UseStockPopover, type BoardPatientOption } from './UseStockPopover';
 import { ReceiveStockDialog } from './ReceiveStockDialog';
 import { TransferStockDialog } from './TransferStockDialog';
+import { RequestFromPharmacyDialog } from './RequestFromPharmacyDialog';
 
 export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: BoardPatientOption[] }> = ({ boardType, patients }) => {
     const { toast } = useToast();
@@ -19,6 +20,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
     const [searchTerm, setSearchTerm] = useState('');
     const [receiveOpen, setReceiveOpen] = useState(false);
     const [transferOpen, setTransferOpen] = useState(false);
+    const [requestOpen, setRequestOpen] = useState(false);
 
     const load = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -105,6 +107,14 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                             >
                                 <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
                             </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setRequestOpen(true)}
+                                className="h-10 rounded-xl border-slate-205 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 active:scale-[0.98] transition-all"
+                            >
+                                <Send className="h-3.5 w-3.5 mr-1.5" /> Request from Pharmacy
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -140,7 +150,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                             <div className="flex items-center gap-1.5">
                                                 <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-200">{row.itemName}</h3>
                                                 {reorderAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
-                                                    <span className="relative flex h-2 w-2">
+                                                    <span className="relative flex h-2 w-2" title="Low stock hospital-wide (this store may still have plenty)">
                                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                                     </span>
@@ -185,7 +195,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
                                             <div className="flex items-center gap-2">
                                                 <span>{row.itemName}</span>
                                                 {reorderAlerts.some(a => a.inventoryItemId === row.inventoryItemId) && (
-                                                    <span className="relative flex h-2 w-2" title="Low Stock">
+                                                    <span className="relative flex h-2 w-2" title="Low stock hospital-wide (this store may still have plenty)">
                                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                                     </span>
@@ -214,6 +224,7 @@ export const BoardInventoryPanel: React.FC<{ boardType: string; patients?: Board
 
             <ReceiveStockDialog open={receiveOpen} onOpenChange={setReceiveOpen} boardStores={stores} onSuccess={() => load(true)} />
             <TransferStockDialog open={transferOpen} onOpenChange={setTransferOpen} boardStores={stores} stockByStore={stockRows} onSuccess={() => load(true)} />
+            <RequestFromPharmacyDialog open={requestOpen} onOpenChange={setRequestOpen} boardStores={stores} onSuccess={() => load(true)} />
         </div>
     );
 };

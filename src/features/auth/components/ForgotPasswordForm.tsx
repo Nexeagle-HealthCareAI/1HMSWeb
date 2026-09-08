@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useId, useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,9 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   const [forgotStep, setForgotStep] = useState(1);
   const [forgotOtpTimer, setForgotOtpTimer] = useState(0);
   const [passwordStrength, setPasswordStrength] = useState<{ isValid: boolean; strength: 'weak' | 'medium' | 'strong'; errors: string[] }>({ isValid: false, strength: 'weak', errors: [] });
+  // See PasswordLoginForm.tsx's useId() comment - LoginLayout renders its children twice.
+  const newPasswordFieldId = useId();
+  const confirmPasswordFieldId = useId();
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -246,13 +249,13 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
 
       {/* New Password */}
       <div className="space-y-2">
-        <Label htmlFor="newPassword" className="text-sm font-medium">
+        <Label htmlFor={newPasswordFieldId} className="text-sm font-medium">
           New Password
         </Label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            id="newPassword"
+            id={newPasswordFieldId}
             type={showPassword ? 'text' : 'password'}
             value={newPassword}
             onChange={(e) => {
@@ -299,13 +302,13 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
 
       {/* Confirm Password */}
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword" className="text-sm font-medium">
+        <Label htmlFor={confirmPasswordFieldId} className="text-sm font-medium">
           Confirm New Password
         </Label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            id="confirmPassword"
+            id={confirmPasswordFieldId}
             type={showConfirmPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => {

@@ -47,6 +47,8 @@ export interface PublicDirectoryDoctorTile {
     opdConsultFee?: number | null;
     ipdVisitFee?: number | null;
     emergencyFee?: number | null;
+    // OPD_CONSULT only, same round-trip-unchanged reasoning as above.
+    freeFollowUpDays: number;
     // OPD discount — same fields CMS's Doctor Dekho marketing editor sets. Applies to online
     // bookings from Doctor Dekho (NexEagleWebsite) only; has no effect on easyHMSWeb's own
     // in-hospital appointment or billing flows.

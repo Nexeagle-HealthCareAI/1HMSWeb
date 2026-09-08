@@ -8,6 +8,9 @@ import { useAuthStore } from '@/store/authStore';
 import { prescriptionFieldConfigApi } from '@/features/doctor/services/prescriptionFieldConfigApi';
 import { usePrescriptionLayoutSettings } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
+import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 
 export interface MarginConfig {
   top: number;
@@ -194,7 +197,7 @@ type A4CompatibilityResult = {
   originalPageSizeMm?: { width: number; height: number };
 };
 
-export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospitalId?: string) => {
+export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospitalId?: string, overrideDoctorName?: string) => {
   const { t } = useTranslation();
   const { settings, update } = usePrescriptionStore();
   const { toast } = useToast();
@@ -219,6 +222,10 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
 
   const [layoutSaveSuccessMessage, setLayoutSaveSuccessMessage] = useState('Layout settings saved successfully.');
   const [validUpto, setValidUpto] = useState<number>(0);
+  // Explicit "use the system-generated default letterhead" choice, distinct from just not having
+  // uploaded anything yet — kept as its own persisted flag so switching back to an uploaded
+  // template doesn't require re-uploading it.
+  const [useSystemDefault, setUseSystemDefault] = useState<boolean>(false);
   const lastServerTemplateUriRef = useRef<string | null>(null);
   const lastAppliedLayoutSettingsRef = useRef<string | null>(null);
 
@@ -269,6 +276,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
 
       textColour: layoutSettings.textColour ?? null,
       validUpto: layoutSettings.validUpto ?? null,
+      useSystemDefaultLetterhead: layoutSettings.useSystemDefaultLetterhead ?? false,
     })
     : null;
 
@@ -303,6 +311,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
       color: resolvedColor,
     });
     setValidUpto(resolvedValidUpto);
+    setUseSystemDefault(layoutSettings.useSystemDefaultLetterhead ?? false);
   }, [layoutSettings, layoutSettingsSignature, typography, updateMargins, setOverflowStrategy, updateTypography]);
 
 
@@ -606,9 +615,55 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
     }
   }, [ensureA4Compatibility, layoutMargins, previewUrl, refetchLayoutSettings, revokePreviewUrl, toast, uploadTemplateToServer]);
 
-  const generatePreview = useCallback(async () => {
+  // Returns the freshly generated blob URL (or null on failure) so callers that need to act on it
+  // immediately - e.g. opening it in a new tab - don't read a stale previewUrl closure captured
+  // before this render's state update lands.
+  const generatePreview = useCallback(async (): Promise<string | null> => {
     setIsGeneratingPreview(true);
     try {
+      // System default is a real generated letterhead, not the mock preview drawn below — show
+      // the actual thing so "Preview" is trustworthy for the choice just made, not a generic mock.
+      if (useSystemDefault) {
+        const [hospital, doctorProfile] = await Promise.all([
+          hospitalId ? hospitalApi.getHospitalById(hospitalId).catch(() => null) : Promise.resolve(null),
+          doctorId ? doctorApi.getDoctorProfile(doctorId).catch(() => null) : Promise.resolve(null),
+        ]);
+        const defaultFile = await generateDefaultLetterheadTemplate({
+          layout: { margins: layoutMargins, headerHeight: layoutMargins.top, footerHeight: layoutMargins.bottom, overflowStrategy },
+          hospital: hospital && {
+            name: hospital.name,
+            location: hospital.location,
+            city: hospital.city,
+            state: hospital.state,
+            pincode: hospital.pincode,
+            contact: hospital.contact,
+            alternateContact: hospital.alternateContact,
+            email: hospital.email,
+            website: hospital.website,
+            registrationNumber: hospital.registrationNumber,
+            nabhNumber: hospital.nabhNumber,
+          },
+          doctor: {
+            name: overrideDoctorName ?? null,
+            qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
+            specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+            department: doctorProfile?.primaryDepartmentName ?? null,
+            registration: doctorProfile?.licenseNumber ?? null,
+            medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+            registrationYear: doctorProfile?.registrationYear ?? null,
+            experienceYears: doctorProfile?.experienceYears ?? null,
+          },
+        });
+        const nextUrl = URL.createObjectURL(defaultFile);
+        revokePreviewUrl(previewUrl);
+        setPreviewUrl(nextUrl);
+        toast({
+          title: t('prescriptionDesigner.messages.previewGenerated'),
+          description: t('prescriptionDesigner.messages.previewGeneratedDesc'),
+        });
+        return nextUrl;
+      }
+
       const doc = new jsPDF({
         orientation,
         unit: 'mm',
@@ -619,8 +674,9 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
       doc.setFont(jsPdfFontMap[typography.family] ?? 'helvetica', fontStyle);
       doc.setFontSize(typography.size);
 
-      // Add watermark if no template is uploaded
-      if (!templateFile && !serverTemplateUri) {
+      // Add watermark if no template is uploaded — not shown when the system default was
+      // deliberately chosen, since that's an intentional configuration, not an omission.
+      if (!templateFile && !serverTemplateUri && !useSystemDefault) {
         doc.setTextColor(230, 230, 230); // Very light but visible gray
         doc.setFontSize(50);
         // Draw watermark in background
@@ -692,6 +748,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
         title: t('prescriptionDesigner.messages.previewGenerated'),
         description: t('prescriptionDesigner.messages.previewGeneratedDesc'),
       });
+      return nextUrl;
     } catch (error) {
       console.error('Failed to generate preview', error);
       toast({
@@ -699,10 +756,11 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
         description: t('prescriptionDesigner.errors.previewFailedDesc'),
         variant: 'destructive',
       });
+      return null;
     } finally {
       setIsGeneratingPreview(false);
     }
-  }, [layoutMargins.left, layoutMargins.top, orientation, previewUrl, revokePreviewUrl, toast, typography.family, typography.size, typography.weight]);
+  }, [layoutMargins, orientation, previewUrl, revokePreviewUrl, toast, typography.family, typography.size, typography.weight, useSystemDefault, hospitalId, doctorId, overrideDoctorName, overflowStrategy]);
 
   const openPreviewInNewTab = useCallback(() => {
     if (!previewUrl) return;
@@ -735,6 +793,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
 
         textColour: typography.color,
         validUpto,
+        useSystemDefaultLetterhead: useSystemDefault,
         loggedInUserId: userId,
       });
 
@@ -757,7 +816,7 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
     } finally {
       setIsSavingLayout(false);
     }
-  }, [doctorId, hospitalId, layoutMargins.bottom, layoutMargins.left, layoutMargins.right, layoutMargins.top, overflowStrategy, refetchLayoutSettings, toast, typography.color, typography.family, typography.size, typography.weight, validUpto, userId]);
+  }, [doctorId, hospitalId, layoutMargins.bottom, layoutMargins.left, layoutMargins.right, layoutMargins.top, overflowStrategy, refetchLayoutSettings, toast, typography.color, typography.family, typography.size, typography.weight, validUpto, useSystemDefault, userId]);
 
   // Auto-generate preview if doctor is selected but has no template
   useEffect(() => {
@@ -806,6 +865,8 @@ export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospi
     isSavingLayout,
     validUpto,
     setValidUpto,
+    useSystemDefault,
+    setUseSystemDefault,
     isLoadingLayoutSettings,
   };
 };

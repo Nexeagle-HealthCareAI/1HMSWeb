@@ -181,11 +181,17 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                             <p className="text-sm text-slate-400">No available bags match this search.</p>
                         ) : (
                             <div className="space-y-2">
-                                {pool.map(b => (
-                                    <div key={b.bloodBagId} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 rounded-lg border border-slate-100">
+                                {pool.map(b => {
+                                    // The pool query already excludes already-expired bags -- this is
+                                    // only an early warning so staff prefer the soonest-expiring unit
+                                    // (list is already sorted by expiry) rather than a safety gate.
+                                    const hoursToExpiry = (new Date(b.expiresAt).getTime() - Date.now()) / 3_600_000;
+                                    const nearExpiry = hoursToExpiry <= 72;
+                                    return (
+                                    <div key={b.bloodBagId} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 rounded-lg border ${nearExpiry ? 'border-amber-300 bg-amber-50' : 'border-slate-100'}`}>
                                         <div className="text-sm">
                                             <span className="font-bold text-slate-800">{b.component} · {groupLabel(b.bloodGroup)}</span>
-                                            <span className="text-slate-500"> · {b.bagNumber} · {b.volumeMl}ml · expires {formatIstDateTime(b.expiresAt)}</span>
+                                            <span className={nearExpiry ? 'text-amber-700 font-semibold' : 'text-slate-500'}> · {b.bagNumber} · {b.volumeMl}ml · expires {formatIstDateTime(b.expiresAt)}{nearExpiry ? ' (expiring soon)' : ''}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             <Button size="sm" variant="outline" className="h-9 sm:h-7 text-[11px] w-full sm:w-auto" disabled={reservingBagId === b.bloodBagId || isSubscriptionReadOnly}
@@ -194,7 +200,8 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                             </Button>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

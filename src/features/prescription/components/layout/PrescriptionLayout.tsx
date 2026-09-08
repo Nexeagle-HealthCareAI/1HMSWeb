@@ -41,6 +41,8 @@ export const PrescriptionLayout = ({ refreshToken }: PrescriptionLayoutProps) =>
             onTemplateUpload={designer.handleTemplateUpload}
             typography={designer.typography}
             onTypographyChange={designer.updateTypography}
+            useSystemDefault={designer.useSystemDefault}
+            onUseSystemDefaultChange={designer.setUseSystemDefault}
             onSaveLayout={designer.saveLayoutSettings}
             onPreview={designer.generatePreview}
             isSavingLayout={designer.isSavingLayout}

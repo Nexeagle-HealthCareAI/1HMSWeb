@@ -5,7 +5,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, UserPlus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/authStore';
 import { nursingStationApi, type HospitalNurseItem, type PatientNurseAssignmentItem } from '../services/nursingStationApi';
+import { shiftApi, type ShiftItem } from '../services/shiftApi';
 
 interface Props {
     admissionId: string;
@@ -16,21 +18,32 @@ export const AssignPatientNursePopover: React.FC<Props> = ({ admissionId, onChan
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const hospitalId = useAuthStore(state => state.hospitalId);
     const [nurses, setNurses] = useState<HospitalNurseItem[]>([]);
     const [assignments, setAssignments] = useState<PatientNurseAssignmentItem[]>([]);
+    const [shifts, setShifts] = useState<ShiftItem[]>([]);
     const [nurseUserId, setNurseUserId] = useState('');
-    const [shiftCode, setShiftCode] = useState('MORNING');
+    const [shiftCode, setShiftCode] = useState('');
     const [busy, setBusy] = useState(false);
     const [releasingId, setReleasingId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open) return;
         setLoading(true);
-        Promise.all([nursingStationApi.listNurses(), nursingStationApi.getPatientAssignments(admissionId)])
-            .then(([n, a]) => { setNurses(n); setAssignments(a); })
+        Promise.all([
+            nursingStationApi.listNurses(), 
+            nursingStationApi.getPatientAssignments(admissionId),
+            shiftApi.getShifts(hospitalId)
+        ])
+            .then(([n, a, s]) => { 
+                setNurses(n); 
+                setAssignments(a); 
+                setShifts(s);
+                if (s.length > 0 && !shiftCode) setShiftCode(s[0].shiftCode);
+            })
             .catch(() => toast({ title: 'Failed to load nurses', variant: 'destructive' }))
             .finally(() => setLoading(false));
-    }, [open, admissionId, toast]);
+    }, [open, admissionId, toast, hospitalId]);
 
     const assign = async () => {
         if (!nurseUserId) return;
@@ -112,9 +125,9 @@ export const AssignPatientNursePopover: React.FC<Props> = ({ admissionId, onChan
                         <Select value={shiftCode} onValueChange={setShiftCode}>
                             <SelectTrigger className="h-9 rounded-lg text-xs"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="MORNING">Morning</SelectItem>
-                                <SelectItem value="EVENING">Evening</SelectItem>
-                                <SelectItem value="NIGHT">Night</SelectItem>
+                                {shifts.sort((a, b) => a.sortOrder - b.sortOrder).map(s => (
+                                    <SelectItem key={s.shiftCode} value={s.shiftCode}>{s.label}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>

@@ -133,7 +133,7 @@ export const procurementApi = {
 
     createGoodsReceiptNote: (input: {
         purchaseOrderId: string; receivedStoreId: string; invoiceNumber?: string; invoiceDate?: string; invoiceAmount?: number; notes?: string;
-        lines: { purchaseOrderLineId: string; inventoryItemId: string; batchNumber: string; manufactureDate?: string; expiryDate?: string; qty: number; rate: number }[];
+        lines: { purchaseOrderLineId: string; inventoryItemId: string; batchNumber: string; manufactureDate?: string; expiryDate?: string; qty: number; rate: number; freeQty?: number }[];
     }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/grn', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 };

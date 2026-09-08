@@ -69,6 +69,7 @@ export interface PrescriptionLayoutSettings {
   textColour?: string | null;
   validUpto?: number | null;
   uri?: string | null;
+  useSystemDefaultLetterhead?: boolean;
   createdAtUtc?: string | null;
   updatedAtUtc?: string | null;
 }
@@ -105,6 +106,7 @@ export interface UpdatePrescriptionLayoutSettingsRequest {
   fontWeight: string;
   textColour: string;
   validUpto: number;
+  useSystemDefaultLetterhead?: boolean;
   loggedInUserId: string;
 }
 

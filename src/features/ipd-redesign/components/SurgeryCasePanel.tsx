@@ -323,7 +323,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
         if (!detail || !pickedSetId) return;
         setIssueBusy(true);
         try {
-            await cssdApi.recordMovement(pickedSetId, 'ISSUE_TO_OT', { surgeryCaseId: detail.surgeryCaseId, location: 'Operation Theatre' });
+            await cssdApi.recordMovement(pickedSetId, 'ISSUE_TO_OT', { surgeryCaseId: detail.surgeryCaseId, location: `OT Case ${detail.surgeryCaseId}` });
             toast({ title: 'Instrument set issued to OT.' });
             setPickedSetId('');
             cssdApi.getSets('STERILE').then(setInstrumentSets).catch(() => {});
@@ -342,6 +342,24 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
         try {
             await surgeryCaseApi.updateStatus(detail.surgeryCaseId, next);
             toast({ title: `Case moved to ${next.replace('_', ' ')}.` });
+            
+            // Auto-return instrument sets when case completes
+            if (next === 'POST_OP' || next === 'COMPLETED') {
+                try {
+                    const allSets = await cssdApi.getSets();
+                    const setsToReturn = allSets.filter(s => 
+                        (s.currentStatus === 'ISSUED' || s.currentStatus === 'IN_USE') && 
+                        s.currentLocation === `OT Case ${detail.surgeryCaseId}`
+                    );
+                    if (setsToReturn.length > 0) {
+                        await Promise.all(setsToReturn.map(s => cssdApi.recordMovement(s.instrumentSetId, 'RETURN', { notes: 'Auto-returned on case completion' })));
+                        toast({ title: `${setsToReturn.length} instrument set(s) auto-returned to CSSD.` });
+                    }
+                } catch (e) {
+                    console.error('Failed to auto-return sets', e);
+                }
+            }
+            
             loadDetail();
             loadCases();
         } catch (err) {

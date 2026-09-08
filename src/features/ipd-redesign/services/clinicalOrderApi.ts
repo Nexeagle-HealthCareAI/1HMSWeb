@@ -38,6 +38,11 @@ export interface ClinicalOrderLineItem {
     chargeEventId?: string | null;
     chargedAmount?: number | null;
     chargeVoided: boolean;
+    // Set only for a LAB line whose ChargeId matched a cataloged pathology test at order time.
+    // DRAFT / TECH_SIGNED / APPROVED, mirroring PathologyReport.Status.
+    linkedPathologyReportStatus?: string | null;
+    linkedPathologyReportId?: string | null;
+    linkedPathologyReportNo?: string | null;
 }
 
 export interface ClinicalOrderItem {

@@ -27,26 +27,26 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
   const { t } = useTranslation();
   const defaultLoadingMessage = t('loginLayout.signingIn');
 
-  // Helper function to render company name with "1HMS" highlighted
+  // Helper function to render company name with "1HMS" (and anything after it, e.g. "Flow") highlighted
   const renderCompanyName = (companyName: string, textColorClass: string = '', fontSize: string = '') => {
     const parts = companyName.split(' 1HMS');
     if (parts.length === 2) {
       return (
         <span className={`${textColorClass} ${fontSize}`}>
-          {parts[0]} <span className="text-healthcare-primary">1HMS</span>
+          {parts[0]} <span className="text-healthcare-primary">1HMS{parts[1]}</span>
         </span>
       );
     }
     return <span className={`${textColorClass} ${fontSize}`}>{companyName}</span>;
   };
 
-  // Helper function to render title with "1HMS" highlighted
+  // Helper function to render title with "1HMS" (and anything after it, e.g. "Flow") highlighted
   const renderTitle = (titleText: string) => {
     const parts = titleText.split(' 1HMS');
     if (parts.length === 2) {
       return (
         <>
-          {parts[0]} <span className="text-healthcare-primary">1HMS</span>
+          {parts[0]} <span className="text-healthcare-primary">1HMS{parts[1]}</span>
         </>
       );
     }

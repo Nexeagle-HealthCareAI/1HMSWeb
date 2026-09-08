@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
     Calendar, RefreshCw, IndianRupee, TrendingDown, TrendingUp, Wallet,
-    Sparkles, AlertTriangle, ArrowUpRight, ArrowDownRight,
+    Sparkles, AlertTriangle, ArrowUpRight, ArrowDownRight, Filter,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,9 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'
 
 const CATEGORY_LABEL = (c: string) => c.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
 
+const DEPARTMENT_FILTERS = ['ALL', 'OPD', 'IPD', 'LAB', 'PHARMACY'] as const;
+type DepartmentFilter = typeof DEPARTMENT_FILTERS[number];
+
 const todayIso = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -40,6 +43,7 @@ const SummaryPanel: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [deptFilter, setDeptFilter] = useState<DepartmentFilter>('ALL');
 
     const load = useCallback(async (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
@@ -71,6 +75,19 @@ const SummaryPanel: React.FC = () => {
         Revenue: p.revenue,
         Expense: p.expense,
     })), [data]);
+
+    // "Other" rolls up any charge BillingDepartmentClassifier couldn't place in OPD/IPD/LAB/PHARMACY
+    // (e.g. an ER visit) -- always included in the "All" view so the total reconciles to the real
+    // grand total, but it's not one of the four named filter buttons since it has no fixed identity.
+    const departmentRows = useMemo(() => {
+        const rows = data?.revenueByDepartment ?? [];
+        return deptFilter === 'ALL' ? rows : rows.filter(r => r.categoryCode === deptFilter);
+    }, [data, deptFilter]);
+
+    const departmentTotal = useMemo(
+        () => departmentRows.reduce((sum, r) => sum + r.amount, 0),
+        [departmentRows]
+    );
 
     return (
         <div className="flex flex-col gap-4 h-full">
@@ -118,6 +135,62 @@ const SummaryPanel: React.FC = () => {
                         <KpiStat label="Expense" amount={data.totalExpense} format={inr} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                         <KpiStat label="Net" amount={data.netAmount} format={inr} icon={<Wallet className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" />
                     </div>
+
+                    <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Income by category</p>
+                            <div className="flex items-center gap-1.5">
+                                <Filter className="h-3.5 w-3.5 text-slate-400" />
+                                <div className="flex gap-1 p-0.5 rounded-lg bg-slate-100">
+                                    {DEPARTMENT_FILTERS.map((f) => (
+                                        <button
+                                            key={f}
+                                            onClick={() => setDeptFilter(f)}
+                                            className={cn(
+                                                'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors',
+                                                deptFilter === f ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            )}
+                                        >
+                                            {f === 'ALL' ? 'All' : f === 'PHARMACY' ? 'Pharmacy' : f}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        {departmentRows.length === 0 ? (
+                            <EmptyState title="No income for this category" hint="Try a different filter or date range." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-slate-100">
+                                            <th className="text-left font-semibold text-slate-500 text-xs uppercase tracking-wide py-2">Category</th>
+                                            <th className="text-right font-semibold text-slate-500 text-xs uppercase tracking-wide py-2">Bills</th>
+                                            <th className="text-right font-semibold text-slate-500 text-xs uppercase tracking-wide py-2">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {departmentRows.map((r) => (
+                                            <tr key={r.categoryCode} className="border-b border-slate-50 last:border-0">
+                                                <td className="py-2.5 font-medium text-slate-700">{CATEGORY_LABEL(r.categoryCode)}</td>
+                                                <td className="py-2.5 text-right text-slate-500 tabular-nums">{r.count}</td>
+                                                <td className="py-2.5 text-right font-semibold text-slate-800 tabular-nums">{inr(r.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t-2 border-slate-200">
+                                            <td className="py-2.5 font-bold text-slate-800">Total</td>
+                                            <td className="py-2.5 text-right font-bold text-slate-800 tabular-nums">
+                                                {departmentRows.reduce((sum, r) => sum + r.count, 0)}
+                                            </td>
+                                            <td className="py-2.5 text-right font-bold text-brand-700 tabular-nums">{inr(departmentTotal)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
@@ -193,11 +266,21 @@ const SummaryPanel: React.FC = () => {
 
 // ─── Nexeagle AI Predictive Analysis sub-tab ──────────────────────────────────
 
+const HORIZONS = ['TOMORROW', 'WEEK', 'MONTH'] as const;
+type Horizon = typeof HORIZONS[number];
+
+const HORIZON_META: Record<Horizon, { label: string; historyDays: number; projectedDays: number; vsLabel: string }> = {
+    TOMORROW: { label: 'Tomorrow', historyDays: 7, projectedDays: 1, vsLabel: 'vs last 7-day daily average' },
+    WEEK: { label: 'Next 7 days', historyDays: 14, projectedDays: 7, vsLabel: 'vs last 7 days' },
+    MONTH: { label: 'Next 30 days', historyDays: 30, projectedDays: 30, vsLabel: 'vs prior 30 days' },
+};
+
 const AiPredictivePanel: React.FC = () => {
     const [data, setData] = useState<BillingAiInsightsResponse['data'] | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [horizon, setHorizon] = useState<Horizon>('MONTH');
 
     const load = useCallback(async (silent = false) => {
         if (silent) setRefreshing(true); else setLoading(true);
@@ -218,26 +301,46 @@ const AiPredictivePanel: React.FC = () => {
     // fetch once per visit to this tab rather than on every re-render.
     useEffect(() => { load(); }, [load]);
 
+    const meta = HORIZON_META[horizon];
+
     const chartData = useMemo(() => {
-        const hist = (data?.historicalTrend ?? []).slice(-30).map(p => ({
+        const hist = (data?.historicalTrend ?? []).slice(-meta.historyDays).map(p => ({
             date: format(new Date(p.date), 'dd MMM'),
             Actual: p.revenue,
             Projected: null as number | null,
         }));
-        const proj = (data?.projectedTrend ?? []).map(p => ({
+        const proj = (data?.projectedTrend ?? []).slice(0, meta.projectedDays).map(p => ({
             date: format(new Date(p.date), 'dd MMM'),
             Actual: null as number | null,
             Projected: p.revenue,
         }));
         return [...hist, ...proj];
-    }, [data]);
+    }, [data, meta]);
+
+    // The forecast model is a flat trend-continuation daily rate (see BillingTrendCalculator.cs),
+    // so "gap vs recent" for Tomorrow/Week compares against that same daily rate's actual baseline
+    // (avg7DayRevenue) rather than a server-computed percent -- Month already has one (month-over-month).
+    const horizonAmounts = useMemo(() => {
+        if (!data) return { revenue: 0, expense: 0, gapPercent: 0 };
+        if (horizon === 'TOMORROW') {
+            const baseline = data.avg7DayRevenue;
+            const gapPercent = baseline === 0 ? 0 : Math.round(((data.predictedTomorrowRevenue - baseline) / baseline) * 1000) / 10;
+            return { revenue: data.predictedTomorrowRevenue, expense: data.predictedTomorrowExpense, gapPercent };
+        }
+        if (horizon === 'WEEK') {
+            const baseline = data.avg7DayRevenue * 7;
+            const gapPercent = baseline === 0 ? 0 : Math.round(((data.predictedNext7DayRevenue - baseline) / baseline) * 1000) / 10;
+            return { revenue: data.predictedNext7DayRevenue, expense: data.predictedNext7DayExpense, gapPercent };
+        }
+        return { revenue: data.predictedNext30DayRevenue, expense: data.predictedNext30DayExpense, gapPercent: data.monthOverMonthRevenueChangePercent };
+    }, [data, horizon]);
 
     if (loading) return <LoadingState rows={5} />;
     if (error) return <ErrorState message={error} onRetry={() => load(true)} />;
     if (!data) return <EmptyState title="No AI insights available yet" hint="Bill a few visits first so there's history to learn from." />;
 
     return (
-        <div className="flex-1 overflow-auto flex flex-col gap-4">
+        <div className="h-full overflow-auto flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-600">
                     <Sparkles className="h-4 w-4" /> Nexeagle AI Predictive Analysis
@@ -251,35 +354,54 @@ const AiPredictivePanel: React.FC = () => {
                 <p className="text-sm text-slate-700">{data.outlook}</p>
             </Card>
 
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Revenue forecast</p>
+                <div className="flex gap-1 p-1 rounded-xl bg-slate-100">
+                    {HORIZONS.map((h) => (
+                        <button
+                            key={h}
+                            onClick={() => setHorizon(h)}
+                            className={cn(
+                                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                                horizon === h ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                            )}
+                        >
+                            {HORIZON_META[h].label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 <KpiStat
-                    label="Predicted 30-day revenue"
-                    amount={data.predictedNext30DayRevenue}
+                    label={`${meta.label} revenue`}
+                    amount={horizonAmounts.revenue}
                     format={inr}
-                    hint={`${data.monthOverMonthRevenueChangePercent >= 0 ? '+' : ''}${data.monthOverMonthRevenueChangePercent}% vs prior 30 days`}
+                    hint={`${horizonAmounts.gapPercent >= 0 ? '+' : ''}${horizonAmounts.gapPercent}% ${meta.vsLabel}`}
                     icon={<TrendingUp className="h-5 w-5 text-brand-600" />}
                     tone="from-brand-50 to-brand-100/50 text-brand-900"
                 />
                 <KpiStat
-                    label="Predicted 30-day expense"
-                    amount={data.predictedNext30DayExpense}
+                    label={`${meta.label} expense`}
+                    amount={horizonAmounts.expense}
                     format={inr}
-                    hint={`${data.monthOverMonthExpenseChangePercent >= 0 ? '+' : ''}${data.monthOverMonthExpenseChangePercent}% vs prior 30 days`}
                     icon={<TrendingDown className="h-5 w-5 text-rose-600" />}
                     tone="from-rose-50 to-orange-100/50 text-rose-900"
                 />
                 <KpiStat
                     label="Projected net"
-                    amount={data.predictedNext30DayNet}
+                    amount={horizonAmounts.revenue - horizonAmounts.expense}
                     format={inr}
-                    hint="Next 30 days"
+                    hint={meta.label}
                     icon={<Wallet className="h-5 w-5 text-emerald-600" />}
                     tone="from-emerald-50 to-teal-100/50 text-emerald-900"
                 />
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl p-4 bg-white shadow-lg shadow-brand-500/5">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Revenue: last 30 days + next 30 days projected</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                    Revenue: last {meta.historyDays} days + {meta.label.toLowerCase()} projected
+                </p>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData}>

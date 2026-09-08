@@ -4,6 +4,9 @@ import { jsPDF } from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSettingsApi, type DischargeSettings } from '../services/dischargeSettingsApi';
+import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 
 // Mirrors MarginConfig/TemplateMetadata/TypographySettings from usePrescriptionDesigner.ts.
 export interface MarginConfig {
@@ -79,7 +82,7 @@ const resolvePositiveNumber = (value: number | null | undefined, fallback: numbe
  * simplified: no shared zustand store (this is the only Phase 1 consumer of this state) and no
  * i18n (plain English strings — Discharge doesn't need translated designer copy yet).
  */
-export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospitalId?: string) => {
+export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospitalId?: string, overrideDoctorName?: string) => {
     const { toast } = useToast();
     const { getDoctorId, getHospitalId } = useAuthStore();
 
@@ -109,6 +112,10 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
     const [templateUploadSuccessMessage, setTemplateUploadSuccessMessage] = useState('Template uploaded successfully.');
     const [layoutSaveSuccessOpen, setLayoutSaveSuccessOpen] = useState(false);
     const [layoutSaveSuccessMessage, setLayoutSaveSuccessMessage] = useState('Layout settings saved successfully.');
+    // Mirrors usePrescriptionDesigner.ts's useSystemDefault — a deliberate "use the
+    // system-generated default letterhead" choice, kept separate from the uploaded URI so
+    // switching back to it later doesn't require re-uploading.
+    const [useSystemDefault, setUseSystemDefault] = useState(false);
 
     const hydratedForRef = useRef<string | null>(null);
 
@@ -144,7 +151,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
             weight: (serverSettings.fontWeight as TypographySettings['weight']) ?? defaultTypography.weight,
             color: serverSettings.textColour ?? defaultTypography.color,
         });
-
+        setUseSystemDefault(serverSettings.useSystemDefaultLetterhead ?? false);
     }, [serverSettings, doctorId, hospitalId]);
 
     // Fetch the uploaded template PDF fresh whenever its URL changes (mirrors
@@ -254,15 +261,57 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
         }
     }, [doctorId, hospitalId, ensureA4Compatibility, margins, revokePreviewUrl, refetchSettings, toast]);
 
-    const generatePreview = useCallback(async () => {
+    // Returns the freshly generated blob URL (or null on failure) so callers that need to act on it
+    // immediately - e.g. opening it in a new tab - don't read a stale previewUrl closure captured
+    // before this render's state update lands.
+    const generatePreview = useCallback(async (): Promise<string | null> => {
         setIsGeneratingPreview(true);
         try {
+            // System default is a real generated letterhead, not the mock preview below — show the
+            // actual thing so "Preview" is trustworthy for the choice just made.
+            if (useSystemDefault) {
+                const [hospital, doctorProfile] = await Promise.all([
+                    hospitalId ? hospitalApi.getHospitalById(hospitalId).catch(() => null) : Promise.resolve(null),
+                    doctorId ? doctorApi.getDoctorProfile(doctorId).catch(() => null) : Promise.resolve(null),
+                ]);
+                const defaultFile = await generateDefaultLetterheadTemplate({
+                    layout: { margins, headerHeight: 0, footerHeight: 0, overflowStrategy: 'reuse-template' },
+                    hospital: hospital && {
+                        name: hospital.name,
+                        location: hospital.location,
+                        city: hospital.city,
+                        state: hospital.state,
+                        pincode: hospital.pincode,
+                        contact: hospital.contact,
+                        alternateContact: hospital.alternateContact,
+                        email: hospital.email,
+                        website: hospital.website,
+                        registrationNumber: hospital.registrationNumber,
+                        nabhNumber: hospital.nabhNumber,
+                    },
+                    doctor: {
+                        name: overrideDoctorName ?? null,
+                        qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
+                        specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+                        department: doctorProfile?.primaryDepartmentName ?? null,
+                        registration: doctorProfile?.licenseNumber ?? null,
+                        medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+                        registrationYear: doctorProfile?.registrationYear ?? null,
+                        experienceYears: doctorProfile?.experienceYears ?? null,
+                    },
+                });
+                const nextUrl = URL.createObjectURL(defaultFile);
+                revokePreviewUrl(previewUrl);
+                setPreviewUrl(nextUrl);
+                return nextUrl;
+            }
+
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const fontStyle = typography.weight === 'regular' ? 'normal' : 'bold';
             doc.setFont(jsPdfFontMap[typography.family] ?? 'helvetica', fontStyle);
             doc.setFontSize(typography.size);
 
-            if (!templateFile) {
+            if (!templateFile && !useSystemDefault) {
                 doc.setTextColor(230, 230, 230);
                 doc.setFontSize(50);
                 doc.text('SAMPLE', 105, 140, { align: 'center', angle: 315 });
@@ -294,13 +343,15 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
             const nextUrl = URL.createObjectURL(blob);
             revokePreviewUrl(previewUrl);
             setPreviewUrl(nextUrl);
+            return nextUrl;
         } catch (error) {
             console.error('Failed to generate discharge letterhead preview', error);
             toast({ title: 'Could not generate preview', variant: 'destructive' });
+            return null;
         } finally {
             setIsGeneratingPreview(false);
         }
-    }, [margins, previewUrl, revokePreviewUrl, toast, typography]);
+    }, [margins, previewUrl, revokePreviewUrl, toast, typography, useSystemDefault, hospitalId, doctorId, overrideDoctorName]);
 
     const openPreviewInNewTab = useCallback(() => {
         if (!previewUrl) return;
@@ -329,6 +380,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
                 fontSize: typography.size,
                 fontWeight: typography.weight,
                 textColour: typography.color,
+                useSystemDefaultLetterhead: useSystemDefault,
             });
             setLayoutSaveSuccessMessage('Discharge letterhead settings saved.');
             setLayoutSaveSuccessOpen(true);
@@ -339,7 +391,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
         } finally {
             setIsSavingLayout(false);
         }
-    }, [doctorId, hospitalId, margins, overflowStrategy, typography, refetchSettings, toast]);
+    }, [doctorId, hospitalId, margins, overflowStrategy, typography, useSystemDefault, refetchSettings, toast]);
 
     return {
         layoutMargins: margins,
@@ -367,5 +419,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
         layoutSaveSuccessOpen,
         setLayoutSaveSuccessOpen,
         layoutSaveSuccessMessage,
+        useSystemDefault,
+        setUseSystemDefault,
     };
 };

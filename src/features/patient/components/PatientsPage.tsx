@@ -446,8 +446,8 @@ export const PatientsPage: React.FC = () => {
     const patients = patientList;
     return {
       total: patients.length,
-      males: patients.filter(p => p.Sex.toLowerCase() === 'male').length,
-      females: patients.filter(p => p.Sex.toLowerCase() === 'female').length,
+      males: patients.filter(p => (p.Sex ?? '').toLowerCase() === 'male').length,
+      females: patients.filter(p => (p.Sex ?? '').toLowerCase() === 'female').length,
       shared: patients.filter(p => {
         // @ts-ignore
         if (!p.Doctor) return false;
@@ -654,7 +654,7 @@ export const PatientsPage: React.FC = () => {
         // @ts-ignore
         result = result.filter(p => p.Doctor && p.Doctor.split(',').length > 1);
       } else {
-        result = result.filter(p => p.Sex.toLowerCase() === selectedGender);
+        result = result.filter(p => (p.Sex ?? '').toLowerCase() === selectedGender);
       }
     }
 
@@ -1856,7 +1856,7 @@ export const PatientsPage: React.FC = () => {
                                   </button>
                                 </div>
                                 <Badge variant="secondary" className="text-[10px]">
-                                  {patient.Age} / {patient.Sex.charAt(0)}
+                                  {patient.Age} / {patient.Sex ? patient.Sex.charAt(0) : '-'}
                                 </Badge>
                               </div>
                               <div className="grid grid-cols-1 gap-1 text-xs text-gray-600 dark:text-gray-400">

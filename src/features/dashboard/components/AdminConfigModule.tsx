@@ -13,6 +13,8 @@ import { ItemMaster } from '@/features/hospital/components/masters/ItemMaster';
 import { EquipmentMaster } from '@/features/hospital/components/masters/EquipmentMaster';
 import { VendorMaster } from '@/features/hospital/components/masters/VendorMaster';
 import { DischargeLetterheadConfig } from '@/features/ipd-redesign/components/DischargeLetterheadConfig';
+import { ReportLetterheadConfig } from '@/features/pathology/components/ReportLetterheadConfig';
+import { ConsentTemplateMaster } from '@/features/hospital/components/ConsentTemplateMaster';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
 export const AdminConfigModule = () => {
@@ -38,6 +40,12 @@ export const AdminConfigModule = () => {
             label: 'Discharge Letterhead',
             description: 'Design the discharge summary letterhead and print layout',
             icon: LogOut,
+        },
+        {
+            id: 'pathology-letterhead',
+            label: 'Pathology Report Letterhead',
+            description: 'Design the pathology lab report letterhead and print layout',
+            icon: FlaskConical,
         },
         {
             id: 'charge-master',
@@ -86,6 +94,12 @@ export const AdminConfigModule = () => {
             label: 'Vendor Master',
             description: 'Set up suppliers/distributors for procurement',
             icon: Truck,
+        },
+        {
+            id: 'consent-master',
+            label: 'Consent Templates',
+            description: 'Manage legal forms and digital consents',
+            icon: FileText,
         },
     ];
 
@@ -187,6 +201,7 @@ export const AdminConfigModule = () => {
                     {activeTab === 'billing' && <BillingPolicyConfig />}
                     {activeTab === 'prescriptions' && <PrescriptionConfig />}
                     {activeTab === 'discharge-letterhead' && <DischargeLetterheadConfig />}
+                    {activeTab === 'pathology-letterhead' && <ReportLetterheadConfig />}
                     {activeTab === 'charge-master' && <ChargeMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
                     {activeTab === 'ot-plans' && <OtPlanMaster />}
@@ -195,6 +210,7 @@ export const AdminConfigModule = () => {
                     {activeTab === 'item-master' && <ItemMaster />}
                     {activeTab === 'equipment-master' && <EquipmentMaster />}
                     {activeTab === 'vendor-master' && <VendorMaster />}
+                    {activeTab === 'consent-master' && <ConsentTemplateMaster />}
                 </SubscriptionReadOnlyOverlay>
             </main>
         </div>

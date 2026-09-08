@@ -75,6 +75,9 @@ export const PatientProfilePage: React.FC = () => {
 
   const queryPatientId = safeDecode(searchParams.get('patientId'));
   const appointmentId = safeDecode(searchParams.get('appointmentId'));
+  // Carried through from wherever this page was opened from (e.g. DocBoard's Past Visits tab) so
+  // the prescription preview shows this appointment's own date instead of falling back to today.
+  const appointmentDate = safeDecode(searchParams.get('appointmentDate'));
   const navigate = useNavigate();
   const {
     hospitalId: storedHospitalId,
@@ -267,6 +270,7 @@ export const PatientProfilePage: React.FC = () => {
       patientId,
       hospitalId,
       doctorId,
+      appointmentDate: appointmentDate ?? undefined,
     });
     setPreviewModalOpen(true);
   };

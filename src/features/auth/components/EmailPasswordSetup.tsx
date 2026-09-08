@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useId, useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,10 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
   const [passwordStrength, setPasswordStrength] = useState<{ isValid: boolean; strength: 'weak' | 'medium' | 'strong'; errors: string[] }>({ isValid: false, strength: 'weak', errors: [] });
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
   const [passwordMatchStatus, setPasswordMatchStatus] = useState<'idle' | 'matching' | 'not-matching'>('idle');
+  // See PasswordLoginForm.tsx's useId() comment - LoginLayout renders its children twice.
+  const emailFieldId = useId();
+  const passwordFieldId = useId();
+  const confirmPasswordFieldId = useId();
 
   // Password strength validation
   useEffect(() => {
@@ -157,13 +161,13 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
 
       {/* Email Input */}
       <div className="space-y-1">
-        <Label htmlFor="email" className="text-xs font-medium">
+        <Label htmlFor={emailFieldId} className="text-xs font-medium">
           Email Address
         </Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            id="email"
+            id={emailFieldId}
             type="email"
             value={email}
             onChange={(e) => handleEmailChange(e.target.value)}
@@ -195,13 +199,13 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
 
       {/* Password Input */}
       <div className="space-y-1">
-        <Label htmlFor="password" className="text-xs font-medium">
+        <Label htmlFor={passwordFieldId} className="text-xs font-medium">
           Password
         </Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            id="password"
+            id={passwordFieldId}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => handlePasswordChange(e.target.value)}
@@ -248,13 +252,13 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
 
       {/* Confirm Password Input */}
       <div className="space-y-1">
-        <Label htmlFor="confirmPassword" className="text-xs font-medium">
+        <Label htmlFor={confirmPasswordFieldId} className="text-xs font-medium">
           Confirm Password
         </Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            id="confirmPassword"
+            id={confirmPasswordFieldId}
             type={showConfirmPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => handleConfirmPasswordChange(e.target.value)}

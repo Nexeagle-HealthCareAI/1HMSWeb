@@ -29,13 +29,15 @@ import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import type { DischargeFieldConfigItem } from '../services/dischargeFieldLayoutApi';
 import { dischargeSettingsApi } from '../services/dischargeSettingsApi';
 import { DischargePreviewModal } from '@/components/shared/discharge-preview/components/DischargePreviewModal';
-import { buildBlankA4TemplateFile, type DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
+import { type DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
+import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
 import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 import { InkDischargePad } from './InkDischargePad';
 import { PenTool } from 'lucide-react';
 import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
 import { FieldTranslationTool } from '@/features/patient/components/FieldTranslationTool';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -437,18 +439,75 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     };
 
     // If this doctor+hospital has a Discharge letterhead configured (a template PDF actually
-    // uploaded, not just default settings), render through the pdf-lib template-bound renderer —
-    // same personalized field layout that drives the workspace form. Without one, allowBlank=true
-    // callers (the in-app Preview) still get a real preview drawn on a blank A4 canvas rather than
-    // a dead end; allowBlank=false callers (Download/Print) return null so they keep falling back
-    // to today's generic hospital-branded HTML print, unchanged.
+    // uploaded, not just default settings) AND UseSystemDefaultLetterhead isn't explicitly on,
+    // render through the pdf-lib template-bound renderer — same personalized field layout that
+    // drives the workspace form. Without an uploaded/usable template, allowBlank=true callers
+    // (the in-app Preview) get a system-generated default letterhead (hospital + assigned doctor
+    // identity — see prescription-preview's defaultLetterhead.ts, reused here) instead of a bare
+    // blank canvas; allowBlank=false callers (Download/Print) return null so they keep falling
+    // back to today's generic hospital-branded HTML print, unchanged — that path was already
+    // properly branded, just via a different (HTML, not pdf-lib) renderer.
     const buildLetterheadPreviewOptions = async ({ allowBlank }: { allowBlank: boolean }): Promise<DischargeTemplateBoundOptions | null> => {
         if (!hospitalId) return null;
         const settings = layoutDoctorId ? await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId) : null;
-        let templateFile = settings?.uri ? await dischargeSettingsApi.fetchTemplateFile(settings.uri) : null;
+        const margins = {
+            top: settings?.headerHeight ?? 20,
+            bottom: settings?.footerHeight ?? 20,
+            left: settings?.contentLeftMargin ?? 20,
+            right: settings?.contentRightMargin ?? 20,
+        };
+        // A deliberately-chosen system default skips the upload fetch entirely — it isn't "no
+        // letterhead configured", so no fetch-failure toast applies here either.
+        let templateFile: File | null = null;
+        if (!settings?.useSystemDefaultLetterhead && settings?.uri) {
+            templateFile = await dischargeSettingsApi.fetchTemplateFile(settings.uri);
+        }
+        // fetchTemplateFile resolves to null on any fetch failure — it never throws, it has its
+        // own internal try/catch (see dischargeSettingsApi.ts) — so a configured uri that still
+        // came back with no file can only mean the fetch itself failed, not "not configured".
+        const letterheadFetchFailed = !settings?.useSystemDefaultLetterhead && Boolean(settings?.uri) && !templateFile;
         if (!templateFile) {
             if (!allowBlank) return null;
-            templateFile = await buildBlankA4TemplateFile();
+            // 'no letterhead configured' is the normal/expected case for a doctor who hasn't
+            // uploaded one yet — only a fetch failure means THEIR OWN letterhead silently didn't
+            // apply, which is worth a visible notice instead of a silent swap to the default.
+            if (letterheadFetchFailed) {
+                toast({
+                    title: 'Could not load your letterhead',
+                    description: "We couldn't load the uploaded discharge letterhead just now, so the default layout was used instead. Your discharge summary content is unaffected — try again, or re-upload the letterhead in Discharge Settings.",
+                    variant: 'destructive',
+                });
+            }
+            const doctorProfile = layoutDoctorId ? await doctorApi.getDoctorProfile(layoutDoctorId).catch(() => null) : null;
+            templateFile = await generateDefaultLetterheadTemplate({
+                // Discharge's margins ARE the header/footer band (no separate headerHeight split
+                // the way prescriptions have) — headerHeight/footerHeight: 0 keeps the default's
+                // reserved band the same size buildDischargeTemplateBoundPreview will respect.
+                layout: { margins, headerHeight: 0, footerHeight: 0, overflowStrategy: 'reuse-template' },
+                hospital: hospitalData && {
+                    name: hospitalData.name,
+                    location: hospitalData.location,
+                    city: hospitalData.city,
+                    state: hospitalData.state,
+                    pincode: hospitalData.pincode,
+                    contact: hospitalData.contact,
+                    alternateContact: hospitalData.alternateContact,
+                    email: hospitalData.email,
+                    website: hospitalData.website,
+                    registrationNumber: hospitalData.registrationNumber,
+                    nabhNumber: hospitalData.nabhNumber,
+                },
+                doctor: {
+                    name: admission.primaryDoctorName || null,
+                    qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
+                    specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+                    department: doctorProfile?.primaryDepartmentName ?? null,
+                    registration: doctorProfile?.licenseNumber ?? null,
+                    medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+                    registrationYear: doctorProfile?.registrationYear ?? null,
+                    experienceYears: doctorProfile?.experienceYears ?? null,
+                },
+            });
         }
 
         const data = buildPrintData();
@@ -456,12 +515,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
         return {
             templateFile,
-            margins: {
-                top: settings?.headerHeight ?? 20,
-                bottom: settings?.footerHeight ?? 20,
-                left: settings?.contentLeftMargin ?? 20,
-                right: settings?.contentRightMargin ?? 20,
-            },
+            margins,
             overflowStrategy: settings?.overFlowPage === false ? 'blank' : 'reuse-template',
             typography: {
                 family: (settings?.fontFamily as 'Helvetica' | 'Times' | 'Courier' | 'Arial' | 'Georgia') ?? 'Helvetica',
@@ -1092,11 +1146,16 @@ const Field: React.FC<{ label: string; value?: string; readOnly: boolean; onChan
                 <p className="text-base text-slate-800 font-medium">{value || '—'}</p>
             </div>
         ) : (
-            <Input
-                value={value ?? ''}
-                onChange={e => onChange(e.target.value)}
-                className="h-12 text-base bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl"
-            />
+            <div className="relative">
+                <div className="absolute top-1.5 right-1.5 z-10">
+                    <FieldTranslationTool text={value ?? ''} onTranslated={onChange} />
+                </div>
+                <Input
+                    value={value ?? ''}
+                    onChange={e => onChange(e.target.value)}
+                    className="h-12 text-base bg-slate-50 border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-shadow rounded-xl pr-8"
+                />
+            </div>
         )}
     </div>
 );

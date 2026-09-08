@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore, useAppStore } from '@/store';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
+import { useDoctorAppointmentDetails } from '@/features/doctor/hooks/useDoctorAppointmentDetails';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { SubscriptionReadOnlyOverlay } from '@/features/subscription/components/SubscriptionReadOnlyOverlay';
 
@@ -264,8 +265,46 @@ export const DoctorCalendarPage: React.FC<DoctorCalendarPageProps> = ({ initialD
   const { data: calendarConfig, isLoading: configLoading, refetch: refetchCalendarConfig } = useDoctorCalendarConfig(doctorId, hospitalId, fromISO, daysCount);
   const { data: events = [], isLoading: eventsLoading, refetch: refetchCalendarEvents } = useCalendarEvents(doctorId, hospitalId, fromISO, toISO, calendarConfig);
 
-  // Use real events directly
-  const allEvents = events;
+  // Real booked patient appointments, shown alongside shifts/time-off so a doctor sees their
+  // whole day -- schedule AND who's actually booked -- in one calendar instead of two separate
+  // places. Reuses the exact same hook/endpoint DocBoard's own Appointments tab already uses.
+  const { data: appointmentData, isLoading: appointmentsLoading } = useDoctorAppointmentDetails({
+    status: 'ALL',
+    startDate: fromISO.slice(0, 10),
+    endDate: toISO.slice(0, 10),
+    hospitalId: hospitalId || '',
+    doctorId: doctorId || '',
+    enabled: !!doctorId && !!hospitalId,
+  });
+
+  const appointmentEvents: CalendarEvent[] = React.useMemo(() => {
+    return (appointmentData?.items || [])
+      // A cancelled slot isn't part of the doctor's actual schedule anymore -- showing it would
+      // clutter the calendar with things that aren't really happening, working against the whole
+      // point of "understand your schedule at a glance."
+      .filter(appt => appt.finalStatusCode !== 'CANCELLED')
+      .map(appt => ({
+        id: `appointment-${appt.appointmentId}`,
+        type: 'appointment' as const,
+        title: appt.patientFullName,
+        start: appt.startAt,
+        end: appt.endAt,
+        extendedProps: {
+          type: 'appointment',
+          appointmentId: appt.appointmentId,
+          patientId: appt.patientId,
+          patientName: appt.patientFullName,
+          tokenNumber: appt.tokenDetails?.tokenNumber,
+          finalStatusCode: appt.finalStatusCode,
+          appointmentType: appt.appointmentType,
+        },
+      }));
+  }, [appointmentData]);
+
+  // Shift/time-off events plus real booked appointments, merged for the calendar's visible
+  // display only -- override/time-off conflict checks below deliberately keep using the raw
+  // `events` (shift/time-off) list, unaffected by this addition.
+  const allEvents = React.useMemo(() => [...events, ...appointmentEvents], [events, appointmentEvents]);
   const clickToManageHint = t('doctorCalendar.clickToManageHint');
   const overrideBadgeLabel = t('doctorCalendar.overrideBadge');
 
@@ -773,7 +812,7 @@ export const DoctorCalendarPage: React.FC<DoctorCalendarPageProps> = ({ initialD
     eventDisplay: 'block', // Ensure events are displayed as blocks
     eventBackgroundColor: '#3b82f6', // Default background for events
     eventOverlap: true, // Allow events to overlap
-    events: events,
+    events: allEvents,
     eventClick: handleEventClick,
     select: handleDateSelect,
     eventDrop: handleEventDrop,
@@ -1427,7 +1466,7 @@ export const DoctorCalendarPage: React.FC<DoctorCalendarPageProps> = ({ initialD
           {/* Calendar Column */}
           <div className="lg:col-span-7 h-full flex flex-col">
             <AnimatePresence mode="wait">
-              {eventsLoading || doctorResolutionLoading || isInitialLoading || configLoading ? (
+              {eventsLoading || appointmentsLoading || doctorResolutionLoading || isInitialLoading || configLoading ? (
                 <motion.div
                   key="calendar-loading"
                   initial={prefersReducedMotion ? false : { opacity: 0 }}

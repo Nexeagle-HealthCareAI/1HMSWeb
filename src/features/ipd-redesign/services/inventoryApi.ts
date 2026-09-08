@@ -17,6 +17,7 @@ export interface InventoryItem {
     itemName: string;
     genericName?: string | null;
     manufacturer?: string | null;
+    saltCompositionId?: string | null;
     category: InventoryCategory;
     unit: string;
     defaultRate?: number | null;
@@ -42,6 +43,7 @@ export interface UpsertInventoryItemInput {
     itemName: string;
     genericName?: string;
     manufacturer?: string;
+    saltCompositionId?: string | null;
     category: InventoryCategory;
     unit?: string;
     defaultRate?: number;
@@ -68,9 +70,96 @@ export interface BatchItem {
     manufactureDate?: string | null;
     expiryDate?: string | null;
     unitCost?: number | null;
+    mrp?: number | null; // maps to backend's `Mrp` property, camelCased
+    barcodeValue?: string | null;
     receivedQty: number;
     remainingQty: number;
     status: 'ACTIVE' | 'EXHAUSTED' | 'EXPIRED' | 'QUARANTINED' | 'RECALLED';
+    // Only populated by getAllBatches — every other caller already knows the item from context.
+    inventoryItemId?: string | null;
+    itemName?: string | null;
+    itemCode?: string | null;
+}
+
+export interface BatchByBarcodeResult {
+    found: boolean;
+    inventoryItemId: string;
+    itemName?: string | null;
+    batch?: BatchItem | null;
+}
+
+export type ExpiryBucket = 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED';
+
+export interface NearExpiryBatch {
+    batchId: string;
+    inventoryItemId: string;
+    itemName?: string | null;
+    genericName?: string | null;
+    storeId: string;
+    storeName?: string | null;
+    vendorId?: string | null;
+    vendorName?: string | null;
+    batchNumber: string;
+    expiryDate?: string | null;
+    daysToExpiry?: number | null;
+    bucket: ExpiryBucket;
+    remainingQty: number;
+    mrp?: number | null;
+}
+
+export interface BulkImportPreviewRow {
+    rowIndex: number;
+    isValid: boolean;
+    errorMessage?: string | null;
+    // Non-blocking — set alongside isValid=true when the batch number already exists for the
+    // item+store (same expiry = will top up; different expiry = possible typo, still importable).
+    existingBatchWarning?: string | null;
+    storeCode?: string | null;
+    itemCode?: string | null;
+    itemName?: string | null;
+    // True when itemCode doesn't exist in the catalogue yet but itemName was supplied -- the
+    // commit step will create the medicine automatically instead of rejecting the row.
+    willCreateItem?: boolean;
+    batchNumber?: string | null;
+    manufactureDate?: string | null;
+    expiryDate?: string | null;
+    unitCost?: number | null;
+    mrp?: number | null;
+    barcodeValue?: string | null;
+    receivedQty: number;
+}
+
+export interface BulkImportPreviewResult {
+    success: boolean;
+    message?: string | null;
+    unrecognizedColumns: string[];
+    rows: BulkImportPreviewRow[];
+}
+
+export interface ReorderThresholdSuggestion {
+    inventoryItemId: string;
+    itemName: string;
+    unit: string;
+    trailing4WeekIssuedQty: number;
+    weeklyAverageConsumption: number;
+    currentMinStockLevel: number;
+    currentMaxStockLevel?: number | null;
+    suggestedMinStockLevel: number;
+    suggestedMaxStockLevel: number;
+    isBelowSuggestedMin: boolean;
+}
+
+export interface DrugScheduleRegisterEntryItem {
+    registerEntryId: string;
+    itemName?: string | null;
+    batchNumber?: string | null;
+    storeName?: string | null;
+    scheduleClass: string;
+    qty: number;
+    patientId?: string | null;
+    prescriberRef?: string | null;
+    dispensedBy?: string | null;
+    recordedAt: string;
 }
 
 export interface RecordMovementInput {
@@ -214,14 +303,64 @@ export const inventoryApi = {
             })
             .then(r => r.batches ?? []),
 
+    getBatchByBarcode: (barcodeValue: string, opts: { storeId?: string } = {}, hospitalId?: string): Promise<BatchByBarcodeResult> =>
+        ipdApiClient.get<BatchByBarcodeResult>('/inventory/batches/by-barcode', {
+            params: { hospitalId: hospitalIdOrThrow(hospitalId), barcodeValue, storeId: opts.storeId },
+        }),
+
+    getNearExpiryReport: (opts: { storeId?: string; vendorId?: string; bucket?: string } = {}, hospitalId?: string): Promise<NearExpiryBatch[]> =>
+        ipdApiClient
+            .get<{ batches?: NearExpiryBatch[] }>('/inventory/expiry/near-expiry-report', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, vendorId: opts.vendorId, bucket: opts.bucket },
+            })
+            .then(r => r.batches ?? []),
+
+    getScheduleRegister: (opts: { inventoryItemId?: string; scheduleClass?: string } = {}, hospitalId?: string): Promise<DrugScheduleRegisterEntryItem[]> =>
+        ipdApiClient
+            .get<{ entries?: DrugScheduleRegisterEntryItem[] }>('/inventory/schedule-register', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), inventoryItemId: opts.inventoryItemId, scheduleClass: opts.scheduleClass },
+            })
+            .then(r => r.entries ?? []),
+
     createBatch: (input: {
         inventoryItemId: string; storeId: string; batchNumber: string; manufactureDate?: string;
-        expiryDate?: string; unitCost?: number; receivedQty: number;
+        expiryDate?: string; unitCost?: number; mrp?: number; barcodeValue?: string; receivedQty: number;
     }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/batches', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
     bulkUploadBatches: (input: { rows: any[] }, hospitalId?: string) =>
         ipdApiClient.post('/inventory/batches/bulk', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
+
+    previewBulkImport: (file: File, hospitalId?: string): Promise<BulkImportPreviewResult> => {
+        const formData = new FormData();
+        formData.append('hospitalId', hospitalIdOrThrow(hospitalId));
+        formData.append('file', file);
+        return ipdApiClient.post<BulkImportPreviewResult>('/inventory/batches/bulk-import/preview', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+    },
+
+    // Flat, hospital-wide "everything currently in stock" view — backs the Batches tab and the
+    // duplicate-check lookups in the bulk-entry grid / single quick-add dialog.
+    getAllBatches: (opts: { storeId?: string; search?: string; activeOnly?: boolean } = {}, hospitalId?: string): Promise<BatchItem[]> =>
+        ipdApiClient
+            .get<{ batches?: BatchItem[] }>('/inventory/batches', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, search: opts.search, activeOnly: opts.activeOnly ?? true },
+            })
+            .then(r => r.batches ?? []),
+
+    getReorderThresholdSuggestions: (opts: { storeId?: string; bufferMultiplier?: number } = {}, hospitalId?: string): Promise<ReorderThresholdSuggestion[]> =>
+        ipdApiClient
+            .get<{ suggestions?: ReorderThresholdSuggestion[] }>('/inventory/reorder-threshold-suggestions', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), storeId: opts.storeId, bufferMultiplier: opts.bufferMultiplier },
+            })
+            .then(r => r.suggestions ?? []),
+
+    acceptThresholdSuggestion: (
+        input: { inventoryItemId: string; minStockLevel: number; maxStockLevel: number; requestingStoreId?: string },
+        hospitalId?: string
+    ): Promise<{ success: boolean; message?: string; indentId?: string; indentNumber?: string }> =>
+        ipdApiClient.post('/inventory/reorder-threshold-suggestions/accept', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),
 
     recordMovement: (input: RecordMovementInput, hospitalId?: string) =>
         ipdApiClient.post('/inventory/items/movement', { hospitalId: hospitalIdOrThrow(hospitalId), ...input }),

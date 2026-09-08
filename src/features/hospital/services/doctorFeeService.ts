@@ -8,6 +8,9 @@ export interface DoctorFeeRow {
     opdConsultFee: number;
     ipdVisitFee: number;
     emergencyFee: number;
+    // OPD_CONSULT only. Days a follow-up stays free after a paid visit. 0 = no free window,
+    // every visit is chargeable.
+    freeFollowUpDays: number;
 }
 
 export interface GetDoctorFeesResponse {
@@ -19,6 +22,7 @@ export interface UpsertDoctorFeeRequest {
     opdConsultFee: number;
     ipdVisitFee: number;
     emergencyFee: number;
+    freeFollowUpDays: number;
 }
 
 const hospitalIdOrThrow = (override?: string) => {

@@ -682,7 +682,7 @@ export const BedMaster = () => {
     const rightPanelTitle = parsedNode.kind === 'room' && selectedRoom
         ? `Room ${selectedRoom.roomNo} · Floor ${selectedRoom.floorNo}`
         : parsedNode.kind === 'floor' ? `Floor ${parsedNode.floorNo}`
-        : parsedNode.kind === 'UNASSIGNED' ? 'Unassigned Beds'
+        : parsedNode.kind === 'UNASSIGNED' ? 'All Beds'
         : 'All Rooms';
 
     return (
@@ -787,12 +787,12 @@ export const BedMaster = () => {
 
                         {unassignedBeds.length > 0 && (
                             <>
-                                <div className="pt-2 pb-1 px-3 text-xs font-bold text-gray-400 uppercase mt-2">Legacy</div>
+                                <div className="pt-2 pb-1 px-3 text-xs font-bold text-gray-400 uppercase mt-2">General</div>
                                 <button
                                     onClick={() => setSelectedNode('UNASSIGNED')}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex justify-between items-center ${selectedNode === 'UNASSIGNED' ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
                                 >
-                                    <span>Unassigned Beds</span>
+                                    <span>All Beds</span>
                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-gray-400">{unassignedBeds.length}</span>
                                 </button>
                             </>
@@ -929,7 +929,7 @@ export const BedMaster = () => {
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
                                 <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                                <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No unassigned beds match your filters</p>
+                                <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No beds match your filters</p>
                             </div>
                         )
                     )}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { buildPreviewFromRequest } from '../services/prescriptionPreviewService';
 import { type GeneratePrescriptionDetailsRequest } from '../services/generatePrescriptionDetailsService';
+import { useToast } from '@/hooks/use-toast';
 
 export interface UsePrescriptionPreviewOptions {
   request: GeneratePrescriptionDetailsRequest | null;
@@ -18,6 +19,7 @@ export const usePrescriptionPreview = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastObjectUrlRef = useRef<string | null>(null);
+  const { toast } = useToast();
 
   const revokeUrl = useCallback((url: string | null) => {
     if (url && url.startsWith('blob:')) {
@@ -38,12 +40,22 @@ export const usePrescriptionPreview = ({
     setError(null);
     try {
       setTemplateUrl(null);
-      const { blob, templateUrl: sourceTemplateUrl } = await buildPreviewFromRequest(request, targetLanguage);
+      const { blob, templateUrl: sourceTemplateUrl, fallbackReason } = await buildPreviewFromRequest(request, targetLanguage);
       const nextUrl = URL.createObjectURL(blob);
       revokeUrl(lastObjectUrlRef.current);
       lastObjectUrlRef.current = nextUrl;
       setPreviewUrl(nextUrl);
       setTemplateUrl(sourceTemplateUrl);
+      // 'no-template' is the normal/expected case for a doctor who hasn't uploaded one yet —
+      // only 'template-fetch-failed' means THEIR OWN letterhead silently didn't apply, which is
+      // worth a visible notice instead of a silent swap to the default.
+      if (fallbackReason === 'template-fetch-failed') {
+        toast({
+          title: 'Could not load your letterhead',
+          description: "We couldn't load your uploaded letterhead just now, so the default layout was used instead. Your prescription content is unaffected — try again, or re-upload your letterhead in settings.",
+          variant: 'destructive',
+        });
+      }
       return nextUrl;
     } catch (err) {
       //console.error('generatePreview failed', err);
@@ -52,7 +64,7 @@ export const usePrescriptionPreview = ({
     } finally {
       setIsLoading(false);
     }
-  }, [request, targetLanguage, revokeUrl]);
+  }, [request, targetLanguage, revokeUrl, toast]);
 
   const resetPreview = useCallback(() => {
     revokeUrl(lastObjectUrlRef.current);

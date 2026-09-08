@@ -7,6 +7,11 @@ export interface GeneratePrescriptionDetailsRequest {
   hospitalId: string;
   doctorId: string;
   appointmentDate?: string;
+  // Client-known display name, not sent to the backend — only used to label the header when
+  // buildPreviewBlob falls back to the system-generated default letterhead (no dedicated
+  // "doctor by id" lookup exists on the frontend; the callers already have this from the
+  // appointment row they're printing from).
+  doctorName?: string;
 }
 
 export interface PrescriptionTemplateDescriptor {
@@ -24,6 +29,7 @@ export interface PrescriptionTemplateDescriptor {
   textColour: string | null;
   uri: string | null;
   validUpto?: number; // Number of days the prescription is valid
+  useSystemDefaultLetterhead?: boolean;
   createdBy: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;

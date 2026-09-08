@@ -72,7 +72,7 @@ export const DoctorFees: React.FC = () => {
         emergency: rows.filter(r => Number(r.emergencyFee) > 0).length,
     }), [rows]);
 
-    const setField = (doctorId: string, key: 'opdConsultFee' | 'ipdVisitFee' | 'emergencyFee', value: number) => {
+    const setField = (doctorId: string, key: 'opdConsultFee' | 'ipdVisitFee' | 'emergencyFee' | 'freeFollowUpDays', value: number) => {
         setRows(prev => prev.map(r => r.doctorId === doctorId ? { ...r, [key]: value, dirty: true } : r));
     };
 
@@ -86,6 +86,7 @@ export const DoctorFees: React.FC = () => {
                 opdConsultFee: Number(row.opdConsultFee) || 0,
                 ipdVisitFee: Number(row.ipdVisitFee) || 0,
                 emergencyFee: Number(row.emergencyFee) || 0,
+                freeFollowUpDays: Number(row.freeFollowUpDays) || 0,
             });
             setRows(prev => prev.map(r => r.doctorId === doctorId ? { ...r, dirty: false, saving: false } : r));
             toast({ title: 'Fees saved', description: row.doctorName ?? '' });
@@ -149,14 +150,15 @@ export const DoctorFees: React.FC = () => {
                             <TableHead className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest w-[150px]">OPD Consult (₹)</TableHead>
                             <TableHead className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest w-[150px]">IPD Visit (₹)</TableHead>
                             <TableHead className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest w-[150px]">Emergency (₹)</TableHead>
+                            <TableHead className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest w-[150px]">Free Follow-up (days)</TableHead>
                             <TableHead className="w-[90px]" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={6} className="py-3"><Skeleton className="h-9 w-full rounded-lg" /></TableCell></TableRow>)
+                            Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={7} className="py-3"><Skeleton className="h-9 w-full rounded-lg" /></TableCell></TableRow>)
                         ) : error ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-40 text-rose-600">
+                            <TableRow><TableCell colSpan={7} className="text-center h-40 text-rose-600">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="h-12 w-12 rounded-2xl bg-rose-50 dark:bg-rose-950/20 flex items-center justify-center"><AlertCircle className="h-6 w-6" /></div>
                                     <p className="text-sm font-semibold">{error}</p>
@@ -164,7 +166,7 @@ export const DoctorFees: React.FC = () => {
                                 </div>
                             </TableCell></TableRow>
                         ) : filtered.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-40 text-slate-400">
+                            <TableRow><TableCell colSpan={7} className="text-center h-40 text-slate-400">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="h-12 w-12 rounded-2xl bg-slate-100 dark:bg-zinc-800/40 flex items-center justify-center"><Stethoscope className="h-6 w-6" /></div>
                                     <p className="text-sm font-semibold text-slate-600">{rows.length === 0 ? 'No doctors found for this hospital' : 'No doctors match your filters'}</p>
@@ -196,6 +198,9 @@ export const DoctorFees: React.FC = () => {
                                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">₹</span>
                                         <Input type="number" min={0} step="1" value={r.emergencyFee} onChange={(e) => setField(r.doctorId, 'emergencyFee', parseFloat(e.target.value || '0'))} className="h-8 pl-6 font-mono text-sm tabular-nums" />
                                     </div>
+                                </TableCell>
+                                <TableCell>
+                                    <Input type="number" min={0} step="1" value={r.freeFollowUpDays} onChange={(e) => setField(r.doctorId, 'freeFollowUpDays', parseInt(e.target.value || '0', 10))} className="h-8 font-mono text-sm tabular-nums" />
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Button size="sm" className={cn('h-8 text-xs rounded-lg transition-all', r.dirty ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500')} disabled={!r.dirty || r.saving} onClick={() => save(r.doctorId)}>
@@ -255,7 +260,7 @@ export const DoctorFees: React.FC = () => {
                             </div>
 
                             {/* Fees Grid */}
-                            <div className="grid grid-cols-3 gap-2.5 mt-1">
+                            <div className="grid grid-cols-2 gap-2.5 mt-1">
                                 <div className="grid gap-1">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500">OPD Consult</label>
                                     <div className="relative">
@@ -292,11 +297,22 @@ export const DoctorFees: React.FC = () => {
                                             type="number" 
                                             min={0} 
                                             step="1" 
-                                            value={r.emergencyFee} 
-                                            onChange={(e) => setField(r.doctorId, 'emergencyFee', parseFloat(e.target.value || '0'))} 
-                                            className="h-8.5 pl-5 pr-1.5 rounded-lg bg-slate-50/50 dark:bg-zinc-950/40 border-slate-200/80 dark:border-zinc-850 focus:bg-white dark:focus:bg-zinc-900 text-xs font-mono tabular-nums focus-visible:ring-1 focus-visible:ring-brand-500" 
+                                            value={r.emergencyFee}
+                                            onChange={(e) => setField(r.doctorId, 'emergencyFee', parseFloat(e.target.value || '0'))}
+                                            className="h-8.5 pl-5 pr-1.5 rounded-lg bg-slate-50/50 dark:bg-zinc-950/40 border-slate-200/80 dark:border-zinc-850 focus:bg-white dark:focus:bg-zinc-900 text-xs font-mono tabular-nums focus-visible:ring-1 focus-visible:ring-brand-500"
                                         />
                                     </div>
+                                </div>
+                                <div className="grid gap-1">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500">Free Follow-up (days)</label>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        step="1"
+                                        value={r.freeFollowUpDays}
+                                        onChange={(e) => setField(r.doctorId, 'freeFollowUpDays', parseInt(e.target.value || '0', 10))}
+                                        className="h-8.5 px-1.5 rounded-lg bg-slate-50/50 dark:bg-zinc-950/40 border-slate-200/80 dark:border-zinc-850 focus:bg-white dark:focus:bg-zinc-900 text-xs font-mono tabular-nums focus-visible:ring-1 focus-visible:ring-brand-500"
+                                    />
                                 </div>
                             </div>
 
@@ -324,7 +340,7 @@ export const DoctorFees: React.FC = () => {
                     ))}
                 </div>
             )}
-            <p className="text-[11px] text-muted-foreground px-1">Tip: the OPD consult fee is charged on New / Old-with-fee appointments (per the prescription validity rule); IPD visit fee applies per doctor visit during admission; emergency fee is stored per doctor for use in ER billing.</p>
+            <p className="text-[11px] text-muted-foreground px-1">Tip: the OPD consult fee is charged on New / Old-with-fee appointments; a follow-up booked within "Free Follow-up (days)" of the patient's last paid visit is free (0 = no free window, every visit is chargeable). IPD visit fee applies per doctor visit during admission; emergency fee is stored per doctor for use in ER billing.</p>
         </div>
     );
 };

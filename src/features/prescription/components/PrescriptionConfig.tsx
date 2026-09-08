@@ -38,8 +38,13 @@ export const PrescriptionConfig: React.FC = () => {
         return doctorsData;
     }, [doctorsData]);
 
+    const selectedDoctorName = useMemo(
+        () => filteredDoctors.find((doc) => doc.userId === selectedDoctorId)?.fullName,
+        [filteredDoctors, selectedDoctorId]
+    );
+
     // Designer Hook for selected doctor
-    const designer = usePrescriptionDesigner(selectedDoctorId, hospitalId || undefined);
+    const designer = usePrescriptionDesigner(selectedDoctorId, hospitalId || undefined, selectedDoctorName);
 
     if (isLoadingDepartments || (selectedDepartmentId && isLoadingDoctors)) {
         return (
@@ -128,11 +133,13 @@ export const PrescriptionConfig: React.FC = () => {
                                 onTemplateUpload={designer.handleTemplateUpload}
                                 typography={designer.typography}
                                 onTypographyChange={designer.updateTypography}
+                                useSystemDefault={designer.useSystemDefault}
+                                onUseSystemDefaultChange={designer.setUseSystemDefault}
                                 validUpto={designer.validUpto}
                                 onValidUptoChange={designer.setValidUpto}
                                 onSaveLayout={designer.saveLayoutSettings}
                                 isSavingLayout={designer.isSavingLayout}
-                                onPreview={() => designer.generatePreview().then(() => designer.openPreviewInNewTab())}
+                                onPreview={() => designer.generatePreview().then((url) => { if (url) window.open(url, '_blank', 'noopener'); })}
                             />
                         </div>
                         <div className="space-y-6">

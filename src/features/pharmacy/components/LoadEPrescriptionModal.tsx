@@ -52,7 +52,7 @@ export const LoadEPrescriptionModal: React.FC<LoadEPrescriptionModalProps> = ({ 
 
       // 2. Fetch inventory master for matching
       // Note: Ideally, there would be a more optimized auto-match endpoint. For now, we do a client-side text match.
-      const inventory = await inventoryApi.getItems(hospitalId);
+      const inventory = await inventoryApi.getItems({}, hospitalId);
       
       // 3. Auto-match logic
       const mapped = response.data.medications.map(med => {

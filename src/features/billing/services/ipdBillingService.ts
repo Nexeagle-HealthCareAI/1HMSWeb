@@ -162,6 +162,9 @@ export interface AddChargeEventRequest {
         rate: number;
         discountPercent: number;
         categoryCode: string;
+        // Canonical origin tag (e.g. "LAB_PATH") — lets a downstream view filter "which module
+        // posted this charge" reliably instead of guessing from the encounter's own type.
+        sourceModule?: string;
         // GST overrides — when supplied they override the ChargeMaster snapshot.
         hsnSacCode?: string;
         gstRate?: number;
@@ -467,6 +470,9 @@ export interface BillingAnalyticsSummaryResponse {
         netAmount: number;
         revenueByCategory: CategoryBreakdownItem[];
         expenseByCategory: CategoryBreakdownItem[];
+        // Same revenue, rolled up into OPD/IPD/LAB/PHARMACY (+ OTHER for anything unclassifiable) --
+        // see BillingDepartmentClassifier.cs server-side for how a charge lands in one of these.
+        revenueByDepartment: CategoryBreakdownItem[];
         dailyTrend: DailyTrendPoint[];
     };
 }
@@ -483,6 +489,12 @@ export interface BillingAiInsightsResponse {
     success: boolean;
     message?: string;
     data?: {
+        predictedTomorrowRevenue: number;
+        predictedTomorrowExpense: number;
+        predictedTomorrowNet: number;
+        predictedNext7DayRevenue: number;
+        predictedNext7DayExpense: number;
+        predictedNext7DayNet: number;
         predictedNext30DayRevenue: number;
         predictedNext30DayExpense: number;
         predictedNext30DayNet: number;

@@ -47,7 +47,8 @@ import {
   LayoutDashboard,
   Receipt,
   Copy,
-  IndianRupee
+  IndianRupee,
+  Sparkles
 } from 'lucide-react';
 import {
   UserManagementModule,
@@ -60,6 +61,8 @@ import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
 // import { BillingDashboard } from '@/features/billing/pages/BillingDashboard';
 import { AnalyticsResponse, fetchAnalyticsData } from '../services/analyticsApi';
+import { PatientVolumeForecastPanel } from './PatientVolumeForecastPanel';
+import { LapsedPatientsPanel } from './LapsedPatientsPanel';
 
 
 
@@ -194,6 +197,7 @@ export const AdminDashboard = () => {
 
   const adminModules = [
     { id: 'dashboard', name: t('admin.dashboard'), icon: LayoutDashboard, description: t('admin.overviewAnalytics') },
+    { id: 'ai-predictive-analysis', name: 'AI Predictive Analysis', icon: Sparkles, description: 'Patient volume forecast & insights' },
     { id: 'user-management', name: t('admin.userManagement'), icon: Users, description: t('admin.usersRolesPermissions') },
     { id: 'patient-management', name: t('admin.patientManagement'), icon: UserCheck, description: t('admin.patientRecordsData') },
     //{ id: 'appointment-oversight', name: t('admin.appointmentOversight') || 'Appointments', icon: Calendar, description: t('admin.appointmentManagement') || 'Manage System Appointments' },
@@ -464,7 +468,7 @@ export const AdminDashboard = () => {
           <nav className="relative z-10 w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-nowrap gap-2 bg-black/15 dark:bg-black/40 backdrop-blur-sm rounded-2xl p-1.5 shadow-inner">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
-              const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
+              const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config' && module.id !== 'ai-predictive-analysis';
               return (
                 <button
                   key={module.id}
@@ -1166,6 +1170,13 @@ export const AdminDashboard = () => {
         </div>
       )
       }
+
+      {currentView === 'ai-predictive-analysis' && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <PatientVolumeForecastPanel hospitalId={hospitalId} />
+          <LapsedPatientsPanel hospitalId={hospitalId} />
+        </div>
+      )}
 
       {/* User Management Module */}
       {currentView === 'user-management' && <UserManagementModule />}

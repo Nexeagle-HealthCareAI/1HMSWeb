@@ -327,15 +327,17 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   });
 
   // B. Valid Upto
-  // B. Valid Upto
-  // Prefer server-provided date, else calculate
+  // Prefer server-provided date, else calculate from the prescription's own appointment
+  // date (dateToUse, above) -- NOT today's date. Otherwise a past prescription's "Valid
+  // Upto" silently drifts forward every time it's reopened, since it'd be computed
+  // relative to whenever someone happens to be viewing it rather than when it was issued.
   const validUptoDays = payload.template?.validUpto ?? 10;
   let validUptoDateVal: Date | null = null;
 
   if (payload.validUptoDate) {
     validUptoDateVal = new Date(payload.validUptoDate);
   } else if (validUptoDays > 0) {
-    validUptoDateVal = new Date();
+    validUptoDateVal = new Date(dateToUse);
     validUptoDateVal.setDate(validUptoDateVal.getDate() + validUptoDays);
   }
 

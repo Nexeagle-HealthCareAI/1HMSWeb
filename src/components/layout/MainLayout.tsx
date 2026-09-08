@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useLogout } from '@/hooks/useLogout';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
 import { SubscriptionExpiryBanner } from '@/features/subscription/components/SubscriptionExpiryBanner';
+import { FreeTierUsageBadge } from '@/features/subscription/components/FreeTierUsageBadge';
 import { SubscriptionReadOnlyBanner } from '@/features/subscription/components/SubscriptionReadOnlyBanner';
 import { SubscriptionUpsellModal } from '@/features/subscription/components/SubscriptionUpsellModal';
 import {
@@ -83,7 +84,8 @@ import {
   LayoutGrid,
   GitBranch,
   ClipboardList,
-  Pill
+  Pill,
+  Users2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -264,6 +266,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
     { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
     { id: 'leads', name: 'HCRM', icon: Megaphone, path: '/leads' },
+    { id: 'hr', name: '1HR Suite', icon: Users2, path: '/hr' },
   ];
 
   // Filter navigation items by real backend-granted PermissionKeys (boardAccess.ts is the
@@ -414,7 +417,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <GamifiedClock currentTime={currentTime} />
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
+              {/* Free-Tier Usage — visible to everyone at the hospital, not just Admin, since
+                  anyone's action can get blocked once the monthly quota is used up. Renders
+                  nothing for a hospital on a paid plan. */}
+              <FreeTierUsageBadge />
+
               {/* Profile Completion Indicator */}
               {profileScore < 100 && (
                 <Button
