@@ -110,7 +110,7 @@ export const doctorApi = {
 
   updateDoctorProfessional: async (payload: {
     userId: string;
-    hospitalDepartmentMappingId: string;
+    hospitalDepartmentMappingId?: string;
     licenseNumber: string;
     qualification: string[];
     experienceYears: number;

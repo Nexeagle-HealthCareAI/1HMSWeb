@@ -305,7 +305,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
 
         const updateData = {
           userId: userId || '',
-          hospitalDepartmentMappingId: profileData.hospitalDepartmentMappingId || '',
+          hospitalDepartmentMappingId: profileData.hospitalDepartmentMappingId || undefined,
           licenseNumber: profileData.licenseNumber,
           qualification: profileData.qualification,
           experienceYears: profileData.experienceYears,

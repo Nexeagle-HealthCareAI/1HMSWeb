@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Award,
   BadgeCheck,
+  ExternalLink,
   Globe,
   GraduationCap,
   Languages as LanguagesIcon,
@@ -136,9 +137,9 @@ export const PublicDirectoryConfig: React.FC = () => {
         setIsListed(!next);
         toast({ variant: 'destructive', title: translate('publicDirectory.saveFailedTitle', 'Could not save'), description: response.message ?? '' });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setIsListed(!next);
-      toast({ variant: 'destructive', title: translate('publicDirectory.saveFailedTitle', 'Could not save'), description: e?.message ?? '' });
+      toast({ variant: 'destructive', title: translate('publicDirectory.saveFailedTitle', 'Could not save'), description: e instanceof Error ? e.message : '' });
     }
   };
 
@@ -174,6 +175,11 @@ export const PublicDirectoryConfig: React.FC = () => {
     );
   }, [doctors, search]);
 
+  const listedDoctorCount = useMemo(
+    () => doctors.filter((doctor) => doctor.isPubliclyListed).length,
+    [doctors]
+  );
+
   const applyDoctorToggle = async (doctorId: string, next: boolean) => {
     if (!hospitalId) return;
     setDoctors((prev) => prev.map((d) => (d.doctorId === doctorId ? { ...d, isPubliclyListed: next, saving: true } : d)));
@@ -183,9 +189,9 @@ export const PublicDirectoryConfig: React.FC = () => {
         setDoctors((prev) => prev.map((d) => (d.doctorId === doctorId ? { ...d, isPubliclyListed: !next } : d)));
         toast({ variant: 'destructive', title: translate('publicDirectory.saveFailedTitle', 'Could not save'), description: response.message ?? '' });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setDoctors((prev) => prev.map((d) => (d.doctorId === doctorId ? { ...d, isPubliclyListed: !next } : d)));
-      toast({ variant: 'destructive', title: translate('publicDirectory.saveFailedTitle', 'Could not save'), description: e?.message ?? '' });
+      toast({ variant: 'destructive', title: translate('publicDirectory.saveFailedTitle', 'Could not save'), description: e instanceof Error ? e.message : '' });
     } finally {
       setDoctors((prev) => prev.map((d) => (d.doctorId === doctorId ? { ...d, saving: false } : d)));
     }
@@ -228,12 +234,12 @@ export const PublicDirectoryConfig: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
             <Globe className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-            {translate('publicDirectory.title', 'Online Listing')}
+            {translate('publicDirectory.title', 'Doctor Dekho listing')}
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             {translate(
               'publicDirectory.description',
-              "List your hospital's active doctors on NexEagle's platform-wide Find a Doctor page. Off by default — patients across the platform can only discover and book your doctors once you turn this on."
+              "Manage how your hospital appears on Doctor Dekho, NexEagle's patient-facing doctor directory. Patients can discover and request appointments with the doctors you publish."
             )}
           </p>
         </CardHeader>
@@ -259,12 +265,12 @@ export const PublicDirectoryConfig: React.FC = () => {
                 )}
                 <div>
                   <Label htmlFor="public-directory-toggle" className="text-sm font-semibold text-slate-800 dark:text-zinc-200">
-                    {translate('publicDirectory.toggleLabel', 'List this hospital publicly')}
+                    {translate('publicDirectory.toggleLabel', 'Show this hospital on Doctor Dekho')}
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     {isListed
-                      ? translate('publicDirectory.activeHint', 'Your doctors are visible on the public directory.')
-                      : translate('publicDirectory.inactiveHint', 'Your doctors are not visible on the public directory.')}
+                      ? translate('publicDirectory.activeHint', '{{count}} doctor(s) can be visible to patients.').replace('{{count}}', String(listedDoctorCount))
+                      : translate('publicDirectory.inactiveHint', 'Your doctors are hidden from patients until you enable this listing.')}
                   </p>
                 </div>
               </div>
@@ -281,15 +287,30 @@ export const PublicDirectoryConfig: React.FC = () => {
 
       <Card className="border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
-            <Stethoscope className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-            {translate('publicDirectory.doctorsTitle', 'Doctors on the directory')}
-          </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isListed
-              ? translate('publicDirectory.doctorsDescription', 'Choose which of your doctors patients can find and book from the public directory, and keep their public profile up to date.')
-              : translate('publicDirectory.doctorsDisabledHint', 'Turn on the public directory above before curating individual doctors.')}
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                <Stethoscope className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                {translate('publicDirectory.doctorsTitle', 'Doctors on Doctor Dekho')}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isListed
+                  ? translate('publicDirectory.doctorsDescription', 'Choose which doctors patients can find and book, then keep their public profiles up to date.')
+                  : translate('publicDirectory.doctorsDisabledHint', 'Enable the hospital listing above before publishing individual doctors.')}
+              </p>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto gap-2 rounded-xl"
+            >
+              <a href="https://nexeagle.com" target="_blank" rel="noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+                {translate('publicDirectory.preview', 'Preview Doctor Dekho')}
+              </a>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className={!isListed ? 'opacity-50 pointer-events-none' : undefined}>
           <div className="relative mb-4 max-w-sm">
