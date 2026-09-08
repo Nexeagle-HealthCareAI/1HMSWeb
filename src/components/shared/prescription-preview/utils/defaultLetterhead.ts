@@ -74,9 +74,16 @@ export interface GenerateDefaultLetterheadOptions {
   whatsAppQrImageBytes?: Uint8Array | null;
 }
 
+// Hospital/doctor fields (address, qualification, etc.) are free text and occasionally carry a
+// pasted-in \r\n or bare \r — WinAnsi has no glyph for the raw 0x0D control character, so pdf-lib
+// throws on drawText/widthOfTextAtSize instead of just rendering it oddly. Collapse any line break
+// to a single space and drop other control chars before this text ever reaches pdf-lib.
+const sanitizeForPdf = (text: string) => text.replace(/\r\n|\r|\n/g, ' ').replace(/[\x00-\x09\x0B-\x1F]/g, '');
+
 const truncateToWidth = (text: string, font: PDFFont, size: number, maxWidth: number) => {
-  if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
-  let clipped = text;
+  const safeText = sanitizeForPdf(text);
+  if (font.widthOfTextAtSize(safeText, size) <= maxWidth) return safeText;
+  let clipped = safeText;
   while (clipped.length > 1 && font.widthOfTextAtSize(`${clipped}…`, size) > maxWidth) {
     clipped = clipped.slice(0, -1);
   }
