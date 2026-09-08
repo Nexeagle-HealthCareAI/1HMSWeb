@@ -148,40 +148,50 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
     }
 
     // No template configured, the configured one couldn't be loaded, or the system default was
-    // deliberately chosen — use a branded default instead of a bare blank page (defaultLetterhead.ts).
+    // deliberately chosen — use a branded default instead of a bare blank page (defaultLetterhead.ts)
+    // UNLESS the doctor explicitly left it as "Upload" but didn't upload anything, in which case
+    // we use a bare blank page so they don't get the system default by accident.
     if (!templateFile) {
       usedFallbackLetterhead = true;
-      const [hospital, doctorProfile] = await Promise.all([
-        request.hospitalId ? hospitalApi.getHospitalById(request.hospitalId).catch(() => null) : Promise.resolve(null),
-        request.doctorId ? doctorApi.getDoctorProfile(request.doctorId).catch(() => null) : Promise.resolve(null),
-      ]);
+      if (fallbackReason === 'no-template') {
+        const { PDFDocument } = await import('pdf-lib');
+        const doc = await PDFDocument.create();
+        doc.addPage([595.28, 841.89]);
+        const bytes = await doc.save();
+        templateFile = new File([bytes as BlobPart], 'blank-letterhead.pdf', { type: 'application/pdf' });
+      } else {
+        const [hospital, doctorProfile] = await Promise.all([
+          request.hospitalId ? hospitalApi.getHospitalById(request.hospitalId).catch(() => null) : Promise.resolve(null),
+          request.doctorId ? doctorApi.getDoctorProfile(request.doctorId).catch(() => null) : Promise.resolve(null),
+        ]);
 
-      templateFile = await generateDefaultLetterheadTemplate({
-        layout: request.layout,
-        hospital: hospital && {
-          name: hospital.name,
-          location: hospital.location,
-          city: hospital.city,
-          state: hospital.state,
-          pincode: hospital.pincode,
-          contact: hospital.contact,
-          alternateContact: hospital.alternateContact,
-          email: hospital.email,
-          website: hospital.website,
-          registrationNumber: hospital.registrationNumber,
-          nabhNumber: hospital.nabhNumber,
-        },
-        doctor: {
-          name: request.doctorName ?? null,
-          qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
-          specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
-          department: doctorProfile?.primaryDepartmentName ?? null,
-          registration: doctorProfile?.licenseNumber ?? null,
-          medicalCouncil: doctorProfile?.medicalCouncil ?? null,
-          registrationYear: doctorProfile?.registrationYear ?? null,
-          experienceYears: doctorProfile?.experienceYears ?? null,
-        },
-      });
+        templateFile = await generateDefaultLetterheadTemplate({
+          layout: request.layout,
+          hospital: hospital && {
+            name: hospital.name,
+            location: hospital.location,
+            city: hospital.city,
+            state: hospital.state,
+            pincode: hospital.pincode,
+            contact: hospital.contact,
+            alternateContact: hospital.alternateContact,
+            email: hospital.email,
+            website: hospital.website,
+            registrationNumber: hospital.registrationNumber,
+            nabhNumber: hospital.nabhNumber,
+          },
+          doctor: {
+            name: request.doctorName ?? null,
+            qualification: doctorProfile?.qualifications?.length ? doctorProfile.qualifications.join(', ') : null,
+            specialization: doctorProfile?.primaryMedicalSpecialityName ?? null,
+            department: doctorProfile?.primaryDepartmentName ?? null,
+            registration: doctorProfile?.licenseNumber ?? null,
+            medicalCouncil: doctorProfile?.medicalCouncil ?? null,
+            registrationYear: doctorProfile?.registrationYear ?? null,
+            experienceYears: doctorProfile?.experienceYears ?? null,
+          },
+        });
+      }
     }
   }
 
