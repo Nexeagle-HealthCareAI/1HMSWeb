@@ -277,4 +277,20 @@ export const hospitalApi = {
   getHospitalQrCodeBlob: async (hospitalId: string): Promise<Blob> => {
     return apiClient.get<Blob>(API_ENDPOINTS.HOSPITALS.QR_CODE(hospitalId), { responseType: 'blob' });
   },
+
+  /**
+   * Downloads the ready-to-print appointment-booking QR (NexEagle logo centered) as a PNG --
+   * same HospitalCode as the check-in QR above, but encodes the bot's "/h/{code}" booking
+   * redirect instead of "/c/{code}". Call generateHospitalCode first if unsure a code exists.
+   */
+  downloadHospitalBookingQrCode: async (hospitalId: string): Promise<void> => {
+    return apiClient.download(API_ENDPOINTS.HOSPITALS.BOOKING_QR_CODE(hospitalId), 'appointment-booking-qr-code.png');
+  },
+
+  /**
+   * Fetches the appointment-booking QR as a Blob so it can be embedded dynamically.
+   */
+  getHospitalBookingQrCodeBlob: async (hospitalId: string): Promise<Blob> => {
+    return apiClient.get<Blob>(API_ENDPOINTS.HOSPITALS.BOOKING_QR_CODE(hospitalId), { responseType: 'blob' });
+  },
 };

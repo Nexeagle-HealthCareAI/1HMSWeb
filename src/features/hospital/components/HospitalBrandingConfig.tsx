@@ -33,6 +33,7 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { hospitalApi, HospitalData } from '../services/hospitalApi';
 import { useAuthStore } from '@/store/authStore';
 import { buildHospitalQrPosterA4 } from '@/printTemplates/hospitalQrPosterA4';
+import { buildHospitalBookingQrPosterA4 } from '@/printTemplates/hospitalBookingQrPosterA4';
 
 export interface HospitalBranding {
   name: string;
@@ -105,6 +106,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [isDownloadingQr, setIsDownloadingQr] = useState(false);
   const [isPrintingPoster, setIsPrintingPoster] = useState(false);
   const [isPrintingQr, setIsPrintingQr] = useState(false);
+  const [isDownloadingBookingQr, setIsDownloadingBookingQr] = useState(false);
+  const [isPrintingBookingQr, setIsPrintingBookingQr] = useState(false);
 
   const fieldLabels: Record<StringFieldKey, string> = useMemo(
     () => ({
@@ -566,6 +569,58 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       });
     } finally {
       setIsDownloadingQr(false);
+    }
+  };
+
+  const handleDownloadBookingQrCode = async () => {
+    if (!hospitalId) return;
+    setIsDownloadingBookingQr(true);
+    try {
+      // Idempotent -- safe to always call, whether or not this hospital already has a code.
+      await hospitalApi.generateHospitalCode(hospitalId);
+      await hospitalApi.downloadHospitalBookingQrCode(hospitalId);
+    } catch (error) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.toast.qrCodeFailed', 'Could not generate the QR code. Please try again.'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDownloadingBookingQr(false);
+    }
+  };
+
+  const handlePrintBookingA4Qr = async () => {
+    if (!hospitalId || !hospitalData) return;
+    setIsPrintingBookingQr(true);
+    try {
+      await hospitalApi.generateHospitalCode(hospitalId);
+      const blob = await hospitalApi.getHospitalBookingQrCodeBlob(hospitalId);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const qrDataUrl = reader.result as string;
+        const html = buildHospitalBookingQrPosterA4(hospitalData as HospitalData, qrDataUrl);
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+          };
+        } else {
+          toast({ variant: 'destructive', title: 'Pop-up blocked', description: 'Please allow pop-ups to print the QR poster.' });
+        }
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      toast({
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.toast.qrCodeFailed', 'Could not generate the QR code. Please try again.'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsPrintingBookingQr(false);
     }
   };
 
@@ -1197,6 +1252,58 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   className="h-10 rounded-xl font-semibold border-brand-200 dark:border-brand-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-brand-700 dark:text-brand-300 transition-colors"
                 >
                   {isPrintingQr ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
+                      <Printer className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <Printer className="h-4 w-4 mr-2" />
+                  )}
+                  {translate('hospitalBranding.buttons.printA4', 'Print A4 Poster')}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {isExistingHospital && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+            <Card className="hover:shadow-lg transition-all duration-300 border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden">
+              <CardHeader className="max-sm:pb-2 max-sm:px-4">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-50">
+                  <QrCode className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                  {translate('hospitalBranding.sections.bookingQrCode.title', 'Appointment Booking QR Code')}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {translate(
+                    'hospitalBranding.sections.bookingQrCode.subtitle',
+                    'Print this for patients to scan and book an appointment on WhatsApp -- a separate QR from the OPD check-in one above.'
+                  )}
+                </p>
+              </CardHeader>
+              <CardContent className="max-sm:px-4 max-sm:pb-6 flex gap-3 flex-wrap">
+                <Button
+                  onClick={handleDownloadBookingQrCode}
+                  disabled={isDownloadingBookingQr || isPrintingBookingQr}
+                  variant="outline"
+                  className="h-10 rounded-xl font-semibold"
+                >
+                  {isDownloadingBookingQr ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
+                      <QrCode className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <QrCode className="h-4 w-4 mr-2" />
+                  )}
+                  {translate('hospitalBranding.buttons.downloadBookingQrCode', 'Download QR Code')}
+                </Button>
+
+                <Button
+                  onClick={handlePrintBookingA4Qr}
+                  disabled={isDownloadingBookingQr || isPrintingBookingQr}
+                  variant="outline"
+                  className="h-10 rounded-xl font-semibold border-brand-200 dark:border-brand-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-brand-700 dark:text-brand-300 transition-colors"
+                >
+                  {isPrintingBookingQr ? (
                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, ease: "linear", duration: 1 }} className="mr-2">
                       <Printer className="h-4 w-4" />
                     </motion.div>

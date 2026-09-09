@@ -105,7 +105,10 @@ export const API_ENDPOINTS = {
     GET_LAPSED_PATIENTS: (hospitalId: string, page = 1, limit = 20) => `hospitals/analytics/lapsed-patients?hospitalId=${hospitalId}&page=${page}&limit=${limit}`,
     DEACTIVATE: (id: string) => `hospitals/${id}/deactivate`,
     GENERATE_CODE: (id: string) => `hospitals/${id}/generate-code`,
+    // OPD check-in QR (bot's "/c/{code}" redirect) -- see BOOKING_QR_CODE below for the
+    // appointment-booking variant ("/h/{code}"), a separate poster/purpose.
     QR_CODE: (id: string) => `hospitals/${id}/qr-code`,
+    BOOKING_QR_CODE: (id: string) => `hospitals/${id}/booking-qr-code`,
   },
   LEADS: {
     // Route shape mirrors HOSPITALS.GET_ANALYSIS ("resource/analysis/hospitalId={id}") --
