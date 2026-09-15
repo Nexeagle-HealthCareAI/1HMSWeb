@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { MapLocationPicker } from '@/components/map/MapLocationPicker';
 import { useHospitalApi } from '@/hooks/useApi';
 import { hospitalApi, HospitalData } from '../services/hospitalApi';
 import { useAuthStore } from '@/store/authStore';
@@ -445,11 +446,11 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
 
   // Latitude/longitude are optional numeric fields, kept separate from updateBranding above
   // since that helper assumes string values and runs string-field validation.
-  const updateGeoField = (field: 'latitude' | 'longitude', value: string) => {
-    const parsed = value.trim() === '' ? undefined : Number(value);
+  const handleLocationPick = (lat: number, lng: number) => {
     onBrandingChange({
       ...branding,
-      [field]: Number.isFinite(parsed) ? parsed : undefined
+      latitude: Number.isFinite(lat) ? lat : undefined,
+      longitude: Number.isFinite(lng) ? lng : undefined
     });
   };
 
@@ -1064,28 +1065,13 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     "Powers the \"get directions\" link on your doctors' public listings."
                   )}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    id="latitude"
-                    type="number"
-                    step="any"
-                    value={branding.latitude ?? ''}
-                    onChange={(e) => updateGeoField('latitude', e.target.value)}
-                    placeholder={translate('hospitalBranding.placeholders.latitude', 'Latitude')}
-                    disabled={isExistingHospital && !isEditMode}
-                    className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
-                  />
-                  <Input
-                    id="longitude"
-                    type="number"
-                    step="any"
-                    value={branding.longitude ?? ''}
-                    onChange={(e) => updateGeoField('longitude', e.target.value)}
-                    placeholder={translate('hospitalBranding.placeholders.longitude', 'Longitude')}
-                    disabled={isExistingHospital && !isEditMode}
-                    className="h-10 rounded-xl border border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
-                  />
-                </div>
+                <MapLocationPicker
+                  latitude={branding.latitude}
+                  longitude={branding.longitude}
+                  onLocationChange={handleLocationPick}
+                  disabled={isExistingHospital && !isEditMode}
+                  searchPlaceholder={translate('hospitalBranding.geolocation.searchPlaceholder', 'Search for your hospital\'s address...')}
+                />
               </div>
             </CardContent>
           </Card>

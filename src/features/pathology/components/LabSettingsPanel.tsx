@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { MapLocationPicker } from '@/components/map/MapLocationPicker';
 import { useAuthStore } from '@/store';
 import { pathologyService } from '../services/pathologyService';
 import { hospitalApi, HospitalData } from '@/features/hospital/services/hospitalApi';
@@ -312,16 +313,15 @@ export const LabSettingsPanel: React.FC = () => {
                 {isDetectingLocation ? 'Detecting...' : 'Use my current location'}
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-lat" className="text-xs text-muted-foreground font-normal">Latitude</Label>
-                <Input id="lab-lat" type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Optional" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-lng" className="text-xs text-muted-foreground font-normal">Longitude</Label>
-                <Input id="lab-lng" type="number" step="any" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Optional" />
-              </div>
-            </div>
+            <MapLocationPicker
+              latitude={latitude.trim() ? Number(latitude) : undefined}
+              longitude={longitude.trim() ? Number(longitude) : undefined}
+              onLocationChange={(lat, lng) => {
+                setLatitude(String(lat));
+                setLongitude(String(lng));
+              }}
+              searchPlaceholder="Search for your lab's address..."
+            />
             <p className="text-xs text-muted-foreground">Powers "Get Directions" on your lab's public page. You can also type coordinates manually.</p>
           </div>
           <div className="space-y-1.5">
