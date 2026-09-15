@@ -19,6 +19,10 @@ ARG VITE_DEMO_LOGIN_EMAIL
 ARG VITE_DEMO_LOGIN_PASSWORD
 ENV VITE_DEMO_LOGIN_EMAIL=$VITE_DEMO_LOGIN_EMAIL
 ENV VITE_DEMO_LOGIN_PASSWORD=$VITE_DEMO_LOGIN_PASSWORD
+# Mapbox public token -- powers the hospital/lab GPS location picker. Set on both Dev and Prod
+# builds (see deploy-web.yml); unset means MapLocationPicker.tsx degrades to plain lat/lng inputs.
+ARG VITE_MAPBOX_TOKEN
+ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
 RUN npm run build:prod
 
 # ───────────────────────── Serve stage ─────────────────────────

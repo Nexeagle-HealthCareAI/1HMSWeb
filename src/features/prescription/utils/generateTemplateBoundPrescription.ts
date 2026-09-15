@@ -97,8 +97,11 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   const lineHeight = Math.max(textSize + 2, textSize * 1.3);
   const leftPad = mmToPt(layout.margins.left);
   const rightPad = mmToPt(layout.margins.right);
-  const templateHeaderPad = mmToPt(layout.margins.top + layout.headerHeight);
-  const templateFooterPad = mmToPt(layout.margins.bottom + layout.footerHeight);
+  // `margins.top`/`margins.bottom` are the same value as `headerHeight`/`footerHeight` by design
+  // (see TestModal's headerHeight = margins.top) — do not add them together, that double-counts
+  // the header/footer height and can push all clinical content off page 1.
+  const templateHeaderPad = mmToPt(layout.headerHeight);
+  const templateFooterPad = mmToPt(layout.footerHeight);
   const blankHeaderPad = mmToPt(layout.margins.top);
   const blankFooterPad = mmToPt(layout.margins.bottom);
   const contentWidth = pageWidth - leftPad - rightPad;

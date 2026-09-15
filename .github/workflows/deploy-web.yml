@@ -30,6 +30,10 @@
 # means the auto-login effect no-ops harmlessly — nothing breaks, it just doesn't activate yet:
 #   VITE_DEMO_LOGIN_EMAIL     e.g. info@nexeagle.com
 #   VITE_DEMO_LOGIN_PASSWORD  e.g. demo123
+# OPTIONAL repo SECRET, both Dev and Prod builds -- Mapbox public token (pk.*) powering the
+# hospital/lab GPS location picker (MapLocationPicker.tsx). Unset means the picker degrades to
+# plain lat/lng inputs with no map, nothing breaks:
+#   VITE_MAPBOX_TOKEN         e.g. pk.eyJ1...
 # ═══════════════════════════════════════════════════════════════════════════════
 
 name: EasyHMS Web — CI/CD
@@ -96,6 +100,7 @@ jobs:
             VITE_API_BASE_URL=${{ vars.DEV_API_BASE_URL || 'https://1hms-dev-api.nexeagle.com' }}
             VITE_DEMO_LOGIN_EMAIL=${{ secrets.VITE_DEMO_LOGIN_EMAIL }}
             VITE_DEMO_LOGIN_PASSWORD=${{ secrets.VITE_DEMO_LOGIN_PASSWORD }}
+            VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
             ${{ steps.vars.outputs.image }}:develop
@@ -167,6 +172,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=${{ vars.PROD_API_BASE_URL || 'https://1hms-api.nexeagle.com' }}
+            VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
             ${{ steps.vars.outputs.image }}:latest
