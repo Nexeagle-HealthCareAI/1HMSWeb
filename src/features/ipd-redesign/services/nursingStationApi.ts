@@ -203,6 +203,18 @@ export const nursingStationApi = {
             })
             .then(r => r.items ?? []),
 
+    // Bulk counterpart -- one request for every visible bed's assignments instead of one
+    // getPatientAssignments call per occupied bed (what the ward board used to do on every load
+    // and every poll tick).
+    getPatientAssignmentsBulk: (admissionIds: string[], hospitalId?: string): Promise<PatientNurseAssignmentItem[]> => {
+        if (admissionIds.length === 0) return Promise.resolve([]);
+        return ipdApiClient
+            .get<GetPatientNurseAssignmentsResponse>('/nursing-station/patient-assignments/bulk', {
+                params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionIds },
+            })
+            .then(r => r.items ?? []);
+    },
+
     assignPatient: async (input: AssignPatientNurseInput, hospitalId?: string) => {
         try {
             return await ipdApiClient.post('/nursing-station/patient-assignment', { hospitalId: hospitalIdOrThrow(hospitalId), ...input });
