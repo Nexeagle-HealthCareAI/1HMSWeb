@@ -22,6 +22,12 @@ export const NurseQuickActionDialog: React.FC<Props> = ({ open, onOpenChange, ad
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('vitals');
 
+    // The dialog instance is shared across bed-card clicks, so without this a tab picked for one
+    // patient (e.g. "Notes") stays selected when a different patient's dialog is opened next.
+    React.useEffect(() => {
+        if (admissionId) setActiveTab('vitals');
+    }, [admissionId]);
+
     if (!admissionId) return null;
 
     return (

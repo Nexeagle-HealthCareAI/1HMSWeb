@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 
 import { useAuthStore } from '@/store/authStore';
 import { nursingStationApi, type HospitalNurseItem, type WardListItem, type PatientNurseAssignmentItem, type NursingStationPatientItem } from '@/features/ipd-redesign/services/nursingStationApi';
@@ -276,16 +277,17 @@ export const UnifiedWardBoard: React.FC = () => {
             const sumMap: Record<string, NursingStationPatientItem> = {};
             clinicalData.items.forEach(item => { sumMap[item.admissionId] = item; });
 
-            // Fetch assignments for all admitted beds
+            // Fetch assignments for all admitted beds in a single bulk call (previously one
+            // GetPatientAssignments request per occupied bed, every load and every poll tick).
+            const admittedIds = finalBeds.map(b => b.admissionId).filter((id): id is string => !!id);
+            const allAssignments = await nursingStationApi.getPatientAssignmentsBulk(admittedIds, hospitalId);
             const assignData: Record<string, PatientNurseAssignmentItem[]> = {};
-            await Promise.all(finalBeds.map(async (b) => {
-                if (b.admissionId) {
-                    const patientAssignments = await nursingStationApi.getPatientAssignments(b.admissionId, hospitalId);
-                    assignData[b.admissionId] = patientAssignments.filter(a => 
-                        a.shiftCode === selectedShift && (!a.shiftDate || a.shiftDate.startsWith(selectedDate))
-                    );
+            admittedIds.forEach(id => { assignData[id] = []; });
+            allAssignments.forEach(a => {
+                if (a.shiftCode === selectedShift && (!a.shiftDate || a.shiftDate.startsWith(selectedDate))) {
+                    (assignData[a.admissionId] ??= []).push(a);
                 }
-            }));
+            });
 
             setBeds(finalBeds);
             setClinicalSummaries(sumMap);
