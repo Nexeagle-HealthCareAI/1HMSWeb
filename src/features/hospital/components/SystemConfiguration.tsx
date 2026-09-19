@@ -30,11 +30,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
     activeTab,
     setActiveTab,
     hospitalBranding,
-    handleBrandingChange,
-    daysRemaining,
-    isTrialActive,
-    isHospitalLoading,
-    trialStartDate
+    handleBrandingChange
   } = useSystemConfiguration(focusTab);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

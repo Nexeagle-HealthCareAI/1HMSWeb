@@ -187,13 +187,13 @@ export const SubscriptionPage = () => {
                                         <div className="flex justify-between items-start gap-2 mb-3">
                                             <div>
                                                 <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{activePlan?.name ?? 'Unknown Plan'}</h3>
-                                                <p className="text-xs text-muted-foreground mt-0.5">{activePlan ? `Billed ${activePlan.billingCycle}` : 'Free trial'}</p>
+                                                <p className="text-xs text-muted-foreground mt-0.5">{activePlan ? `Billed ${activePlan.billingCycle}` : 'Free plan'}</p>
                                             </div>
                                             <StatusBadge status={status.status} />
                                         </div>
 
-                                        {status.daysLeft !== undefined && status.daysLeft >= 0 && (() => {
-                                            const isUrgent = status.status === 'Active' && status.daysLeft <= 3;
+                                        {status.status === 'Active' && status.daysLeft != null && (() => {
+                                            const isUrgent = status.daysLeft <= 3;
                                             return (
                                                 <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                                                     <div className="flex justify-between items-baseline text-xs font-semibold mb-1.5">
