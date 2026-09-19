@@ -262,8 +262,8 @@ export const DoctorCalendarPage: React.FC<DoctorCalendarPageProps> = ({ initialD
   const daysCount = getDaysCount();
 
   // Queries - Use the same startDate for both hooks to ensure consistency
-  const { data: calendarConfig, isLoading: configLoading, refetch: refetchCalendarConfig } = useDoctorCalendarConfig(doctorId, hospitalId, fromISO, daysCount);
-  const { data: events = [], isLoading: eventsLoading, refetch: refetchCalendarEvents } = useCalendarEvents(doctorId, hospitalId, fromISO, toISO, calendarConfig);
+  const { data: calendarConfig, isLoading: configLoading, refetch: refetchCalendarConfig } = useDoctorCalendarConfig(doctorId || '', hospitalId || '', fromISO, daysCount);
+  const { data: events = [], isLoading: eventsLoading, refetch: refetchCalendarEvents } = useCalendarEvents(doctorId || '', hospitalId || '', fromISO, toISO, calendarConfig);
 
   // Real booked patient appointments, shown alongside shifts/time-off so a doctor sees their
   // whole day -- schedule AND who's actually booked -- in one calendar instead of two separate

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 
 import { useAuthStore } from '@/store/authStore';
 import { nursingStationApi, type HospitalNurseItem, type WardListItem, type PatientNurseAssignmentItem, type NursingStationPatientItem } from '@/features/ipd-redesign/services/nursingStationApi';
