@@ -8,7 +8,7 @@ const hospitalIdOrThrow = (override?: string) => {
 };
 
 // ─── Duplicate detection & merge ───────────────────────────────────────────────
-export type DuplicateConfidence = 'NEAR_CERTAIN' | 'PROBABLE' | 'POSSIBLE';
+export type DuplicateConfidence = 'ABHA_VERIFIED' | 'NEAR_CERTAIN' | 'PROBABLE' | 'POSSIBLE';
 
 export interface DuplicateMatch {
   patientId: string;
@@ -28,6 +28,7 @@ export interface CheckDuplicatesPayload {
   mobile?: string;
   dateOfBirth?: string | null;
   aadhaarNumber?: string;
+  abhaId?: string;
   excludePatientId?: string;
 }
 

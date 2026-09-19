@@ -82,6 +82,7 @@ const PHONE_REGEX = /^\d{10}$/;
 const RELATION_OPTIONS = ['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'];
 
 const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
+  ABHA_VERIFIED: { chip: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'ABHA match' },
   NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
   PROBABLE: { chip: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Probable' },
   POSSIBLE: { chip: 'bg-sky-100 text-sky-700 border-sky-200', label: 'Possible' },
@@ -449,21 +450,24 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   // Debounced fuzzy duplicate probe for a brand-new patient (skip once one is selected).
+  // An ABHA link alone is enough to trigger this even if the name is still short — an exact
+  // ABHA match is deterministic, it doesn't need the name-similarity gate the other signals do.
   useEffect(() => {
     if (formData.patientId) { setDupMatches([]); return; }
     const name = formData.name.trim();
     const phoneDigits = formData.phone.replace(/\D/g, '');
-    if (name.length < 3) { setDupMatches([]); return; }
+    if (name.length < 3 && !formData.abhaId) { setDupMatches([]); return; }
     let active = true;
     const tid = setTimeout(async () => {
       const matches = await patientApi.checkDuplicates({
         fullName: name,
         mobile: phoneDigits.length >= 10 ? phoneDigits : undefined,
+        abhaId: formData.abhaId || undefined,
       }, hospitalId);
       if (active) { setDupMatches(matches); setDupDismissed(false); }
     }, 450);
     return () => { active = false; clearTimeout(tid); };
-  }, [formData.patientId, formData.name, formData.phone, hospitalId]);
+  }, [formData.patientId, formData.name, formData.phone, formData.abhaId, hospitalId]);
 
   const useExistingDuplicate = (m: DuplicateMatch) => {
     handlePatientSelect({
@@ -911,12 +915,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               </div>
 
               {/* Duplicate-patient warning (new patient only) */}
-              {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (
-                <div className={`xl:col-span-12 rounded-xl border shadow-sm overflow-hidden ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
+              {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (() => {
+                const abhaVerified = dupMatches.some(m => m.confidence === 'ABHA_VERIFIED');
+                const nearCertain = dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
+                const tone = abhaVerified ? 'emerald' : nearCertain ? 'rose' : 'amber';
+                return (
+                <div className={`xl:col-span-12 rounded-xl border shadow-sm overflow-hidden ${tone === 'emerald' ? 'border-emerald-300 bg-emerald-50/70' : tone === 'rose' ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-black/5">
-                    <AlertTriangle className={`h-4 w-4 shrink-0 ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'text-rose-600' : 'text-amber-600'}`} />
+                    <AlertTriangle className={`h-4 w-4 shrink-0 ${tone === 'emerald' ? 'text-emerald-600' : tone === 'rose' ? 'text-rose-600' : 'text-amber-600'}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-foreground">Possible existing patient</p>
+                      <p className="text-sm font-bold text-foreground">{abhaVerified ? 'Already registered here — ABHA verified' : 'Possible existing patient'}</p>
                       <p className="text-[11px] text-muted-foreground">{dupMatches.length} match{dupMatches.length > 1 ? 'es' : ''} — select to avoid a duplicate UHID.</p>
                     </div>
                     <button type="button" onClick={() => setDupDismissed(true)} className="text-[11px] text-muted-foreground hover:text-foreground shrink-0">Dismiss</button>
@@ -938,7 +946,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     ))}
                   </div>
                 </div>
-              )}
+                );
+              })()}
               {/* Personal & Contact Information - Single Row */}
               <Card className="xl:col-span-5 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow mt-0">
                 <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
