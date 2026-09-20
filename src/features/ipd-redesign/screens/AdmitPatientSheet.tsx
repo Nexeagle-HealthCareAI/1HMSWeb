@@ -28,6 +28,7 @@ import {
     type AdmissionPatientDetail, type AdmissionHistoryItem,
     type HospitalDoctorItem,
     type PatientSearchResult,
+    type DuplicateMatch, type DuplicateConfidence,
 } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { consentApi, type ConsentTemplateItem } from '../services/consentApi';
@@ -170,6 +171,15 @@ const CHIP_TONES = {
     rose: 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/10',
 };
 
+// Same tiers/labels as the appointment-booking PatientForm's duplicate banner — kept as its own
+// local copy rather than a shared import, matching this file's existing convention.
+const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
+    ABHA_VERIFIED: { chip: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'ABHA match' },
+    NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
+    PROBABLE: { chip: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Probable' },
+    POSSIBLE: { chip: 'bg-sky-100 text-sky-700 border-sky-200', label: 'Possible' },
+};
+
 const SectionCard: React.FC<{
     icon: React.ReactNode; title: string; subtitle?: string; tone?: keyof typeof CHIP_TONES;
     right?: React.ReactNode; children: React.ReactNode;
@@ -238,6 +248,28 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [patientSearching, setPatientSearching] = useState(false);
     const [showPatientSearchResults, setShowPatientSearchResults] = useState(false);
     const patientSearchContainerRef = useRef<HTMLDivElement>(null);
+
+    // Live fuzzy duplicate probe (name/mobile/DOB/Aadhaar/ABHA) for the new-patient path — mirrors
+    // PatientForm.tsx's booking-side check against the same /patient/check-duplicates endpoint.
+    const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
+    const [dupDismissed, setDupDismissed] = useState(false);
+    useEffect(() => {
+        if (selectedPatientId) { setDupMatches([]); return; }
+        const name = form.fullName.trim();
+        if (name.length < 3 && !form.abhaId) { setDupMatches([]); return; }
+        let active = true;
+        const tid = setTimeout(async () => {
+            const matches = await admissionApi.checkDuplicates({
+                fullName: name,
+                mobile: form.mobile.length >= 10 ? form.mobile : undefined,
+                dateOfBirth: form.dateOfBirth || undefined,
+                aadhaarNumber: form.aadhaarNumber || undefined,
+                abhaId: form.abhaId || undefined,
+            }, hospitalId);
+            if (active) { setDupMatches(matches); setDupDismissed(false); }
+        }, 450);
+        return () => { active = false; clearTimeout(tid); };
+    }, [selectedPatientId, form.fullName, form.mobile, form.dateOfBirth, form.aadhaarNumber, form.abhaId, hospitalId]);
 
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState<{ admissionNo?: string; patientId?: string; isNewPatient?: boolean; admissionId?: string; statusCode?: string; admittedAt?: string; advanceReceiptNo?: string; advancePendingApproval?: boolean } | null>(null);
@@ -831,6 +863,42 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     </div>
                                 </SectionCard>
                             )}
+
+                            {/* ── Live duplicate-detection banner (new patient only) ── */}
+                            {!selectedPatientId && dupMatches.length > 0 && !dupDismissed && (() => {
+                                const abhaVerified = dupMatches.some(m => m.confidence === 'ABHA_VERIFIED');
+                                const nearCertain = dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
+                                const tone = abhaVerified ? 'emerald' : nearCertain ? 'rose' : 'amber';
+                                return (
+                                <div className={cn('rounded-xl border shadow-sm overflow-hidden',
+                                    tone === 'emerald' ? 'border-emerald-300 bg-emerald-50/70' : tone === 'rose' ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60')}>
+                                    <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-black/5">
+                                        <AlertTriangle className={cn('h-4 w-4 shrink-0', tone === 'emerald' ? 'text-emerald-600' : tone === 'rose' ? 'text-rose-600' : 'text-amber-600')} />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-bold text-foreground">{abhaVerified ? 'Already registered here — ABHA verified' : 'Possible existing patient'}</p>
+                                            <p className="text-[11px] text-muted-foreground">{dupMatches.length} match{dupMatches.length > 1 ? 'es' : ''} — select to avoid a duplicate UHID.</p>
+                                        </div>
+                                        <button type="button" onClick={() => setDupDismissed(true)} className="text-[11px] text-muted-foreground hover:text-foreground shrink-0">Dismiss</button>
+                                    </div>
+                                    <div className="p-2.5 space-y-1.5">
+                                        {dupMatches.map(m => (
+                                            <div key={m.patientId} className="rounded-lg border border-input bg-background p-2 flex items-center gap-2.5">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-semibold text-sm truncate">{m.fullName || '—'}</p>
+                                                        <Badge variant="outline" className={cn('text-[11px] font-bold border', DUP_TONE[m.confidence].chip)}>{DUP_TONE[m.confidence].label}</Badge>
+                                                    </div>
+                                                    <p className="text-[11px] text-muted-foreground font-mono truncate">
+                                                        {m.patientId}{m.ageYears != null ? ` · ${m.ageYears}${m.sex ?? ''}` : m.sex ? ` · ${m.sex}` : ''}{m.mobile ? ` · ${m.mobile}` : ''} · {Math.round(m.similarity * 100)}% name
+                                                    </p>
+                                                </div>
+                                                <Button type="button" size="sm" onClick={() => { selectPatient(m.patientId); setDupMatches([]); }} className="h-8 text-xs shrink-0">Use this</Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                );
+                            })()}
 
                             {/* ── Selected existing patient: identity card ──────── */}
                             {!!selectedPatientId && (
