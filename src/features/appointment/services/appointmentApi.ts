@@ -274,6 +274,24 @@ export interface AppointmentDetailsResponse {
   items: AppointmentDetail[];
 }
 
+// A public (Doctor Dekho / NexEagle) booking that came in since the caller's cursor -- see
+// GET /appointments/online-bookings/recent. `serverTime` is the cursor for the NEXT call (server
+// clock, so it never depends on the browser's own).
+export interface RecentOnlineBooking {
+  appointmentId: string;
+  patientName?: string | null;
+  doctorName?: string | null;
+  apptDate: string;
+  startAt: string;
+  createdAt: string;
+  status?: string | null;
+}
+
+export interface RecentOnlineBookingsResponse {
+  serverTime: string;
+  items: RecentOnlineBooking[];
+}
+
 export interface AppointmentDetail {
   appointmentId: string;
   patientId: string;
@@ -436,6 +454,17 @@ export const appointmentApi = {
     }
     const url = `/appointments/patient-appointment-details?status=${params.status}&startDate=${params.startDate}&endDate=${params.endDate}&hospitalId=${params.hospitalId}`;
     return apiClient.get(url);
+  },
+
+  // Cheap poll for "did an online booking just come in?" -- unlike getAppointmentDetails it isn't
+  // date-scoped (a booking for next week still counts) and returns only what's new since `since`.
+  // Omit `since` on the first call to just get a baseline cursor.
+  getRecentOnlineBookings: (hospitalId: string, since?: string): Promise<RecentOnlineBookingsResponse> => {
+    if (hospitalId === 'PREVIEW-HOSPITAL') {
+      return Promise.resolve({ serverTime: new Date().toISOString(), items: [] });
+    }
+    const sinceParam = since ? `&since=${encodeURIComponent(since)}` : '';
+    return apiClient.get(`/appointments/online-bookings/recent?hospitalId=${hospitalId}${sinceParam}`);
   },
 
   // Most recent appointment for a patient, across all doctors/dates — used to surface
