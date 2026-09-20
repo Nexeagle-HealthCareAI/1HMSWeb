@@ -95,9 +95,62 @@ export interface AbdmFindAbhaSearchResponse {
   candidates: AbdmFindAbhaCandidate[];
 }
 
+// "Scan Health Facility QR": a patient scans the counter QR in their ABHA app and ABDM pushes
+// their profile to our callback — these are those received profiles.
+export interface AbdmProfileShareItem {
+  profileShareId: string;
+  counterId?: string;
+  abhaNumber?: string;
+  abhaAddress?: string;
+  fullName?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  mobile?: string;
+  address?: string;
+  statusCode: 'NEW' | 'HANDLED' | string;
+  receivedAt: string;
+  // Set when a patient here already carries this ABHA number (a returning patient).
+  existingPatientId?: string;
+  existingPatientName?: string;
+}
+
+export interface GetAbdmProfileSharesResponse {
+  success: boolean;
+  message?: string;
+  items: AbdmProfileShareItem[];
+}
+
+export interface AbdmFacilityResponse {
+  success: boolean;
+  hipId?: string;
+  // Base of the counter QR's URL; empty when this environment has none configured.
+  qrBaseUrl: string;
+}
+
 // ---- API -------------------------------------------------------------------------------
 
 export const abdmApi = {
+  getFacility: (hospitalId: string) =>
+    apiClient.get<AbdmFacilityResponse>(`/abdm/facility?hospitalId=${encodeURIComponent(hospitalId)}`),
+
+  saveFacility: (hospitalId: string, hipId: string) =>
+    apiClient.put<{ success: boolean; message?: string }>('/abdm/facility', { hospitalId, hipId }),
+
+  getProfileShares: (hospitalId: string, opts?: { counterId?: string; status?: 'NEW' | 'HANDLED' }) => {
+    const qs = new URLSearchParams({ hospitalId });
+    if (opts?.counterId) qs.set('counterId', opts.counterId);
+    if (opts?.status) qs.set('status', opts.status);
+    return apiClient.get<GetAbdmProfileSharesResponse>(`/abdm/profile-shares?${qs.toString()}`);
+  },
+
+  handleProfileShare: (hospitalId: string, profileShareId: string) =>
+    apiClient.post<{ success: boolean; message?: string }>(
+      `/abdm/profile-shares/${encodeURIComponent(profileShareId)}/handle?hospitalId=${encodeURIComponent(hospitalId)}`, {}),
+
+  // Platform-wide (not per hospital): points ABDM at this API's public callback URL.
+  registerBridgeUrl: () =>
+    apiClient.post<{ message?: string; abdmResponse?: string }>('/abdm/bridge/register', {}),
+
   getAccounts: (hospitalId: string) =>
     apiClient.get<GetAbhaAccountsResponse>(`/abdm/accounts?hospitalId=${encodeURIComponent(hospitalId)}`),
 

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Link2, Loader2, CheckCircle2, Search } from 'lucide-react';
+import { Link2, Loader2, CheckCircle2, Search, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { abdmApi, type AbdmProfileResponse, type AbdmFindAbhaCandidate } from '../services/abdmApi';
+import { abdmApi, type AbdmProfileResponse, type AbdmFindAbhaCandidate, type AbdmProfileShareItem } from '../services/abdmApi';
 
 type Step = 'login' | 'pick' | 'otp' | 'confirm';
 type LoginHint = 'mobile' | 'aadhaar' | 'abha-number';
@@ -45,6 +45,34 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
   const [candidates, setCandidates] = useState<AbdmFindAbhaCandidate[]>([]);
   const [searchTxnId, setSearchTxnId] = useState('');
 
+  // Profiles patients just shared by scanning the counter QR — already consented to in their ABHA
+  // app, so picking one skips the OTP step entirely.
+  const [recentScans, setRecentScans] = useState<AbdmProfileShareItem[]>([]);
+  const [pickedShareId, setPickedShareId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || step !== 'login' || !hospitalId) return;
+    let active = true;
+    abdmApi.getProfileShares(hospitalId, { status: 'NEW' })
+      .then(res => { if (active) setRecentScans((res.items || []).filter(i => i.abhaNumber).slice(0, 5)); })
+      .catch(() => { /* optional shortcut — the OTP path below still works */ });
+    return () => { active = false; };
+  }, [open, step, hospitalId]);
+
+  const pickScan = (item: AbdmProfileShareItem) => {
+    setProfile({
+      success: true,
+      abhaNumber: item.abhaNumber,
+      abhaAddress: item.abhaAddress,
+      fullName: item.fullName,
+      gender: item.gender,
+      dateOfBirth: item.dateOfBirth,
+      mobile: item.mobile,
+    });
+    setPickedShareId(item.profileShareId);
+    setStep('confirm');
+  };
+
   const reset = () => {
     setStep('login');
     setBusy(false);
@@ -56,6 +84,8 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     setFindMode(false);
     setCandidates([]);
     setSearchTxnId('');
+    setRecentScans([]);
+    setPickedShareId(null);
   };
 
   const handleOpenChange = (v: boolean) => {
@@ -145,6 +175,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
       const res = await abdmApi.saveLinkedAccount(hospitalId, profile);
       if (!res.success) { fail(res.message); return; }
       toast({ title: 'ABHA account linked', description: res.message });
+      if (pickedShareId) void abdmApi.handleProfileShare(hospitalId, pickedShareId).catch(() => { /* best-effort */ });
       onLinked?.(profile);
       onDone();
       handleOpenChange(false);
@@ -181,6 +212,23 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
         {step === 'login' && (
           <>
+            {recentScans.length > 0 && (
+              <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+                <p className="text-sm font-semibold flex items-center gap-2"><QrCode className="h-4 w-4 text-emerald-600" /> Just scanned at the counter</p>
+                {recentScans.map(item => (
+                  <button
+                    key={item.profileShareId}
+                    type="button"
+                    onClick={() => pickScan(item)}
+                    className="w-full text-left rounded-lg border bg-background p-2.5 hover:bg-muted/50 transition-colors"
+                  >
+                    <p className="text-sm font-medium truncate">{item.fullName || 'Unnamed'}</p>
+                    <p className="text-xs text-muted-foreground font-mono truncate">{[item.abhaNumber, item.mobile].filter(Boolean).join(' · ')}</p>
+                  </button>
+                ))}
+                <p className="text-[11px] text-muted-foreground">No OTP needed — the patient already consented in their ABHA app.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Identify by</Label>
               <RadioGroup value={loginHint} onValueChange={v => setLoginHint(v as LoginHint)} className="flex gap-4">
