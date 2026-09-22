@@ -1,9 +1,10 @@
 import { PublicDirectoryDoctorTile } from '../features/hospital/services/publicDirectoryDoctorsApi';
+import { DOCTOR_DEKHO_URL } from '../app/publicSite';
 
 export const buildDoctorQrPosterA4 = (doctor: PublicDirectoryDoctorTile, hospitalName: string, city: string): string => {
     // Generate the public URL that patients should visit
     const doctorSlug = `${(doctor.fullName || 'doctor').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${city.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${doctor.doctorId}`;
-    const publicUrl = `https://nexeagle.com/doctors/${doctorSlug}`;
+    const publicUrl = `${DOCTOR_DEKHO_URL}/doctors/${doctorSlug}`;
     
     // Generate QR code URL using a public API (qrserver)
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(publicUrl)}&margin=10`;

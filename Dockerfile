@@ -23,6 +23,11 @@ ENV VITE_DEMO_LOGIN_PASSWORD=$VITE_DEMO_LOGIN_PASSWORD
 # builds (see deploy-web.yml); unset means MapLocationPicker.tsx degrades to plain lat/lng inputs.
 ARG VITE_MAPBOX_TOKEN
 ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
+# Origin of Doctor Dekho (the separate patient-facing site) -- used for printed doctor QR posters
+# and the "Preview Doctor Dekho" button. Defaults to prod in code (src/app/publicSite.ts); only the
+# Dev build sets it (see deploy-web.yml) so dev posters point at dev's Doctor Dekho.
+ARG VITE_DOCTORDEKHO_URL
+ENV VITE_DOCTORDEKHO_URL=$VITE_DOCTORDEKHO_URL
 RUN npm run build:prod
 
 # ───────────────────────── Serve stage ─────────────────────────
