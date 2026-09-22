@@ -101,6 +101,7 @@ jobs:
             VITE_DEMO_LOGIN_EMAIL=${{ secrets.VITE_DEMO_LOGIN_EMAIL }}
             VITE_DEMO_LOGIN_PASSWORD=${{ secrets.VITE_DEMO_LOGIN_PASSWORD }}
             VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
+            VITE_DOCTORDEKHO_URL=https://doctordekho-dev.nexeagle.com
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
             ${{ steps.vars.outputs.image }}:develop

@@ -40,6 +40,7 @@ const RoleBasedRedirect = () => {
 
 const SubscriptionPage = lazy(() => import('@/features/subscription/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
+const MagicLoginPage = lazy(() => import('@/features/auth/pages/MagicLoginPage').then(module => ({ default: module.default })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 // DEV-ONLY: unauthenticated mobile-UI preview harness for the Admin dashboard (see route below).
 const AdminDashboardPreview = lazy(() => import('@/features/dashboard/pages/AdminDashboardPreview').then(module => ({ default: module.default })));
@@ -292,6 +293,9 @@ export const AppRoutes: React.FC = () => {
             )
           }
         />
+
+        {/* One-tap sign-in link from WhatsApp/email notifications -- public: it establishes the session. */}
+        <Route path="/magic-login" element={<MagicLoginPage />} />
 
         {/* Print Preview Route - Public or Protected? usually protected but lets keep open for iframe/window access simplicity or protect appropriately */}
         <Route

@@ -47,6 +47,7 @@ import { EditDoctorTileDialog } from './EditDoctorTileDialog';
 import { DoctorReviewsDialog } from './DoctorReviewsDialog';
 import { cn } from '@/lib/utils';
 import { buildDoctorQrPosterA4 } from '@/printTemplates/doctorQrPosterA4';
+import { DOCTOR_DEKHO_URL } from '@/app/publicSite';
 
 const initialsFor = (name?: string | null) => {
   const cleaned = (name || '').replace(/^Dr\.?\s*/i, '').trim();
@@ -305,7 +306,7 @@ export const PublicDirectoryConfig: React.FC = () => {
               size="sm"
               className="w-full sm:w-auto gap-2 rounded-xl"
             >
-              <a href="https://nexeagle.com" target="_blank" rel="noreferrer">
+              <a href={DOCTOR_DEKHO_URL} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5" />
                 {translate('publicDirectory.preview', 'Preview Doctor Dekho')}
               </a>

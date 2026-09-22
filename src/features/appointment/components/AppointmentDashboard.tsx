@@ -107,6 +107,9 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { useAvailabilityRoster } from '@/features/doctor-calendar/hooks/useCalendar';
 import { DoctorCalendarPage } from '@/features/doctor-calendar/DoctorCalendarPage';
+import { useOnlineBookingPulse, type OnlineBookingAlert } from '../hooks/useOnlineBookingPulse';
+import { OnlineBookingAlerts } from './OnlineBookingAlerts';
+import { AnimatedCount, LiveOnlineChip, NewPill, PulseRing } from './OnlineBookingLive';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -607,6 +610,35 @@ export const AppointmentDashboard = () => {
   useEffect(() => {
     if (appointmentData) setLastUpdateTime(new Date());
   }, [appointmentData]);
+
+  // Near-live detection of new online (Doctor Dekho / NexEagle) bookings: polls a tiny,
+  // hospital-scoped endpoint every few seconds and, on a hit, refetches the board so the booking
+  // shows up (and is counted) right away instead of waiting for the 30s list poll. Not date-scoped,
+  // so it also announces a booking made for a day the board is not currently showing.
+  const onlinePulse = useOnlineBookingPulse({
+    hospitalId: hospitalId || '',
+    enabled: !!hospitalId,
+    onNewBookings: () => {
+      refetch();
+    },
+  });
+  const hasFreshOnlineBooking = onlinePulse.freshIds.size > 0;
+
+  // "View" on an alert: clear every filter that could hide the row and land on the tab that
+  // contains its date, so pressing it always ends with the new booking on screen.
+  const handleViewOnlineBooking = (alert: OnlineBookingAlert) => {
+    const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const when = new Date(alert.booking.startAt || alert.booking.apptDate);
+    const today = dayKey(new Date());
+    const bookingDay = Number.isNaN(when.getTime()) ? today : dayKey(when);
+    setShowBooking(false);
+    setSearchTerm('');
+    setSelectedDoctor('all');
+    setSelectedDepartment('all');
+    setSelectedStatus('all');
+    setActiveTab(bookingDay === today ? 'current' : bookingDay > today ? 'future' : 'past');
+    refetch();
+  };
 
   const getDoctorFilterValue = (doctorId?: string, doctorName?: string | null) => {
     if (doctorId) {
@@ -1240,6 +1272,8 @@ export const AppointmentDashboard = () => {
 
   return (
     <>
+      <OnlineBookingAlerts alerts={onlinePulse.alerts} onDismiss={onlinePulse.dismissAlert} onView={handleViewOnlineBooking} />
+
       {/* Dashboard View - Hidden on desktop when booking is active */}
       <div className={`flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4 ${showBooking ? 'md:hidden' : ''}`}>
       {!isLowBandwidthMode && (
@@ -1302,29 +1336,40 @@ export const AppointmentDashboard = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 w-full relative z-10 flex flex-col gap-6">
-        {/* Live indicator -- the current tab's data already auto-refreshes every 30s
-            (useAppointmentDetails.ts); this makes that visible instead of silent. Only shown on
-            the current tab, since "live" doesn't mean anything for past/future appointments. */}
-        {activeTab === 'current' && (
-          <div className="flex items-center gap-2 -mb-2 px-1 text-xs text-slate-500 dark:text-slate-400">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span>Live</span>
-            <span className="text-slate-300 dark:text-slate-600">·</span>
-            <span>Last synced {lastUpdateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              disabled={isLoading}
-              className="ml-1 inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
-        )}
+        {/* Live strip. On the current tab it shows the sync status (that tab's data auto-refreshes
+            every 30s -- useAppointmentDetails.ts -- and this makes it visible instead of silent;
+            "live" means nothing for past/future). The online-bookings chip is shown on every tab and
+            every screen size (the KPI cards below are desktop-only) and animates when one arrives. */}
+        <div className="flex flex-wrap items-center gap-2 -mb-2 px-1 text-xs text-slate-500 dark:text-slate-400">
+          {activeTab === 'current' && (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span>Live</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+              <span>Last synced {lastUpdateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isLoading}
+                className="ml-1 inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </>
+          )}
+          <LiveOnlineChip
+            className="ml-auto"
+            count={kpiStats.totalOnlineToday}
+            pulseToken={onlinePulse.pulseToken}
+            hasFresh={hasFreshOnlineBooking}
+            soundOn={onlinePulse.soundOn}
+            onToggleSound={onlinePulse.toggleSound}
+          />
+        </div>
 
         {/* KPI Section */}
         <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
@@ -1356,15 +1401,23 @@ export const AppointmentDashboard = () => {
                 </div>
                 <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' })}</span>
               </div>
-              <div className="text-4xl font-mono font-black text-amber-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all">{kpiStats.preAppointment}</div>
+              <div className="relative z-10 ml-1">
+                <AnimatedCount
+                  value={kpiStats.preAppointment}
+                  className="text-4xl font-mono font-black text-amber-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all"
+                />
+              </div>
             </div>
           )}
 
-          {/* Online Bookings Today: total booked via public/online channels, regardless of
-              current status -- unlike the card above, this doesn't drop once front desk confirms
-              a pending online booking, so it answers "how much of today's volume is online." */}
-          {kpiStats.totalOnlineToday > 0 && (
-            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-sky-500/20 hover:-translate-y-1 transition-all duration-300 group">
+          {/* Online Bookings: total booked via public/online channels, regardless of current status --
+              unlike the card above, this does not drop once front desk confirms a pending online
+              booking, so it answers "how much of this view's volume is online." Always shown (even at
+              0) and live: the count rolls when it changes, the card rings + flashes NEW when an
+              online booking lands, and the header carries a LIVE beacon. */}
+          <div className="relative">
+            <PulseRing token={onlinePulse.pulseToken} className="rounded-2xl" />
+            <div className={`relative h-full overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border shadow-lg hover:shadow-sky-500/20 hover:-translate-y-1 transition-all duration-300 group ${hasFreshOnlineBooking ? 'border-sky-300 dark:border-sky-500/60 ring-2 ring-sky-400/40 shadow-sky-500/30' : 'border-white/50 dark:border-zinc-800/50'}`}>
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
                 <Globe className="h-20 w-20 text-sky-500 -rotate-12" />
               </div>
@@ -1374,10 +1427,22 @@ export const AppointmentDashboard = () => {
                   <Globe className="h-5 w-5" />
                 </div>
                 <span className="text-xs font-bold uppercase tracking-widest text-sky-900/70 dark:text-sky-300/80">{t('appointmentDashboard.statusFilters.totalOnlineToday', { defaultValue: 'Online Bookings Today' })}</span>
+                <span className="ml-auto flex items-center gap-1.5">
+                  <NewPill visible={hasFreshOnlineBooking} label={t('appointmentDashboard.onlineLive.new', { defaultValue: 'NEW' })} />
+                  <span className="relative flex h-2 w-2" title="Live">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                </span>
               </div>
-              <div className="text-4xl font-mono font-black text-sky-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sky-600 group-hover:to-cyan-500 dark:group-hover:from-sky-400 dark:group-hover:to-cyan-400 transition-all">{kpiStats.totalOnlineToday}</div>
+              <div className="relative z-10 ml-1">
+                <AnimatedCount
+                  value={kpiStats.totalOnlineToday}
+                  className="text-4xl font-mono font-black text-sky-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sky-600 group-hover:to-cyan-500 dark:group-hover:from-sky-400 dark:group-hover:to-cyan-400 transition-all"
+                />
+              </div>
             </div>
-          )}
+          </div>
 
           {activeTab !== 'future' && (
             <>
@@ -1834,7 +1899,7 @@ export const AppointmentDashboard = () => {
                         </TableRow>
                       ) : (
                         currentAppointments.map((appointment) => (
-                          <TableRow key={appointment.appointmentId} className={`group hover:bg-brand-50/50 dark:hover:bg-brand-900/20 transition-all border-b border-brand-50 dark:border-zinc-800/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm relative hover:shadow-[inset_0_0_15px_rgba(59,130,246,0.1)]`}>
+                          <TableRow key={appointment.appointmentId} className={`group hover:bg-brand-50/50 dark:hover:bg-brand-900/20 transition-all border-b border-brand-50 dark:border-zinc-800/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm relative hover:shadow-[inset_0_0_15px_rgba(59,130,246,0.1)] ${onlinePulse.freshIds.has(appointment.appointmentId) ? 'animate-online-row-flash shadow-[inset_4px_0_0_0_rgb(14_165_233)]' : ''}`}>
                             {/* Patient ID */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div
@@ -2138,7 +2203,7 @@ export const AppointmentDashboard = () => {
                   ) : (
                     <div className="flex flex-col gap-3 px-2 pt-2 pb-24">
                       {currentAppointments.map((appointment) => (
-                        <div key={appointment.appointmentId} className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800/80 overflow-hidden active:scale-[0.98] transition-all relative group">
+                        <div key={appointment.appointmentId} className={`bg-white dark:bg-zinc-900/80 p-3.5 sm:p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800/80 overflow-hidden active:scale-[0.98] transition-all relative group ${onlinePulse.freshIds.has(appointment.appointmentId) ? 'ring-2 ring-sky-400/70 animate-online-row-flash' : ''}`}>
                           {/* Main Row */}
                           <div className="flex gap-3 relative z-10">
                             {/* Avatar */}

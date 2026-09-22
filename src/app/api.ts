@@ -83,6 +83,7 @@ export const API_ENDPOINTS = {
     SEND_OTP: 'auth/otp/send',
     SIGN_UP: 'auth/user/register',
     OTP_CHECKER: 'auth/otp/verify',
+    MAGIC_LINK_EXCHANGE: 'auth/magic-link/exchange',
     SET_PASSWORD: 'auth/user/password?scope=set-password',
     RESET_PASSWORD: 'auth/user/password?scope=reset-password',
     CHANGE_PASSWORD: 'auth/user/password?scope=change-password',

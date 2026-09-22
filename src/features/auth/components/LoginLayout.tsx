@@ -2,8 +2,99 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { useTranslation } from 'react-i18next';
-import { Check, Shield, Activity, Lock, Database, FileText, GraduationCap, Users, Code, Calendar, HardDrive } from 'lucide-react';
+import { Check, Shield, Activity, Lock, Database, FileText, GraduationCap, Users, Code, Calendar, HardDrive, ExternalLink, Scan, Stethoscope } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// Sibling NexEagle platforms, cross-promoted on the login banner. Features are grounded in each
+// product's own repo/README, not guesses. prodUrl/devUrl are the real URLs.
+const OTHER_PLATFORMS = [
+  {
+    key: '1rad',
+    name: '1Rad Flow',
+    tagline: 'Radiology Management System',
+    Icon: Scan,
+    accent: '#2563eb',
+    features: [
+      'Live worklist — booking to report, one board',
+      'DICOM viewing & structured reporting built in',
+      'Real-time referral incentive tracking & payouts',
+      'Doctor portal — referring physicians book online',
+    ],
+    prodUrl: 'https://1rad.nexeagle.com',
+    devUrl: '',
+  },
+  {
+    key: 'doctordekho',
+    name: 'DoctorDekho',
+    tagline: 'Find & Book a Doctor',
+    Icon: Stethoscope,
+    accent: '#7c3aed',
+    features: [
+      'Search doctors by specialty, condition or symptom',
+      'Book across hospitals & labs instantly',
+      'WhatsApp OTP login — no passwords',
+      'English, Hindi, Bengali & Hinglish',
+    ],
+    prodUrl: 'https://doctordekho.nexeagle.com',
+    devUrl: 'https://doctordekho-dev.nexeagle.com',
+  },
+];
+
+// One sibling-platform card. The whole card opens Prod in a new tab; a small "Dev" chip (shown
+// only when a dev URL is configured) opens Dev instead. Matches LoginLayout's glass-card language.
+const PlatformCard: React.FC<{ platform: typeof OTHER_PLATFORMS[number] }> = ({ platform }) => {
+  const { name, tagline, Icon, accent, features, prodUrl, devUrl } = platform;
+  // A <div> wrapper, not <a> — the "Dev" link below must be a real, separately-clickable <a>,
+  // and nesting <a> inside <a> is invalid HTML (browsers silently break the outer one at that
+  // point, so most of the card would stop opening Prod).
+  const openProd = () => window.open(prodUrl, '_blank', 'noopener,noreferrer');
+  return (
+    <div
+      onClick={openProd}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProd(); } }}
+      className="group block bg-white/10 backdrop-blur-md border border-white/10 rounded-lg p-3.5 hover:bg-white/15 hover:border-white/25 transition-all duration-300 cursor-pointer"
+    >
+      <div className="flex items-center gap-2.5 mb-2.5">
+        <div
+          className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${accent}33` }}
+        >
+          <Icon className="w-4 h-4" style={{ color: accent }} />
+        </div>
+        <div className="min-w-0">
+          <div className="text-white text-sm font-bold leading-tight truncate">{name}</div>
+          <div className="text-brand-200/80 text-[10px] font-medium truncate">{tagline}</div>
+        </div>
+      </div>
+      <ul className="space-y-1 mb-2.5">
+        {features.map((f, i) => (
+          <li key={i} className="flex items-start gap-1.5 text-[11px] text-brand-100/85 leading-snug">
+            <Check className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: accent }} />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-[10.5px] font-bold" style={{ color: accent }}>
+          Open platform <ExternalLink className="w-3 h-3" />
+        </span>
+        {devUrl && (
+          <a
+            href={devUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="ml-auto text-[9.5px] font-bold text-white/50 hover:text-white/80 border border-white/15 rounded-full px-2 py-0.5 no-underline transition-colors"
+          >
+            Dev ↗
+          </a>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface LoginLayoutProps {
   children: React.ReactNode;
@@ -86,6 +177,19 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg p-3 hover:bg-white/15 transition-all duration-300">
           <div className="text-2xl font-bold text-white mb-0.5">24/7</div>
           <div className="text-xs text-brand-200 font-medium uppercase tracking-wider">{t('loginLayout.support')}</div>
+        </div>
+      </div>
+
+      {/* More from NexEagle — sibling platforms, each clickable to Prod (+ a Dev chip where set) */}
+      <div className="mt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-1 h-1 rounded-full bg-white/40" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-200/70">
+            More from NexEagle
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {OTHER_PLATFORMS.map((p) => <PlatformCard key={p.key} platform={p} />)}
         </div>
       </div>
     </div>

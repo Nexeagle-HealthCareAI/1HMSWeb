@@ -598,6 +598,20 @@
       "cancelled": "Cancelled",
       "preAppointment": "Online Appointment"
     },
+    "onlineLive": {
+      "chipLabel": "Online bookings",
+      "new": "NEW",
+      "newBooking": "New online appointment",
+      "aPatient": "A patient",
+      "withDoctor": "with {{doctor}}",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "view": "View",
+      "dismiss": "Dismiss",
+      "soundOn": "Sound alerts on — click to mute",
+      "soundOff": "Sound alerts off — click to unmute",
+      "cardLabel": "Online Bookings"
+    },
     "statusLabels": {
       "vitalsRequired": "Vitals",
       "ready": "Ready",

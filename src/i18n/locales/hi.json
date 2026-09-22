@@ -1301,6 +1301,20 @@
       "cancelled": "रद्द",
       "preAppointment": "ऑनलाइन अपॉइंटमेंट"
     },
+    "onlineLive": {
+      "chipLabel": "ऑनलाइन बुकिंग",
+      "new": "नया",
+      "newBooking": "नया ऑनलाइन अपॉइंटमेंट",
+      "aPatient": "एक मरीज़",
+      "withDoctor": "{{doctor}} के साथ",
+      "today": "आज",
+      "tomorrow": "कल",
+      "view": "देखें",
+      "dismiss": "हटाएँ",
+      "soundOn": "आवाज़ वाली सूचना चालू — बंद करने के लिए क्लिक करें",
+      "soundOff": "आवाज़ वाली सूचना बंद — चालू करने के लिए क्लिक करें",
+      "cardLabel": "ऑनलाइन बुकिंग"
+    },
     "statusLabels": {
       "vitalsRequired": "वाइटल्स",
       "ready": "तैयार",

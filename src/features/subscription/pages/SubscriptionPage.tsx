@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { CheckCircle, AlertTriangle, CreditCard, ShieldCheck, Zap, Stethoscope, BedDouble, Mail, Sparkles, LayoutGrid, Receipt, CalendarClock, Gauge } from 'lucide-react';
+import { CheckCircle, AlertTriangle, CreditCard, ShieldCheck, Zap, Stethoscope, BedDouble, Mail, Sparkles, LayoutGrid, Receipt, CalendarClock, Gift } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionApi } from '../hooks/useSubscriptionApi';
@@ -179,6 +179,56 @@ export const SubscriptionPage = () => {
                     </h2>
 
                     <div className="space-y-6">
+                        {usage?.freeTierLimit != null && usage.freeTierUsedCount != null && (() => {
+                            const pct = Math.min(100, (usage.freeTierUsedCount! / usage.freeTierLimit!) * 100);
+                            const isAtLimit = usage.freeTierUsedCount! >= usage.freeTierLimit!;
+                            const isUrgent = !isAtLimit && pct >= 80;
+                            const remaining = Math.max(0, usage.freeTierLimit! - usage.freeTierUsedCount!);
+                            return (
+                                <motion.div variants={itemVariants} initial="hidden" animate="show">
+                                    <Card className={cn(
+                                        "relative overflow-hidden border-2 shadow-lg",
+                                        isAtLimit
+                                            ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10"
+                                            : isUrgent
+                                                ? "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10"
+                                                : "border-brand-200 dark:border-brand-800 bg-gradient-to-br from-brand-50 via-white to-blue-50 dark:from-brand-900/20 dark:via-slate-900 dark:to-blue-900/10"
+                                    )}>
+                                        {!isAtLimit && !isUrgent && (
+                                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-brand-500/10 blur-2xl pointer-events-none" />
+                                        )}
+                                        <CardContent className="p-5 relative">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-brand-600 dark:text-brand-400">
+                                                    <Gift className="w-4 h-4" /> Free Patient Entries
+                                                </div>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                                                    Included free
+                                                </span>
+                                            </div>
+                                            <div className="flex items-end gap-2 mb-2">
+                                                <span className={cn('text-4xl font-black tracking-tight', isAtLimit ? 'text-red-600 dark:text-red-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white')}>
+                                                    {usage.freeTierUsedCount}
+                                                </span>
+                                                <span className="text-lg font-bold text-muted-foreground mb-0.5">/ {usage.freeTierLimit} used</span>
+                                            </div>
+                                            <Progress
+                                                value={pct}
+                                                className="h-2 mb-2"
+                                                indicatorClassName={isAtLimit ? 'bg-red-500' : isUrgent ? 'bg-amber-500' : 'bg-brand-500'}
+                                            />
+                                            <p className={cn("text-xs font-bold", isAtLimit ? 'text-red-600 dark:text-red-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
+                                                {isAtLimit ? 'Limit reached — upgrade to keep registering patients' : `${remaining} free entries left this month`}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                                                Covers IPD admissions, OPD appointments, pathology orders, and pharmacy checkouts — resets every month, free of charge.
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            );
+                        })()}
+
                         {status ? (
                             <motion.div variants={itemVariants} initial="hidden" animate="show">
                                 <Card className="border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg relative">
@@ -221,39 +271,6 @@ export const SubscriptionPage = () => {
                                 <p className="text-blue-700 dark:text-blue-400 mt-1">Select a plan on the right to get started.</p>
                             </div>
                         )}
-
-                        {usage?.freeTierLimit != null && usage.freeTierUsedCount != null && (() => {
-                            const pct = Math.min(100, (usage.freeTierUsedCount! / usage.freeTierLimit!) * 100);
-                            const isAtLimit = usage.freeTierUsedCount! >= usage.freeTierLimit!;
-                            const isUrgent = !isAtLimit && pct >= 80;
-                            return (
-                                <motion.div variants={itemVariants} initial="hidden" animate="show">
-                                    <Card className="border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg">
-                                        <CardContent className="p-5">
-                                            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-                                                <Gauge className="w-3.5 h-3.5" /> Free Tier Usage
-                                            </div>
-                                            <div className="flex justify-between items-baseline text-xs font-semibold mb-1.5">
-                                                <span className={cn(isAtLimit ? 'text-red-600 dark:text-red-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400')}>
-                                                    {isAtLimit ? 'Limit reached — upgrade to continue' : 'Resets next month'}
-                                                </span>
-                                                <span className={cn('text-sm font-bold', isAtLimit ? 'text-red-600 dark:text-red-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200')}>
-                                                    {usage.freeTierUsedCount} / {usage.freeTierLimit}
-                                                </span>
-                                            </div>
-                                            <Progress
-                                                value={pct}
-                                                className="h-1.5"
-                                                indicatorClassName={isAtLimit ? 'bg-red-500' : isUrgent ? 'bg-amber-500' : 'bg-brand-500'}
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-2.5 leading-relaxed">
-                                                Counts IPD admissions, OPD appointments, pathology orders, and pharmacy checkouts this month.
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            );
-                        })()}
 
                         {isBlocked && (
                             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/60 p-4 rounded-xl shadow-sm text-sm">
