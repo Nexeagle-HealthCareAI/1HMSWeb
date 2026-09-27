@@ -10,6 +10,7 @@ import {
   Fingerprint,
   ChevronDown,
   Building2,
+  Cpu,
 } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { HrKpiMatrix } from '../components/HrKpiMatrix';
@@ -19,11 +20,12 @@ import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import { DutyRosterPlanner } from '../components/DutyRosterPlanner';
 import { LeaveConsole } from '../components/LeaveConsole';
 import { AttendanceExceptions } from '../components/AttendanceExceptions';
+import { BiometricDevicesPanel } from '../components/BiometricDevicesPanel';
 import { PayrollWizard } from '../components/PayrollWizard';
 import { useHrKpi } from '../hrApi';
 import type { HrEmployee } from '../types';
 
-type HrTab = 'overview' | 'employees' | 'roster' | 'leave' | 'attendance' | 'payroll';
+type HrTab = 'overview' | 'employees' | 'roster' | 'leave' | 'attendance' | 'devices' | 'payroll';
 
 const HR_TABS: { id: HrTab; label: string; icon: React.ReactNode; description: string }[] = [
   {
@@ -55,6 +57,12 @@ const HR_TABS: { id: HrTab; label: string; icon: React.ReactNode; description: s
     label: 'Attendance',
     icon: <Fingerprint className="h-4 w-4" />,
     description: 'Exceptions & Punches',
+  },
+  {
+    id: 'devices',
+    label: 'Devices',
+    icon: <Cpu className="h-4 w-4" />,
+    description: 'Fingerprint terminals',
   },
   {
     id: 'payroll',
@@ -232,6 +240,7 @@ export const HrDashboardPage: React.FC = () => {
             {activeTab === 'roster' && <DutyRosterPlanner hospitalId={hospitalId} />}
             {activeTab === 'leave' && <LeaveConsole hospitalId={hospitalId} />}
             {activeTab === 'attendance' && <AttendanceExceptions hospitalId={hospitalId} />}
+            {activeTab === 'devices' && <BiometricDevicesPanel hospitalId={hospitalId} />}
             {activeTab === 'payroll' && <PayrollWizard hospitalId={hospitalId} />}
           </motion.div>
         </AnimatePresence>

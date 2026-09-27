@@ -456,3 +456,66 @@ export interface DispatchPayslipsResponseModel {
 }
 
 
+
+// ─── Biometric attendance devices ───────────────────────────────────────────
+
+export interface BiometricDevice {
+  hrBiometricDeviceId: string;
+  name: string;
+  serialNumber: string;
+  vendor: string;
+  model?: string | null;
+  location?: string | null;
+  isActive: boolean;
+  /** UTC, but serialised without a "Z" — parse with asUtc() before showing it. */
+  lastSeenAt?: string | null;
+  lastSeenIp?: string | null;
+  /** The device's own wall-clock time for its newest scan (no timezone). */
+  lastPunchTime?: string | null;
+  /** Heard from within the last 10 minutes (decided server-side). */
+  isOnline: boolean;
+}
+
+/** A PIN that has scanned at a device but isn't linked to an employee yet. */
+export interface UnmappedDeviceUser {
+  deviceUserId: string;
+  scanCount: number;
+  firstSeen: string;
+  lastSeen: string;
+}
+
+/** An employee <-> device PIN link that already exists. */
+export interface EmployeeDeviceLink {
+  hrEmployeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  deviceUserId: string;
+}
+
+export interface RegisterBiometricDeviceRequest {
+  hospitalId: string;
+  name: string;
+  serialNumber: string;
+  model?: string;
+  location?: string;
+}
+
+export interface RegisterBiometricDeviceResponse {
+  success: boolean;
+  message?: string;
+  device?: BiometricDevice;
+  /** Shown exactly once, here. Only its hash is stored server-side. */
+  token?: string;
+}
+
+export interface RotateBiometricDeviceTokenResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+}
+
+export interface MapDeviceUserResponse {
+  success: boolean;
+  message?: string;
+  attendanceDaysUpdated: number;
+}

@@ -20,6 +20,13 @@ import type {
   HrDutyRoster,
   LeaveStatus,
   AttendanceExceptionDto,
+  BiometricDevice,
+  UnmappedDeviceUser,
+  EmployeeDeviceLink,
+  RegisterBiometricDeviceRequest,
+  RegisterBiometricDeviceResponse,
+  RotateBiometricDeviceTokenResponse,
+  MapDeviceUserResponse,
   RunMonthlyPayrollResponseModel,
   GetPayslipsByRunResponseModel,
   DispatchPayslipsResponseModel
@@ -79,6 +86,9 @@ export function useHrEmployees(filters: EmployeeFilters = {}) {
       if (filters.employmentType) params.append('employmentType', filters.employmentType);
       if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
       if (filters.departmentId) params.append('departmentId', filters.departmentId);
+      // The API pages at 20 by default and this hook never asked for more, so every hospital with more
+      // than 20 staff silently saw only the first 20. Ask for a full page until real paging is added.
+      params.append('take', '500');
 
       const data = await apiClient.get<{ employees: HrEmployee[] }>(`/api/v1/hr/employees?${params.toString()}`);
       return data.employees || [];
@@ -243,5 +253,100 @@ export function useGetPayslipsByRun(hrPayrollRunId: string | null) {
 export function useDispatchPayslips() {
   return useMutation<DispatchPayslipsResponseModel, Error, string>({
     mutationFn: (hrPayrollRunId: string) => unwrapMutationError(() => apiClient.post(`/api/v1/hr/payroll/${hrPayrollRunId}/dispatch`)),
+  });
+}
+
+// ─── Biometric attendance devices ───────────────────────────────────────────
+
+export const BIOMETRIC_QUERY_KEYS = {
+  devices: (hospitalId: string) => ['hr', 'biometric', 'devices', hospitalId] as const,
+  unmapped: (hospitalId: string) => ['hr', 'biometric', 'unmapped', hospitalId] as const,
+  links: (hospitalId: string) => ['hr', 'biometric', 'links', hospitalId] as const,
+};
+
+export function useBiometricDevices(hospitalId: string) {
+  return useQuery<BiometricDevice[]>({
+    queryKey: BIOMETRIC_QUERY_KEYS.devices(hospitalId),
+    queryFn: async () => {
+      const data = await apiClient.get<{ devices: BiometricDevice[] }>(`/api/v1/hr/biometric/devices?hospitalId=${hospitalId}`);
+      return data.devices || [];
+    },
+    // The online/offline badge is the whole point of this list, so keep it fresh.
+    refetchInterval: 30_000,
+    enabled: !!hospitalId,
+  });
+}
+
+export function useUnmappedDeviceUsers(hospitalId: string) {
+  return useQuery<UnmappedDeviceUser[]>({
+    queryKey: BIOMETRIC_QUERY_KEYS.unmapped(hospitalId),
+    queryFn: async () => {
+      const data = await apiClient.get<{ users: UnmappedDeviceUser[] }>(`/api/v1/hr/biometric/unmapped?hospitalId=${hospitalId}`);
+      return data.users || [];
+    },
+    refetchInterval: 30_000,
+    enabled: !!hospitalId,
+  });
+}
+
+export function useEmployeeDeviceLinks(hospitalId: string) {
+  return useQuery<EmployeeDeviceLink[]>({
+    queryKey: BIOMETRIC_QUERY_KEYS.links(hospitalId),
+    queryFn: async () => {
+      const data = await apiClient.get<{ links: EmployeeDeviceLink[] }>(`/api/v1/hr/biometric/device-users?hospitalId=${hospitalId}`);
+      return data.links || [];
+    },
+    enabled: !!hospitalId,
+  });
+}
+
+export function useRegisterBiometricDevice() {
+  const qc = useQueryClient();
+  return useMutation<RegisterBiometricDeviceResponse, Error, RegisterBiometricDeviceRequest>({
+    mutationFn: (data) => unwrapMutationError(() => apiClient.post('/api/v1/hr/biometric/devices', data)),
+    onSuccess: (_res, vars) => qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.devices(vars.hospitalId) }),
+  });
+}
+
+export function useSetBiometricDeviceActive(hospitalId: string) {
+  const qc = useQueryClient();
+  return useMutation<{ success: boolean; message?: string }, Error, { deviceId: string; isActive: boolean }>({
+    mutationFn: ({ deviceId, isActive }) =>
+      unwrapMutationError(() => apiClient.put(`/api/v1/hr/biometric/devices/${deviceId}/active`, { isActive })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.devices(hospitalId) }),
+  });
+}
+
+export function useRotateBiometricDeviceToken() {
+  return useMutation<RotateBiometricDeviceTokenResponse, Error, string>({
+    mutationFn: (deviceId) =>
+      unwrapMutationError(() => apiClient.post(`/api/v1/hr/biometric/devices/${deviceId}/rotate-token`)),
+  });
+}
+
+export function useMapDeviceUser(hospitalId: string) {
+  const qc = useQueryClient();
+  return useMutation<MapDeviceUserResponse, Error, { employeeId: string; deviceUserId: string }>({
+    mutationFn: ({ employeeId, deviceUserId }) =>
+      unwrapMutationError(() => apiClient.put(`/api/v1/hr/biometric/employees/${employeeId}/device-user`, { deviceUserId })),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.unmapped(hospitalId) });
+      qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.links(hospitalId) });
+      // Linking a PIN can build attendance from scans that were waiting for it.
+      qc.invalidateQueries({ queryKey: ['hr', 'attendance'] });
+      qc.invalidateQueries({ queryKey: ['hr', 'attendance-exceptions'] });
+    },
+  });
+}
+
+export function useUnmapDeviceUser(hospitalId: string) {
+  const qc = useQueryClient();
+  return useMutation<{ success: boolean; message?: string }, Error, string>({
+    mutationFn: (employeeId) =>
+      unwrapMutationError(() => apiClient.delete(`/api/v1/hr/biometric/employees/${employeeId}/device-user`)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.links(hospitalId) });
+      qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.unmapped(hospitalId) });
+    },
   });
 }
