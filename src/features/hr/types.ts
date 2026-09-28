@@ -170,7 +170,7 @@ export interface AttendanceExceptionDto {
   attendanceDate: string;
   punchIn?: string;
   punchOut?: string;
-  exceptionType: 'LATE' | 'MISSING_OUT_PUNCH' | 'MISSING_IN_PUNCH' | 'UNSCHEDULED';
+  exceptionType: 'LATE' | 'MISSING_OUT_PUNCH' | 'MISSING_IN_PUNCH' | 'UNSCHEDULED' | 'ABSENT';
   description: string;
 }
 
@@ -518,4 +518,27 @@ export interface MapDeviceUserResponse {
   success: boolean;
   message?: string;
   attendanceDaysUpdated: number;
+}
+
+// ─── Manual attendance override ─────────────────────────────────────────────
+
+/** PRESENT | LATE | HALF_DAY | ABSENT | ON_LEAVE */
+export type AttendanceOverrideStatus = 'PRESENT' | 'LATE' | 'HALF_DAY' | 'ABSENT' | 'ON_LEAVE';
+
+export interface SetAttendanceOverrideRequest {
+  employeeId: string;
+  /** ISO date, e.g. "2026-08-10" */
+  attendanceDate: string;
+  status: AttendanceOverrideStatus;
+  /** Full ISO datetime. Omit to leave an existing punch time untouched. */
+  punchIn?: string;
+  punchOut?: string;
+  notes?: string;
+  reason: string;
+}
+
+export interface SetAttendanceOverrideResponse {
+  success: boolean;
+  message?: string;
+  attendanceLogId?: string;
 }

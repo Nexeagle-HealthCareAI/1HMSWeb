@@ -27,6 +27,8 @@ import type {
   RegisterBiometricDeviceResponse,
   RotateBiometricDeviceTokenResponse,
   MapDeviceUserResponse,
+  SetAttendanceOverrideRequest,
+  SetAttendanceOverrideResponse,
   RunMonthlyPayrollResponseModel,
   GetPayslipsByRunResponseModel,
   DispatchPayslipsResponseModel
@@ -347,6 +349,21 @@ export function useUnmapDeviceUser(hospitalId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.links(hospitalId) });
       qc.invalidateQueries({ queryKey: BIOMETRIC_QUERY_KEYS.unmapped(hospitalId) });
+    },
+  });
+}
+
+// ─── Manual attendance override ─────────────────────────────────────────────
+
+export function useSetAttendanceOverride() {
+  const qc = useQueryClient();
+  return useMutation<SetAttendanceOverrideResponse, Error, SetAttendanceOverrideRequest>({
+    mutationFn: ({ employeeId, ...body }) =>
+      unwrapMutationError(() => apiClient.put(`/api/v1/hr/attendance/${employeeId}/override`, body)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hr', 'attendance-exceptions'] });
+      qc.invalidateQueries({ queryKey: ['hr', 'attendance'] });
+      qc.invalidateQueries({ queryKey: ['hr', 'kpi'] });
     },
   });
 }

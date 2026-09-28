@@ -5,6 +5,7 @@ import {
   Clock,
   LogOut,
   CalendarX,
+  UserX,
   Search,
   Filter,
   CheckCircle,
@@ -13,15 +14,18 @@ import {
 } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { useAttendanceExceptions } from '../hrApi';
+import { AttendanceOverrideDialog } from './AttendanceOverrideDialog';
+import type { AttendanceExceptionDto } from '../types';
 
 export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospitalId }) => {
   const endDate = new Date().toISOString();
   const startDate = subDays(new Date(), 7).toISOString();
-  
+
   const { data: exceptions, isLoading } = useAttendanceExceptions(hospitalId, startDate, endDate);
-  
+
   const [filterType, setFilterType] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [overrideTarget, setOverrideTarget] = useState<AttendanceExceptionDto | null>(null);
 
   const filteredExceptions = exceptions?.filter(ex => {
     if (filterType !== 'ALL' && ex.exceptionType !== filterType) return false;
@@ -38,6 +42,7 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
       case 'MISSING_OUT_PUNCH': return <LogOut className="h-5 w-5 text-red-500" />;
       case 'MISSING_IN_PUNCH': return <LogOut className="h-5 w-5 text-red-500" />;
       case 'UNSCHEDULED': return <CalendarX className="h-5 w-5 text-purple-500" />;
+      case 'ABSENT': return <UserX className="h-5 w-5 text-rose-600" />;
       default: return <AlertTriangle className="h-5 w-5 text-gray-500" />;
     }
   };
@@ -51,6 +56,8 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
         return <span className="px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 text-xs font-bold">MISSED PUNCH</span>;
       case 'UNSCHEDULED':
         return <span className="px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 text-xs font-bold">UNSCHEDULED</span>;
+      case 'ABSENT':
+        return <span className="px-2.5 py-1 rounded-md bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 text-xs font-bold">ABSENT</span>;
       default:
         return <span className="px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-bold">{type}</span>;
     }
@@ -76,7 +83,7 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
         </div>
 
         {/* Stats Summary */}
-        <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="md:col-span-3 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-center relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform">
               <Clock className="h-24 w-24" />
@@ -104,6 +111,15 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
               {exceptions?.filter(e => e.exceptionType === 'UNSCHEDULED').length || 0}
             </div>
           </div>
+          <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-center relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform">
+              <UserX className="h-24 w-24" />
+            </div>
+            <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Absent</div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">
+              {exceptions?.filter(e => e.exceptionType === 'ABSENT').length || 0}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -111,7 +127,7 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
       <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit overflow-x-auto">
-            {(['ALL', 'LATE', 'MISSING_OUT_PUNCH', 'UNSCHEDULED'] as const).map(status => (
+            {(['ALL', 'LATE', 'MISSING_OUT_PUNCH', 'UNSCHEDULED', 'ABSENT'] as const).map(status => (
               <button
                 key={status}
                 onClick={() => setFilterType(status)}
@@ -188,7 +204,8 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
+                        <button
+                          onClick={() => setOverrideTarget(ex)}
                           className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm transition-all"
                         >
                           Manual Override
@@ -217,6 +234,8 @@ export const AttendanceExceptions: React.FC<{ hospitalId: string }> = ({ hospita
           </table>
         </div>
       </div>
+
+      <AttendanceOverrideDialog target={overrideTarget} onClose={() => setOverrideTarget(null)} />
     </div>
   );
 };
