@@ -1,3 +1,4 @@
+import { ipdApiClient } from '@/services/ipdApiClient';
 import { useAuthStore } from '@/store/authStore';
 
 export interface ShiftItem {
@@ -23,29 +24,59 @@ const hospitalIdOrThrow = (override?: string) => {
     return id;
 };
 
+// Shifts now live on the server (GET/PUT /nursing-station/shifts) so every device sees the same
+// definitions. Older builds kept them in this browser's localStorage; the first admin load after the
+// upgrade migrates that list to the server once, then drops the local copy.
+interface ShiftsResponse { success?: boolean; shifts?: ShiftItem[]; message?: string }
+
+const readLegacy = (hid: string): ShiftItem[] | null => {
+    try {
+        const stored = localStorage.getItem(getStorageKey(hid));
+        if (!stored) return null;
+        const parsed = JSON.parse(stored) as ShiftItem[];
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    } catch {
+        return null;
+    }
+};
+
+const clearLegacy = (hid: string) => {
+    try { localStorage.removeItem(getStorageKey(hid)); } catch { /* storage unavailable */ }
+};
+
 export const shiftApi = {
     getShifts: async (hospitalId?: string): Promise<ShiftItem[]> => {
-        // Simulate network delay
-        await new Promise(r => setTimeout(r, 200));
-        
         const hid = hospitalIdOrThrow(hospitalId);
-        const stored = localStorage.getItem(getStorageKey(hid));
-        if (stored) {
-            try {
-                return JSON.parse(stored) as ShiftItem[];
-            } catch (e) {
-                console.error('Failed to parse stored shifts', e);
-            }
+        let server: ShiftItem[] = [];
+        try {
+            const res = await ipdApiClient.get<ShiftsResponse>('/nursing-station/shifts', { params: { hospitalId: hid } });
+            server = res?.shifts ?? [];
+        } catch {
+            // Offline / API error: fall back to a legacy local copy, else the defaults.
+            return readLegacy(hid) ?? DEFAULT_SHIFTS;
         }
-        
-        // Return default if nothing stored
+        if (server.length > 0) {
+            clearLegacy(hid);
+            return server;
+        }
+
+        const legacy = readLegacy(hid);
+        if (legacy) {
+            try {
+                await ipdApiClient.put<ShiftsResponse>('/nursing-station/shifts', legacy, { params: { hospitalId: hid } });
+                clearLegacy(hid);
+            } catch {
+                // Not an admin (PUT is admin-only) or offline: keep using the local copy for now.
+            }
+            return legacy;
+        }
         return DEFAULT_SHIFTS;
     },
 
     saveShifts: async (shifts: ShiftItem[], hospitalId?: string): Promise<void> => {
-        await new Promise(r => setTimeout(r, 300));
         const hid = hospitalIdOrThrow(hospitalId);
-        localStorage.setItem(getStorageKey(hid), JSON.stringify(shifts));
+        await ipdApiClient.put<ShiftsResponse>('/nursing-station/shifts', shifts, { params: { hospitalId: hid } });
+        clearLegacy(hid);
     },
 
     addShift: async (shift: Omit<ShiftItem, 'sortOrder'>, hospitalId?: string): Promise<ShiftItem[]> => {

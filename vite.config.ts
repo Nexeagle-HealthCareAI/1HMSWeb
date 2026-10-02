@@ -135,8 +135,9 @@ export default defineConfig(({ mode }) => {
       minify: mode === 'production' ? 'terser' : false,
       terserOptions: mode === 'production' ? {
         compress: {
-          drop_console: false,
-          drop_debugger: false,
+          // Strip chatty/PHI-adjacent logging from production; keep console.warn/error.
+          pure_funcs: ['console.log', 'console.info', 'console.debug'],
+          drop_debugger: true,
         },
         mangle: {
           safari10: true

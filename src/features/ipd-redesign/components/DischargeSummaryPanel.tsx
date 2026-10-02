@@ -11,6 +11,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
+import { useDischargeCustomFields } from '../hooks/useDischargeCustomFields';
 import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
 import { bedBoardApi } from '../services/bedBoardApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
@@ -112,17 +113,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         }
     }, [layoutDoctorId, hospitalId]);
 
-    // Custom field values aren't backed by a DischargeSummary column yet (Phase 1/UI-only pass —
-    // real persistence lands with the rest of the backend). Kept per-admission in localStorage
-    // purely so a demo doesn't lose data on reload.
-    const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+    // Custom field values persist on the server (discharge-summary/custom-fields). A signed summary
+    // is frozen: the server rejects writes, so the hook is read-only once signed.
+    const { values: customFieldValues, setValues: setCustomFieldValues, saveError: customFieldSaveError } =
+        useDischargeCustomFields(admission.admissionId, isSigned);
     useEffect(() => {
-        const raw = localStorage.getItem(`discharge-custom-fields:${admission.admissionId}`);
-        setCustomFieldValues(raw ? JSON.parse(raw) : {});
-    }, [admission.admissionId]);
-    useEffect(() => {
-        localStorage.setItem(`discharge-custom-fields:${admission.admissionId}`, JSON.stringify(customFieldValues));
-    }, [customFieldValues, admission.admissionId]);
+        if (customFieldSaveError) toast({ title: 'Custom fields not saved', description: customFieldSaveError, variant: 'destructive' });
+    }, [customFieldSaveError]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const isCash = admission.payerType === 'CASH';
     const isDischarged = admission.statusCode === 'DISCHARGED';

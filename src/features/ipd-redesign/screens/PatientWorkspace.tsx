@@ -832,6 +832,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     {activeSection === 'cpoe' && activeCpoeTab === 'medications' && (
                         <ClinicalOrderPanel
                             admissionId={current.admissionId}
+                            patientId={current.patientId}
                             isActive={isActive}
                             orderType="MEDICATION"
                             itemPickerCategoryCodes={['PHARMACY']}

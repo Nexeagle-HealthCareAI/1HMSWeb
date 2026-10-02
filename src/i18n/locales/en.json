@@ -3438,5 +3438,32 @@
     "hospitalPage": "Hospital page",
     "anonymous": "Anonymous",
     "pageOf": "Page {{page}} of {{totalPages}}"
+  },
+  "mainNav": {
+    "subscription": "Subscription",
+    "ipd": "IPD",
+    "abdm": "ABHA / ABDM",
+    "pathology": "Pathology Lab",
+    "pharmacy": "Pharmacy Retail",
+    "inventory": "Inventory",
+    "otBoard": "OT Board",
+    "icuBoard": "ICU Board",
+    "nursingStation": "Nursing Station",
+    "hcrm": "HCRM",
+    "hr": "1HR Suite"
+  },
+  "noAccess": {
+    "title": "No access assigned",
+    "description": "Your account is signed in, but no pages have been enabled for your role yet. Please contact your hospital administrator.",
+    "stillNoAccess": "Still no access. Please ask your hospital admin to assign you a role.",
+    "checkAgain": "Check again",
+    "signOut": "Sign out"
+  },
+  "safety": {
+    "notChecked": "Allergy / interaction check could not be run — these medicines have not been screened.",
+    "noneFound": "No known allergy conflicts or interactions found (starter database — not a substitute for clinical judgement).",
+    "reasonPlaceholder": "Reason for proceeding (optional)",
+    "acknowledge": "Acknowledge & continue",
+    "acknowledged": "Warnings acknowledged and noted."
   }
 }

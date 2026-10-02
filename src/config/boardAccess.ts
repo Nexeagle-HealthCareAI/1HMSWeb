@@ -42,7 +42,9 @@ export type PermissionKey =
   | 'doctor_calendar'
   | 'abdm'
   | 'leads'
-  | 'print_preview';
+  | 'print_preview'
+  | 'hr.manage_employees'
+  | 'hr.view_dashboard';
 
 export interface BoardAccessRule {
   id: string;
@@ -74,8 +76,6 @@ export const BOARD_ACCESS: BoardAccessRule[] = [
   { id: 'calendar', path: '/calendar', permissionKeys: ['doctor_calendar'] },
   { id: 'appointment-dashboard', path: '/appointment-dashboard', permissionKeys: ['appointment_scheduler'], navLabel: 'Appointments', navIcon: Calendar, showInSidebar: true, showInMobileNav: true },
   { id: 'appointment-booking', path: '/appointment-booking', permissionKeys: ['appointment_booking'] },
-  { id: 'appointment-oversight', path: '/appointment-oversight', permissionKeys: ['appointment_scheduler'] },
-  { id: 'doc-ai', path: '/doc-ai', permissionKeys: ['doc_board'] },
   { id: 'patients', path: '/patients', permissionKeys: ['patients'], navLabel: 'Patients', navIcon: Users, showInSidebar: true },
   { id: 'patient-detail', path: '/patient/:patientId', permissionKeys: ['patients'] },
   { id: 'patient-new', path: '/patient/new', permissionKeys: ['patients'] },
@@ -84,6 +84,7 @@ export const BOARD_ACCESS: BoardAccessRule[] = [
   { id: 'billing-appointment', path: '/billing/:appointmentId', permissionKeys: ['billing'] },
   { id: 'billing-encounter', path: '/billing/encounter/:encounterId', permissionKeys: ['billing'] },
   { id: 'pharmacy-retail', path: '/pharmacy-retail', permissionKeys: ['pharmacy'], navLabel: 'Pharmacy Retail', navIcon: Pill, showInSidebar: true },
+  { id: 'hr', path: '/hr', permissionKeys: ['hr.manage_employees', 'hr.view_dashboard'] },
   { id: 'print-preview', path: '/print-preview', permissionKeys: ['print_preview'] },
 ];
 

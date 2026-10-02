@@ -4,6 +4,7 @@ import { SecureLogin } from '@/features/auth/components/SecureLogin';
 import { Registration } from '@/features/auth/components/Registration';
 import { useIsAuthenticated } from '@/store';
 import { useAuthStore } from '@/store/authStore';
+import { getLandingPath } from '@/config/landing';
 
 type AppState = 'login' | 'register';
 
@@ -14,114 +15,40 @@ const LoginPage = () => {
   const [currentState, setCurrentState] = useState<AppState>('login');
 
 
-//Note: Current Implementation is focused on Admin Doctor and Admin Prespective.
-// We have to update landing page based on  user role assigned.
+  // Where to send the user once signed in: the page they originally asked for, else the landing
+  // page resolved from their granted permissions (config/landing.ts). A user with no permitted
+  // board goes to "/" which renders the "no access" screen (never a silent logout).
+  const goAfterAuth = () => {
+    const store = useAuthStore.getState();
+    const intendedPath = location.state?.from?.pathname;
+    if (intendedPath && intendedPath !== '/') {
+      navigate(intendedPath);
+      return;
+    }
+    const target = getLandingPath(store.getUserRoles(), store.getPermissions(), window.innerWidth < 1024);
+    navigate(target ?? '/');
+  };
 
-
-  // Note: Authentication clearing is now handled by the route guard
-  // This ensures proper session management without clearing on every visit
-
-  // Redirect authenticated users to appropriate dashboard based on role
+  // Redirect already-authenticated visitors to their landing page.
   useEffect(() => {
     if (isAuthenticated && currentState === 'login') {
-      const authStore = useAuthStore.getState();
-      const userRole = authStore.getUserRole();
-      const intendedPath = location.state?.from?.pathname;
-      
-      if (intendedPath && intendedPath !== '/') {
-        // Redirect to the originally requested page
-        navigate(intendedPath);
-      } else if (userRole === 'Admin' || userRole === 'AdminDoctor') {
-        navigate('/admin');
-      } else if (userRole === 'Receptionist') {
-        navigate('/appointment-dashboard');
-      } else if (userRole === 'Nurse') {
-        navigate('/nursing-station');
-      } else if (userRole === 'Doctor') {
-        const isMobile = window.innerWidth < 1024;
-        navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
-      } else if (userRole === 'Accountant') {
-        navigate('/billing');
-      } else {
-        // Default fallback
-        navigate('/appointment-dashboard');
-      }
+      goAfterAuth();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, currentState, navigate, location.state]);
 
   const handleLogin = (userRole?: string) => {
-    const authStore = useAuthStore.getState();
     if (userRole) {
-      authStore.setUserRole(userRole);
+      useAuthStore.getState().setUserRole(userRole);
     }
-
-    // Get the user role from the store if not provided as parameter
-    const currentUserRole = userRole || authStore.getUserRole();
-
-    // Navigate to appropriate dashboard based on role
-    const intendedPath = location.state?.from?.pathname;
-    console.log('[LOGIN-DEBUG] handleLogin: currentUserRole=', currentUserRole, 'intendedPath=', intendedPath, 'isAuthenticated=', authStore.isAuthenticated, 'allRoles=', authStore.userRoles);
-    if (intendedPath && intendedPath !== '/') {
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to intendedPath=', intendedPath);
-      navigate(intendedPath);
-    } else if (currentUserRole === 'Admin' || currentUserRole === 'AdminDoctor') {
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to /admin');
-      navigate('/admin');
-    } else if (currentUserRole === 'Receptionist') {
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (Receptionist branch)');
-      navigate('/appointment-dashboard');
-    } else if (currentUserRole === 'Nurse') {
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to /nursing-station (Nurse branch)');
-      navigate('/nursing-station');
-    } else if (currentUserRole === 'Doctor') {
-      const isMobile = window.innerWidth < 1024;
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to', isMobile ? '/appointment-dashboard' : '/dashboard', '(Doctor branch)');
-      navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
-    } else if (currentUserRole === 'Accountant') {
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to /billing (Accountant branch)');
-      navigate('/billing');
-    } else {
-      // Default fallback
-      console.log('[LOGIN-DEBUG] handleLogin: navigating to /appointment-dashboard (default fallback branch) — currentUserRole was', JSON.stringify(currentUserRole));
-      navigate('/appointment-dashboard');
-    }
+    goAfterAuth();
   };
 
   const handleRegister = (userRole?: string) => {
-    const authStore = useAuthStore.getState();
     if (userRole) {
-      authStore.setUserRole(userRole);
+      useAuthStore.getState().setUserRole(userRole);
     }
-    
-    // Navigate to appropriate dashboard based on role
-    const intendedPath = location.state?.from?.pathname;
-    if (intendedPath && intendedPath !== '/') {
-      navigate(intendedPath);
-    } else if (userRole === 'Admin') {
-      navigate('/admin');
-    } else if (userRole === 'AdminDoctor') {
-      navigate('/admin');
-    } else if (userRole === 'Receptionist') {
-      navigate('/appointment-dashboard');
-    } else if (userRole === 'Nurse') {
-      navigate('/nursing-station');
-    } else if (userRole === 'Doctor') {
-      const isMobile = window.innerWidth < 1024;
-      navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
-    } else {
-      // Default fallback - check stored role
-      const storedRole = authStore.getUserRole();
-      if (storedRole === 'Admin') {
-        navigate('/admin');
-      } else if (storedRole === 'Receptionist') {
-        navigate('/appointment-dashboard');
-      } else if (storedRole === 'Nurse') {
-        navigate('/nursing-station');
-      } else {
-        const isMobile = window.innerWidth < 1024;
-        navigate(isMobile ? '/appointment-dashboard' : '/dashboard');
-      }
-    }
+    goAfterAuth();
   };
 
   const renderCurrentView = () => {

@@ -79,6 +79,19 @@ interface GenerateDischargeNarrativeResponse {
 }
 
 export const dischargeSummaryApi = {
+    getCustomFields: (admissionId: string, hospitalId?: string): Promise<Record<string, string>> =>
+        ipdApiClient
+            .get<{ values?: Record<string, string> }>('/discharge-summary/custom-fields', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .then(r => r?.values ?? {}),
+
+    saveCustomFields: async (admissionId: string, values: Record<string, string>, hospitalId?: string): Promise<void> => {
+        try {
+            await ipdApiClient.put('/discharge-summary/custom-fields', values, { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not save the custom discharge fields.'));
+        }
+    },
+
     getDraft: (admissionId: string, hospitalId?: string): Promise<DischargeSummaryDraft | undefined> =>
         ipdApiClient
             .get<GetDischargeSummaryDraftResponse>('/discharge-summary/draft', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })

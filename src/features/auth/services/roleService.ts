@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/authStore';
+import { getLandingPath } from '@/config/landing';
 
 export class RoleService {
   private static ROLE_KEY = 'userRole';
@@ -150,19 +151,9 @@ export class RoleService {
   // "accountant") against fictional paths like "/nurse/dashboard" that don't exist as routes,
   // so this always fell through to "/" for every role: a real role landing on a route their
   // RouteGuard denies would get silently bounced to "/" instead of somewhere that actually works.
-  static getRedirectPath(userRole: string | null): string {
-    if (!userRole) return '/';
-
-    const roleRedirects: { [key: string]: string } = {
-      Admin: '/admin',
-      AdminDoctor: '/admin',
-      Doctor: '/dashboard',
-      Nurse: '/appointment-dashboard',
-      Receptionist: '/appointment-dashboard',
-      Accountant: '/billing',
-    };
-
-    return roleRedirects[userRole] || '/';
+  static getRedirectPath(_userRole: string | null): string {
+    // Resolved from granted permissions; "/" (the no-access screen) when nothing is permitted.
+    return getLandingPath(this.getRoles(), this.getUserPermissions(), window.innerWidth < 1024) ?? '/';
   }
 
   // Get permissions (alias for getUserPermissions for backward compatibility)

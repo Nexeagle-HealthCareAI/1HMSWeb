@@ -22,6 +22,8 @@ import {
 import { ipdBillingService, type ChargeMaster } from '@/features/billing/services/ipdBillingService';
 import { formatIstDateTime } from '../utils/istDate';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
+import { useAuthStore } from '@/store/authStore';
+import { PrescriptionSafetyAlerts } from '@/features/patient/components/PrescriptionSafetyAlerts';
 
 const EMPTY_LINE: ClinicalOrderLineInput = { itemName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', urgency: undefined, scheduledAt: undefined, isHighAlert: false, isDailyRecurringCharge: false, qty: 1 };
 
@@ -37,6 +39,8 @@ const MEDICATION_FREQUENCIES: MedicationFrequency[] = ['STAT', 'OD', 'BD', 'TDS'
 
 interface Props {
     admissionId: string;
+    /** Needed for the allergy / interaction screen on MEDICATION orders. */
+    patientId?: string;
     isActive: boolean;
     orderType: ClinicalOrderType;
     itemPickerCategoryCodes: string[];
@@ -53,7 +57,7 @@ interface Props {
  * duplicating the order-list/new-order/discontinue UI per type.
  */
 export const ClinicalOrderPanel: React.FC<Props> = ({
-    admissionId, isActive, orderType, itemPickerCategoryCodes, itemLabel, noItemsText,
+    admissionId, patientId, isActive, orderType, itemPickerCategoryCodes, itemLabel, noItemsText,
     showMedicationFields, showUrgency, showScheduledAt,
 }) => {
     const { toast } = useToast();
@@ -239,6 +243,22 @@ export const ClinicalOrderPanel: React.FC<Props> = ({
                         <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">Chargeable lines are billed to this admission immediately.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
+                        {orderType === 'MEDICATION' && patientId && (
+                            <PrescriptionSafetyAlerts
+                                hospitalId={useAuthStore.getState().getHospitalId()}
+                                patientId={patientId}
+                                medications={[
+                                    // Active medication orders already on the chart + the lines being entered now.
+                                    ...orders
+                                        .filter(o => o.statusCode === 'ACTIVE')
+                                        .flatMap(o => o.lines)
+                                        .map(l => ({ name: l.itemName ?? '', saltName: l.saltName ?? undefined })),
+                                    ...lines.map(l => ({ name: l.itemName, saltName: l.saltName })),
+                                ]}
+                                onAcknowledge={(summary) => setNotes(n => (n ? `${n}
+${summary}` : summary))}
+                            />
+                        )}
                         {lines.map((line, i) => (
                             <div key={i} className="rounded-2xl border border-slate-200/65 dark:border-zinc-800/80 p-4 space-y-3 relative bg-slate-50/10 dark:bg-zinc-900/10 shadow-sm">
                                 {lines.length > 1 && (
