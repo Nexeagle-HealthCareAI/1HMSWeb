@@ -11,7 +11,8 @@ const hospitalIdOrThrow = (override?: string) => {
 const messageFrom = (err: unknown, fallback: string): string =>
     (axios.isAxiosError(err) && (err.response?.data as { message?: string } | undefined)?.message) || fallback;
 
-export type ShiftCode = 'MORNING' | 'EVENING' | 'NIGHT';
+// Hospital-defined (see shiftApi / /nursing-station/shifts); the built-ins MORNING / EVENING / NIGHT are only the defaults.
+export type ShiftCode = string;
 
 export interface ShiftHandoverNoteItem {
     shiftHandoverNoteId: string;

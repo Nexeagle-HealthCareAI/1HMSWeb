@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, RefreshCw, Check } from 'lucide-react';
 import { shiftHandoverApi, type ShiftHandoverNoteItem, type ShiftCode } from '../services/shiftHandoverApi';
+import { shiftApi, type ShiftItem } from '../services/shiftApi';
 import { formatIstDateTime } from '../utils/istDate';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
@@ -25,13 +26,26 @@ interface Props {
     outgoingNurseDefaultName?: string | null;
 }
 
-const SHIFTS: ShiftCode[] = ['MORNING', 'EVENING', 'NIGHT'];
+const toMinutes = (hhmm?: string): number | null => {
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm ?? '');
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
 
-const guessShift = (): ShiftCode => {
-    const h = new Date().getHours();
-    if (h >= 7 && h < 14) return 'MORNING';
-    if (h >= 14 && h < 21) return 'EVENING';
-    return 'NIGHT';
+// Pick the hospital shift that is running now (overnight shifts wrap midnight); fall back to the
+// built-in clock heuristic when the hospital has not given its shifts times, then to the first shift.
+const guessShift = (shifts: ShiftItem[]): ShiftCode => {
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    for (const s of shifts) {
+        const start = toMinutes(s.startTime);
+        const end = toMinutes(s.endTime);
+        if (start === null || end === null || start === end) continue;
+        const inside = start < end ? nowMin >= start && nowMin < end : nowMin >= start || nowMin < end;
+        if (inside) return s.shiftCode;
+    }
+    const h = now.getHours();
+    const builtIn = h >= 7 && h < 14 ? 'MORNING' : h >= 14 && h < 21 ? 'EVENING' : 'NIGHT';
+    return shifts.some(s => s.shiftCode === builtIn) ? builtIn : (shifts[0]?.shiftCode ?? builtIn);
 };
 
 export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, outgoingNurseDefaultName }) => {
@@ -42,7 +56,8 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
 
     const [newOpen, setNewOpen] = useState(false);
     const [mode, setMode] = useState<'structured' | 'freeText'>('structured');
-    const [shiftCode, setShiftCode] = useState<ShiftCode>(guessShift());
+    const [shifts, setShifts] = useState<ShiftItem[]>([]);
+    const [shiftCode, setShiftCode] = useState<ShiftCode>('');
     const [outgoingNurseName, setOutgoingNurseName] = useState('');
     const [incomingNurseName, setIncomingNurseName] = useState('');
     const [freeTextNote, setFreeTextNote] = useState('');
@@ -66,10 +81,17 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
 
     useEffect(() => { load(); }, [admissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // The hospital's own shift list (server-side); active shifts only, in their configured order.
+    useEffect(() => {
+        shiftApi.getShifts()
+            .then(list => setShifts(list.filter(s => s.isActive).sort((a, b) => a.sortOrder - b.sortOrder)))
+            .catch(() => setShifts([]));
+    }, []);
+
     const openNew = () => {
         if (isSubscriptionReadOnly) { blockAction('Recording shift handovers'); return; }
         setMode('structured');
-        setShiftCode(guessShift());
+        setShiftCode(guessShift(shifts));
         setOutgoingNurseName(outgoingNurseDefaultName ?? '');
         setIncomingNurseName('');
         setFreeTextNote('');
@@ -77,7 +99,7 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
         setNewOpen(true);
     };
 
-    const canSubmit = outgoingNurseName.trim().length > 0 && (mode === 'freeText' ? freeTextNote.trim().length > 0 : situation.trim().length > 0);
+    const canSubmit = shiftCode.trim().length > 0 && outgoingNurseName.trim().length > 0 && (mode === 'freeText' ? freeTextNote.trim().length > 0 : situation.trim().length > 0);
 
     const submit = async () => {
         if (!canSubmit || submitting) {
@@ -203,8 +225,8 @@ export const ShiftHandoverPanel: React.FC<Props> = ({ admissionId, isActive, out
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg">
-                                    {SHIFTS.map(s => (
-                                        <SelectItem key={s} value={s} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">{s}</SelectItem>
+                                    {shifts.map(s => (
+                                        <SelectItem key={s.shiftCode} value={s.shiftCode} className="rounded-lg focus:bg-brand-50 dark:focus:bg-brand-950/30 focus:text-brand-700 dark:focus:text-brand-300 font-semibold cursor-pointer">{s.label || s.shiftCode}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
