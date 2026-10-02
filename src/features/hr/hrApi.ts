@@ -31,7 +31,10 @@ import type {
   SetAttendanceOverrideResponse,
   RunMonthlyPayrollResponseModel,
   GetPayslipsByRunResponseModel,
-  DispatchPayslipsResponseModel
+  DispatchPayslipsResponseModel,
+  LicenseAlertDto,
+  ConsultantFeeConfigDto,
+  UpsertConsultantFeeConfigRequest
 } from './types';
 
 // The old fetch()-based implementation threw new Error(body.message) on failure, so components
@@ -63,6 +66,7 @@ export const HR_QUERY_KEYS = {
   shifts: (hospitalId: string) => ['hr', 'shifts', hospitalId] as const,
   roster: (hospitalId: string, startDate: Date, endDate: Date) => ['hr', 'roster', hospitalId, startDate.toISOString(), endDate.toISOString()] as const,
   attendanceExceptions: (hospitalId: string, startDate: string, endDate: string) => ['hr', 'attendance-exceptions', hospitalId, startDate, endDate] as const,
+  licenseAlerts: (hospitalId: string) => ['hr', 'license-alerts', hospitalId] as const,
 };
 
 // ─── KPI Summary ─────────────────────────────────────────────────────────────
@@ -72,6 +76,20 @@ export function useHrKpi(hospitalId: string) {
     queryKey: HR_QUERY_KEYS.kpi(hospitalId),
     queryFn: () => apiClient.get(`/api/v1/hr/kpi-summary?hospitalId=${hospitalId}`),
     staleTime: 30_000,
+    enabled: !!hospitalId,
+  });
+}
+
+// ─── License Alerts ──────────────────────────────────────────────────────────
+
+export function useLicenseAlerts(hospitalId: string) {
+  return useQuery<LicenseAlertDto[]>({
+    queryKey: HR_QUERY_KEYS.licenseAlerts(hospitalId),
+    queryFn: async () => {
+      const data = await apiClient.get<{ alerts: LicenseAlertDto[] }>(`/api/v1/hr/license-alerts?hospitalId=${hospitalId}`);
+      return data.alerts || [];
+    },
+    staleTime: 60_000,
     enabled: !!hospitalId,
   });
 }
@@ -354,6 +372,30 @@ export function useUnmapDeviceUser(hospitalId: string) {
 }
 
 // ─── Manual attendance override ─────────────────────────────────────────────
+
+// ─── Consultant Fee Config (Track B payroll) ────────────────────────────────
+
+export function useConsultantFeeConfig(hrEmployeeId: string) {
+  return useQuery<ConsultantFeeConfigDto | null>({
+    queryKey: ['hr', 'consultant-fee-config', hrEmployeeId],
+    queryFn: async () => {
+      const data = await apiClient.get<{ feeConfig: ConsultantFeeConfigDto | null }>(`/api/v1/hr/consultant-fee-config/${hrEmployeeId}`);
+      return data.feeConfig;
+    },
+    enabled: !!hrEmployeeId,
+  });
+}
+
+export function useUpsertConsultantFeeConfig() {
+  const qc = useQueryClient();
+  return useMutation<{ isSuccess: boolean; message?: string }, Error, UpsertConsultantFeeConfigRequest>({
+    mutationFn: ({ hrEmployeeId, ...body }) =>
+      unwrapMutationError(() => apiClient.put(`/api/v1/hr/consultant-fee-config/${hrEmployeeId}`, body)),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['hr', 'consultant-fee-config', vars.hrEmployeeId] });
+    },
+  });
+}
 
 export function useSetAttendanceOverride() {
   const qc = useQueryClient();

@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Building2,
   Cpu,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { HrKpiMatrix } from '../components/HrKpiMatrix';
@@ -22,10 +23,12 @@ import { LeaveConsole } from '../components/LeaveConsole';
 import { AttendanceExceptions } from '../components/AttendanceExceptions';
 import { BiometricDevicesPanel } from '../components/BiometricDevicesPanel';
 import { PayrollWizard } from '../components/PayrollWizard';
+import { PayrollSettingsCard } from '../components/PayrollSettingsCard';
+import { LicenseAlertsPanel } from '../components/LicenseAlertsPanel';
 import { useHrKpi } from '../hrApi';
 import type { HrEmployee } from '../types';
 
-type HrTab = 'overview' | 'employees' | 'roster' | 'leave' | 'attendance' | 'devices' | 'payroll';
+type HrTab = 'overview' | 'employees' | 'roster' | 'leave' | 'attendance' | 'devices' | 'payroll' | 'licenses';
 
 const HR_TABS: { id: HrTab; label: string; icon: React.ReactNode; description: string }[] = [
   {
@@ -69,6 +72,12 @@ const HR_TABS: { id: HrTab; label: string; icon: React.ReactNode; description: s
     label: 'Payroll',
     icon: <IndianRupee className="h-4 w-4" />,
     description: '1-Click Payroll',
+  },
+  {
+    id: 'licenses',
+    label: 'License Alerts',
+    icon: <ShieldAlert className="h-4 w-4" />,
+    description: 'Compliance Watchdog',
   },
 ];
 
@@ -136,6 +145,7 @@ export const HrDashboardPage: React.FC = () => {
             kpi={kpi}
             onLeaveClick={() => setActiveTab('leave')}
             onPayrollClick={() => setActiveTab('payroll')}
+            onLicenseAlertClick={() => setActiveTab('licenses')}
           />
         )}
         {kpiLoading && (
@@ -183,9 +193,17 @@ export const HrDashboardPage: React.FC = () => {
                 {/* License Expiry detail list */}
                 {kpi && kpi.licenseExpiringSoon.length > 0 && (
                   <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm p-4">
-                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <span>⚠️</span> License Expiry Alerts
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span>⚠️</span> License Expiry Alerts
+                      </h3>
+                      <button
+                        onClick={() => setActiveTab('licenses')}
+                        className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                      >
+                        View All →
+                      </button>
+                    </div>
                     <div className="space-y-2">
                       {kpi.licenseExpiringSoon.map(alert => (
                         <div key={alert.employeeId} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800/60 last:border-0">
@@ -241,7 +259,13 @@ export const HrDashboardPage: React.FC = () => {
             {activeTab === 'leave' && <LeaveConsole hospitalId={hospitalId} />}
             {activeTab === 'attendance' && <AttendanceExceptions hospitalId={hospitalId} />}
             {activeTab === 'devices' && <BiometricDevicesPanel hospitalId={hospitalId} />}
-            {activeTab === 'payroll' && <PayrollWizard hospitalId={hospitalId} />}
+            {activeTab === 'payroll' && (
+              <div className="space-y-6">
+                <PayrollWizard hospitalId={hospitalId} />
+                <PayrollSettingsCard hospitalId={hospitalId} />
+              </div>
+            )}
+            {activeTab === 'licenses' && <LicenseAlertsPanel hospitalId={hospitalId} />}
           </motion.div>
         </AnimatePresence>
       </div>

@@ -238,9 +238,33 @@ export interface HrConsultantFeeConfig {
   monthlyRetainer: number;
   opdSharePercent: number;    // e.g. 60 = 60%
   ipdVisitFee: number;        // per IPD round visit
+  adminSurcharge: number;
   surgeryShareConfig: SurgeryShareConfig[];
   effectiveFrom: string;
   isActive: boolean;
+}
+
+// Shape returned by GET/PUT /hr/consultant-fee-config/{hrEmployeeId}
+export interface ConsultantFeeConfigDto {
+  hrConsultantFeeConfigId: string;
+  hrEmployeeId: string;
+  effectiveFrom: string;
+  monthlyRetainer: number;
+  opdSharePercent: number;
+  ipdVisitFee: number;
+  adminSurcharge: number;
+  surgeryShareConfigJson: string | null;
+  isActive: boolean;
+}
+
+export interface UpsertConsultantFeeConfigRequest {
+  hrEmployeeId: string;
+  effectiveFrom: string;
+  monthlyRetainer: number;
+  opdSharePercent: number;
+  ipdVisitFee: number;
+  adminSurcharge: number;
+  surgeryShareConfigJson: string | null;
 }
 
 export interface SurgeryShareConfig {
@@ -315,6 +339,18 @@ export interface HrLicenseAlert {
   credentialType: string;
   expiryDate: string;
   daysUntilExpiry: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+}
+
+// Full detail record from GET /hr/license-alerts (one row per expiring document,
+// vs. HrLicenseAlert which is the capped preview embedded in the KPI summary).
+export interface LicenseAlertDto {
+  hrEmployeeId: string;
+  employeeName: string;
+  designation: string;
+  documentName: string;
+  expiryDate: string;
+  daysLeft: number;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
 }
 
