@@ -75,7 +75,7 @@ const ChecklistPhaseSection: React.FC<{
                         </label>
                     ))}
                     <div className="flex justify-end pt-2">
-                        <Button size="sm" className="h-10 rounded-xl text-xs bg-brand-600 hover:bg-brand-700 font-bold active:scale-[0.98] transition-all px-4" disabled={busy} onClick={submit}>
+                        <Button size="sm" className="h-10 rounded-xl text-xs bg-brand-600 hover:bg-brand-700 font-bold active:scale-[0.98] transition-all px-4" disabled={busy || !meta.items.every(i => items[i.key])} onClick={submit}>
                             {busy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Complete {meta.label.split(' ')[0]}
                         </Button>
                     </div>
