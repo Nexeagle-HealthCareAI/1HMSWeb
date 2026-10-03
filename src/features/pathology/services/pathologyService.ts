@@ -76,6 +76,8 @@ export interface PathologyResultDto {
   resultId: string;
   resultValuesJson: string;
   interpretation?: string;
+  // Required by the server when the line already has a report (kept in the result history; the report becomes AMENDED).
+  amendmentReason?: string;
 }
 
 export interface PathologyOrderLineDto {

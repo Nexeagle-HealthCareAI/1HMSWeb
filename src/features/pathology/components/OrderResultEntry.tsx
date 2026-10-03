@@ -385,6 +385,20 @@ export const OrderResultEntry = forwardRef<OrderResultEntryHandle, OrderResultEn
   const save = async (opts?: { silent?: boolean; refresh?: boolean }) => {
     const silent = opts?.silent ?? true;
     const refresh = opts?.refresh ?? false;
+
+    // A result that already has a report is amended, not edited: autosave never touches it, and an explicit
+    // save needs a reason (kept in the result history; the report is marked AMENDED and must be re-verified).
+    let amendmentReason: string | undefined;
+    if (orderLine.reportId) {
+      if (silent) return;
+      const entered = window.prompt('This result has already been reported. Reason for the amendment (at least 5 characters):')?.trim();
+      if (!entered || entered.length < 5) {
+        toast.error("Amendment reason required", { description: "Enter a reason of at least 5 characters to change a reported result." });
+        return;
+      }
+      amendmentReason = entered;
+    }
+
     setIsSubmitting(true);
     onSaveStateChange?.('saving');
     try {
@@ -398,7 +412,8 @@ export const OrderResultEntry = forwardRef<OrderResultEntryHandle, OrderResultEn
       }
       await pathologyService.enterResult(hospitalId, orderId, orderLine.orderLineId, {
         resultValuesJson: JSON.stringify(payload),
-        interpretation
+        interpretation,
+        amendmentReason
       });
       setIsDirty(false);
       onSaveStateChange?.('saved');
@@ -411,7 +426,8 @@ export const OrderResultEntry = forwardRef<OrderResultEntryHandle, OrderResultEn
     } catch (error) {
       onSaveStateChange?.('error');
       if (!silent) {
-        toast.error("Error", { description: "Failed to save results." });
+        const serverMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        toast.error("Error", { description: serverMessage || "Failed to save results." });
       }
     } finally {
       setIsSubmitting(false);
