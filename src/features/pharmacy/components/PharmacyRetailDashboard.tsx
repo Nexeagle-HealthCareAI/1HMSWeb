@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuthStore } from '@/store';
 import { inventoryApi, InventoryItem } from '@/features/ipd-redesign/services/inventoryApi';
 import { procurementApi } from '@/features/ipd-redesign/services/procurementApi';
@@ -99,6 +99,8 @@ export const PharmacyRetailDashboard: React.FC = () => {
   const [settlementMode, setSettlementMode] = useState<PharmacySettlementMode>('DIRECT_CASH');
   const [paymentMode, setPaymentMode] = useState('CASH');
   const [discountAmount, setDiscountAmount] = useState(0);
+  // Idempotency key of the checkout in flight; reset when the cart changes or the sale succeeds.
+  const checkoutKeyRef = useRef<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [storeId, setStoreId] = useState<string | null>(null);
@@ -340,6 +342,9 @@ export const PharmacyRetailDashboard: React.FC = () => {
     return { subtotal, tax, gross, finalTotal };
   }, [cart, discountAmount]);
 
+  // A changed cart / discount / patient / settlement is a different sale: it gets a fresh idempotency key.
+  useEffect(() => { checkoutKeyRef.current = null; }, [cart, discountAmount, selectedPatient, settlementMode]);
+
   const cartHasScheduledDrug = cart.some(c => !!c.scheduleClass);
 
   const isNewPatientMobileValid = /^\d{10}$/.test(newPatientMobile);
@@ -488,6 +493,14 @@ export const PharmacyRetailDashboard: React.FC = () => {
 
     setIsProcessing(true);
     try {
+      // The server prices every line (batch MRP, else the Charge Master rate) and caps the discount, so the bill
+      // discount is sent as one percentage applied to every line instead of a flat amount.
+      const grossForDiscount = cart.reduce((sum, c) => sum + c.qty * c.rate, 0);
+      const billDiscountPercent = grossForDiscount > 0 && discountAmount > 0
+        ? Math.min(100, Math.round((discountAmount / grossForDiscount) * 10000) / 100)
+        : 0;
+      // One key per attempt; kept across retries of the same cart so a double click cannot sell twice.
+      if (!checkoutKeyRef.current) checkoutKeyRef.current = crypto.randomUUID();
       const response = await pharmacyApi.checkout(hospitalId, {
         storeId: storeId,
         patientId: selectedPatient.patientId,
@@ -497,13 +510,15 @@ export const PharmacyRetailDashboard: React.FC = () => {
           inventoryItemId: c.inventoryItemId,
           qty: c.qty,
           rate: c.rate,
-          discountPercent: c.discountPercent
+          discountPercent: billDiscountPercent
         })),
         totalAmount: cartTotals.finalTotal,
         discountAmount: discountAmount,
         paidAmount: settlementMode === 'POST_TO_ADMISSION_DAY_BILL' ? 0 : cartTotals.finalTotal,
-        paymentMode: settlementMode === 'POST_TO_ADMISSION_DAY_BILL' ? undefined : paymentMode
-      });
+        paymentMode: settlementMode === 'POST_TO_ADMISSION_DAY_BILL' ? undefined : paymentMode,
+        // The server decides the invoice total, so collect exactly that rather than the browser's estimate.
+        payInFull: settlementMode !== 'POST_TO_ADMISSION_DAY_BILL'
+      }, checkoutKeyRef.current);
 
       if (response.success) {
         const batchSummary = summarizeAllocatedBatches(response.allocatedBatches);
@@ -523,6 +538,7 @@ export const PharmacyRetailDashboard: React.FC = () => {
           );
         }
 
+        checkoutKeyRef.current = null;
         setCart([]);
         clearPatient();
         setSearchResults([]);
@@ -754,7 +770,9 @@ export const PharmacyRetailDashboard: React.FC = () => {
                             step="0.01"
                             className="w-24 h-8"
                             value={item.rate}
-                            onChange={(e) => updateRate(item.id, parseFloat(e.target.value) || 0)}
+                            readOnly
+                            title="Final price is set by the server from the batch MRP (or the Charge Master rate)"
+                            onChange={() => { /* priced by the server */ }}
                           />
                         </TableCell>
                         <TableCell>

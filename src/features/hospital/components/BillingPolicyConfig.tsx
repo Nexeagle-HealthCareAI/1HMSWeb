@@ -40,6 +40,9 @@ export const BillingPolicyConfig = () => {
         ipdBedChargeMode: 'OFF',
     });
 
+    // Pharmacy counter: highest discount % a cashier may give on an item whose Charge Master entry has no cap of its own.
+    const [pharmacyMaxDiscount, setPharmacyMaxDiscount] = useState('20');
+
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -68,6 +71,7 @@ export const BillingPolicyConfig = () => {
                     opdConsultTrigger: d.opdConsultTrigger ?? 'OFF',
                     ipdBedChargeMode:  d.ipdBedChargeMode  ?? 'OFF',
                 });
+                if (d.pharmacyMaxDiscountPercent != null) setPharmacyMaxDiscount(String(d.pharmacyMaxDiscountPercent));
                 const ns = d.numberSeries ?? {};
                 const pickSeries = (code: 'INV' | 'RCPT', fallbackPrefix: string) => {
                     // Backend returns keyed by code (lowercase or upper)
@@ -166,6 +170,7 @@ export const BillingPolicyConfig = () => {
                 pharmacyIpdTrigger: config.pharmacyIpdTrigger,
                 opdConsultTrigger: config.opdConsultTrigger,
                 ipdBedChargeMode: config.ipdBedChargeMode,
+                pharmacyMaxDiscountPercent: Math.min(100, Math.max(0, Number(pharmacyMaxDiscount) || 0)),
                 numberSeries: {
                     invoice: seriesItem(sequenceConfigs.INV),
                     receipt: seriesItem(sequenceConfigs.RCPT),
@@ -309,6 +314,24 @@ export const BillingPolicyConfig = () => {
                         )}
                     </Button>
                 </div>
+            </div>
+
+            {/* Pharmacy discount limit */}
+            <div className="rounded-2xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 space-y-2">
+                <Label htmlFor="pharmacyMaxDiscount" className="text-sm font-bold text-slate-800 dark:text-zinc-100">Pharmacy counter: maximum discount (%)</Label>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    The most a cashier can discount an item at the pharmacy counter. A Charge Master entry with its own maximum overrides this. Prices come from the batch MRP and cannot be edited at the counter.
+                </p>
+                <Input
+                    id="pharmacyMaxDiscount"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    className="h-11 w-32"
+                    value={pharmacyMaxDiscount}
+                    onChange={(e) => setPharmacyMaxDiscount(e.target.value)}
+                />
             </div>
 
             {/* Auto-Billing Rules Cards */}

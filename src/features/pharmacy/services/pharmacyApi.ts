@@ -28,6 +28,8 @@ export interface PharmacyRetailCheckoutRequest {
   // enforced server-side by the same regulated-drug guard narcotics/H1 dispensing already uses.
   prescriberRef?: string;
   items: PharmacyCartItem[];
+  // Collect exactly the invoice total the server computed (prices come from batch MRP / Charge Master).
+  payInFull?: boolean;
   totalAmount: number;
   discountAmount: number;
   paidAmount: number;
@@ -110,8 +112,14 @@ export interface PharmacyBillingHistoryResponse {
 }
 
 export const pharmacyApi = {
-  checkout: async (hospitalId: string, request: PharmacyRetailCheckoutRequest): Promise<PharmacyRetailCheckoutResponse> => {
-    const response = await api.post<PharmacyRetailCheckoutResponse>(`/api/v1/PharmacyRetail/${hospitalId}/checkout`, request);
+  // idempotencyKey: one value per checkout attempt. A repeat (double click, retry, offline replay) returns the
+  // first sale instead of selling and billing twice.
+  checkout: async (hospitalId: string, request: PharmacyRetailCheckoutRequest, idempotencyKey?: string): Promise<PharmacyRetailCheckoutResponse> => {
+    const response = await api.post<PharmacyRetailCheckoutResponse>(
+      `/api/v1/PharmacyRetail/${hospitalId}/checkout`,
+      request,
+      idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
+    );
     return response.data;
   },
 
