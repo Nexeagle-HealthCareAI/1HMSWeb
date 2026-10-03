@@ -256,9 +256,14 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     };
 
     const revokeSign = async () => {
+        const reason = window.prompt('Why is the signed discharge summary being reopened? (at least 5 characters; kept in the audit trail)')?.trim();
+        if (!reason || reason.length < 5) {
+            toast({ title: 'A reason is required', description: 'Enter at least 5 characters to reopen a signed discharge summary.', variant: 'destructive' });
+            return;
+        }
         setUnsigning(true);
         try {
-            await dischargeSummaryApi.unsign(admission.admissionId);
+            await dischargeSummaryApi.unsign(admission.admissionId, reason);
             toast({ title: 'Signature revoked. The summary is now editable.' });
             load();
         } catch (err) {

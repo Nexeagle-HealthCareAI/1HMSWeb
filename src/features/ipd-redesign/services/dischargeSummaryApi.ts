@@ -113,9 +113,10 @@ export const dischargeSummaryApi = {
         }
     },
 
-    unsign: async (admissionId: string, hospitalId?: string) => {
+    // Admin (or discharge_unsign) only, and a reason is mandatory; the server keeps it in the audit trail.
+    unsign: async (admissionId: string, reason: string, hospitalId?: string) => {
         try {
-            return await ipdApiClient.post('/discharge-summary/unsign', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId });
+            return await ipdApiClient.post('/discharge-summary/unsign', { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, reason });
         } catch (err) {
             throw new Error(messageFrom(err, 'Could not revoke signature on the discharge summary.'));
         }
