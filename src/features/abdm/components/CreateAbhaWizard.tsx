@@ -21,11 +21,6 @@ const STEP_LABELS: Record<Step, string> = {
   success: 'Done',
 };
 
-// NHA-published consent declaration for Aadhaar-based ABHA creation (CRT_ABHA_102, mandatory for
-// M1). Verify this against NHA's current officially published consent copy before go-live — exact
-// wording is a compliance requirement, not just UX text.
-const ABHA_CONSENT_TEXT = `I hereby declare that I am voluntarily sharing my Aadhaar number and demographic information issued by UIDAI, with the National Health Authority (NHA), for the sole purpose of creating an Ayushman Bharat Health Account (ABHA) number and ABHA Address. I understand that my Aadhaar number / Virtual ID and demographic information will be used only for this purpose and will not be used for any other purpose. This consent is given in accordance with the provisions of the Aadhaar Act, 2016 and the regulations made thereunder. I understand that my personally identifiable information (name, address, age, date of birth, gender, photograph, mobile number) may be shared with entities in the National Digital Health Ecosystem that I choose to interact with, only after my informed consent.`;
-
 // Max 2 resends, each gated by a 60s cooldown (CRT_ABHA_106, mandatory for M1).
 const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_RESENDS = 2;
@@ -42,6 +37,11 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const [step, setStep] = useState<Step>('consent');
   const [busy, setBusy] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  // The wording comes from the server (it owns the text and the version); consent is recorded server-side before any OTP is requested.
+  const [consentText, setConsentText] = useState<{ version: string; text: string } | null>(null);
+  const [consentGivenBy, setConsentGivenBy] = useState<'PATIENT' | 'GUARDIAN'>('PATIENT');
+  const [consentSubject, setConsentSubject] = useState('');
+  const [consentId, setConsentId] = useState('');
 
   const [aadhaar, setAadhaar] = useState('');
   const [aadhaarOtp, setAadhaarOtp] = useState('');
@@ -78,6 +78,9 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setStep('consent');
     setBusy(false);
     setConsentChecked(false);
+    setConsentId('');
+    setConsentGivenBy('PATIENT');
+    setConsentSubject('');
     setAadhaar('');
     setAadhaarOtp('');
     setMobile('');
@@ -100,6 +103,29 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     onOpenChange(v);
   };
 
+  // Load the wording the server will hold the consent against.
+  useEffect(() => {
+    if (!open || consentText) return;
+    abdmApi.getConsentText()
+      .then(res => setConsentText({ version: res.version, text: res.text }))
+      .catch(() => toast({ title: 'Could not load the consent wording', description: 'Check your connection and reopen this window.', variant: 'destructive' }));
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const recordConsentAndContinue = async () => {
+    if (!consentText) return;
+    setBusy(true);
+    try {
+      const res = await abdmApi.recordConsent(hospitalId, consentText.version, consentGivenBy, consentSubject.trim() || undefined);
+      if (!res.success || !res.consentId) { fail(res.message); return; }
+      setConsentId(res.consentId);
+      setStep('aadhaar');
+    } catch (e: any) {
+      fail(e?.response?.data?.Message || e?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const fail = (message?: string) => toast({ title: 'Something went wrong', description: message || 'Please try again.', variant: 'destructive' });
 
   const sendAadhaarOtp = async () => {
@@ -107,7 +133,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     if (clean.length !== 12) { toast({ title: 'Enter a valid 12-digit Aadhaar number', variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean);
+      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
       setAadhaarResends(0);
@@ -126,7 +152,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setBusy(true);
     try {
       const clean = aadhaar.replace(/\D/g, '');
-      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean);
+      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
       setAadhaarResends(n => n + 1);
@@ -291,16 +317,26 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         {step === 'consent' && (
           <>
             <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground max-h-64 overflow-y-auto">
-              {ABHA_CONSENT_TEXT}
+              {consentText ? consentText.text : 'Loading the consent wording...'}
             </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <span className="text-muted-foreground">Consent given by</span>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="consent-given-by" checked={consentGivenBy === 'PATIENT'} onChange={() => setConsentGivenBy('PATIENT')} /> Patient
+              </label>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="consent-given-by" checked={consentGivenBy === 'GUARDIAN'} onChange={() => setConsentGivenBy('GUARDIAN')} /> Guardian
+              </label>
+            </div>
+            <Input value={consentSubject} onChange={e => setConsentSubject(e.target.value)} placeholder="Name of the person giving consent (optional)" maxLength={200} />
             <div className="flex items-start gap-2">
               <Checkbox id="abha-consent" checked={consentChecked} onCheckedChange={v => setConsentChecked(v === true)} className="mt-0.5" />
               <label htmlFor="abha-consent" className="text-sm cursor-pointer">
                 I have read and agree to the above consent for sharing my Aadhaar details and creating an ABHA number.
               </label>
             </div>
-            <Button onClick={() => setStep('aadhaar')} disabled={!consentChecked} className="w-full">
-              Continue
+            <Button onClick={recordConsentAndContinue} disabled={!consentChecked || !consentText || busy} className="w-full">
+              {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Continue
             </Button>
           </>
         )}

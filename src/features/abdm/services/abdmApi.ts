@@ -31,6 +31,8 @@ export interface AbdmAddressSuggestionsResponse {
 }
 
 export interface AbdmProfileResponse {
+  // One-time proof returned by login/verify-otp; accounts/link requires it.
+  linkToken?: string;
   success: boolean;
   message?: string;
   // Authenticated session handle from a just-completed OTP verification — pass to the
@@ -159,8 +161,16 @@ export const abdmApi = {
     apiClient.delete<{ success: boolean; message?: string }>(`/abdm/accounts/${encodeURIComponent(abhaAccountId)}?hospitalId=${encodeURIComponent(hospitalId)}`),
 
   // Create ABHA — Aadhaar OTP
-  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string) =>
-    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber }),
+  // The server owns the consent wording and its version; the screen shows exactly what this returns.
+  getConsentText: () =>
+    apiClient.get<{ code: string; version: string; text: string }>('/abdm/consent/text'),
+
+  // Records that the patient (or guardian) agreed. The returned consentId must accompany the Aadhaar OTP request (valid 30 min, 3 OTPs).
+  recordConsent: (hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string) =>
+    apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string }>('/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName }),
+
+  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber, consentId }),
 
   // mobile is mandatory on ABDM's side even when it matches the Aadhaar-linked number.
   verifyAadhaarOtp: (hospitalId: string, txnId: string, otp: string, mobile: string) =>
@@ -187,16 +197,10 @@ export const abdmApi = {
   verifyLoginOtp: (hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number') =>
     apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint }),
 
+  // Linking is server-verified: the API stores the profile ABDM returned for this one-time linkToken (from verifyLoginOtp), never the
+  // demographics a client sends. The token is single-use and expires after 15 minutes.
   saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse) =>
-    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', {
-      hospitalId,
-      abhaNumber: profile.abhaNumber,
-      abhaAddress: profile.abhaAddress,
-      fullName: profile.fullName,
-      gender: profile.gender,
-      dateOfBirth: profile.dateOfBirth,
-      mobile: profile.mobile,
-    }),
+    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', { hospitalId, linkToken: profile.linkToken }),
 
   // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live
   // sessionTxnId, then update mobile (OTP-gated) or email (direct) using it.
