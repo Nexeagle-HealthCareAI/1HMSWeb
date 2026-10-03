@@ -80,6 +80,7 @@ const PathologyOrderDetailPage: React.FC = () => {
   // after every action) rather than local state, so a page reload mid-flow shows the true status
   // instead of a stale client guess.
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isVerifyingReport, setIsVerifyingReport] = useState(false);
   const [isFinalizingPdf, setIsFinalizingPdf] = useState(false);
   const [isPreviewingReport, setIsPreviewingReport] = useState(false);
 
@@ -460,6 +461,33 @@ const PathologyOrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleVerifyReport = async (line: PathologyOrderLineDto) => {
+    if (!hospitalId || !order || !line.report) return;
+    const name = window.prompt('Verifying pathologist name:')?.trim();
+    if (!name) return;
+    const regNo = window.prompt('Pathologist registration number:')?.trim();
+    if (!regNo) {
+      toast.error('Registration number required', { description: 'The verifying pathologist's registration number is required.' });
+      return;
+    }
+    setIsVerifyingReport(true);
+    try {
+      const response = await pathologyService.verifyReport(hospitalId, order.orderId, line.report.reportId, { pathologistName: name, pathologistRegNo: regNo });
+      if (!response.success) {
+        toast.error('Could not verify report', { description: response.message });
+        return;
+      }
+      // The message carries a billing warning when the lab charge was due but could not be posted automatically.
+      if (response.message && response.message !== 'Report verified.') toast.warning(response.message);
+      else toast.success('Report verified');
+      await refetch();
+    } catch (e: any) {
+      toast.error('Could not verify report', { description: e?.response?.data?.message });
+    } finally {
+      setIsVerifyingReport(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -686,6 +714,15 @@ const PathologyOrderDetailPage: React.FC = () => {
                     ? (activeLine?.report ? 'Updating...' : 'Generating...')
                     : (activeLine?.report ? 'Update Report' : 'Generate Report')}
                 </Button>
+                {activeLine?.report && activeLine.report.status !== 'VERIFIED' && (
+                  <Button
+                    variant="outline" className="w-full justify-start gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    onClick={() => handleVerifyReport(activeLine)} disabled={isVerifyingReport || isGeneratingReport || isFinalizingPdf}
+                  >
+                    {isVerifyingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
+                    {activeLine.report.status === 'AMENDED' ? 'Re-verify Report' : 'Verify Report'}
+                  </Button>
+                )}
                 {!activeLine?.result && (
                   <p className="text-[11px] text-muted-foreground px-0.5">
                     Enter this test's result to generate its report.
@@ -695,6 +732,11 @@ const PathologyOrderDetailPage: React.FC = () => {
                   {activeLine?.report?.pdfBlobPath && (
                     <Badge variant="outline" className="bg-green-100 text-green-800">
                       <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Report ready
+                    </Badge>
+                  )}
+                  {activeLine?.report && (
+                    <Badge variant="outline" className={activeLine.report.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}>
+                      {activeLine.report.status === 'VERIFIED' ? 'Verified' : activeLine.report.status === 'AMENDED' ? 'Amended - needs re-verification' : 'Awaiting verification'}
                     </Badge>
                   )}
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">

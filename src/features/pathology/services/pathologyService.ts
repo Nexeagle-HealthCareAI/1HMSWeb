@@ -386,6 +386,13 @@ export const pathologyService = {
     return response.data;
   },
 
+  // Pathologist sign-off. Required before the report counts as approved (and, when the hospital's lab billing
+  // trigger is "On report approval", this is the moment the charge is posted).
+  verifyReport: async (hospitalId: string, orderId: string, reportId: string, request: { pathologistName: string; pathologistRegNo: string }): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post<{ success: boolean; message?: string }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report/${reportId}/verify`, request);
+    return response.data;
+  },
+
   uploadReportPdf: async (hospitalId: string, orderId: string, reportId: string, file: Blob): Promise<{ success: boolean; message?: string; url?: string; sha256?: string }> => {
     const formData = new FormData();
     formData.append('File', file, `${reportId}.pdf`);
