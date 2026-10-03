@@ -200,7 +200,7 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
 
     // Candidates for "transfer to" — free beds, excluding the one currently selected.
     const freeBeds = useMemo(
-        () => items.filter(b => b.isActive && !b.admissionId && b.bedId !== selected?.bedId),
+        () => items.filter(b => b.isActive && !b.admissionId && (b.statusCode ?? 'AVAILABLE') === 'AVAILABLE' && b.bedId !== selected?.bedId),
         [items, selected],
     );
 

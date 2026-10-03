@@ -156,7 +156,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     };
 
     const loadFreeBeds = () => {
-        bedBoardApi.getBoard().then(beds => setFreeBeds(beds.filter(b => b.isActive && !b.admissionId))).catch(() => setFreeBeds([]));
+        bedBoardApi.getBoard().then(beds => setFreeBeds(beds.filter(b => b.isActive && !b.admissionId && (b.statusCode ?? 'AVAILABLE') === 'AVAILABLE'))).catch(() => setFreeBeds([]));
     };
 
     const loadDoctors = () => {
