@@ -467,7 +467,7 @@ const PathologyOrderDetailPage: React.FC = () => {
     if (!name) return;
     const regNo = window.prompt('Pathologist registration number:')?.trim();
     if (!regNo) {
-      toast.error('Registration number required', { description: 'The verifying pathologist's registration number is required.' });
+      toast.error('Registration number required', { description: "The verifying pathologist's registration number is required." });
       return;
     }
     setIsVerifyingReport(true);
