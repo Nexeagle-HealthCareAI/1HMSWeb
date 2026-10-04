@@ -19,7 +19,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
   onBack,
   onSwitchToLogin
 }) => {
-  const progressPercentage = currentStep === 1 ? 33 : currentStep === 2 ? 66 : currentStep === 3 ? 100 : 100;
+  const progressPercentage = Math.min(100, Math.round((currentStep / 4) * 100));
 
   // Determine if back button should be shown
   const shouldShowBackButton = () => {
@@ -68,7 +68,8 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             <p className="text-brand-100 font-medium text-xs mt-1 max-w-[80%] text-center opacity-90">
               {currentStep === 1 && "Select the access level that best matches your responsibilities"}
               {currentStep === 2 && "Secure your account with mobile verification"}
-              {currentStep === 3 && "Set up email & password (optional)"}
+              {currentStep === 3 && "Tell us about your hospital and pin its location"}
+              {currentStep === 4 && "Add your name, email & password"}
             </p>
           </div>
         </div>
@@ -84,10 +85,11 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             <div className="text-lg font-bold bg-gradient-to-r from-brand-600 to-purple-600 bg-clip-text text-transparent">
               {currentStep === 1 && "Choose Your Role"}
               {currentStep === 2 && "Quick Verification"}
-              {currentStep === 3 && "Account Setup"}
+              {currentStep === 3 && "Your Hospital"}
+              {currentStep === 4 && "Account Setup"}
             </div>
             <div className="flex items-center gap-2">
-              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Step {currentStep} / 3</div>
+              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Step {currentStep} / 4</div>
               <Progress value={progressPercentage} className="w-12 h-1.5" />
             </div>
           </div>
@@ -148,7 +150,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             
             <div className="flex items-center justify-end">
               <div className="text-right">
-                <div className="text-xs text-muted-foreground mb-0.5 font-medium">Step {currentStep} of 3</div>
+                <div className="text-xs text-muted-foreground mb-0.5 font-medium">Step {currentStep} of 4</div>
                 <Progress value={progressPercentage} className="w-16 h-1.5" />
               </div>
             </div>
@@ -161,13 +163,15 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
               <CardTitle className="text-xl font-bold tracking-tight">
                 {currentStep === 1 && "Choose Your Role"}
                 {currentStep === 2 && "Quick Verification"}
-                {currentStep === 3 && "Account Setup"}
+                {currentStep === 3 && "Your Hospital"}
+                {currentStep === 4 && "Account Setup"}
               </CardTitle>
               
               <p className="text-muted-foreground text-sm leading-relaxed">
                 {currentStep === 1 && "Select the access level that best matches your responsibilities"}
                 {currentStep === 2 && "Secure your account with mobile verification"}
-                {currentStep === 3 && "Set up email & password (optional)"}
+                {currentStep === 3 && "Tell us about your hospital and pin its location"}
+                {currentStep === 4 && "Add your name, email & password"}
               </p>
             </div>
           </CardHeader>

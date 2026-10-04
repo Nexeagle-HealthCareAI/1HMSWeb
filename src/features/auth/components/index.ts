@@ -6,6 +6,7 @@ export { ForgotPasswordForm } from './ForgotPasswordForm';
 export { LockedAccountScreen } from './LockedAccountScreen';
 export { LoginLayout } from './LoginLayout';
 export { EmailPasswordSetup } from './EmailPasswordSetup';
+export { HospitalQuickSetup } from './HospitalQuickSetup';
 export { RegistrationLayout } from './RegistrationLayout';
 export { UserTypeSelection } from './UserTypeSelection';
 export { MobileVerification } from './MobileVerification';

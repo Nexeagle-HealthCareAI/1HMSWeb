@@ -14,8 +14,10 @@ import {
   RegistrationLayout,
   UserTypeSelection,
   MobileVerification,
-  EmailPasswordSetup
+  EmailPasswordSetup,
+  HospitalQuickSetup
 } from '@/features/auth/components';
+import { emptyQuickHospital, validateQuickHospital, type QuickHospitalData } from '@/features/auth/components/HospitalQuickSetup';
 
 interface RegistrationProps {
   onRegister: (userRole?: string) => void;
@@ -39,7 +41,14 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   const [userType, setUserType] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
+  // Registration order: role -> mobile OTP -> hospital details + map pin -> name/email/password. The hospital is created together with the
+  // account at the last step (so it can use the admin's email and name), and each part is done only once however many times the user goes back.
+  const [hospital, setHospital] = useState<QuickHospitalData>(emptyQuickHospital());
+  const [accountDone, setAccountDone] = useState(false);
+  const [hospitalDone, setHospitalDone] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -300,7 +309,13 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       });
       return;
     }
-    setStep(3); // Go to email/password setup
+    goToHospitalStep();
+  };
+
+  // Entering the hospital step: start the contact number from the verified mobile, which the admin can change.
+  const goToHospitalStep = () => {
+    setHospital(prev => (prev.contact ? prev : { ...prev, contact: ValidationUtils.cleanMobileNumber(mobile) }));
+    setStep(3);
   };
 
   const handleBackFromStep3 = () => {
@@ -310,9 +325,57 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     setStep(2);
   };
 
-  const handleNextFromStep3 = () => {
-    // Email/password setup is optional, can proceed to completion
-    onRegister(userType === 'Admin Only' ? 'Admin' : 'AdminDoctor');
+  const handleNextFromStep3 = () => setStep(4);
+
+  const handleBackFromStep4 = () => setStep(3);
+
+  // Creates the hospital for the signed-in admin once. Returns false when it could not be created (the caller carries on, and the
+  // post-login hospital form picks it up, so a registration problem never strands a user who already has an account).
+  const registerHospitalOnce = async (userId: string, hospitalEmail: string): Promise<boolean> => {
+    if (hospitalDone) return true;
+    const problems = validateQuickHospital(hospital);
+    if (Object.keys(problems).length > 0) {
+      setStep(3);
+      toast({ title: 'Hospital details incomplete', description: 'Please complete the hospital details.', variant: 'destructive' });
+      return false;
+    }
+    try {
+      const response = await hospitalApi.registerHospital({
+        userId,
+        name: hospital.name.trim(),
+        type: hospital.type,
+        registrationNumber: hospital.registrationNumber.trim(),
+        email: hospitalEmail,
+        contact: hospital.contact.trim(),
+        alternateContact: '',
+        website: '',
+        location: hospital.location.trim(),
+        city: hospital.city.trim(),
+        state: hospital.state.trim(),
+        country: hospital.country.trim(),
+        pincode: hospital.pincode.trim(),
+        timeZone: 'Asia/Kolkata',
+        latitude: hospital.latitude,
+        longitude: hospital.longitude,
+        referralCode: hospital.referralCode.trim() || undefined,
+      });
+      if (!response.success) throw new Error(response.message || 'Hospital registration failed');
+      setHospitalDone(true);
+      if (hospital.referralCode.trim()) {
+        toast(response.referralCodeApplied
+          ? { title: 'Referral Code Applied', description: response.referralCodeMessage || 'Referral code applied.' }
+          : { title: 'Referral Code Not Applied', description: response.referralCodeMessage || 'This referral code could not be recognized.', variant: 'destructive' });
+      }
+      return true;
+    } catch (error) {
+      console.error('Hospital registration during sign-up failed:', error);
+      toast({
+        title: 'Account created, hospital not saved',
+        description: `${getErrorMessage(error)} You can add the hospital details right after signing in.`,
+        variant: 'destructive',
+      });
+      return false;
+    }
   };
 
   // Map user type to role for API
@@ -489,7 +552,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           title: "OTP Verified!",
           description: "Mobile number verified successfully"
         });
-        setStep(3);
+        goToHospitalStep();
       } else {
         throw new Error(response.message || 'OTP verification failed');
       }
@@ -559,16 +622,27 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       }
     }
 
+    const trimmedName = fullName.trim();
+    if (trimmedName.length < 2) {
+      toast({ title: 'Name required', description: 'Please enter your full name.', variant: 'destructive' });
+      return;
+    }
+
+    setIsFinishing(true);
     try {
       const setPasswordData = {
         userId: userId,
+        fullName: trimmedName,
         email: trimmedEmail,
         password: trimmedPassword
       };
 
-      const response = await setPasswordMutation.mutateAsync(setPasswordData);
+      // Skip when an earlier attempt already saved the account (the server refuses to set the same email twice).
+      const response = accountDone ? { success: true, message: '' } : await setPasswordMutation.mutateAsync(setPasswordData);
       
       if (response.success) {
+        setAccountDone(true);
+        await registerHospitalOnce(userId, trimmedEmail);
         // Properly authenticate the user after successful registration
         const userRole = userType === 'Admin Only' ? 'Admin' : 'AdminDoctor';
         const token = getToken();
@@ -601,6 +675,8 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         description: getErrorMessage(error),
         variant: "destructive"
       });
+    } finally {
+      setIsFinishing(false);
     }
   };
 
@@ -609,6 +685,10 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     const userRole = userType === 'Admin Only' ? 'Admin' : 'AdminDoctor';
     const userId = getUserId();
     const token = getToken();
+    setIsFinishing(true);
+    // The hospital details were already entered, so create it even when the email/password step is skipped (the hospital email is left empty).
+    if (userId) await registerHospitalOnce(userId, email.trim());
+    setIsFinishing(false);
     if (userId && token) {
       setAuthenticatedUser(userId, token);
       const hospitalResult = await fetchAndStoreHospitalMapping(userId);
@@ -674,15 +754,26 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         );
       case 3:
         return (
+          <HospitalQuickSetup
+            data={hospital}
+            onChange={patch => setHospital(prev => ({ ...prev, ...patch }))}
+            onNext={handleNextFromStep3}
+            onBack={handleBackFromStep3}
+          />
+        );
+      case 4:
+        return (
           <EmailPasswordSetup
+            fullName={fullName}
+            onFullNameChange={setFullName}
             email={email}
             password={password}
-            isLoading={setPasswordMutation.isPending}
+            isLoading={setPasswordMutation.isPending || isFinishing}
             onEmailChange={setEmail}
             onPasswordChange={setPassword}
             onComplete={handleEmailPasswordSetup}
             onSkip={handleSkipEmailPassword}
-            onBack={handleBackFromStep3}
+            onBack={handleBackFromStep4}
           />
         );
 
@@ -695,8 +786,9 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     <RegistrationLayout
       currentStep={step}
       onBack={
-        step === 2 ? handleBackFromStep2 : 
-        step === 3 ? handleBackFromStep3 : 
+        step === 2 ? handleBackFromStep2 :
+        step === 3 ? handleBackFromStep3 :
+        step === 4 ? handleBackFromStep4 :
         undefined
       }
       onSwitchToLogin={onSwitchToLogin}
@@ -712,7 +804,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
             <button
               onClick={onSwitchToLogin}
               className="text-primary hover:underline font-medium"
-              disabled={registerMutation.isPending || sendOTPMutation.isPending || verifyOTPMutation.isPending || setPasswordMutation.isPending}
+              disabled={registerMutation.isPending || sendOTPMutation.isPending || verifyOTPMutation.isPending || setPasswordMutation.isPending || isFinishing}
             >
               Sign in here
             </button>
