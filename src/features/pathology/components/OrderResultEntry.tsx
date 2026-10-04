@@ -389,7 +389,7 @@ export const OrderResultEntry = forwardRef<OrderResultEntryHandle, OrderResultEn
     // A result that already has a report is amended, not edited: autosave never touches it, and an explicit
     // save needs a reason (kept in the result history; the report is marked AMENDED and must be re-verified).
     let amendmentReason: string | undefined;
-    if (orderLine.reportId) {
+    if (orderLine.report) {
       if (silent) return;
       const entered = window.prompt('This result has already been reported. Reason for the amendment (at least 5 characters):')?.trim();
       if (!entered || entered.length < 5) {

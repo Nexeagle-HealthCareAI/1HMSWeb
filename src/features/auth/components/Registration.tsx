@@ -18,6 +18,7 @@ import {
   HospitalQuickSetup
 } from '@/features/auth/components';
 import { emptyQuickHospital, validateQuickHospital, type QuickHospitalData } from '@/features/auth/components/HospitalQuickSetup';
+import { clearRegistrationDraft, loadValidRegistrationDraft, saveRegistrationDraft } from '@/features/auth/services/registrationDraft';
 
 interface RegistrationProps {
   onRegister: (userRole?: string) => void;
@@ -37,20 +38,23 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   const { refetch: refetchHospitalUser } = useHospitalUser(currentUserId || '');
   const queryClient = useQueryClient();
   
-  const [step, setStep] = useState(1);
-  const [userType, setUserType] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
+  // Resume point when the page was reloaded after the OTP was verified (see registrationDraft.ts).
+  const [draft] = useState(() => loadValidRegistrationDraft());
+  const [step, setStep] = useState<number>(draft?.step ?? 1);
+  const [userType, setUserType] = useState(draft?.userType ?? '');
+  const [mobile, setMobile] = useState(draft?.mobile ?? '');
+  const [email, setEmail] = useState(draft?.email ?? '');
+  const [fullName, setFullName] = useState(draft?.fullName ?? '');
   const [password, setPassword] = useState('');
   // Registration order: role -> mobile OTP -> hospital details + map pin -> name/email/password. The hospital is created together with the
   // account at the last step (so it can use the admin's email and name), and each part is done only once however many times the user goes back.
-  const [hospital, setHospital] = useState<QuickHospitalData>(emptyQuickHospital());
-  const [accountDone, setAccountDone] = useState(false);
-  const [hospitalDone, setHospitalDone] = useState(false);
+  const [hospital, setHospital] = useState<QuickHospitalData>(draft?.hospital ?? emptyQuickHospital());
+  const [accountDone, setAccountDone] = useState(draft?.accountDone ?? false);
+  const [hospitalDone, setHospitalDone] = useState(draft?.hospitalDone ?? false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [otpSent, setOtpSent] = useState(!!draft);
+  const [otpVerified, setOtpVerified] = useState(!!draft);
   const [resendTimer, setResendTimer] = useState(0);
   const [localUserId, setLocalUserId] = useState<string | null>(null);
   const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
@@ -59,6 +63,19 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   const [originalMobile, setOriginalMobile] = useState('');
   const [allowSendOTP, setAllowSendOTP] = useState(true);
   const verificationInProgressRef = useRef(false);
+
+  // Remember where the person is once the mobile is verified, so a reload resumes here instead of treating them as signed in.
+  useEffect(() => {
+    if (!otpVerified || step < 3) return;
+    saveRegistrationDraft({ step: step === 4 ? 4 : 3, userType, mobile, hospital, fullName, email, accountDone, hospitalDone });
+  }, [otpVerified, step, userType, mobile, hospital, fullName, email, accountDone, hospitalDone]);
+
+  // Leaving registration for sign-in: drop the half-finished session so it cannot linger as a ghost login.
+  const leaveToLogin = () => {
+    clearRegistrationDraft();
+    if (otpVerified) useAuthStore.getState().clearSession();
+    onSwitchToLogin();
+  };
 
   // Handler to clear verification errors
   const handleClearVerificationError = () => {
@@ -416,16 +433,10 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       }   
     
       
+      // Nothing is stored in the auth store here: the mobile number is not verified yet. The session token and user id are saved only after
+      // the OTP is verified below. (The server no longer issues a token at registration either.)
       if (signUpResponse.userId) {
-        console.log('🔑 Storing userId from registration:', signUpResponse.userId);
-        setUserId(signUpResponse.userId);
         setLocalUserId(signUpResponse.userId);
-        console.log('🔍 After setUserId - userId from store:', getUserId());
-      }
-      
-      // Store token if available
-      if (signUpResponse.accessToken) {
-        setToken(signUpResponse.accessToken);
       }    
       
       const otpResponse = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
@@ -552,6 +563,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           title: "OTP Verified!",
           description: "Mobile number verified successfully"
         });
+        setOtpVerified(true);
         goToHospitalStep();
       } else {
         throw new Error(response.message || 'OTP verification failed');
@@ -643,6 +655,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       if (response.success) {
         setAccountDone(true);
         await registerHospitalOnce(userId, trimmedEmail);
+        clearRegistrationDraft();
         // Properly authenticate the user after successful registration
         const userRole = userType === 'Admin Only' ? 'Admin' : 'AdminDoctor';
         const token = getToken();
@@ -689,6 +702,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     // The hospital details were already entered, so create it even when the email/password step is skipped (the hospital email is left empty).
     if (userId) await registerHospitalOnce(userId, email.trim());
     setIsFinishing(false);
+    clearRegistrationDraft();
     if (userId && token) {
       setAuthenticatedUser(userId, token);
       const hospitalResult = await fetchAndStoreHospitalMapping(userId);
@@ -791,7 +805,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         step === 4 ? handleBackFromStep4 :
         undefined
       }
-      onSwitchToLogin={onSwitchToLogin}
+      onSwitchToLogin={leaveToLogin}
     >
       <div className="space-y-6">
         {/* Current Step Content */}
@@ -802,7 +816,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <button
-              onClick={onSwitchToLogin}
+              onClick={leaveToLogin}
               className="text-primary hover:underline font-medium"
               disabled={registerMutation.isPending || sendOTPMutation.isPending || verifyOTPMutation.isPending || setPasswordMutation.isPending || isFinishing}
             >

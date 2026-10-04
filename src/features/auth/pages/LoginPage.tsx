@@ -5,6 +5,7 @@ import { Registration } from '@/features/auth/components/Registration';
 import { useIsAuthenticated } from '@/store';
 import { useAuthStore } from '@/store/authStore';
 import { getLandingPath } from '@/config/landing';
+import { loadValidRegistrationDraft } from '@/features/auth/services/registrationDraft';
 
 type AppState = 'login' | 'register';
 
@@ -12,7 +13,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useIsAuthenticated();
-  const [currentState, setCurrentState] = useState<AppState>('login');
+  // Reopen registration where it was left when the page reloaded after the mobile was verified.
+  const [currentState, setCurrentState] = useState<AppState>(() => (loadValidRegistrationDraft() ? 'register' : 'login'));
 
 
   // Where to send the user once signed in: the page they originally asked for, else the landing
