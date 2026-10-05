@@ -377,6 +377,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         country: hospital.country.trim(),
         pincode: hospital.pincode.trim(),
         timeZone: 'Asia/Kolkata',
+        gstin: (hospital.gstin ?? '').trim() || undefined,
         latitude: hospital.latitude,
         longitude: hospital.longitude,
         referralCode: hospital.referralCode.trim() || undefined,

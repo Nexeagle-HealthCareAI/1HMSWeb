@@ -12,6 +12,8 @@ export interface QuickHospitalData {
   name: string;
   type: string;
   registrationNumber: string;
+  // Optional. A saved draft from before this field existed has none, hence the optional type.
+  gstin?: string;
   contact: string;
   location: string;
   city: string;
@@ -24,7 +26,7 @@ export interface QuickHospitalData {
 }
 
 export const emptyQuickHospital = (contact = ''): QuickHospitalData => ({
-  name: '', type: '', registrationNumber: '', contact, location: '', city: '', state: '', country: 'India', pincode: '', referralCode: '',
+  name: '', type: '', registrationNumber: '', gstin: '', contact, location: '', city: '', state: '', country: 'India', pincode: '', referralCode: '',
 });
 
 const HOSPITAL_TYPES = ['Hospital', 'Clinic', 'Medical Center', 'Nursing Home', 'Diagnostic Center', 'Dental Clinic', 'Eye Clinic', 'Other'];
@@ -37,6 +39,8 @@ export const validateHospitalBasics = (d: QuickHospitalData): FieldErrors => {
   if (d.name.trim().length < 2) e.name = 'Enter the hospital or clinic name';
   if (!d.type) e.type = 'Select a type';
   if (!/^[+]?[0-9\s-]{8,15}$/.test(d.contact.trim())) e.contact = 'Enter a valid contact number';
+  const gst = (d.gstin ?? '').trim();
+  if (gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst)) e.gstin = 'Enter a valid 15-character GSTIN, or leave it blank';
   return e;
 };
 
@@ -118,14 +122,20 @@ export const HospitalBasicsStep: React.FC<StepProps> = ({ data, onChange, onNext
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium">Contact number <span className="text-red-500">*</span></Label>
-        <Input value={data.contact} onChange={e => set({ contact: e.target.value })} inputMode="tel" placeholder="Hospital phone" className={`h-10 text-sm ${border('contact')}`} disabled={isLoading} />
-        {err('contact')}
+        <Label className="text-xs font-medium">Registration number <span className="text-muted-foreground font-normal">(optional, add later if you don't have it handy)</span></Label>
+        <Input value={data.registrationNumber} onChange={e => set({ registrationNumber: e.target.value })} maxLength={60} className="h-10 text-sm" disabled={isLoading} />
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium">Registration number <span className="text-muted-foreground font-normal">(optional, add later if you don't have it handy)</span></Label>
-        <Input value={data.registrationNumber} onChange={e => set({ registrationNumber: e.target.value })} maxLength={60} className="h-10 text-sm" disabled={isLoading} />
+        <Label className="text-xs font-medium">GST number <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Input value={data.gstin ?? ''} onChange={e => set({ gstin: e.target.value.toUpperCase().replace(/\s/g, '') })} maxLength={15} placeholder="e.g. 29ABCDE1234F1Z5" className={`h-10 text-sm ${border('gstin')}`} disabled={isLoading} />
+        {err('gstin')}
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium">Contact number <span className="text-red-500">*</span></Label>
+        <Input value={data.contact} onChange={e => set({ contact: e.target.value })} inputMode="tel" placeholder="Hospital phone" className={`h-10 text-sm ${border('contact')}`} disabled={isLoading} />
+        {err('contact')}
       </div>
 
       {showReferral ? (
