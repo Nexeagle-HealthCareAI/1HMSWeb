@@ -15,9 +15,10 @@ import {
   UserTypeSelection,
   MobileVerification,
   EmailPasswordSetup,
-  HospitalQuickSetup
+  HospitalBasicsStep,
+  HospitalLocationStep
 } from '@/features/auth/components';
-import { emptyQuickHospital, validateQuickHospital, type QuickHospitalData } from '@/features/auth/components/HospitalQuickSetup';
+import { emptyQuickHospital, validateHospitalBasics, validateQuickHospital, type QuickHospitalData } from '@/features/auth/components/HospitalQuickSetup';
 import { clearRegistrationDraft, loadValidRegistrationDraft, saveRegistrationDraft } from '@/features/auth/services/registrationDraft';
 
 interface RegistrationProps {
@@ -67,7 +68,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   // Remember where the person is once the mobile is verified, so a reload resumes here instead of treating them as signed in.
   useEffect(() => {
     if (!otpVerified || step < 3) return;
-    saveRegistrationDraft({ step: step === 4 ? 4 : 3, userType, mobile, hospital, fullName, email, accountDone, hospitalDone });
+    saveRegistrationDraft({ step: step >= 5 ? 5 : step === 4 ? 4 : 3, userType, mobile, hospital, fullName, email, accountDone, hospitalDone });
   }, [otpVerified, step, userType, mobile, hospital, fullName, email, accountDone, hospitalDone]);
 
   // Leaving registration for sign-in: drop the half-finished session so it cannot linger as a ghost login.
@@ -344,7 +345,11 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
 
   const handleNextFromStep3 = () => setStep(4);
 
+  const handleNextFromStep4 = () => setStep(5);
+
   const handleBackFromStep4 = () => setStep(3);
+
+  const handleBackFromStep5 = () => setStep(4);
 
   // Creates the hospital for the signed-in admin once. Returns false when it could not be created (the caller carries on, and the
   // post-login hospital form picks it up, so a registration problem never strands a user who already has an account).
@@ -352,7 +357,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     if (hospitalDone) return true;
     const problems = validateQuickHospital(hospital);
     if (Object.keys(problems).length > 0) {
-      setStep(3);
+      setStep(Object.keys(validateHospitalBasics(hospital)).length > 0 ? 3 : 4);
       toast({ title: 'Hospital details incomplete', description: 'Please complete the hospital details.', variant: 'destructive' });
       return false;
     }
@@ -768,7 +773,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         );
       case 3:
         return (
-          <HospitalQuickSetup
+          <HospitalBasicsStep
             data={hospital}
             onChange={patch => setHospital(prev => ({ ...prev, ...patch }))}
             onNext={handleNextFromStep3}
@@ -776,6 +781,15 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           />
         );
       case 4:
+        return (
+          <HospitalLocationStep
+            data={hospital}
+            onChange={patch => setHospital(prev => ({ ...prev, ...patch }))}
+            onNext={handleNextFromStep4}
+            onBack={handleBackFromStep4}
+          />
+        );
+      case 5:
         return (
           <EmailPasswordSetup
             fullName={fullName}
@@ -787,7 +801,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
             onPasswordChange={setPassword}
             onComplete={handleEmailPasswordSetup}
             onSkip={handleSkipEmailPassword}
-            onBack={handleBackFromStep4}
+            onBack={handleBackFromStep5}
           />
         );
 
@@ -803,6 +817,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         step === 2 ? handleBackFromStep2 :
         step === 3 ? handleBackFromStep3 :
         step === 4 ? handleBackFromStep4 :
+        step === 5 ? handleBackFromStep5 :
         undefined
       }
       onSwitchToLogin={leaveToLogin}

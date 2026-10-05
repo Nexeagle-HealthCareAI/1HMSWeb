@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 const KEY = 'nx_registration_draft_v1';
 
 export interface RegistrationDraft {
-  step: 3 | 4;
+  step: 3 | 4 | 5;
   userType: string;
   mobile: string;
   hospital: QuickHospitalData;
@@ -49,7 +49,7 @@ export const loadValidRegistrationDraft = (): RegistrationDraft | null => {
     if (!raw) return null;
     const draft = JSON.parse(raw) as RegistrationDraft;
     const store = useAuthStore.getState();
-    const valid = (draft.step === 3 || draft.step === 4) && !!store.token && !!store.userId && store.isTokenValid();
+    const valid = (draft.step === 3 || draft.step === 4 || draft.step === 5) && !!store.token && !!store.userId && store.isTokenValid();
     if (!valid) {
       clearRegistrationDraft();
       return null;

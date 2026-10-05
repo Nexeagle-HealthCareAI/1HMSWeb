@@ -11,7 +11,7 @@ export const RegistrationProgress: React.FC<RegistrationProgressProps> = ({
   currentStep,
   onBack
 }) => {
-  const totalSteps = 4;
+  const totalSteps = 5;
   const progressPercentage = (currentStep / totalSteps) * 100;
 
   return (
