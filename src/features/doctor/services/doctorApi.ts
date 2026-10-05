@@ -44,6 +44,10 @@ export interface DoctorProfileResponse {
   primaryMedicalSpecialityName?: string;
   primaryMedicalSpecialityPatientFacingName?: string;
   profileCompletionPercentage: number;
+  // Confirmed = real licence number + state medical council + year of registration. A doctor created by hospital registration starts
+  // with the placeholder licence "PENDING" and must confirm before going online.
+  isProfileConfirmed?: boolean;
+  missingProfileItems?: string[];
   createdAt: string;
   doctorDepartments: DoctorDepartment[];
   doctorSpecializations: DoctorSpecialization[];

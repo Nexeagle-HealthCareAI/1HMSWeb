@@ -252,6 +252,9 @@ export const ClinicalDashboard: React.FC = () => {
   // Profile completion percentage for verified badge
   const profileCompletionPercentage = doctorProfileResponse?.profileCompletionPercentage || 0;
   const clampedProfileCompletion = Math.min(Math.max(profileCompletionPercentage, 0), 100);
+  // An admin-doctor created at hospital registration has a profile row but not real credentials yet: they must confirm it to start working.
+  const needsProfileConfirmation = !!doctorProfileResponse?.doctorId && doctorProfileResponse.isProfileConfirmed === false;
+  const missingProfileItems = doctorProfileResponse?.missingProfileItems ?? [];
   // Check if doctor profile is restricted (204/404 means profile incomplete)
   const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
   const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
@@ -1107,7 +1110,8 @@ export const ClinicalDashboard: React.FC = () => {
                   </span>
                   <Switch
                     checked={isOnlineNow}
-                    disabled={isSavingOnlineStatus}
+                    disabled={isSavingOnlineStatus || (needsProfileConfirmation && !isOnlineNow)}
+                    title={needsProfileConfirmation ? 'Confirm your profile before going online' : undefined}
                     onCheckedChange={handleToggleOnlineNow}
                   />
                 </div>
@@ -1210,6 +1214,31 @@ export const ClinicalDashboard: React.FC = () => {
                       {t('docBoard.error.refreshPage')}
                     </Button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Confirm-your-profile prompt: shown to a doctor whose professional details are still the registration placeholder */}
+            {!isDataLoading && !shouldShowError && !doctorProfileRestricted && needsProfileConfirmation && (
+              <div className="rounded-2xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-5 sm:p-6 mb-6 shadow-md" role="alert">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-amber-400/90 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-6 w-6 text-amber-950" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-amber-900 dark:text-amber-200">Confirm your profile to start working</h3>
+                    <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                      Before you can go online and see patients, add your professional details. They appear on prescriptions and are checked against your medical registration.
+                    </p>
+                    {missingProfileItems.length > 0 && (
+                      <ul className="mt-2 text-sm text-amber-900 dark:text-amber-200 list-disc pl-5 space-y-0.5">
+                        {missingProfileItems.map(item => <li key={item}>{item}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                  <Button onClick={() => navigate('/profile?tab=professional')} className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold shrink-0">
+                    Confirm my profile
+                  </Button>
                 </div>
               </div>
             )}
