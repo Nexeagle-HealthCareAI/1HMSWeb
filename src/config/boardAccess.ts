@@ -15,6 +15,7 @@ import {
   HeartPulse,
   ClipboardList,
   Megaphone,
+  BookOpen,
 } from 'lucide-react';
 
 /**
@@ -43,6 +44,7 @@ export type PermissionKey =
   | 'abdm'
   | 'leads'
   | 'print_preview'
+  | 'health_wiki'
   | 'hr.manage_employees'
   | 'hr.view_dashboard';
 
@@ -84,6 +86,10 @@ export const BOARD_ACCESS: BoardAccessRule[] = [
   { id: 'billing-appointment', path: '/billing/:appointmentId', permissionKeys: ['billing'] },
   { id: 'billing-encounter', path: '/billing/encounter/:encounterId', permissionKeys: ['billing'] },
   { id: 'pharmacy-retail', path: '/pharmacy-retail', permissionKeys: ['pharmacy'], navLabel: 'Pharmacy Retail', navIcon: Pill, showInSidebar: true },
+  // Health Wiki: articles waiting for this doctor's medical review. The key must exist in the backend's
+  // permission seed and be granted to doctor roles before the menu item appears for anyone.
+  { id: 'health-wiki', path: '/health-wiki', permissionKeys: ['health_wiki'], navLabel: 'Health Wiki', navIcon: BookOpen, showInSidebar: true },
+  { id: 'health-wiki-article', path: '/health-wiki/:slug', permissionKeys: ['health_wiki'] },
   { id: 'hr', path: '/hr', permissionKeys: ['hr.manage_employees', 'hr.view_dashboard'] },
   { id: 'print-preview', path: '/print-preview', permissionKeys: ['print_preview'] },
 ];

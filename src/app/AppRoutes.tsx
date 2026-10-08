@@ -49,6 +49,10 @@ const PatientProfilePagePreview = lazy(() => import('@/features/patient/pages/Pa
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 
+const HealthWikiInboxPage = lazy(() => import('@/features/healthWiki/pages/HealthWikiInboxPage'));
+const HealthWikiArticlePage = lazy(() => import('@/features/healthWiki/pages/HealthWikiArticlePage'));
+// DEV-ONLY: unauthenticated Health Wiki preview with example data (see route below).
+const HealthWikiPreview = lazy(() => import('@/features/healthWiki/pages/HealthWikiPreview'));
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 
@@ -241,6 +245,18 @@ export const AppRoutes: React.FC = () => {
             element={
               <MainLayout>
                 <DocBoardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Health Wiki preview with example data, for UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/health-wiki-preview/*"
+            element={
+              <MainLayout>
+                <HealthWikiPreview />
               </MainLayout>
             }
           />
@@ -502,6 +518,28 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredPermissions={getRequiredPermissions('/calendar')}>
                   <MainLayout>
                     <DoctorCalendar />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
+            {/* Health Wiki - articles waiting for this doctor's medical review, and the ones they approved */}
+            <Route
+              path="/health-wiki"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki')}>
+                  <MainLayout>
+                    <HealthWikiInboxPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/health-wiki/:slug"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki/x')}>
+                  <MainLayout>
+                    <HealthWikiArticlePage />
                   </MainLayout>
                 </RouteGuard>
               }
