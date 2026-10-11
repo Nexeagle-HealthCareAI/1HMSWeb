@@ -56,7 +56,7 @@ export interface ArticleDetail extends InboxArticle {
   dailyViews: number[];
 }
 
-export type ReviewDecision = { decision: 'APPROVE' } | { decision: 'REQUEST_CHANGES'; comment: string };
+export type ReviewDecision = { decision: 'APPROVE'; accuracyConfirmed: true } | { decision: 'REQUEST_CHANGES'; comment: string };
 
 /** After a decision: published right away, or approved and waiting for the doctor's registration check. */
 export interface ReviewResult {

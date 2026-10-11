@@ -26,7 +26,7 @@ function DecisionPanel({ article }: { article: ArticleDetail }) {
   const done = (title: string) => { toast({ title }); navigate(base); };
   const fail = (e: unknown) => toast({ title: healthWikiErrorMessage(e), variant: 'destructive' });
 
-  const approve = () => review.mutate({ decision: 'APPROVE' }, {
+  const approve = () => review.mutate({ decision: 'APPROVE', accuracyConfirmed: true }, {
     onSuccess: (res) => done(res.outcome === 'APPROVED_AWAITING_VERIFICATION' ? 'Approved. It goes live once your registration is verified.' : 'Published on Doctor Dekho.'),
     onError: fail,
   });
