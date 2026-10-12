@@ -50,6 +50,7 @@ const AppointmentDashboard = lazy(() => import('@/features/appointment/component
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 
 const HealthWikiInboxPage = lazy(() => import('@/features/healthWiki/pages/HealthWikiInboxPage'));
+const HealthWikiTopicsPage = lazy(() => import('@/features/healthWiki/pages/HealthWikiTopicsPage'));
 const HealthWikiArticlePage = lazy(() => import('@/features/healthWiki/pages/HealthWikiArticlePage'));
 // DEV-ONLY: unauthenticated Health Wiki preview with example data (see route below).
 const HealthWikiPreview = lazy(() => import('@/features/healthWiki/pages/HealthWikiPreview'));
@@ -530,6 +531,16 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki')}>
                   <MainLayout>
                     <HealthWikiInboxPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/health-wiki/topics"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki/topics')}>
+                  <MainLayout>
+                    <HealthWikiTopicsPage />
                   </MainLayout>
                 </RouteGuard>
               }

@@ -64,3 +64,44 @@ export interface ReviewResult {
 }
 
 export const MIN_CHANGE_COMMENT = 10;
+
+// ---- topics: what a doctor suggests for the team to commission
+
+export type TopicStatus = 'SUBMITTED' | 'NEEDS_DETAIL' | 'ACCEPTED' | 'DECLINED' | 'ARTICLE_STARTED';
+
+export const TOPIC_STATUS_LABEL: Record<TopicStatus, string> = {
+  SUBMITTED: 'Sent to the team',
+  NEEDS_DETAIL: 'Needs more detail',
+  ACCEPTED: 'Accepted',
+  DECLINED: 'Not taken up',
+  ARTICLE_STARTED: 'Article started',
+};
+
+export interface TopicRequest {
+  id: string;
+  title: string;
+  type: ArticleType;
+  outline: string;
+  whyItMatters: string;
+  conditionSlug: string | null;
+  references: string | null;
+  status: TopicStatus;
+  /** Why it was declined, or the detail the team asked for. */
+  decisionNote: string | null;
+  articleSlug: string | null;
+  /** The doctor asked for someone else to write it and will review it. */
+  requestWriter: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TopicInput {
+  title: string;
+  type: ArticleType;
+  outline: string;
+  whyItMatters: string;
+  references: string | null;
+  requestWriter: boolean;
+}
+
+export const OPEN_TOPIC_LIMIT = 5;

@@ -1,5 +1,5 @@
-import type { ArticleDetail, InboxArticle, InboxResponse, ReviewDecision, ReviewResult } from '../types';
-import { MIN_CHANGE_COMMENT } from '../types';
+import type { ArticleDetail, InboxArticle, InboxResponse, ReviewDecision, ReviewResult, TopicInput, TopicRequest } from '../types';
+import { MIN_CHANGE_COMMENT, OPEN_TOPIC_LIMIT } from '../types';
 
 // Example data for local design review (VITE_HEALTH_WIKI_MOCK=true, or the dev-only preview route).
 // Replace-with-API: the real calls are in healthWikiApi.ts.
@@ -52,7 +52,12 @@ const seed = (): Stored[] => [
 ];
 
 let articles = seed();
-export const resetMockHealthWiki = () => { articles = seed(); };
+const seedTopics = (): TopicRequest[] => [
+  { id: 't1', title: 'Sleep and blood pressure', type: 'MEDICAL', outline: 'How poor sleep raises blood pressure.', whyItMatters: 'Patients ask about it in every clinic.', conditionSlug: null, references: null, status: 'SUBMITTED', decisionNote: null, articleSlug: null, requestWriter: true, createdAt: iso(2), updatedAt: iso(2) },
+  { id: 't2', title: 'Home care for a child with fever', type: 'MEDICAL', outline: 'Simple steps for parents.', whyItMatters: 'Parents call at night.', conditionSlug: null, references: null, status: 'NEEDS_DETAIL', decisionNote: 'Which age group does this cover?', articleSlug: null, requestWriter: false, createdAt: iso(5), updatedAt: iso(3) },
+];
+let topics = seedTopics();
+export const resetMockHealthWiki = () => { articles = seed(); topics = seedTopics(); };
 
 const wait = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 200));
 const brief = ({ content: _c, coverImageAlt: _a, relatedConditionSlug: _r, disclosure: _d, references: _f, reviewer: _v, status: _s, canDecide: _k, dailyViews: _y, ...rest }: Stored): InboxArticle => rest;
@@ -64,6 +69,23 @@ export class MockHealthWikiError extends Error {
 }
 
 export const mockHealthWikiApi = {
+  topics: (): Promise<TopicRequest[]> => wait([...topics].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))),
+  createTopic: async (input: TopicInput): Promise<TopicRequest> => {
+    if (!input.title.trim() || !input.outline.trim() || !input.whyItMatters.trim()) throw new MockHealthWikiError(400, 'Fill in the topic, the outline and why it matters.');
+    if (topics.filter((t) => t.status === 'SUBMITTED' || t.status === 'NEEDS_DETAIL').length >= OPEN_TOPIC_LIMIT)
+      throw new MockHealthWikiError(409, `You already have ${OPEN_TOPIC_LIMIT} open requests. Wait for a decision before sending another.`);
+    const t: TopicRequest = { id: `t${topics.length + 1}`, ...input, conditionSlug: null, status: 'SUBMITTED', decisionNote: null, articleSlug: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    topics = [t, ...topics];
+    return wait({ ...t });
+  },
+  addTopicDetail: async (id: string, detail: { outline?: string; whyItMatters?: string }): Promise<TopicRequest> => {
+    const t = topics.find((x) => x.id === id);
+    if (!t) throw new MockHealthWikiError(404, 'Topic not found.');
+    if (t.status !== 'NEEDS_DETAIL') throw new MockHealthWikiError(409, 'The team has not asked for more detail on this one.');
+    Object.assign(t, { ...detail, status: 'SUBMITTED', decisionNote: null, updatedAt: new Date().toISOString() });
+    return wait({ ...t });
+  },
+  writeHandoff: (): Promise<{ url: string }> => wait({ url: 'https://doctordekho.example.com/contribute/sso?code=example&to=write' }),
   inbox: (): Promise<InboxResponse> =>
     wait({
       pending: articles.filter((a) => a.status === 'IN_REVIEW').sort((a, b) => (b.waitingDays ?? 0) - (a.waitingDays ?? 0)).map(brief),

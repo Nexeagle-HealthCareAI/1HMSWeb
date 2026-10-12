@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Eye, Heart, Clock } from 'lucide-react';
+import { BookOpen, Eye, Heart, Clock, PenLine, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useInbox } from '../hooks';
+import { toast } from '@/hooks/use-toast';
+import { useInbox, useWriteHandoff } from '../hooks';
 import { ARTICLE_TYPE_LABEL, type InboxArticle, type InboxTab } from '../types';
 import { healthWikiErrorMessage } from '../api/healthWikiApi';
 import { useHealthWikiBase } from '../baseContext';
@@ -62,6 +63,12 @@ export default function HealthWikiInboxPage() {
   const base = useHealthWikiBase();
   const { data, isLoading, error, refetch } = useInbox();
   const [tab, setTab] = useState<InboxTab>('pending');
+  const handoff = useWriteHandoff();
+  // Doctor Dekho signs the doctor in with a one-time address, so no WhatsApp code is needed.
+  const write = (to: 'write' | 'drafts') => handoff.mutate(to, {
+    onSuccess: (r) => window.location.assign(r.url),
+    onError: (e) => toast({ title: healthWikiErrorMessage(e), variant: 'destructive' }),
+  });
 
   if (isLoading) return <div className="p-6 text-center text-slate-500" role="status">Loading…</div>;
   if (error || !data) {
@@ -85,9 +92,15 @@ export default function HealthWikiInboxPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6">
-      <header>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900"><BookOpen className="h-6 w-6 text-indigo-600" aria-hidden="true" /> Health Wiki</h1>
-        <p className="text-sm text-slate-500">Articles for Doctor Dekho that need your medical review, and the ones you approved.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900"><BookOpen className="h-6 w-6 text-indigo-600" aria-hidden="true" /> Health Wiki</h1>
+          <p className="text-sm text-slate-500">Articles for Doctor Dekho that need your medical review, and the ones you approved.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => navigate(`${base}/topics`)}><Lightbulb className="mr-2 h-4 w-4" aria-hidden="true" />Suggest a topic</Button>
+          <Button onClick={() => write('write')} disabled={handoff.isPending}><PenLine className="mr-2 h-4 w-4" aria-hidden="true" />{handoff.isPending ? 'Opening…' : 'Write an article'}</Button>
+        </div>
       </header>
 
       <div role="tablist" aria-label="Health Wiki" className="grid gap-3 sm:grid-cols-2">

@@ -3,6 +3,7 @@ import { forceHealthWikiMock } from '../api/healthWikiApi';
 import { HealthWikiBase } from '../base';
 import HealthWikiArticlePage from './HealthWikiArticlePage';
 import HealthWikiInboxPage from './HealthWikiInboxPage';
+import HealthWikiTopicsPage from './HealthWikiTopicsPage';
 
 /**
  * DEV-ONLY preview of the doctor's Health Wiki screens with example data, no login needed.
@@ -15,6 +16,7 @@ export default function HealthWikiPreview() {
     <HealthWikiBase base="/health-wiki-preview">
       <Routes>
         <Route index element={<HealthWikiInboxPage />} />
+        <Route path="topics" element={<HealthWikiTopicsPage />} />
         <Route path=":slug" element={<HealthWikiArticlePage />} />
       </Routes>
     </HealthWikiBase>

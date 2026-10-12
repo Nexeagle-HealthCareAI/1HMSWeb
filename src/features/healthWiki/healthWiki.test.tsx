@@ -13,6 +13,7 @@ import ArticleBody from './components/ArticleBody';
 import ViewsChart from './components/ViewsChart';
 import HealthWikiArticlePage from './pages/HealthWikiArticlePage';
 import HealthWikiInboxPage from './pages/HealthWikiInboxPage';
+import HealthWikiTopicsPage from './pages/HealthWikiTopicsPage';
 
 forceHealthWikiMock();
 
@@ -137,5 +138,61 @@ describe('ViewsChart', () => {
     render(<ViewsChart values={[1, 2, 4]} />);
     expect(screen.getByRole('img')).toHaveAccessibleName('Views per day for the last 3 days, from 1 to 4');
     expect(screen.getByText('Today: 4')).toBeInTheDocument();
+  });
+});
+
+describe('Topics and writing', () => {
+  const renderTopics = () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/health-wiki/topics']}>
+          <Routes>
+            <Route path="/health-wiki" element={<HealthWikiInboxPage />} />
+            <Route path="/health-wiki/topics" element={<HealthWikiTopicsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+
+  it('lists the doctor\'s suggestions with what happens next', async () => {
+    renderTopics();
+    expect(await screen.findByText('Sleep and blood pressure')).toBeInTheDocument();
+    expect(screen.getByText('Writer requested')).toBeInTheDocument();
+    expect(screen.getByText('Home care for a child with fever')).toBeInTheDocument();
+    expect(screen.getByText(/Which age group does this cover/)).toBeInTheDocument();
+  });
+
+  it('suggests a topic and asks for a writer', async () => {
+    renderTopics();
+    await userEvent.click(await screen.findByRole('button', { name: 'Suggest a topic' }));
+    const form = screen.getByRole('form', { name: 'Suggest a topic' });
+    await userEvent.click(within(form).getByRole('button', { name: 'Send to the team' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Fill in the topic');
+    await userEvent.type(within(form).getByLabelText('Topic'), 'Sodium and the heart');
+    await userEvent.type(within(form).getByLabelText('What would you write about?'), 'How much salt is too much.');
+    await userEvent.type(within(form).getByLabelText('Why does it matter?'), 'Patients ask.');
+    await userEvent.click(within(form).getByRole('checkbox', { name: /someone else to write it/i }));
+    await userEvent.click(within(form).getByRole('button', { name: 'Send to the team' }));
+    expect(await screen.findByText('Sodium and the heart')).toBeInTheDocument();
+    expect(screen.getAllByText('Writer requested')).toHaveLength(2);
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('Sent to the team') }));
+  });
+
+  it('answers a request for more detail', async () => {
+    renderTopics();
+    const form = await screen.findByRole('form', { name: /Add detail to Home care/ });
+    await userEvent.type(within(form).getByLabelText('What would you write about?'), ' For children under 5.');
+    await userEvent.click(within(form).getByRole('button', { name: 'Send the detail' }));
+    await waitFor(() => expect(screen.queryByRole('form', { name: /Add detail to Home care/ })).not.toBeInTheDocument());
+  });
+
+  it('offers Write an article on the inbox, which opens Doctor Dekho signed in', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', { value: { ...window.location, assign }, writable: true });
+    renderAt('/health-wiki');
+    await userEvent.click(await screen.findByRole('button', { name: /Write an article/ }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(expect.stringContaining('/contribute/sso?code=')));
   });
 });
