@@ -107,6 +107,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { AdviseAdmissionSheet } from '@/features/patient/components/AdviseAdmissionSheet';
+import { AbdmLinkButton } from '@/features/abdm/components/AbdmLinkButton';
 import { AdmissionStatusBadge } from '@/features/patient/components/AdmissionStatusBadge';
 import { admissionReferralApi, AdmissionReferralItem } from '@/features/ipd-redesign/services/admissionReferralApi';
 import { LabReportReadyBadge } from './LabReportReadyBadge';
@@ -1852,6 +1853,9 @@ export const ClinicalDashboard: React.FC = () => {
                                       >
                                         <PenLine className="h-4 w-4" />
                                       </Button>
+                                      {appointment.finalStatusCode === 'COMPLETED' && (
+                                        <AbdmLinkButton hospitalId={hospitalId || ''} sourceType="OPD" sourceId={appointment.appointmentId} />
+                                      )}
                                       <AdviseAdmissionSheet
                                         hospitalId={hospitalId || ''}
                                         doctorId={doctorId || ''}

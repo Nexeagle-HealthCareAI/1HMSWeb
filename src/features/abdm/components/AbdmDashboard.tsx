@@ -16,6 +16,7 @@ import { EditAbhaProfileWizard } from './EditAbhaProfileWizard';
 import { AbdmGuidePanel } from './AbdmGuidePanel';
 import { ReactivateAbhaDialog } from './ReactivateAbhaDialog';
 import { CounterScanPanel } from './CounterScanPanel';
+import { RecordLinkingPanel } from './RecordLinkingPanel';
 
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
@@ -128,6 +129,8 @@ export const AbdmDashboard: React.FC = () => {
       </div>
 
       <CounterScanPanel hospitalId={hospitalId} onHandled={onWizardDone} />
+
+      <RecordLinkingPanel hospitalId={hospitalId} />
 
       <CreateAbhaWizard hospitalId={hospitalId} open={createOpen} onOpenChange={setCreateOpen} onDone={onWizardDone} />
       <LinkExistingAbhaWizard hospitalId={hospitalId} open={linkOpen} onOpenChange={setLinkOpen} onDone={onWizardDone} />

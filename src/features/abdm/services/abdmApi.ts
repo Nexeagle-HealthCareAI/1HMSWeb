@@ -269,4 +269,135 @@ export const abdmApi = {
 
   verifyReactivateOtp: (hospitalId: string, txnId: string, otp: string) =>
     apiClient.post<AbdmProfileResponse>('/abdm/profile/reactivate/verify-otp', { hospitalId, txnId, otp }),
+
+  // ---- M2: link visits (care contexts) to the patient's ABHA ----------------------------
+  // Starts linking and returns at once; linkStatus says where it has got to, and later reads of
+  // getCareContexts show it move on as ABDM's callbacks arrive.
+  linkCareContext: (hospitalId: string, sourceType: AbdmCareContextSource, sourceId: string) =>
+    apiClient.post<AbdmCareContextResponse>('/abdm/care-contexts/link', { hospitalId, sourceType, sourceId }),
+
+  getCareContexts: (hospitalId: string, patientId?: string) =>
+    apiClient.get<AbdmCareContextListResponse>(
+      `/abdm/care-contexts?hospitalId=${encodeURIComponent(hospitalId)}${patientId ? `&patientId=${encodeURIComponent(patientId)}` : ''}`),
+
+  getM2Readiness: (hospitalId: string) =>
+    apiClient.get<AbdmM2Readiness>(`/abdm/m2/readiness?hospitalId=${encodeURIComponent(hospitalId)}`),
+
+  getExchanges: (hospitalId: string, take = 100) =>
+    apiClient.get<AbdmExchangeListResponse>(`/abdm/exchanges?hospitalId=${encodeURIComponent(hospitalId)}&take=${take}`),
+
+  getInboundRequests: (hospitalId: string, take = 100) =>
+    apiClient.get<AbdmInboundListResponse>(`/abdm/inbound-requests?hospitalId=${encodeURIComponent(hospitalId)}&take=${take}`),
 };
+
+// ---- M2 shapes ---------------------------------------------------------------------------
+
+export type AbdmCareContextSource = 'OPD' | 'IPD';
+export type AbdmLinkStatus = 'NOT_LINKED' | 'TOKEN_REQUESTED' | 'LINK_REQUESTED' | 'LINKED' | 'FAILED';
+
+export interface AbdmCareContext {
+  careContextId: string;
+  patientId: string;
+  sourceType: AbdmCareContextSource;
+  sourceId: string;
+  referenceNumber: string;
+  display: string;
+  hiTypes: string[];
+  abhaAddress?: string | null;
+  linkStatus: AbdmLinkStatus;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+  linkedAt?: string | null;
+  updatedAt: string;
+}
+
+export interface AbdmCareContextResponse {
+  success: boolean;
+  message?: string;
+  careContext?: AbdmCareContext;
+}
+
+export interface AbdmCareContextListResponse {
+  success: boolean;
+  message?: string;
+  careContexts: AbdmCareContext[];
+}
+
+export interface AbdmReadinessIssue {
+  level: 'blocker' | 'warning';
+  text: string;
+}
+
+export interface AbdmM2Readiness {
+  success: boolean;
+  message?: string;
+  hipId?: string | null;
+  bridgeSettingsPresent: boolean;
+  lastCallbackAt?: string | null;
+  issues: AbdmReadinessIssue[];
+}
+
+export type AbdmExchangeStatus = 'SENT' | 'ACCEPTED' | 'DONE' | 'REFUSED' | 'ANSWERED' | 'NO_ANSWER';
+
+export interface AbdmExchange {
+  requestId: string;
+  kind: string;
+  subjectRef?: string | null;
+  status: AbdmExchangeStatus;
+  httpStatus?: number | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  sentAt: string;
+  acceptedAt?: string | null;
+  answeredAt?: string | null;
+  waitMs?: number | null;
+  callbackPath?: string | null;
+  callbackHeaders?: string | null;
+}
+
+export interface AbdmExchangeListResponse {
+  success: boolean;
+  message?: string;
+  callbackWindowSeconds: number;
+  exchanges: AbdmExchange[];
+}
+
+export interface AbdmInboundRequest {
+  path: string;
+  verdict: string;
+  facilityId?: string | null;
+  headerNames: string;
+  receivedAt: string;
+  processedAt?: string | null;
+  processError?: string | null;
+  unanswered: boolean;
+}
+
+export interface AbdmInboundListResponse {
+  success: boolean;
+  message?: string;
+  requests: AbdmInboundRequest[];
+}
+
+/** Backend DateTime values are naive UTC — read them as UTC, not local time. */
+export const abdmUtc = (iso: string) => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`);
+
+/** What each link status means to a receptionist: the step, not a spinner. */
+export const abdmLinkStatusText = (c: Pick<AbdmCareContext, 'linkStatus' | 'lastErrorCode' | 'lastErrorMessage'>): string => {
+  switch (c.linkStatus) {
+    case 'TOKEN_REQUESTED': return 'Asking ABDM for a link token';
+    case 'LINK_REQUESTED': return 'Linking this visit with ABDM';
+    case 'LINKED': return 'Linked to the patient\'s ABHA';
+    case 'FAILED':
+      return c.lastErrorCode === 'ABDM-1092'
+        ? 'ABDM still remembers an earlier refused request for this patient. That first refusal names the cause; wait a few minutes before trying again.'
+        : `Link failed${c.lastErrorCode ? ` (${c.lastErrorCode})` : ''}: ${c.lastErrorMessage ?? 'no reason given'}`;
+    default: return 'Not linked to ABHA';
+  }
+};
+
+/** ABDM keeps a refused link-token request for at least ~69 s and answers a repeat with
+ * ABDM-1092, so a retry inside that window cannot work. */
+export const abdmCanRetry = (c: Pick<AbdmCareContext, 'linkStatus' | 'lastErrorCode' | 'updatedAt'>): boolean =>
+  c.linkStatus === 'NOT_LINKED'
+  || (c.linkStatus === 'FAILED' && (c.lastErrorCode !== 'ABDM-1092' || Date.now() - abdmUtc(c.updatedAt).getTime() > 3 * 60_000));

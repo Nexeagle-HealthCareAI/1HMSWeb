@@ -12,6 +12,7 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
 import { useDischargeCustomFields } from '../hooks/useDischargeCustomFields';
+import { AbdmLinkButton } from '@/features/abdm/components/AbdmLinkButton';
 import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
 import { bedBoardApi } from '../services/bedBoardApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
@@ -880,11 +881,15 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Check className="h-4 w-4 text-emerald-600 shrink-0" />
                         <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
                     </div>
-                    {isActive && (
-                        <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100 self-start sm:self-auto">
-                            {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-1 self-start sm:self-auto">
+                        {/* A signed discharge summary is what makes the admission worth linking to ABHA. */}
+                        <AbdmLinkButton hospitalId={hospitalId} sourceType="IPD" sourceId={admission.admissionId} variant="full" />
+                        {isActive && (
+                            <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
+                                {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
 
