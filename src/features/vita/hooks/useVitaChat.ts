@@ -1,0 +1,213 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  VitaClient,
+  VitaError,
+  type VitaCitation,
+  type VitaConversation,
+  type VitaLocale,
+  type VitaScreenContext,
+  type VitaScreenLink,
+} from '../api/vitaClient';
+
+export type VitaRating = 'up' | 'down';
+
+export interface VitaChatMessage {
+  key: string;
+  role: 'user' | 'assistant';
+  text: string;
+  status: 'pending' | 'streaming' | 'done' | 'error' | 'cancelled';
+  stage?: string;
+  citations: VitaCitation[];
+  screen?: VitaScreenLink;
+  messageId?: string | null;
+  turnId?: string;
+  rating?: VitaRating;
+  errorCode?: string;
+}
+
+let seq = 0;
+const key = () => `m${Date.now().toString(36)}${(seq++).toString(36)}`;
+
+/**
+ * Chat state for the Vita dock. `onNavigate` is called when the user asked Vita to open a
+ * screen ("go to billing") and the screen is allowed; the dock decides how to navigate.
+ */
+export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: VitaScreenLink) => void } = {}) {
+  const [messages, setMessages] = useState<VitaChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [history, setHistory] = useState<VitaConversation[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const turnRef = useRef<string | null>(null);
+  const navRef = useRef(opts.onNavigate);
+  navRef.current = opts.onNavigate;
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const patch = useCallback((k: string, fn: (m: VitaChatMessage) => VitaChatMessage) => {
+    setMessages((ms) => ms.map((m) => (m.key === k ? fn(m) : m)));
+  }, []);
+
+  const send = useCallback(
+    async (text: string, screen: VitaScreenContext | null) => {
+      const q = text.trim();
+      if (!client || !q || busy) return;
+      setNotice(null);
+      const userKey = key();
+      const botKey = key();
+      setMessages((ms) => [
+        ...ms,
+        { key: userKey, role: 'user', text: q, status: 'done', citations: [] },
+        { key: botKey, role: 'assistant', text: '', status: 'pending', citations: [] },
+      ]);
+      setBusy(true);
+      const ac = new AbortController();
+      abortRef.current = ac;
+      try {
+        const acc = await client.ask(q, { conversationId, screen });
+        setConversationId(acc.conversationId);
+        turnRef.current = acc.turnId;
+        patch(botKey, (m) => ({ ...m, turnId: acc.turnId }));
+        for await (const ev of client.stream(acc.turnId, ac.signal)) {
+          switch (ev.type) {
+            case 'status':
+              patch(botKey, (m) => ({ ...m, stage: ev.stage }));
+              break;
+            case 'token':
+              patch(botKey, (m) => ({ ...m, status: 'streaming', text: m.text + ev.text }));
+              break;
+            case 'citation':
+              patch(botKey, (m) =>
+                m.citations.some((c) => c.docId === ev.citation.docId && c.section === ev.citation.section)
+                  ? m
+                  : { ...m, citations: [...m.citations, ev.citation] },
+              );
+              break;
+            case 'suggest_screen':
+              patch(botKey, (m) => ({ ...m, screen: ev.screen }));
+              break;
+            case 'navigate':
+              patch(botKey, (m) => ({ ...m, screen: ev.screen }));
+              navRef.current?.(ev.screen);
+              break;
+            case 'done':
+              patch(botKey, (m) => ({ ...m, status: 'done', text: ev.text || m.text, messageId: ev.messageId }));
+              break;
+            case 'error':
+              patch(botKey, (m) => ({ ...m, status: 'error', text: m.text || ev.message, errorCode: ev.code }));
+              break;
+            case 'cancelled':
+              patch(botKey, (m) => ({ ...m, status: 'cancelled' }));
+              break;
+          }
+        }
+        // Stream ended without a terminal event (aborted): mark stopped.
+        patch(botKey, (m) => (m.status === 'pending' || m.status === 'streaming' ? { ...m, status: 'cancelled' } : m));
+      } catch (e) {
+        const msg = e instanceof VitaError ? e.message : 'Vita is not reachable right now.';
+        patch(botKey, (m) => ({ ...m, status: 'error', text: msg, errorCode: e instanceof VitaError ? e.code : 'network' }));
+      } finally {
+        setBusy(false);
+        abortRef.current = null;
+        turnRef.current = null;
+      }
+    },
+    [client, busy, conversationId, patch],
+  );
+
+  const stop = useCallback(() => {
+    const t = turnRef.current;
+    if (client && t) void client.cancel(t);
+    abortRef.current?.abort();
+  }, [client]);
+
+  const rate = useCallback(
+    async (k: string, rating: VitaRating, reason?: Parameters<VitaClient['feedback']>[2], comment?: string) => {
+      const m = messages.find((x) => x.key === k);
+      if (!client || !m?.messageId) return;
+      const before = m.rating;
+      patch(k, (x) => ({ ...x, rating }));
+      try {
+        await client.feedback(m.messageId, rating, reason, comment);
+      } catch {
+        patch(k, (x) => ({ ...x, rating: before }));
+        setNotice('Could not save your feedback. Please try again.');
+      }
+    },
+    [client, messages, patch],
+  );
+
+  const newChat = useCallback(() => {
+    if (busy) return;
+    setMessages([]);
+    setConversationId(null);
+    setNotice(null);
+  }, [busy]);
+
+  const loadHistory = useCallback(async () => {
+    if (!client) return;
+    try {
+      setHistory(await client.conversations(20));
+    } catch (e) {
+      setNotice(e instanceof VitaError ? e.message : 'Could not load your chats.');
+    }
+  }, [client]);
+
+  const openConversation = useCallback(
+    async (id: string) => {
+      if (!client || busy) return;
+      try {
+        const rows = await client.messages(id);
+        setConversationId(id);
+        setMessages(
+          rows.map((r) => ({
+            key: r.id,
+            role: r.role,
+            text: r.text,
+            status: 'done',
+            citations: r.citations ?? [],
+            messageId: r.role === 'assistant' ? r.id : undefined,
+          })),
+        );
+      } catch (e) {
+        setNotice(e instanceof VitaError ? e.message : 'Could not open that chat.');
+      }
+    },
+    [client, busy],
+  );
+
+  const deleteConversation = useCallback(
+    async (id: string) => {
+      if (!client) return;
+      await client.deleteConversation(id).catch(() => {});
+      setHistory((h) => h.filter((c) => c.id !== id));
+      if (id === conversationId) newChat();
+    },
+    [client, conversationId, newChat],
+  );
+
+  const setLocale = useCallback(
+    async (l: VitaLocale) => {
+      if (client) await client.setLocale(l);
+    },
+    [client],
+  );
+
+  return {
+    messages,
+    conversationId,
+    busy,
+    history,
+    notice,
+    send,
+    stop,
+    rate,
+    newChat,
+    loadHistory,
+    openConversation,
+    deleteConversation,
+    setLocale,
+    dismissNotice: () => setNotice(null),
+  };
+}
