@@ -67,6 +67,10 @@ export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: 
       try {
         const acc = await client.ask(q, { conversationId, screen });
         setConversationId(acc.conversationId);
+        if (acc.removed?.length) {
+          // The server removed phone numbers, names, ids... before keeping or using the question.
+          setNotice('Patient details were removed from your question. Vita never needs them to help.');
+        }
         turnRef.current = acc.turnId;
         patch(botKey, (m) => ({ ...m, turnId: acc.turnId }));
         for await (const ev of client.stream(acc.turnId, ac.signal)) {

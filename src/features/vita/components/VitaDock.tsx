@@ -142,7 +142,12 @@ const VitaDock: React.FC = () => {
   const client = useMemo(
     () =>
       VITA_API_URL
-        ? new VitaClient({ baseUrl: VITA_API_URL, getHmsToken: () => useAuthStore.getState().getToken(), locale })
+        ? new VitaClient({
+            baseUrl: VITA_API_URL,
+            getHmsToken: () => useAuthStore.getState().getToken(),
+            getHospitalId: () => useAuthStore.getState().hospitalId,
+            locale,
+          })
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -155,6 +160,18 @@ const VitaDock: React.FC = () => {
     [navigate],
   );
   const chat = useVitaChat(client, { onNavigate });
+
+  // Switching hospital in 1HMS: chats are per hospital, so start a fresh one (the client opens a
+  // new Vita session for that hospital on the next question).
+  const hospitalId = useAuthStore((st) => st.hospitalId);
+  const firstHospital = useRef(hospitalId);
+  useEffect(() => {
+    if (hospitalId !== firstHospital.current) {
+      firstHospital.current = hospitalId;
+      chat.newChat();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hospitalId]);
 
   // Ending the 1HMS login ends the Vita session too.
   useEffect(() => {

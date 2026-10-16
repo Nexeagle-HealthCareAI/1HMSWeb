@@ -63,6 +63,8 @@ export interface VitaClientOptions {
   baseUrl: string;
   /** Current 1HMS login token (read fresh on every call; it rotates). */
   getHmsToken: () => string | null;
+  /** Hospital currently selected in 1HMS (multi-hospital users). Vita checks membership with 1HMS. */
+  getHospitalId?: () => string | null;
   locale?: VitaLocale;
   fetchImpl?: typeof fetch;
 }
@@ -72,6 +74,8 @@ interface SessionState {
   accessToken: string;
   expiresAt: number;
   hmsToken: string;
+  /** Hospital asked for when the session was made (null = user's primary hospital). */
+  requestedHospitalId: string | null;
   hospitalId: string;
   permissions: string[];
 }
@@ -112,8 +116,9 @@ export class VitaClient {
   private async ensureSession(): Promise<SessionState> {
     const hms = this.opts.getHmsToken();
     if (!hms) throw new VitaError(401, 'not_logged_in', 'Please log in to 1HMS first.');
+    const wanted = this.opts.getHospitalId?.() || null;
     const s = this.session;
-    if (s && s.hmsToken === hms) {
+    if (s && s.hmsToken === hms && s.requestedHospitalId === wanted) {
       if (Date.now() < s.expiresAt - 30_000) return s;
       try {
         return await this.refresh(s);
@@ -121,21 +126,21 @@ export class VitaClient {
         this.session = null; // fall through to a new session
       }
     } else if (s) {
-      this.session = null; // 1HMS token changed (new login / rotation): start over
+      this.session = null; // 1HMS token or selected hospital changed: start over
     }
-    this.creating ??= this.createSession(hms).finally(() => (this.creating = null));
+    this.creating ??= this.createSession(hms, wanted).finally(() => (this.creating = null));
     return this.creating;
   }
 
-  private async createSession(hms: string): Promise<SessionState> {
+  private async createSession(hms: string, hospitalId: string | null): Promise<SessionState> {
     const r = await this.fetch(`${this.base}/v1/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hmsToken: hms, locale: this.locale }),
+      body: JSON.stringify({ hmsToken: hms, locale: this.locale, hospitalId: hospitalId ?? undefined }),
     });
     const body = await readJson(r);
     if (!r.ok) throw toError(r.status, body);
-    this.session = this.toState(body, hms);
+    this.session = this.toState(body, hms, hospitalId);
     return this.session;
   }
 
@@ -146,17 +151,18 @@ export class VitaClient {
     });
     const body = await readJson(r);
     if (!r.ok) throw toError(r.status, body);
-    this.session = this.toState(body, s.hmsToken);
+    this.session = this.toState(body, s.hmsToken, s.requestedHospitalId);
     return this.session;
   }
 
-  private toState(raw: unknown, hms: string): SessionState {
+  private toState(raw: unknown, hms: string, requestedHospitalId: string | null): SessionState {
     const b = raw as SessionJson;
     return {
       sessionId: b.sessionId,
       accessToken: b.accessToken,
       expiresAt: Date.now() + (b.expiresIn ?? 900) * 1000,
       hmsToken: hms,
+      requestedHospitalId,
       hospitalId: b.user?.hospitalId ?? '',
       permissions: b.user?.permissions ?? [],
     };
@@ -204,7 +210,7 @@ export class VitaClient {
   ask(
     message: string,
     opts: { conversationId?: string | null; screen?: VitaScreenContext | null; mode?: VitaMode } = {},
-  ): Promise<{ turnId: string; conversationId: string; streamUrl: string }> {
+  ): Promise<{ turnId: string; conversationId: string; streamUrl: string; removed?: string[] }> {
     return this.json('/v1/chat', {
       method: 'POST',
       body: JSON.stringify({
@@ -366,8 +372,11 @@ function toError(status: number, body: unknown): VitaError {
 const MESSAGES: Record<string, string> = {
   hms_token_rejected: 'Your 1HMS login has expired. Please log in again.',
   hms_unavailable: '1HMS is not reachable right now. Please try again in a minute.',
+  hospital_not_allowed: "Vita can't confirm you work at the hospital selected in 1HMS. Switch hospital or log in again.",
   rate_limited: 'Too many questions in a minute. Please wait a moment.',
   conversation_busy: 'Vita is still answering. Please wait.',
+  hospital_rate_limited: 'Vita is getting a lot of questions from your hospital. Please try again in a minute.',
+  vita_busy: 'Vita is busy right now. Please try again in a minute.',
   http_429: 'Too many questions in a minute. Please wait a moment.',
   http_503: 'Vita is busy right now. Please try again in a minute.',
 };

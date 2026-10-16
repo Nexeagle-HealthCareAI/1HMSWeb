@@ -128,6 +128,48 @@ describe('VitaClient', () => {
     expect(made).toBe(2);
   });
 
+  it('asks for the hospital selected in 1HMS and starts a new session when it changes', async () => {
+    let hospital: string | null = 'h-a';
+    const asked: (string | undefined)[] = [];
+    let made = 0;
+    const { fetchImpl } = fakeVita({
+      'POST /v1/sessions': (_u, init) => {
+        asked.push(JSON.parse(String(init.body)).hospitalId);
+        return session(++made);
+      },
+      'POST /v1/chat': () => json({ turnId: 't', conversationId: 'c', streamUrl: '' }, 202),
+    });
+    const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'hms', getHospitalId: () => hospital, fetchImpl });
+    await c.ask('q');
+    await c.ask('q');
+    hospital = 'h-b';
+    await c.ask('q');
+    hospital = null;
+    await c.ask('q');
+    expect(asked).toEqual(['h-a', 'h-b', undefined]);
+  });
+
+  it('explains when 1HMS says the user is not in the selected hospital', async () => {
+    const { fetchImpl } = fakeVita({ 'POST /v1/sessions': () => json({ detail: 'hospital_not_allowed' }, 403) });
+    const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'hms', getHospitalId: () => 'x', fetchImpl });
+    await expect(c.ask('q')).rejects.toMatchObject({ code: 'hospital_not_allowed', message: expect.stringContaining('hospital') });
+  });
+
+  it('reports when patient details were removed, and explains hospital limits', async () => {
+    const { fetchImpl } = fakeVita({
+      'POST /v1/sessions': () => session(1),
+      'POST /v1/chat': () => json({ turnId: 't', conversationId: 'c', streamUrl: '', removed: ['name', 'phone'] }, 202),
+    });
+    const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'hms', fetchImpl });
+    expect((await c.ask('refund for patient Ramesh 9876543210')).removed).toEqual(['name', 'phone']);
+    const busy = fakeVita({
+      'POST /v1/sessions': () => session(1),
+      'POST /v1/chat': () => json({ detail: 'hospital_rate_limited' }, 429),
+    });
+    const b = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'hms', fetchImpl: busy.fetchImpl });
+    await expect(b.ask('q')).rejects.toMatchObject({ code: 'hospital_rate_limited', message: expect.stringContaining('hospital') });
+  });
+
   it('turns API errors into friendly messages', async () => {
     const { fetchImpl } = fakeVita({ 'POST /v1/sessions': () => json({ detail: 'hms_token_rejected' }, 401) });
     const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'x', fetchImpl });
