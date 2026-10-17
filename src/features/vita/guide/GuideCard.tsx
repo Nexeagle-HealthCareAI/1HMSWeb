@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Compass, ExternalLink, SkipForward, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoldText } from './GuideOverlay';
-import type { RunnerState } from './runner';
+import { openableScreen, type RunnerState } from './runner';
 import { stepText, type GuideStrings } from './text';
 
 /**
@@ -22,6 +22,7 @@ export const GuideCard: React.FC<{
 }> = ({ state, t, canOpenScreen, onOpenScreen, onBack, onNext, onStop, onRate, onClose }) => {
   const [rated, setRated] = useState<'up' | 'down' | null>(null);
   const { guide, step } = state;
+  const target = openableScreen(step?.screen ?? null);
   const n = guide.steps.length;
   const finished = state.status === 'finished';
   const pct = finished ? 100 : Math.round((state.index / n) * 100);
@@ -102,14 +103,14 @@ export const GuideCard: React.FC<{
             {(state.wrongScreen || step.action === 'navigate') && step.screen && (
               <div className="space-y-1 rounded-lg bg-violet-50 px-2 py-1.5 text-xs text-violet-800 dark:bg-violet-900/30 dark:text-violet-200">
                 {state.wrongScreen && <div>{t.wrongScreen(step.screen.label)}</div>}
-                {canOpenScreen(step.screen.route) && (
+                {target && canOpenScreen(target.route) && (
                   <button
                     type="button"
                     data-testid="guide-take-me"
-                    onClick={() => onOpenScreen(step.screen!.route)}
+                    onClick={() => onOpenScreen(target.route)}
                     className="inline-flex items-center gap-1 font-semibold underline"
                   >
-                    <ExternalLink className="h-3 w-3" /> {t.takeMe(step.screen.label)}
+                    <ExternalLink className="h-3 w-3" /> {t.takeMe(target.label)}
                   </button>
                 )}
               </div>

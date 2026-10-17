@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { findTarget, labelNorm } from './finder';
-import { GuideRunner, routeMatches, type RunnerState } from './runner';
+import { GuideRunner, openableScreen, routeMatches, type RunnerState } from './runner';
 import { stepText } from './text';
 import type { GuidePayload, GuideRunEvent, GuideTarget } from './types';
 
@@ -229,5 +229,17 @@ describe('helpers', () => {
     expect(routeMatches('/billing?x=1', '/billing')).toBe(true);
     expect(stepText(guide.steps[1], 'अपॉइंटमेंट बुक करें')).toBe('Click **अपॉइंटमेंट बुक करें**.');
     expect(stepText(guide.steps[1])).toBe('Click **Book Appointment**.');
+  });
+});
+
+describe('pages opened from a list', () => {
+  it('matches a route with a parameter and offers the list screen instead', () => {
+    expect(routeMatches('/pathology/orders/ORD-1', '/pathology/orders/:orderId')).toBe(true);
+    expect(routeMatches('/pathology/orders', '/pathology/orders/:orderId')).toBe(false);
+    expect(routeMatches('/pathology', '/pathology/orders/:orderId')).toBe(false);
+    const from = { id: 'pathology', route: '/pathology', label: 'Pathology Lab' };
+    expect(openableScreen({ id: 'pathology-order', route: '/pathology/orders/:orderId', label: 'Lab order', openFrom: from })).toEqual(from);
+    expect(openableScreen({ id: 'billing', route: '/billing', label: 'Billing' })?.route).toBe('/billing');
+    expect(openableScreen({ id: 'x', route: '/x/:id', label: 'X' })).toBeNull();
   });
 });

@@ -21,7 +21,9 @@ export interface GuideTarget {
 
 export interface GuideStep {
   id: string;
-  screen: { id: string; route: string; label: string } | null;
+  /** `route` may hold a parameter (`/pathology/orders/:orderId`): a page opened from a list. Then
+   *  `openFrom` is the screen it is opened from, which the dock can take the user to. */
+  screen: { id: string; route: string; label: string; openFrom?: { id: string; route: string; label: string } | null } | null;
   action: GuideAction;
   done: GuideDone;
   /** One sentence, already in the user's language; `{label}` = the target's label. */

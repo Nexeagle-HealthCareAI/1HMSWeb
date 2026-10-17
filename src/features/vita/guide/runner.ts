@@ -44,7 +44,18 @@ export interface RunnerHooks {
 
 export function routeMatches(path: string, route: string): boolean {
   const clean = (p: string) => p.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
-  return clean(path) === clean(route);
+  const a = clean(path).split('/');
+  const b = clean(route).split('/');
+  // A ":param" segment of the route matches any one segment of the path.
+  return a.length === b.length && b.every((seg, i) => (seg.startsWith(':') ? a[i] !== '' : seg === a[i]));
+}
+
+/** Where "Take me there" goes: the screen itself, or for a page opened from a list, that list. */
+type ScreenRef = { id?: string; route: string; label: string };
+export function openableScreen(screen: (ScreenRef & { openFrom?: ScreenRef | null }) | null): ScreenRef | null {
+  if (!screen) return null;
+  if (!screen.route.includes(':')) return screen;
+  return screen.openFrom ?? null;
 }
 
 export class GuideRunner {
