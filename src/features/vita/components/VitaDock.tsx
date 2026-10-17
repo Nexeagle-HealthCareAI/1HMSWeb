@@ -59,6 +59,17 @@ const T = {
     thinking: 'Thinking…',
     reasons: { wrong: 'Wrong', incomplete: 'Incomplete', not_relevant: 'Not what I asked', too_long: 'Too long', other: 'Other' },
     fab: 'Ask Vita',
+    errors: {
+      timeout: 'Vita took too long. Please try again.',
+      agent_error: 'Vita had a problem. Please try again.',
+      internal_error: 'Vita had a problem. Please try again.',
+      worker_lost: 'Vita lost this reply. Please ask again.',
+      conversation_busy: 'Vita is still answering. Please wait a moment.',
+      session_expired: 'Your Vita session ended. Please ask again.',
+      stream_timeout: 'The reply took too long to arrive. Please ask again.',
+      connection_lost: 'The connection dropped. Please check the internet and ask again.',
+      network: 'Vita is not reachable right now. Please check the internet.',
+    } as Record<string, string>,
   },
   hi: {
     title: 'Vita',
@@ -85,6 +96,17 @@ const T = {
     thinking: 'सोच रही हूँ…',
     reasons: { wrong: 'गलत', incomplete: 'अधूरा', not_relevant: 'सवाल से अलग', too_long: 'बहुत लंबा', other: 'अन्य' },
     fab: 'Vita से पूछें',
+    errors: {
+      timeout: 'Vita को जवाब देने में ज़्यादा समय लगा। कृपया फिर से पूछें।',
+      agent_error: 'Vita में कोई दिक्कत आई। कृपया फिर से पूछें।',
+      internal_error: 'Vita में कोई दिक्कत आई। कृपया फिर से पूछें।',
+      worker_lost: 'यह जवाब बीच में रुक गया। कृपया फिर से पूछें।',
+      conversation_busy: 'Vita अभी पिछला जवाब दे रही है। थोड़ा रुकें।',
+      session_expired: 'Vita का सेशन खत्म हो गया। कृपया फिर से पूछें।',
+      stream_timeout: 'जवाब आने में ज़्यादा समय लगा। कृपया फिर से पूछें।',
+      connection_lost: 'कनेक्शन टूट गया। इंटरनेट देखें और फिर से पूछें।',
+      network: 'Vita से अभी संपर्क नहीं हो रहा। इंटरनेट देखें।',
+    } as Record<string, string>,
   },
 } as const;
 
@@ -108,9 +130,65 @@ const SUGGESTIONS: Record<string, { en: string[]; hi: string[] }> = {
     en: ['How do I admit a patient?', 'How do I transfer a bed?', 'How do I discharge a patient?'],
     hi: ['Patient admit kaise kare?', 'Bed transfer kaise kare?', 'Discharge kaise kare?'],
   },
-  pharmacy: {
-    en: ['How do I sell medicines to a walk-in patient?', 'How do I check stock?', 'How do returns work?'],
-    hi: ['Walk-in patient ko dawai kaise bechein?', 'Stock kaise check kare?', 'Return kaise hota hai?'],
+  'pharmacy-retail': {
+    en: ['How do I sell medicines to a walk-in patient?', 'How do I take back medicines from a patient?', 'Which medicines are about to expire?'],
+    hi: ['Walk-in patient ko dawai kaise bechein?', 'Patient se dawai wapas kaise le?', 'Kaun si dawai expire hone wali hai?'],
+  },
+  'billing-ledger': {
+    en: ['How do I take a payment on a bill?', 'How do I add a charge to a bill?', 'Why can’t I add a charge to this bill?'],
+    hi: ['Bill par payment kaise le?', 'Bill me charge kaise jode?', 'Is bill me charge kyu nahi jud raha?'],
+  },
+  dashboard: {
+    en: ['How do I write a prescription?', 'How do I order lab tests?', 'How do I mark a patient as done?'],
+    hi: ['Prescription kaise likhe?', 'Lab test kaise order kare?', 'Patient ko done kaise kare?'],
+  },
+  calendar: {
+    en: ['How do I mark a doctor on leave?', 'How do I change a doctor’s hours?', 'Why are no slots showing?'],
+    hi: ['Doctor ki leave kaise lagaye?', 'Doctor ka time kaise badle?', 'Slot kyu nahi dikh rahe?'],
+  },
+  patients: {
+    en: ['How do I find a patient?', 'How do I edit patient details?', 'How do I merge duplicate patients?'],
+    hi: ['Patient kaise dhunde?', 'Patient ki details kaise badle?', 'Duplicate patient kaise merge kare?'],
+  },
+  'nursing-station': {
+    en: ['How do I chart a medicine dose?', 'How do I record vitals?', 'How do I give shift handover?'],
+    hi: ['MAR me dose kaise record kare?', 'Vitals kaise bhare?', 'Shift handover kaise de?'],
+  },
+  'ot-board': {
+    en: ['How do I book an OT for a surgery?', 'Why can’t I move the case to theatre?', 'How do I record implants used?'],
+    hi: ['Surgery ke liye OT kaise book kare?', 'Case theatre me kyu nahi ja raha?', 'Implant kaise record kare?'],
+  },
+  'icu-board': {
+    en: ['What does the ICU board show?', 'How do I record APACHE II?', 'How do I record ventilator settings?'],
+    hi: ['ICU board me kya dikhta hai?', 'APACHE II kaise bhare?', 'Ventilator settings kaise likhe?'],
+  },
+  pathology: {
+    en: ['How do I create a lab order?', 'How do I enter results?', 'How do I generate the report?'],
+    hi: ['Lab order kaise banaye?', 'Result kaise bhare?', 'Report kaise banaye?'],
+  },
+  inventory: {
+    en: ['How do I check stock?', 'How do I make a purchase order?', 'How do I transfer stock to another store?'],
+    hi: ['Stock kaise dekhe?', 'Purchase order kaise banaye?', 'Stock doosre store me kaise bheje?'],
+  },
+  admin: {
+    en: ['How do I add a new staff user?', 'How do I reset a staff password?', 'How do I change a user’s role?'],
+    hi: ['Naya staff user kaise jode?', 'Staff ka password kaise reset kare?', 'User ka role kaise badle?'],
+  },
+  configuration: {
+    en: ['How do I change the rate of a service?', 'How do I add new beds?', 'How do I change doctor fees?'],
+    hi: ['Service ka rate kaise badle?', 'Naye bed kaise jode?', 'Doctor ki fees kaise badle?'],
+  },
+  hr: {
+    en: ['How do I run payroll?', 'How do I approve leave?', 'How do I correct attendance?'],
+    hi: ['Payroll kaise chalaye?', 'Chhutti kaise approve kare?', 'Attendance kaise sudhare?'],
+  },
+  abdm: {
+    en: ['How do I create an ABHA number?', 'How do I link an existing ABHA?', 'How does scan and share work?'],
+    hi: ['ABHA number kaise banaye?', 'Pehle se bana ABHA kaise jode?', 'Scan and share kaise chalta hai?'],
+  },
+  subscription: {
+    en: ['How do I renew the subscription?', 'Why can’t I save anything?'],
+    hi: ['Subscription kaise renew kare?', 'Kuch save kyu nahi ho raha?'],
   },
 };
 const DEFAULT_SUGGESTIONS = {
@@ -539,7 +617,7 @@ const AssistantMessage: React.FC<{
           </div>
         ) : (
           <div className={cn('text-gray-800 dark:text-gray-100', m.status === 'error' && 'text-red-600 dark:text-red-400')}>
-            <VitaMarkdown text={m.text} />
+            <VitaMarkdown text={m.status === 'error' && m.errorCode && t.errors[m.errorCode] ? t.errors[m.errorCode] : m.text} />
             {m.status === 'streaming' && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-brand-500 align-middle" />}
             {m.status === 'cancelled' && <p className="mt-1 text-xs text-gray-400">{t.stopped}</p>}
           </div>

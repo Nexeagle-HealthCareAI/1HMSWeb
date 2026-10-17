@@ -107,7 +107,7 @@ export class VitaClient {
 
   constructor(private readonly opts: VitaClientOptions) {
     this.base = opts.baseUrl.replace(/\/+$/, '');
-    this.fetch = opts.fetchImpl ?? ((...a) => globalThis.fetch(...a));
+    this.fetch = opts.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
     this.locale = opts.locale ?? 'en';
   }
 
