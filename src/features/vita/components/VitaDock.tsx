@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUp,
   BookOpen,
+  Compass,
   ExternalLink,
   History,
   Loader2,
@@ -21,10 +22,16 @@ import { useVitaChat, type VitaChatMessage } from '../hooks/useVitaChat';
 import { canOpen, screenContext } from '../screens';
 import { VitaMarkdown } from './VitaMarkdown';
 import { VITA_API_URL } from '../config';
+import { useGuide } from '../guide/useGuide';
+import { GuideOverlay } from '../guide/GuideOverlay';
+import { GuideCard } from '../guide/GuideCard';
+import { GUIDE_T, type GuideStrings } from '../guide/text';
+import type { GuidePayload } from '../guide/types';
 
 
 const LS_LOCALE = 'vita.locale';
 const LS_OPEN = 'vita.open';
+const LS_MODE = 'vita.mode';
 
 const T = {
   en: {
@@ -136,7 +143,10 @@ const VitaDock: React.FC = () => {
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [locale, setLocaleState] = useState<VitaLocale>(() => (readLS(LS_LOCALE) === 'hi' ? 'hi' : 'en'));
   const [input, setInput] = useState('');
+  const [mode, setMode] = useState<'ask' | 'guide'>(() => (readLS(LS_MODE) === 'guide' ? 'guide' : 'ask'));
+  const [guideOn, setGuideOn] = useState(false);
   const t: Strings = T[locale];
+  const gt: GuideStrings = GUIDE_T[locale];
 
   // One client per page load; it reads the 1HMS token on every call (tokens rotate).
   const client = useMemo(
@@ -159,7 +169,35 @@ const VitaDock: React.FC = () => {
     },
     [navigate],
   );
-  const chat = useVitaChat(client, { onNavigate });
+  const guide = useGuide(client, location.pathname);
+  const startGuide = guide.start;
+  const chat = useVitaChat(client, { onNavigate, onGuide: (g: GuidePayload) => startGuide(g) });
+
+  // Vita says whether Guide Mode is on for this deployment (it can be switched off server-side).
+  useEffect(() => {
+    if (!open || !client || !token) return;
+    let live = true;
+    client
+      .features()
+      .then((f) => live && setGuideOn(!!f.guide))
+      .catch(() => live && setGuideOn(false));
+    return () => {
+      live = false;
+    };
+  }, [open, client, token]);
+  useEffect(() => writeLS(LS_MODE, mode), [mode]);
+
+  const showGuide = useCallback(
+    async (guideId: string, fallback?: GuidePayload) => {
+      if (!client) return;
+      try {
+        startGuide(await client.guide(guideId, locale));
+      } catch {
+        if (fallback) startGuide({ ...fallback, runId: undefined });
+      }
+    },
+    [client, locale, startGuide],
+  );
 
   // Switching hospital in 1HMS: chats are per hospital, so start a fresh one (the client opens a
   // new Vita session for that hospital on the next question).
@@ -186,13 +224,13 @@ const VitaDock: React.FC = () => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setOpen((o) => !o);
-      } else if (e.key === 'Escape' && open) {
+      } else if (e.key === 'Escape' && open && !guide.active) {
         setOpen(false);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  }, [open, guide.active]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -214,7 +252,7 @@ const VitaDock: React.FC = () => {
   const submit = (text = input) => {
     if (!text.trim() || chat.busy) return;
     setInput('');
-    void chat.send(text, screen);
+    void chat.send(text, screen, guideOn && mode === 'guide' ? 'guide' : undefined);
   };
 
   const switchLocale = () => {
@@ -224,11 +262,32 @@ const VitaDock: React.FC = () => {
     void chat.setLocale(l);
   };
 
+  if (guide.state) {
+    const perms = permissions ?? [];
+    return (
+      <>
+        <GuideOverlay state={guide.state} />
+        <GuideCard
+          state={guide.state}
+          t={gt}
+          canOpenScreen={(route) => canOpen({ route, screenId: '', label: '' }, perms)}
+          onOpenScreen={(route) => navigate(route)}
+          onBack={guide.back}
+          onNext={guide.next}
+          onStop={guide.close}
+          onRate={guide.rate}
+          onClose={guide.close}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       {!open && (
         <button
           type="button"
+          data-vita-ui="fab"
           onClick={() => setOpen(true)}
           className="fixed z-[70] right-4 bottom-[84px] lg:bottom-6 lg:right-6 flex items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 py-3 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 active:scale-95 transition"
           aria-label={t.fab}
@@ -243,6 +302,7 @@ const VitaDock: React.FC = () => {
       {open && (
         <section
           role="dialog"
+          data-vita-ui="dock"
           aria-label="Vita assistant"
           className={cn(
             'fixed z-[80] flex flex-col bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800',
@@ -290,6 +350,30 @@ const VitaDock: React.FC = () => {
               <X className="h-4 w-4" />
             </HeaderBtn>
           </header>
+
+          {guideOn && view === 'chat' && (
+            <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 dark:border-gray-800">
+              <div className="flex rounded-full bg-gray-100 p-0.5 text-xs font-semibold dark:bg-gray-800" role="radiogroup" aria-label="Mode">
+                {(['ask', 'guide'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === m}
+                    onClick={() => setMode(m)}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1',
+                      mode === m ? 'bg-white text-brand-700 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500',
+                    )}
+                  >
+                    {m === 'guide' ? <Compass className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {m === 'guide' ? gt.guide : gt.ask}
+                  </button>
+                ))}
+              </div>
+              {mode === 'guide' && <span className="min-w-0 flex-1 truncate text-[11px] text-gray-400">{gt.modeHint}</span>}
+            </div>
+          )}
 
           {chat.notice && (
             <div className="flex items-center justify-between gap-2 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
@@ -349,6 +433,8 @@ const VitaDock: React.FC = () => {
                         permissions={permissions ?? []}
                         onOpen={(s) => navigate(s.route)}
                         onRate={chat.rate}
+                        gt={gt}
+                        onShowGuide={guideOn ? showGuide : undefined}
                       />
                     ),
                   )
@@ -432,7 +518,9 @@ const AssistantMessage: React.FC<{
   permissions: readonly string[];
   onOpen: (s: VitaScreenLink) => void;
   onRate: (key: string, r: 'up' | 'down', reason?: Reason, comment?: string) => void;
-}> = ({ m, t, permissions, onOpen, onRate }) => {
+  gt: GuideStrings;
+  onShowGuide?: (guideId: string, fallback?: GuidePayload) => void;
+}> = ({ m, t, permissions, onOpen, onRate, gt, onShowGuide }) => {
   const [askWhy, setAskWhy] = useState(false);
   const [comment, setComment] = useState('');
   const [thanked, setThanked] = useState(false);
@@ -472,6 +560,17 @@ const AssistantMessage: React.FC<{
               </span>
             ))}
           </div>
+        )}
+
+        {onShowGuide && m.status === 'done' && (m.offer || m.guide) && (
+          <button
+            type="button"
+            data-testid="show-guide"
+            onClick={() => onShowGuide(m.offer?.guideId ?? m.guide!.id, m.guide)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"
+          >
+            <Compass className="h-3.5 w-3.5" /> {gt.showMe}
+          </button>
         )}
 
         {m.screen && canOpen(m.screen, permissions) && m.status !== 'error' && (

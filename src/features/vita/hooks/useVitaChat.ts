@@ -5,9 +5,11 @@ import {
   type VitaCitation,
   type VitaConversation,
   type VitaLocale,
+  type VitaMode,
   type VitaScreenContext,
   type VitaScreenLink,
 } from '../api/vitaClient';
+import type { GuideOffer, GuidePayload } from '../guide/types';
 
 export type VitaRating = 'up' | 'down';
 
@@ -23,6 +25,10 @@ export interface VitaChatMessage {
   turnId?: string;
   rating?: VitaRating;
   errorCode?: string;
+  /** Guide Mode: the guide Vita sent for this answer (the dock runs it on the screen). */
+  guide?: GuidePayload;
+  /** Ask mode: this how-to has an on-screen guide ("Show me on screen"). */
+  offer?: GuideOffer;
 }
 
 let seq = 0;
@@ -32,7 +38,10 @@ const key = () => `m${Date.now().toString(36)}${(seq++).toString(36)}`;
  * Chat state for the Vita dock. `onNavigate` is called when the user asked Vita to open a
  * screen ("go to billing") and the screen is allowed; the dock decides how to navigate.
  */
-export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: VitaScreenLink) => void } = {}) {
+export function useVitaChat(
+  client: VitaClient | null,
+  opts: { onNavigate?: (s: VitaScreenLink) => void; onGuide?: (g: GuidePayload) => void } = {},
+) {
   const [messages, setMessages] = useState<VitaChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +51,8 @@ export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: 
   const turnRef = useRef<string | null>(null);
   const navRef = useRef(opts.onNavigate);
   navRef.current = opts.onNavigate;
+  const guideRef = useRef(opts.onGuide);
+  guideRef.current = opts.onGuide;
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -50,7 +61,7 @@ export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: 
   }, []);
 
   const send = useCallback(
-    async (text: string, screen: VitaScreenContext | null) => {
+    async (text: string, screen: VitaScreenContext | null, mode?: VitaMode) => {
       const q = text.trim();
       if (!client || !q || busy) return;
       setNotice(null);
@@ -65,7 +76,7 @@ export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: 
       const ac = new AbortController();
       abortRef.current = ac;
       try {
-        const acc = await client.ask(q, { conversationId, screen });
+        const acc = await client.ask(q, { conversationId, screen, mode });
         setConversationId(acc.conversationId);
         if (acc.removed?.length) {
           // The server removed phone numbers, names, ids... before keeping or using the question.
@@ -90,6 +101,13 @@ export function useVitaChat(client: VitaClient | null, opts: { onNavigate?: (s: 
               break;
             case 'suggest_screen':
               patch(botKey, (m) => ({ ...m, screen: ev.screen }));
+              break;
+            case 'guide':
+              patch(botKey, (m) => ({ ...m, guide: ev.guide }));
+              guideRef.current?.(ev.guide);
+              break;
+            case 'guide_offer':
+              patch(botKey, (m) => ({ ...m, offer: ev.offer }));
               break;
             case 'navigate':
               patch(botKey, (m) => ({ ...m, screen: ev.screen }));

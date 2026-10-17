@@ -9,6 +9,7 @@
  *   a flaky hospital Wi-Fi never runs the same question twice.
  */
 import { SseParser } from './sse';
+import type { GuideOffer, GuidePayload, GuideRunEvent } from '../guide/types';
 
 export type VitaLocale = 'en' | 'hi';
 export type VitaMode = 'ask' | 'guide' | 'do';
@@ -39,6 +40,8 @@ export type VitaStreamEvent =
   | { type: 'citation'; citation: VitaCitation }
   | { type: 'suggest_screen'; screen: VitaScreenLink }
   | { type: 'navigate'; screen: VitaScreenLink }
+  | { type: 'guide'; guide: GuidePayload }
+  | { type: 'guide_offer'; offer: GuideOffer }
   | { type: 'done'; messageId: string | null; text: string; route?: string }
   | { type: 'error'; code: string; message: string }
   | { type: 'cancelled' };
@@ -78,6 +81,7 @@ interface SessionState {
   requestedHospitalId: string | null;
   hospitalId: string;
   permissions: string[];
+  features: Record<string, boolean>;
 }
 
 export class VitaError extends Error {
@@ -109,6 +113,11 @@ export class VitaClient {
 
   get hospitalId(): string | null {
     return this.session?.hospitalId ?? null;
+  }
+
+  /** Features Vita has switched on for this session, e.g. { guide: true }. Opens a session if needed. */
+  async features(): Promise<Record<string, boolean>> {
+    return (await this.ensureSession()).features;
   }
 
   // ------------------------------------------------------------------ session
@@ -165,6 +174,7 @@ export class VitaClient {
       requestedHospitalId,
       hospitalId: b.user?.hospitalId ?? '',
       permissions: b.user?.permissions ?? [],
+      features: b.features ?? {},
     };
   }
 
@@ -297,6 +307,22 @@ export class VitaClient {
   deleteConversation(conversationId: string): Promise<unknown> {
     return this.request(`/v1/conversations/${conversationId}`, { method: 'DELETE' });
   }
+
+  // ------------------------------------------------------------------ guide mode
+
+  /** A guide in the user's language, with a new runId ("Show me on screen"). */
+  guide(guideId: string, lang?: 'en' | 'hi' | 'hinglish'): Promise<GuidePayload> {
+    const q = lang ? `?lang=${lang}` : '';
+    return this.json(`/v1/guides/${encodeURIComponent(guideId)}${q}`);
+  }
+
+  /** Progress of a guide run: step ids and timings only, never what the user typed or saw. */
+  guideEvents(runId: string, events: GuideRunEvent[]): Promise<unknown> {
+    return this.json(`/v1/guide-runs/${encodeURIComponent(runId)}/events`, {
+      method: 'POST',
+      body: JSON.stringify({ events }),
+    });
+  }
 }
 
 // ------------------------------------------------------------------ helpers
@@ -308,6 +334,7 @@ interface SessionJson {
   accessToken: string;
   expiresIn?: number;
   user?: { hospitalId?: string; permissions?: string[] };
+  features?: Record<string, boolean>;
 }
 
 const str = (v: unknown, fallback = ''): string => (v === undefined || v === null ? fallback : String(v));
@@ -331,6 +358,10 @@ function mapEvent(event: string, d: Obj): VitaStreamEvent | null {
       return d.route ? { type: 'suggest_screen', screen: d as unknown as VitaScreenLink } : null;
     case 'ui_action':
       return d.type === 'navigate' && d.route ? { type: 'navigate', screen: d as unknown as VitaScreenLink } : null;
+    case 'guide':
+      return Array.isArray(d.steps) && d.id ? { type: 'guide', guide: d as unknown as GuidePayload } : null;
+    case 'guide_offer':
+      return d.guideId ? { type: 'guide_offer', offer: d as unknown as GuideOffer } : null;
     case 'done':
       return {
         type: 'done',
@@ -377,6 +408,8 @@ const MESSAGES: Record<string, string> = {
   conversation_busy: 'Vita is still answering. Please wait.',
   hospital_rate_limited: 'Vita is getting a lot of questions from your hospital. Please try again in a minute.',
   vita_busy: 'Vita is busy right now. Please try again in a minute.',
+  guide_mode_off: 'Guide mode is switched off right now. Ask in words instead.',
+  guide_not_found: 'That guide is not available for your account.',
   http_429: 'Too many questions in a minute. Please wait a moment.',
   http_503: 'Vita is busy right now. Please try again in a minute.',
 };
