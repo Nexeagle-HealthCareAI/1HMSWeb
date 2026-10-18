@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { createPortal } from 'react-dom';
 import type { RunnerState } from './runner';
 import { stepText } from './text';
+import { VITA_Z } from '../components/VitaLayer';
 
 interface Box {
   top: number;
@@ -72,7 +73,7 @@ export const GuideOverlay: React.FC<{ state: RunnerState }> = ({ state }) => {
   const pos = bubbleSpot(boxes[0]);
 
   return createPortal(
-    <div data-vita-ui="overlay" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 75, pointerEvents: 'none' }}>
+    <div data-vita-ui="overlay" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: VITA_Z.overlay, pointerEvents: 'none' }}>
       {boxes.map((b, i) => (
         <div
           key={i}

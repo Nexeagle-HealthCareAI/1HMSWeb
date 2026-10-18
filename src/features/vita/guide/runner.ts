@@ -68,6 +68,7 @@ export class GuideRunner {
   private stepStarted = 0;
   private missingTimer: ReturnType<typeof setTimeout> | null = null;
   private typingTimer: ReturnType<typeof setTimeout> | null = null;
+  private pressed: { el: Node; at: number } | null = null;
   private readonly now: () => number;
   private readonly onClick = (e: Event) => this.handleClick(e);
   private readonly onInput = (e: Event) => this.handleInput(e, false);
@@ -97,6 +98,9 @@ export class GuideRunner {
 
   start(): void {
     this.doc.addEventListener('click', this.onClick, true);
+    // 1HMS dropdowns (Radix Select / menus) open on press and never send a click to the
+    // element that was pressed: a press on the target counts too.
+    this.doc.addEventListener('pointerdown', this.onClick, true);
     this.doc.addEventListener('input', this.onInput, true);
     this.doc.addEventListener('change', this.onChangeEv, true);
     this.hooks.report({ type: 'started' });
@@ -211,9 +215,16 @@ export class GuideRunner {
     const t = e.target as Node | null;
     if (!t || (t instanceof Element && t.closest('[data-vita-ui]'))) return;
     const hitEls = this.found?.all ?? [];
-    if (!hitEls.some((el) => el === t || el.contains(t))) return;
+    const hit = hitEls.find((el) => el === t || el.contains(t));
+    if (!hit) return;
     if (step.done === 'click') {
-      // Let 1HMS handle the click first (it may open a dialog for the next step).
+      // A press on a field (a dropdown) is the choice being made: wait for the click or the
+      // chosen value instead. Buttons, tabs and menu items count on press or click.
+      if (e.type === 'pointerdown' && hitEls.some((el) => el.matches('input, textarea, [contenteditable="true"]'))) return;
+      // The click that ends the same press must not also complete the next step.
+      if (e.type === 'click' && this.pressed && this.now() - this.pressed.at < 800 && this.pressed.el.contains(t)) return;
+      if (e.type === 'pointerdown') this.pressed = { el: hit, at: this.now() };
+      // Let 1HMS handle it first (it may open a dialog for the next step).
       setTimeout(() => {
         if (this.current() === step) this.complete(step);
       }, 60);
@@ -264,6 +275,7 @@ export class GuideRunner {
     this.clearMissing();
     this.clearTyping();
     this.doc.removeEventListener('click', this.onClick, true);
+    this.doc.removeEventListener('pointerdown', this.onClick, true);
     this.doc.removeEventListener('input', this.onInput, true);
     this.doc.removeEventListener('change', this.onChangeEv, true);
   }

@@ -17,6 +17,16 @@ export function translateKey(key: string): string | null {
 }
 
 const FLUSH_MS = 1500;
+/** Look for the target again at most this often while the page keeps changing. */
+const REFRESH_MS = 120;
+/** While the target is not found, look again this often even if nothing seems to change. */
+const POLL_MS = 300;
+
+/** A node that belongs to Vita (dock, guide card, ring): its changes are not 1HMS changes. */
+function isVita(n: Node): boolean {
+  const el = n instanceof Element ? n : n.parentElement;
+  return !!el?.closest('[data-vita-ui]');
+}
 
 /**
  * Runs one guide at a time on the page and reports progress to Vita (batched).
@@ -29,6 +39,7 @@ export function useGuide(client: VitaClient | null, pathname: string) {
   const queue = useRef<GuideRunEvent[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observer = useRef<MutationObserver | null>(null);
+  const stopWatching = useRef<(() => void) | null>(null);
 
   const flush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -54,6 +65,8 @@ export function useGuide(client: VitaClient | null, pathname: string) {
   const detach = useCallback(() => {
     observer.current?.disconnect();
     observer.current = null;
+    stopWatching.current?.();
+    stopWatching.current = null;
     runner.current?.destroy();
   }, []);
 
@@ -71,18 +84,42 @@ export function useGuide(client: VitaClient | null, pathname: string) {
       });
       runner.current = r;
       r.start();
-      // 1HMS re-renders all the time (dialogs open, lists load): look for the target again,
-      // at most every 200 ms.
-      let pending = false;
-      const mo = new MutationObserver(() => {
-        if (pending) return;
-        pending = true;
-        setTimeout(() => {
-          pending = false;
-          runner.current?.refresh();
-        }, 200);
+      // 1HMS re-renders all the time (dialogs open, lists load): look for the target again.
+      // First change: look on the next frame (no waiting). Then at most every REFRESH_MS while
+      // the page keeps changing. Vita's own ring, card and chat are ignored: they move with
+      // every frame and would make it look again and again for nothing.
+      let scheduled = false;
+      let last = 0;
+      const look = () => {
+        scheduled = false;
+        last = performance.now();
+        runner.current?.refresh();
+      };
+      const schedule = () => {
+        if (scheduled) return;
+        scheduled = true;
+        const wait = Math.max(0, REFRESH_MS - (performance.now() - last));
+        if (wait === 0) requestAnimationFrame(look);
+        else setTimeout(() => requestAnimationFrame(look), wait);
+      };
+      const mo = new MutationObserver((records) => {
+        if (records.every((r) => isVita(r.target))) return;
+        schedule();
       });
       mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'aria-hidden', 'data-state', 'open'] });
+      // Some changes don't touch the page structure (a dialog finishing its open animation, a
+      // panel shown with CSS). While the target is not found, check again a few times a second.
+      const poll = setInterval(() => {
+        if (runner.current?.state.status === 'running' && !runner.current.state.found) schedule();
+      }, POLL_MS);
+      const onEnd = () => schedule();
+      document.addEventListener('animationend', onEnd, true);
+      document.addEventListener('transitionend', onEnd, true);
+      stopWatching.current = () => {
+        clearInterval(poll);
+        document.removeEventListener('animationend', onEnd, true);
+        document.removeEventListener('transitionend', onEnd, true);
+      };
       observer.current = mo;
     },
     [detach, flush, report],

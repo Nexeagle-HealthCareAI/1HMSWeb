@@ -243,3 +243,35 @@ describe('pages opened from a list', () => {
     expect(openableScreen({ id: 'x', route: '/x/:id', label: 'X' })).toBeNull();
   });
 });
+
+describe('press counts as a click (1HMS dropdowns open on press)', () => {
+  const steps = [
+    { id: 's1', screen: null, action: 'click', done: 'click', say: 'Click {label}.', note: null, optional: false, target: { label: 'Next', key: null, kind: 'button', many: false, match: 'exact', within: null, alt: [] } },
+    { id: 's2', screen: null, action: 'click', done: 'click', say: 'Click {label}.', note: null, optional: false, target: { label: 'Next', key: null, kind: 'button', many: false, match: 'exact', within: null, alt: [] } },
+  ];
+  it('a press completes the step, and the click of the same press does not complete the next one', async () => {
+    document.body.innerHTML = '<button id="n">Next</button>';
+    const btn = document.getElementById('n')!;
+    let t = 1000;
+    const r = new GuideRunner({ id: 'g', title: 'G', source: 'playbook', steps } as never, {
+      find: () => ({ el: btn, all: [btn], shown: 'Next' }),
+      getPath: () => '/',
+      report: () => {},
+      onChange: () => {},
+      now: () => t,
+    });
+    r.start();
+    btn.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await new Promise((res) => setTimeout(res, 80));
+    expect(r.state.index).toBe(1);
+    t += 120;
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((res) => setTimeout(res, 80));
+    expect(r.state.index).toBe(1); // still on step 2
+    t += 2000;
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((res) => setTimeout(res, 80));
+    expect(r.state.status).toBe('finished');
+    r.destroy();
+  });
+});

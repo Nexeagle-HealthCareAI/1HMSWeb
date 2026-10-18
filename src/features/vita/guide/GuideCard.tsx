@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { BoldText } from './GuideOverlay';
 import { openableScreen, type RunnerState } from './runner';
 import { stepText, type GuideStrings } from './text';
+import { VITA_Z } from '../components/VitaLayer';
 
 /**
  * Small card that replaces the Vita panel while a guide runs, so the 1HMS screen stays free.
@@ -35,9 +36,9 @@ export const GuideCard: React.FC<{
       aria-live="polite"
       // 1HMS dialogs (Radix) turn off pointer events outside themselves and close when the user
       // presses outside: keep the card usable and don't close the 1HMS dialog the guide is about.
-      style={{ pointerEvents: 'auto' }}
+      style={{ zIndex: VITA_Z.card, pointerEvents: 'auto' }}
       onPointerDown={(e) => e.stopPropagation()}
-      className="fixed z-[80] inset-x-2 bottom-2 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[360px] rounded-2xl border border-violet-200 bg-white shadow-2xl dark:border-violet-900 dark:bg-gray-900"
+      className="fixed inset-x-2 bottom-2 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[360px] rounded-2xl border border-violet-200 bg-white shadow-2xl dark:border-violet-900 dark:bg-gray-900"
     >
       <header className="flex items-center gap-2 rounded-t-2xl bg-gradient-to-r from-violet-600 to-brand-600 px-3 py-2 text-white">
         <Compass className="h-4 w-4 shrink-0" />

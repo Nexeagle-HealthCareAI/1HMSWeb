@@ -25,6 +25,7 @@ import { VITA_API_URL } from '../config';
 import { useGuide } from '../guide/useGuide';
 import { GuideOverlay } from '../guide/GuideOverlay';
 import { GuideCard } from '../guide/GuideCard';
+import { VitaLayer, VITA_ESCAPE, VITA_Z } from './VitaLayer';
 import { GUIDE_T, type GuideStrings } from '../guide/text';
 import type { GuidePayload } from '../guide/types';
 
@@ -306,8 +307,16 @@ const VitaDock: React.FC = () => {
         setOpen(false);
       }
     };
+    // An Escape pressed inside Vita arrives as VITA_ESCAPE (so an open 1HMS drawer stays open).
+    const onVitaEscape = () => {
+      if (open && !guide.active) setOpen(false);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(VITA_ESCAPE, onVitaEscape);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(VITA_ESCAPE, onVitaEscape);
+    };
   }, [open, guide.active]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -343,7 +352,7 @@ const VitaDock: React.FC = () => {
   if (guide.state) {
     const perms = permissions ?? [];
     return (
-      <>
+      <VitaLayer>
         <GuideOverlay state={guide.state} />
         <GuideCard
           state={guide.state}
@@ -356,18 +365,19 @@ const VitaDock: React.FC = () => {
           onRate={guide.rate}
           onClose={guide.close}
         />
-      </>
+      </VitaLayer>
     );
   }
 
   return (
-    <>
+    <VitaLayer>
       {!open && (
         <button
           type="button"
           data-vita-ui="fab"
           onClick={() => setOpen(true)}
-          className="fixed z-[70] right-4 bottom-[84px] lg:bottom-6 lg:right-6 flex items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 py-3 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 active:scale-95 transition"
+          style={{ zIndex: VITA_Z.fab }}
+          className="fixed right-4 bottom-[84px] lg:bottom-6 lg:right-6 flex items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 py-3 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 active:scale-95 transition"
           aria-label={t.fab}
           title={`${t.fab} (Ctrl+K)`}
         >
@@ -381,9 +391,10 @@ const VitaDock: React.FC = () => {
         <section
           role="dialog"
           data-vita-ui="dock"
+          style={{ zIndex: VITA_Z.dock }}
           aria-label="Vita assistant"
           className={cn(
-            'fixed z-[80] flex flex-col bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800',
+            'fixed flex flex-col bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800',
             'inset-0 lg:inset-auto lg:right-6 lg:bottom-6 lg:w-[420px] lg:h-[min(680px,calc(100vh-48px))] lg:rounded-2xl overflow-hidden',
           )}
         >
@@ -565,7 +576,7 @@ const VitaDock: React.FC = () => {
           )}
         </section>
       )}
-    </>
+    </VitaLayer>
   );
 };
 

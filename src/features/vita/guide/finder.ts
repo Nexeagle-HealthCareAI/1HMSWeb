@@ -183,7 +183,8 @@ export function findTarget(target: GuideTarget, opts: FindOptions = {}): FoundTa
   let order = 0;
   const consider = (match: Element, resolve: (m: Element) => HTMLElement | null) => {
     order++;
-    if (!scope(match) || !visible(match)) return;
+    // Cheapest test first: most elements on a 1HMS page don't carry the words at all, and
+    // checking where and whether an element is visible costs a layout read.
     let best = 0;
     let shown = '';
     for (const t of textsOf(match)) {
@@ -196,6 +197,7 @@ export function findTarget(target: GuideTarget, opts: FindOptions = {}): FoundTa
       }
     }
     if (!best) return;
+    if (!scope(match) || !visible(match)) return;
     const el = resolve(match);
     if (!el || !scope(el) || !visible(el)) return;
     let s = best;
@@ -204,22 +206,26 @@ export function findTarget(target: GuideTarget, opts: FindOptions = {}): FoundTa
     hits.push({ el, s, order, shown: shown.replace(/\s*\*\s*$/, '').trim() });
   };
 
+  // A step "in the dialog" only needs to look inside open dialogs (much less to read on a big page).
+  const roots: ParentNode[] =
+    target.within === 'dialog' && openDialogs.length ? openDialogs : [root];
+  const pick = (sel: string) => roots.flatMap((r) => Array.from(r.querySelectorAll(sel)));
   const kind = target.kind;
   if (kind === 'field') {
-    root.querySelectorAll(FIELD).forEach((f) => consider(f, (m) => m as HTMLElement));
-    root.querySelectorAll(LABELS).forEach((l) => consider(l, fieldFor));
-    root.querySelectorAll(TEXTY).forEach((t) => {
+    pick(FIELD).forEach((f) => consider(f, (m) => m as HTMLElement));
+    pick(LABELS).forEach((l) => consider(l, fieldFor));
+    pick(TEXTY).forEach((t) => {
       if (!t.matches(LABELS) && leafText(t, maxLeaf) && !t.querySelector(TEXTY)) consider(t, fieldFor);
     });
   } else if (kind === 'region') {
-    root.querySelectorAll(TEXTY).forEach((t) => {
+    pick(TEXTY).forEach((t) => {
       if (leafText(t, maxLeaf) && !t.closest(INTERACTIVE)) {
         consider(t, (m) => regionFor(m, (m.textContent ?? '').trim().length));
       }
     });
   } else {
     const sel = kind === 'tab' ? '[role="tab"], ' + INTERACTIVE : kind === 'option' ? '[role="option"], option, li, ' + INTERACTIVE : INTERACTIVE;
-    root.querySelectorAll(sel).forEach((b) => consider(b, (m) => m as HTMLElement));
+    pick(sel).forEach((b) => consider(b, (m) => m as HTMLElement));
   }
   if (!hits.length) return null;
 
