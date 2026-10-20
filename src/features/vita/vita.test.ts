@@ -203,6 +203,58 @@ describe('VitaClient', () => {
     expect(evs[evs.length - 1]).toMatchObject({ type: 'done', messageId: 'm1', text: 'Go to Billing.' });
   });
 
+  it('maps Vita\'s choices, keeping only well-formed ones, and the preview flag on a guide', async () => {
+    const choices = {
+      purpose: 'ask',
+      header: null,
+      other: true,
+      otherLabel: 'Something else',
+      items: [
+        { kind: 'card', id: 'appt-cancel', label: 'Cancel an appointment' },
+        { kind: 'guide', id: 'cancel-admission', label: 'Cancel an admission' },
+        { kind: 'script', id: 'x', label: 'bad kind' },
+        { kind: 'card', id: '../etc', label: 'bad id' },
+        { kind: 'card', id: 'lab-cancel', label: '   ' },
+      ],
+    };
+    const guide = { id: 'book-appointment', source: 'playbook', title: 'Book', lang: 'en', steps: [], preview: true };
+    const { fetchImpl } = fakeVita({
+      'POST /v1/sessions': () => session(1),
+      'GET /v1/turns/t1/events': () =>
+        new Response(
+          sseBody([
+            `id: 1-0\nevent: choices\ndata: ${JSON.stringify(choices)}\n\n`,
+            'id: 2-0\nevent: choices\ndata: {"items":[{"kind":"other","id":"","label":"x"}]}\n\n',
+            `id: 3-0\nevent: guide\ndata: ${JSON.stringify(guide)}\n\n`,
+            'id: 4-0\nevent: done\ndata: {"messageId":"m1","text":"Which?","card":"appt-book"}\n\n',
+          ]),
+          { headers: { 'Content-Type': 'text/event-stream' } },
+        ),
+    });
+    const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'h', fetchImpl });
+    const evs: VitaStreamEvent[] = [];
+    for await (const e of c.stream('t1')) evs.push(e);
+    expect(evs.map((e) => e.type)).toEqual(['choices', 'guide', 'done']);
+    const ch = evs[0] as Extract<VitaStreamEvent, { type: 'choices' }>;
+    expect(ch.choices.items.map((i) => i.id)).toEqual(['appt-cancel', 'cancel-admission']);
+    expect(ch.choices).toMatchObject({ purpose: 'ask', other: true, otherLabel: 'Something else', header: null });
+    expect((evs[1] as Extract<VitaStreamEvent, { type: 'guide' }>).guide.preview).toBe(true);
+    expect(evs[2]).toMatchObject({ type: 'done', card: 'appt-book' });
+  });
+
+  it('sends a tapped choice as ids only', async () => {
+    const { fetchImpl, calls } = fakeVita({
+      'POST /v1/sessions': () => session(1),
+      'POST /v1/chat': () => json({ turnId: 't', conversationId: 'c', streamUrl: '/v1/turns/t/events' }, 202),
+    });
+    const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'h', fetchImpl });
+    const choice = { kind: 'card', id: 'appt-cancel', label: 'not sent' } as const;
+    await c.ask('Cancel an appointment', { choice });
+    const body = JSON.parse(String(calls.find((x) => x.url.endsWith('/v1/chat'))!.init.body));
+    expect(body).toMatchObject({ message: 'Cancel an appointment', choice: { kind: 'card', id: 'appt-cancel' } });
+    expect(body.choice.label).toBeUndefined();
+  });
+
   it('resumes a dropped stream from the last event id without repeating text', async () => {
     let n = 0;
     const seen: (string | null)[] = [];

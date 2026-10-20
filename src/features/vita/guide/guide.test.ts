@@ -275,3 +275,125 @@ describe('press counts as a click (1HMS dropdowns open on press)', () => {
     r.destroy();
   });
 });
+
+// ---------------------------------------------------------------- Do mode
+
+describe('Do mode: Vita clicks the safe steps, the user fills in and saves', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const drive: GuidePayload = {
+    ...guide,
+    drive: true,
+    steps: [
+      { ...guide.steps[0], auto: true },
+      { ...guide.steps[1], auto: true },
+      { ...guide.steps[2], auto: false },
+      { id: 's4', screen: guide.steps[1].screen, action: 'click', done: 'click', say: 'Press {label}.', target: T('Save'), auto: false },
+    ],
+  };
+
+  function run(g: GuidePayload, path = '/billing') {
+    let p = path;
+    const events: GuideRunEvent[] = [];
+    const states: RunnerState[] = [];
+    const clicked: string[] = [];
+    const r: GuideRunner = new GuideRunner(g, {
+      find: (t) => findTarget(t),
+      getPath: () => p,
+      report: (e) => events.push(e),
+      onChange: (s) => states.push(s),
+      typingIdleMs: 50,
+      actDelayMs: 500,
+      act: {
+        click: (el) => {
+          clicked.push(el.textContent ?? '');
+          el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+          el.click();
+        },
+        navigate: (route) => {
+          p = route;
+          r.locationChanged();
+        },
+      },
+    });
+    return { r, events, clicked, last: () => states[states.length - 1] };
+  }
+
+  const page = () => {
+    document.body.innerHTML = `<button id="book">Book Appointment</button><label for="n">Patient Name</label><input id="n"/><button id="save">Save</button>`;
+  };
+
+  it('opens the screen and the form itself, then hands the field and Save to the user', () => {
+    page();
+    const { r, events, clicked, last } = run(drive);
+    r.start();
+    expect(last()).toMatchObject({ driving: true, acting: true });
+    vi.advanceTimersByTime(500); // Vita opens Appointments
+    expect(last().step?.id).toBe('s2');
+    vi.advanceTimersByTime(499);
+    expect(clicked).toEqual([]); // the user sees the ring first
+    vi.advanceTimersByTime(1);
+    vi.advanceTimersByTime(100);
+    expect(clicked).toEqual(['Book Appointment']);
+    expect(last().step?.id).toBe('s3');
+    expect(document.activeElement?.id).toBe('n'); // the cursor waits in the field
+    vi.advanceTimersByTime(5000);
+    expect(last().step?.id).toBe('s3'); // never types
+    const input = document.getElementById('n') as HTMLInputElement;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    vi.advanceTimersByTime(100);
+    expect(last().step?.id).toBe('s4');
+    vi.advanceTimersByTime(5000);
+    expect(clicked).toEqual(['Book Appointment']); // Save is never pressed by Vita
+    document.getElementById('save')!.click();
+    vi.advanceTimersByTime(100);
+    expect(last().status).toBe('finished');
+    expect(events.filter((e) => e.type === 'auto').map((e) => e.step)).toEqual(['s1', 's2']);
+  });
+
+  it('pauses when the user acts while Vita is about to, and resumes on request', () => {
+    page();
+    const { r, events, clicked, last } = run(drive, '/appointment-dashboard');
+    r.start();
+    expect(last()).toMatchObject({ acting: true });
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
+    expect(last()).toMatchObject({ paused: true, driving: false, acting: false });
+    vi.advanceTimersByTime(2000);
+    expect(clicked).toEqual([]);
+    expect(events.some((e) => e.type === 'paused')).toBe(true);
+    r.resume();
+    vi.advanceTimersByTime(600);
+    expect(clicked).toEqual(['Book Appointment']);
+  });
+
+  it('a press inside Vita does not count as taking over; Pause does', () => {
+    page();
+    document.body.insertAdjacentHTML('beforeend', '<div data-vita-ui="guide-card"><button id="v">x</button></div>');
+    const { r, clicked, last } = run(drive, '/appointment-dashboard');
+    r.start();
+    document.getElementById('v')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(last().paused).toBe(false);
+    r.pause();
+    vi.advanceTimersByTime(2000);
+    expect(clicked).toEqual([]);
+  });
+
+  it('never presses a disabled button: the user can Skip', () => {
+    document.body.innerHTML = `<button disabled>Book Appointment</button>`;
+    const { r, clicked, last } = run(drive, '/appointment-dashboard');
+    r.start();
+    vi.advanceTimersByTime(2000);
+    expect(clicked).toEqual([]);
+    expect(last().step?.id).toBe('s2');
+  });
+
+  it('a guide without drive never acts, even with the dock able to', () => {
+    page();
+    const { r, clicked, last } = run({ ...drive, drive: false });
+    r.start();
+    vi.advanceTimersByTime(3000);
+    expect(clicked).toEqual([]);
+    expect(last()).toMatchObject({ driving: false, acting: false, step: expect.objectContaining({ id: 's1' }) });
+  });
+});

@@ -1,8 +1,14 @@
 /**
  * Guide runner: walks the user through a guide on the real screen.
  *
- * It only watches. It never clicks, types or reads a value: a "fill" step is done when the user
- * types in the highlighted field (the input event), whatever they type.
+ * Guide mode: it only watches. It never clicks, types or reads a value: a "fill" step is done
+ * when the user types in the highlighted field (the input event), whatever they type.
+ *
+ * Do mode (guide.drive): it also does the steps the server marked `auto` (going to a screen, a
+ * tab, a button that opens a form), after a short pause so the user sees what is clicked, and
+ * puts the cursor in each field the user has to fill. It still never types or reads a value,
+ * never picks a row or an option, and never presses a button that saves, pays or deletes. A real
+ * press or key anywhere on the page while Vita is about to act pauses it: the user is in control.
  *
  *   navigate  done when the page route is the step's screen (skipped if already there)
  *   click     done when the user clicks the highlighted element (or anything inside it)
@@ -28,6 +34,12 @@ export interface RunnerState {
   /** The step happens on another screen than the one the user is on. */
   wrongScreen: boolean;
   done: number;
+  /** Do mode and not paused: Vita does the auto steps. */
+  driving: boolean;
+  /** Do mode was paused (the user took over, or pressed Pause). */
+  paused: boolean;
+  /** Vita is about to do this step (the short pause before its click). */
+  acting: boolean;
 }
 
 export interface RunnerHooks {
@@ -40,6 +52,10 @@ export interface RunnerHooks {
   missingAfterMs?: number;
   /** Quiet time after typing before a fill step counts as done (ms). */
   typingIdleMs?: number;
+  /** Do mode: how Vita clicks and goes to a screen. Without it, Do mode behaves like Guide mode. */
+  act?: { click: (el: HTMLElement) => void; navigate: (route: string) => void };
+  /** Do mode: pause before Vita acts, so the user sees the ring first (ms). */
+  actDelayMs?: number;
 }
 
 export function routeMatches(path: string, route: string): boolean {
@@ -69,10 +85,17 @@ export class GuideRunner {
   private missingTimer: ReturnType<typeof setTimeout> | null = null;
   private typingTimer: ReturnType<typeof setTimeout> | null = null;
   private pressed: { el: Node; at: number } | null = null;
+  private paused = false;
+  private actTimer: ReturnType<typeof setTimeout> | null = null;
+  private acted = new Set<string>();
+  private focused = new Set<string>();
+  /** True while Vita's own click runs (its events are not the user taking over). */
+  private selfActing = false;
   private readonly now: () => number;
   private readonly onClick = (e: Event) => this.handleClick(e);
   private readonly onInput = (e: Event) => this.handleInput(e, false);
   private readonly onChangeEv = (e: Event) => this.handleInput(e, true);
+  private readonly onUser = (e: Event) => this.handleUser(e);
 
   constructor(
     readonly guide: GuidePayload,
@@ -93,7 +116,31 @@ export class GuideRunner {
       missing: this.missing,
       wrongScreen: !!step && this.onWrongScreen(step),
       done: this.doneSteps.size,
+      driving: this.drives && !this.paused,
+      paused: this.drives && this.paused,
+      acting: !!this.actTimer,
     };
+  }
+
+  /** Do mode is on for this guide (and the dock can act). */
+  private get drives(): boolean {
+    return !!this.guide.drive && !!this.hooks.act;
+  }
+
+  /** Stop doing steps; the user carries on (Guide mode behaviour) until Resume. */
+  pause(): void {
+    if (!this.drives || this.paused) return;
+    this.paused = true;
+    this.clearAct();
+    this.hooks.report({ type: 'paused', step: this.current()?.id });
+    this.emit();
+  }
+
+  resume(): void {
+    if (!this.drives || !this.paused) return;
+    this.paused = false;
+    this.maybeAct();
+    this.emit();
   }
 
   start(): void {
@@ -103,6 +150,10 @@ export class GuideRunner {
     this.doc.addEventListener('pointerdown', this.onClick, true);
     this.doc.addEventListener('input', this.onInput, true);
     this.doc.addEventListener('change', this.onChangeEv, true);
+    if (this.drives) {
+      this.doc.addEventListener('pointerdown', this.onUser, true);
+      this.doc.addEventListener('keydown', this.onUser, true);
+    }
     this.hooks.report({ type: 'started' });
     this.enter(0);
   }
@@ -154,6 +205,7 @@ export class GuideRunner {
     } else if (step.target && !this.missingTimer && !this.missing) {
       this.missingTimer = setTimeout(() => this.markMissing(), this.hooks.missingAfterMs ?? 2500);
     }
+    this.maybeAct();
     if (before !== this.found?.el || !this.found) this.emit();
   }
 
@@ -176,6 +228,7 @@ export class GuideRunner {
   private enter(i: number, autoSkip = true): void {
     this.clearMissing();
     this.clearTyping();
+    this.clearAct();
     this.index = i;
     this.stepStarted = this.now();
     const step = this.current();
@@ -192,6 +245,7 @@ export class GuideRunner {
 
   private complete(step: GuideStep): void {
     this.clearTyping();
+    this.clearAct();
     this.doneSteps.add(step.id);
     this.hooks.report({ type: 'step_done', step: step.id, ms: Math.max(0, Math.round(this.now() - this.stepStarted)) });
     this.advance();
@@ -248,6 +302,74 @@ export class GuideRunner {
     }, this.hooks.typingIdleMs ?? 1200);
   }
 
+  /** Do mode: do this step (after a pause), or put the cursor in the field the user fills. */
+  private maybeAct(): void {
+    const step = this.current();
+    const act = this.hooks.act;
+    if (!step || !act || !this.drives || this.paused) return;
+    if (step.action === 'fill' && this.found && !this.focused.has(step.id)) {
+      const el = this.found.el;
+      const field = el.matches('input, textarea, select') ? el : el.querySelector('input, textarea, select');
+      if (field instanceof HTMLElement && !this.inVita(field)) {
+        this.focused.add(step.id);
+        field.focus({ preventScroll: false });
+      }
+      return;
+    }
+    if (!step.auto || this.actTimer || this.acted.has(step.id)) return;
+    if (step.action === 'navigate') {
+      const to = openableScreen(step.screen);
+      if (!to || to.route.includes(':')) return;
+      this.schedule(step, () => act.navigate(to.route));
+      return;
+    }
+    if (step.action !== 'click' || !this.found) return;
+    this.schedule(step, () => {
+      const el = this.found?.el;
+      if (!(el instanceof HTMLElement) || !el.isConnected || this.inVita(el)) return false;
+      if ((el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') return false;
+      this.selfActing = true;
+      try {
+        act.click(el);
+      } finally {
+        this.selfActing = false;
+      }
+      return true;
+    });
+  }
+
+  private schedule(step: GuideStep, run: () => boolean | void): void {
+    this.actTimer = setTimeout(() => {
+      this.actTimer = null;
+      if (this.current() !== step || this.paused) return;
+      this.acted.add(step.id);
+      if (run() === false) {
+        this.emit();
+        return;
+      }
+      this.hooks.report({ type: 'auto', step: step.id });
+      this.emit();
+    }, this.hooks.actDelayMs ?? 700);
+    this.emit();
+  }
+
+  /** A real press or key on the page while Vita is about to act: the user takes over. */
+  private handleUser(e: Event): void {
+    if (this.selfActing || !this.actTimer) return;
+    const t = e.target;
+    if (t instanceof Element && this.inVita(t)) return;
+    this.pause();
+  }
+
+  private inVita(el: Element): boolean {
+    return !!el.closest('[data-vita-ui]');
+  }
+
+  private clearAct(): void {
+    if (this.actTimer) clearTimeout(this.actTimer);
+    this.actTimer = null;
+  }
+
   private markMissing(): void {
     this.missingTimer = null;
     const step = this.current();
@@ -274,6 +396,9 @@ export class GuideRunner {
   private teardown(): void {
     this.clearMissing();
     this.clearTyping();
+    this.clearAct();
+    this.doc.removeEventListener('pointerdown', this.onUser, true);
+    this.doc.removeEventListener('keydown', this.onUser, true);
     this.doc.removeEventListener('click', this.onClick, true);
     this.doc.removeEventListener('pointerdown', this.onClick, true);
     this.doc.removeEventListener('input', this.onInput, true);

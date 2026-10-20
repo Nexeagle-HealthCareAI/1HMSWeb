@@ -33,6 +33,24 @@ export interface VitaScreenContext {
   screenId?: string;
 }
 
+/** A task Vita offers as a button (vita docs/CONVERSATION.md). Tapping sends its label as the
+ *  message plus `{kind, id}`; the server looks the task up again and checks access. */
+export interface VitaChoice {
+  kind: 'card' | 'guide' | 'before' | 'other' | 'not_this';
+  id: string;
+  label: string;
+}
+
+export interface VitaChoices {
+  purpose: string;
+  header: string | null;
+  items: VitaChoice[];
+  other: boolean;
+  otherLabel: string | null;
+}
+
+export type VitaChoiceRef = Pick<VitaChoice, 'kind' | 'id'>;
+
 export type VitaStreamEvent =
   | { type: 'started' }
   | { type: 'status'; stage: string }
@@ -42,7 +60,8 @@ export type VitaStreamEvent =
   | { type: 'navigate'; screen: VitaScreenLink }
   | { type: 'guide'; guide: GuidePayload }
   | { type: 'guide_offer'; offer: GuideOffer }
-  | { type: 'done'; messageId: string | null; text: string; route?: string }
+  | { type: 'choices'; choices: VitaChoices }
+  | { type: 'done'; messageId: string | null; text: string; route?: string; card?: string }
   | { type: 'error'; code: string; message: string }
   | { type: 'cancelled' };
 
@@ -82,6 +101,8 @@ interface SessionState {
   hospitalId: string;
   permissions: string[];
   features: Record<string, boolean>;
+  /** Do mode switched on for this session (it starts off in every new session). */
+  doModeOn: boolean;
 }
 
 export class VitaError extends Error {
@@ -175,6 +196,7 @@ export class VitaClient {
       hospitalId: b.user?.hospitalId ?? '',
       permissions: b.user?.permissions ?? [],
       features: b.features ?? {},
+      doModeOn: false,
     };
   }
 
@@ -202,6 +224,14 @@ export class VitaClient {
     return body as T;
   }
 
+  /** Switch Do mode on or off for this session (Vita records it in its audit log). */
+  async setDoMode(on: boolean): Promise<void> {
+    const s = await this.ensureSession();
+    if (s.doModeOn === on) return;
+    await this.json('/v1/sessions/current', { method: 'PATCH', body: JSON.stringify({ doModeOn: on }) });
+    s.doModeOn = on;
+  }
+
   async setLocale(locale: VitaLocale): Promise<void> {
     this.locale = locale;
     if (this.session) {
@@ -217,10 +247,18 @@ export class VitaClient {
 
   // ------------------------------------------------------------------ chat
 
-  ask(
+  async ask(
     message: string,
-    opts: { conversationId?: string | null; screen?: VitaScreenContext | null; mode?: VitaMode } = {},
+    opts: {
+      conversationId?: string | null;
+      screen?: VitaScreenContext | null;
+      mode?: VitaMode;
+      choice?: VitaChoiceRef | null;
+    } = {},
   ): Promise<{ turnId: string; conversationId: string; streamUrl: string; removed?: string[] }> {
+    // Do mode must be on for the session; a new session (idle timeout, new 1HMS token) starts
+    // with it off, so it is switched on again here. The user chose it in the dock.
+    if (opts.mode === 'do') await this.setDoMode(true);
     return this.json('/v1/chat', {
       method: 'POST',
       body: JSON.stringify({
@@ -228,6 +266,7 @@ export class VitaClient {
         conversationId: opts.conversationId ?? undefined,
         screen: opts.screen ?? undefined,
         mode: opts.mode ?? undefined,
+        choice: opts.choice ? { kind: opts.choice.kind, id: opts.choice.id } : undefined,
       }),
     });
   }
@@ -344,6 +383,26 @@ function detailOf(body: unknown): string | null {
   return typeof d === 'string' ? d : null;
 }
 
+const CHOICE_KINDS = new Set(['card', 'guide', 'before']);
+
+/** Only well-formed choices, at most four (the server never sends more). */
+function toChoices(d: Obj): VitaChoices | null {
+  if (!Array.isArray(d.items)) return null;
+  const items = (d.items as Obj[])
+    .filter((i) => i && CHOICE_KINDS.has(str(i.kind)) && /^[a-z0-9#-]{1,120}$/.test(str(i.id)) && str(i.label).trim())
+    .slice(0, 4)
+    .map((i) => ({ kind: str(i.kind) as VitaChoice['kind'], id: str(i.id), label: str(i.label).slice(0, 200) }));
+  const other = d.other === true && typeof d.otherLabel === 'string' && !!d.otherLabel.trim();
+  if (!items.length && !other) return null;
+  return {
+    purpose: str(d.purpose),
+    header: typeof d.header === 'string' && d.header.trim() ? d.header : null,
+    items,
+    other,
+    otherLabel: other ? str(d.otherLabel) : null,
+  };
+}
+
 function mapEvent(event: string, d: Obj): VitaStreamEvent | null {
   switch (event) {
     case 'turn.started':
@@ -362,12 +421,17 @@ function mapEvent(event: string, d: Obj): VitaStreamEvent | null {
       return Array.isArray(d.steps) && d.id ? { type: 'guide', guide: d as unknown as GuidePayload } : null;
     case 'guide_offer':
       return d.guideId ? { type: 'guide_offer', offer: d as unknown as GuideOffer } : null;
+    case 'choices': {
+      const c = toChoices(d);
+      return c ? { type: 'choices', choices: c } : null;
+    }
     case 'done':
       return {
         type: 'done',
         messageId: typeof d.messageId === 'string' ? d.messageId : null,
         text: str(d.text),
         route: typeof d.route === 'string' ? d.route : undefined,
+        card: typeof d.card === 'string' ? d.card : undefined,
       };
     case 'error':
       return { type: 'error', code: str(d.code, 'error'), message: str(d.message, 'Vita had a problem. Please try again.') };

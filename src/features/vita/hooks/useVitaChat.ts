@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   VitaClient,
   VitaError,
+  type VitaChoiceRef,
+  type VitaChoices,
   type VitaCitation,
   type VitaConversation,
   type VitaLocale,
@@ -29,6 +31,12 @@ export interface VitaChatMessage {
   guide?: GuidePayload;
   /** Ask mode: this how-to has an on-screen guide ("Show me on screen"). */
   offer?: GuideOffer;
+  /** Tasks Vita offers as buttons: its question's choices, or "Something else?" / "Next". */
+  choices?: VitaChoices;
+  /** The answer card Vita showed (sent back with "Not this"). */
+  card?: string;
+  /** A guide Vita picked itself waits for Start (guide.preview); false once started. */
+  awaitingStart?: boolean;
 }
 
 let seq = 0;
@@ -61,7 +69,7 @@ export function useVitaChat(
   }, []);
 
   const send = useCallback(
-    async (text: string, screen: VitaScreenContext | null, mode?: VitaMode) => {
+    async (text: string, screen: VitaScreenContext | null, mode?: VitaMode, choice?: VitaChoiceRef) => {
       const q = text.trim();
       if (!client || !q || busy) return;
       setNotice(null);
@@ -76,7 +84,7 @@ export function useVitaChat(
       const ac = new AbortController();
       abortRef.current = ac;
       try {
-        const acc = await client.ask(q, { conversationId, screen, mode });
+        const acc = await client.ask(q, { conversationId, screen, mode, choice });
         setConversationId(acc.conversationId);
         if (acc.removed?.length) {
           // The server removed phone numbers, names, ids... before keeping or using the question.
@@ -103,8 +111,13 @@ export function useVitaChat(
               patch(botKey, (m) => ({ ...m, screen: ev.screen }));
               break;
             case 'guide':
-              patch(botKey, (m) => ({ ...m, guide: ev.guide }));
-              guideRef.current?.(ev.guide);
+              // Picked by Vita: the user sees what it is and presses Start. Chosen by the user
+              // (a tapped choice, "show me"): it starts at once.
+              patch(botKey, (m) => ({ ...m, guide: ev.guide, awaitingStart: !!ev.guide.preview }));
+              if (!ev.guide.preview) guideRef.current?.(ev.guide);
+              break;
+            case 'choices':
+              patch(botKey, (m) => ({ ...m, choices: ev.choices }));
               break;
             case 'guide_offer':
               patch(botKey, (m) => ({ ...m, offer: ev.offer }));
@@ -114,7 +127,13 @@ export function useVitaChat(
               navRef.current?.(ev.screen);
               break;
             case 'done':
-              patch(botKey, (m) => ({ ...m, status: 'done', text: ev.text || m.text, messageId: ev.messageId }));
+              patch(botKey, (m) => ({
+                ...m,
+                status: 'done',
+                text: ev.text || m.text,
+                messageId: ev.messageId,
+                card: ev.card ?? m.card,
+              }));
               break;
             case 'error':
               patch(botKey, (m) => ({ ...m, status: 'error', text: m.text || ev.message, errorCode: ev.code }));
@@ -136,6 +155,17 @@ export function useVitaChat(
       }
     },
     [client, busy, conversationId, patch],
+  );
+
+  /** Start the guide a message is waiting with (its Start button). */
+  const startGuide = useCallback(
+    (k: string) => {
+      const m = messages.find((x) => x.key === k);
+      if (!m?.guide) return;
+      patch(k, (x) => ({ ...x, awaitingStart: false }));
+      guideRef.current?.(m.guide);
+    },
+    [messages, patch],
   );
 
   const stop = useCallback(() => {
@@ -223,6 +253,7 @@ export function useVitaChat(
     history,
     notice,
     send,
+    startGuide,
     stop,
     rate,
     newChat,

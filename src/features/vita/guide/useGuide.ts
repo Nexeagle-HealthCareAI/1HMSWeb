@@ -22,6 +22,23 @@ const REFRESH_MS = 120;
 /** While the target is not found, look again this often even if nothing seems to change. */
 const POLL_MS = 300;
 
+/**
+ * Do mode: press a 1HMS button the way a person does. Radix menus and tabs react to the press
+ * (pointerdown / mousedown), plain buttons and dialog triggers to the click.
+ */
+export function clickLikeUser(el: HTMLElement): void {
+  el.scrollIntoView({ block: 'center', inline: 'nearest' });
+  const r = el.getBoundingClientRect();
+  const at = { bubbles: true, cancelable: true, composed: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 0 };
+  const P = typeof PointerEvent === 'function' ? PointerEvent : MouseEvent;
+  el.dispatchEvent(new P('pointerdown', { ...at, pointerType: 'mouse', isPrimary: true } as PointerEventInit));
+  el.dispatchEvent(new MouseEvent('mousedown', at));
+  el.focus({ preventScroll: true });
+  el.dispatchEvent(new P('pointerup', { ...at, pointerType: 'mouse', isPrimary: true } as PointerEventInit));
+  el.dispatchEvent(new MouseEvent('mouseup', at));
+  el.click();
+}
+
 /** A node that belongs to Vita (dock, guide card, ring): its changes are not 1HMS changes. */
 function isVita(n: Node): boolean {
   const el = n instanceof Element ? n : n.parentElement;
@@ -32,7 +49,13 @@ function isVita(n: Node): boolean {
  * Runs one guide at a time on the page and reports progress to Vita (batched).
  * `pathname` is the router's current path: route steps finish when it matches.
  */
-export function useGuide(client: VitaClient | null, pathname: string) {
+export function useGuide(
+  client: VitaClient | null,
+  pathname: string,
+  opts: { navigate?: (route: string) => void } = {},
+) {
+  const navRef = useRef(opts.navigate);
+  navRef.current = opts.navigate;
   const [state, setState] = useState<RunnerState | null>(null);
   const runner = useRef<GuideRunner | null>(null);
   const runId = useRef<string | null>(null);
@@ -81,6 +104,8 @@ export function useGuide(client: VitaClient | null, pathname: string) {
         getPath: () => window.location.pathname,
         report,
         onChange: (s) => setState(s),
+        // Do mode: Vita clicks the safe steps and opens screens (guide.drive decides).
+        act: { click: clickLikeUser, navigate: (route) => navRef.current?.(route) },
       });
       runner.current = r;
       r.start();
@@ -155,6 +180,8 @@ export function useGuide(client: VitaClient | null, pathname: string) {
     next: () => runner.current?.next(),
     back: () => runner.current?.back(),
     stop: () => runner.current?.stop(),
+    pause: () => runner.current?.pause(),
+    resume: () => runner.current?.resume(),
     rate,
     close,
   };

@@ -31,6 +31,9 @@ export interface GuideStep {
   note?: string | null;
   optional?: boolean;
   target: GuideTarget | null;
+  /** Do mode: Vita does this step itself (a screen, a tab, a button that opens a form). Never
+   *  set for fields, choices or a button that saves, pays or deletes. */
+  auto?: boolean;
 }
 
 export interface GuidePayload {
@@ -41,6 +44,12 @@ export interface GuidePayload {
   lang: string;
   steps: GuideStep[];
   cites?: { docId: string; section: string }[];
+  /** Do mode: the runner does the `auto` steps itself; the user fills in and saves. */
+  drive?: boolean;
+  /** Vita picked this guide itself: show its title and steps with Start / Not this first. */
+  preview?: boolean;
+  /** A line shown with the guide, e.g. after a "before you start" answer. */
+  note?: string;
 }
 
 export interface GuideOffer {
@@ -57,7 +66,10 @@ export type GuideRunEventType =
   | 'skip'
   | 'completed'
   | 'abandoned'
-  | 'rated';
+  | 'rated'
+  /** Do mode: Vita did this step itself / the user took over (paused Vita). */
+  | 'auto'
+  | 'paused';
 
 export interface GuideRunEvent {
   type: GuideRunEventType;

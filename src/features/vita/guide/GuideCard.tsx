@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Compass, ExternalLink, SkipForward, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Compass,
+  ExternalLink,
+  Hand,
+  MousePointerClick,
+  Pause,
+  Play,
+  SkipForward,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BoldText } from './GuideOverlay';
 import { openableScreen, type RunnerState } from './runner';
@@ -10,6 +24,44 @@ import { VITA_Z } from '../components/VitaLayer';
  * Small card that replaces the Vita panel while a guide runs, so the 1HMS screen stays free.
  * The user can always go Back, press Next / Skip, or Stop.
  */
+/** Do mode: who does this step. Vita (with Pause), the user ("Your turn"), or paused. */
+const DriveStatus: React.FC<{
+  state: RunnerState;
+  t: GuideStrings;
+  onPause?: () => void;
+  onResume?: () => void;
+}> = ({ state, t, onPause, onResume }) => {
+  const step = state.step!;
+  const label = state.found?.shown || step.target?.label || step.screen?.label || '';
+  if (state.paused)
+    return (
+      <div data-testid="guide-drive" data-drive="paused" className="flex items-center gap-2 rounded-lg bg-gray-50 px-2 py-1.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+        <Hand className="h-3.5 w-3.5 shrink-0" />
+        <span className="flex-1">{t.paused}</span>
+        <button type="button" data-testid="guide-resume" onClick={onResume} className="inline-flex items-center gap-1 rounded-md bg-violet-600 px-2 py-1 font-semibold text-white">
+          <Play className="h-3 w-3" /> {t.resume}
+        </button>
+      </div>
+    );
+  if (step.auto)
+    return (
+      <div data-testid="guide-drive" data-drive="vita" className="flex items-center gap-2 rounded-lg bg-violet-50 px-2 py-1.5 text-xs text-violet-800 dark:bg-violet-900/30 dark:text-violet-200">
+        <MousePointerClick className={cn('h-3.5 w-3.5 shrink-0', state.acting && 'animate-pulse')} />
+        <span className="flex-1">{step.action === 'navigate' ? t.actingNav(label) : t.acting(label)}</span>
+        <button type="button" data-testid="guide-pause" onClick={onPause} className="inline-flex items-center gap-1 rounded-md border border-violet-200 px-2 py-1 font-semibold dark:border-violet-800">
+          <Pause className="h-3 w-3" /> {t.pause}
+        </button>
+      </div>
+    );
+  const finalPress = step.action === 'click';
+  return (
+    <div data-testid="guide-drive" data-drive="you" className="flex items-center gap-2 rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+      <Hand className="h-3.5 w-3.5 shrink-0" />
+      <span className="flex-1">{finalPress ? t.yourTurnSave : t.yourTurn}</span>
+    </div>
+  );
+};
+
 export const GuideCard: React.FC<{
   state: RunnerState;
   t: GuideStrings;
@@ -20,7 +72,9 @@ export const GuideCard: React.FC<{
   onStop: () => void;
   onRate: (r: 'up' | 'down') => void;
   onClose: () => void;
-}> = ({ state, t, canOpenScreen, onOpenScreen, onBack, onNext, onStop, onRate, onClose }) => {
+  onPause?: () => void;
+  onResume?: () => void;
+}> = ({ state, t, canOpenScreen, onOpenScreen, onBack, onNext, onStop, onRate, onClose, onPause, onResume }) => {
   const [rated, setRated] = useState<'up' | 'down' | null>(null);
   const { guide, step } = state;
   const target = openableScreen(step?.screen ?? null);
@@ -100,6 +154,9 @@ export const GuideCard: React.FC<{
             <p className="leading-snug" data-testid="guide-say">
               <BoldText text={stepText(step, state.found?.shown)} />
             </p>
+            {(state.driving || state.paused) && (
+              <DriveStatus state={state} t={t} onPause={onPause} onResume={onResume} />
+            )}
             {step.note && <p className="rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">{step.note}</p>}
             {(state.wrongScreen || step.action === 'navigate') && step.screen && (
               <div className="space-y-1 rounded-lg bg-violet-50 px-2 py-1.5 text-xs text-violet-800 dark:bg-violet-900/30 dark:text-violet-200">

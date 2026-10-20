@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';

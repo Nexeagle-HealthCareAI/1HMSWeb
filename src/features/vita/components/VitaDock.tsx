@@ -3,11 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUp,
   BookOpen,
+  ChevronRight,
   Compass,
   ExternalLink,
   History,
   Loader2,
   MessageSquarePlus,
+  MousePointerClick,
   Sparkles,
   Square,
   ThumbsDown,
@@ -17,7 +19,13 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
-import { VitaClient, type VitaLocale, type VitaScreenLink } from '../api/vitaClient';
+import {
+  VitaClient,
+  type VitaChoice,
+  type VitaChoiceRef,
+  type VitaLocale,
+  type VitaScreenLink,
+} from '../api/vitaClient';
 import { useVitaChat, type VitaChatMessage } from '../hooks/useVitaChat';
 import { canOpen, screenContext } from '../screens';
 import { VitaMarkdown } from './VitaMarkdown';
@@ -60,6 +68,10 @@ const T = {
     thinking: 'Thinking…',
     reasons: { wrong: 'Wrong', incomplete: 'Incomplete', not_relevant: 'Not what I asked', too_long: 'Too long', other: 'Other' },
     fab: 'Ask Vita',
+    start: 'Start',
+    notThis: 'Not this',
+    steps: (n: number) => (n === 1 ? '1 step' : `${n} steps`),
+    onScreen: 'Shown on screen',
     errors: {
       timeout: 'Vita took too long. Please try again.',
       agent_error: 'Vita had a problem. Please try again.',
@@ -97,6 +109,10 @@ const T = {
     thinking: 'सोच रही हूँ…',
     reasons: { wrong: 'गलत', incomplete: 'अधूरा', not_relevant: 'सवाल से अलग', too_long: 'बहुत लंबा', other: 'अन्य' },
     fab: 'Vita से पूछें',
+    start: 'शुरू करें',
+    notThis: 'यह नहीं',
+    steps: (n: number) => `${n} चरण`,
+    onScreen: 'स्क्रीन पर दिखेगा',
     errors: {
       timeout: 'Vita को जवाब देने में ज़्यादा समय लगा। कृपया फिर से पूछें।',
       agent_error: 'Vita में कोई दिक्कत आई। कृपया फिर से पूछें।',
@@ -222,8 +238,12 @@ const VitaDock: React.FC = () => {
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [locale, setLocaleState] = useState<VitaLocale>(() => (readLS(LS_LOCALE) === 'hi' ? 'hi' : 'en'));
   const [input, setInput] = useState('');
-  const [mode, setMode] = useState<'ask' | 'guide'>(() => (readLS(LS_MODE) === 'guide' ? 'guide' : 'ask'));
+  const [mode, setMode] = useState<'ask' | 'guide' | 'do'>(() => {
+    const m = readLS(LS_MODE);
+    return m === 'guide' || m === 'do' ? m : 'ask';
+  });
   const [guideOn, setGuideOn] = useState(false);
+  const [doOn, setDoOn] = useState(false);
   const t: Strings = T[locale];
   const gt: GuideStrings = GUIDE_T[locale];
 
@@ -248,7 +268,14 @@ const VitaDock: React.FC = () => {
     },
     [navigate],
   );
-  const guide = useGuide(client, location.pathname);
+  // Do mode: Vita opens a step's screen itself, only one this user may open.
+  const guideNavigate = useCallback(
+    (route: string) => {
+      if (canOpen({ route, screenId: '', label: '' }, useAuthStore.getState().permissions ?? [])) navigate(route);
+    },
+    [navigate],
+  );
+  const guide = useGuide(client, location.pathname, { navigate: guideNavigate });
   const startGuide = guide.start;
   const chat = useVitaChat(client, { onNavigate, onGuide: (g: GuidePayload) => startGuide(g) });
 
@@ -258,8 +285,16 @@ const VitaDock: React.FC = () => {
     let live = true;
     client
       .features()
-      .then((f) => live && setGuideOn(!!f.guide))
-      .catch(() => live && setGuideOn(false));
+      .then((f) => {
+        if (!live) return;
+        setGuideOn(!!f.guide);
+        setDoOn(!!f.guide && !!f.do);
+      })
+      .catch(() => {
+        if (!live) return;
+        setGuideOn(false);
+        setDoOn(false);
+      });
     return () => {
       live = false;
     };
@@ -336,11 +371,18 @@ const VitaDock: React.FC = () => {
   const screen = screenContext(location.pathname);
   const suggestions = (screen && SUGGESTIONS[screen.screenId ?? '']) || DEFAULT_SUGGESTIONS;
 
+  const sendMode = mode === 'do' && doOn ? 'do' : guideOn && mode !== 'ask' ? 'guide' : undefined;
   const submit = (text = input) => {
     if (!text.trim() || chat.busy) return;
     setInput('');
-    void chat.send(text, screen, guideOn && mode === 'guide' ? 'guide' : undefined);
+    void chat.send(text, screen, sendMode);
   };
+  /** A tapped choice: its label is what the user "said"; Vita gets the ids. */
+  const choose = (label: string, ref: VitaChoiceRef) => {
+    if (chat.busy) return;
+    void chat.send(label, screen, sendMode, ref);
+  };
+  const lastBot = [...chat.messages].reverse().find((m) => m.role === 'assistant')?.key;
 
   const switchLocale = () => {
     const l: VitaLocale = locale === 'en' ? 'hi' : 'en';
@@ -364,6 +406,8 @@ const VitaDock: React.FC = () => {
           onStop={guide.close}
           onRate={guide.rate}
           onClose={guide.close}
+          onPause={guide.pause}
+          onResume={guide.resume}
         />
       </VitaLayer>
     );
@@ -443,7 +487,7 @@ const VitaDock: React.FC = () => {
           {guideOn && view === 'chat' && (
             <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 dark:border-gray-800">
               <div className="flex rounded-full bg-gray-100 p-0.5 text-xs font-semibold dark:bg-gray-800" role="radiogroup" aria-label="Mode">
-                {(['ask', 'guide'] as const).map((m) => (
+                {(doOn ? (['ask', 'guide', 'do'] as const) : (['ask', 'guide'] as const)).map((m) => (
                   <button
                     key={m}
                     type="button"
@@ -455,12 +499,22 @@ const VitaDock: React.FC = () => {
                       mode === m ? 'bg-white text-brand-700 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500',
                     )}
                   >
-                    {m === 'guide' ? <Compass className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-                    {m === 'guide' ? gt.guide : gt.ask}
+                    {m === 'do' ? (
+                      <MousePointerClick className="h-3.5 w-3.5" />
+                    ) : m === 'guide' ? (
+                      <Compass className="h-3.5 w-3.5" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {m === 'do' ? gt.doIt : m === 'guide' ? gt.guide : gt.ask}
                   </button>
                 ))}
               </div>
-              {mode === 'guide' && <span className="min-w-0 flex-1 truncate text-[11px] text-gray-400">{gt.modeHint}</span>}
+              {mode !== 'ask' && (
+                <span className="min-w-0 flex-1 truncate text-[11px] text-gray-400" title={mode === 'do' ? gt.doHint : gt.modeHint}>
+                  {mode === 'do' ? gt.doHint : gt.modeHint}
+                </span>
+              )}
             </div>
           )}
 
@@ -521,9 +575,18 @@ const VitaDock: React.FC = () => {
                         t={t}
                         permissions={permissions ?? []}
                         onOpen={(s) => navigate(s.route)}
-                        onRate={chat.rate}
+                        onRate={(k, r, reason, comment) => {
+                          chat.rate(k, r, reason, comment);
+                          // "Not what I asked" on the latest answer: Vita offers the other tasks.
+                          if (r === 'down' && reason === 'not_relevant' && k === lastBot && !chat.busy) {
+                            choose(t.notThis, { kind: 'not_this', id: m.card ?? m.guide?.id ?? '' });
+                          }
+                        }}
                         gt={gt}
                         onShowGuide={guideOn ? showGuide : undefined}
+                        last={m.key === lastBot && !chat.busy}
+                        onChoose={choose}
+                        onStart={() => chat.startGuide(m.key)}
                       />
                     ),
                   )
@@ -609,7 +672,11 @@ const AssistantMessage: React.FC<{
   onRate: (key: string, r: 'up' | 'down', reason?: Reason, comment?: string) => void;
   gt: GuideStrings;
   onShowGuide?: (guideId: string, fallback?: GuidePayload) => void;
-}> = ({ m, t, permissions, onOpen, onRate, gt, onShowGuide }) => {
+  /** The latest answer and Vita is not busy: its choices and Start can be used. */
+  last?: boolean;
+  onChoose?: (label: string, ref: VitaChoiceRef) => void;
+  onStart?: () => void;
+}> = ({ m, t, permissions, onOpen, onRate, gt, onShowGuide, last, onChoose, onStart }) => {
   const [askWhy, setAskWhy] = useState(false);
   const [comment, setComment] = useState('');
   const [thanked, setThanked] = useState(false);
@@ -639,7 +706,9 @@ const AssistantMessage: React.FC<{
             <span className="flex items-center gap-1 text-[11px] font-medium text-gray-400">
               <BookOpen className="h-3 w-3" /> {t.sources}
             </span>
-            {m.citations.map((c) => (
+            {m.citations
+              .filter((c, i, all) => !c.title || all.findIndex((x) => x.title === c.title) === i)
+              .map((c) => (
               <span
                 key={`${c.docId}-${c.section}`}
                 className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600 dark:bg-gray-800 dark:text-gray-300"
@@ -651,7 +720,22 @@ const AssistantMessage: React.FC<{
           </div>
         )}
 
-        {onShowGuide && m.status === 'done' && (m.offer || m.guide) && (
+        {m.status === 'done' && m.guide && m.awaitingStart && (
+          <GuidePreview
+            title={m.guide.title}
+            steps={m.guide.steps.length}
+            t={t}
+            active={!!last}
+            onStart={() => onStart?.()}
+            onNotThis={() => onChoose?.(t.notThis, { kind: 'not_this', id: m.guide!.id })}
+          />
+        )}
+
+        {m.status === 'done' && m.choices && last && onChoose && (
+          <ChoiceList choices={m.choices} t={t} onChoose={onChoose} />
+        )}
+
+        {onShowGuide && m.status === 'done' && (m.offer || m.guide) && !m.awaitingStart && (
           <button
             type="button"
             data-testid="show-guide"
@@ -733,6 +817,92 @@ const AssistantMessage: React.FC<{
     </div>
   );
 };
+
+/** Vita's question (or "Something else?" / "Next") as buttons. Tasks with an on-screen guide
+ *  carry the compass. */
+const ChoiceList: React.FC<{
+  choices: NonNullable<VitaChatMessage['choices']>;
+  t: Strings;
+  onChoose: (label: string, ref: VitaChoiceRef) => void;
+}> = ({ choices, t, onChoose }) => (
+  <div className="space-y-1.5" data-testid="vita-choices" data-purpose={choices.purpose}>
+    {choices.header && <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{choices.header}</div>}
+    <div className="flex flex-col gap-1.5">
+      {choices.items.map((c: VitaChoice) => (
+        <button
+          key={`${c.kind}:${c.id}`}
+          type="button"
+          data-testid="vita-choice"
+          data-kind={c.kind}
+          data-id={c.id}
+          onClick={() => onChoose(c.label, { kind: c.kind, id: c.id })}
+          className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-800 hover:border-brand-400 hover:bg-brand-50/60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+        >
+          <span className="min-w-0 flex-1">{c.label}</span>
+          {c.kind === 'guide' && (
+            <span title={t.onScreen} aria-label={t.onScreen} className="text-violet-600 dark:text-violet-400">
+              <Compass className="h-3.5 w-3.5" />
+            </span>
+          )}
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300 group-hover:text-brand-500" />
+        </button>
+      ))}
+      {choices.other && choices.otherLabel && (
+        <button
+          type="button"
+          data-testid="vita-choice-other"
+          onClick={() => onChoose(choices.otherLabel!, { kind: 'other', id: '' })}
+          className="self-start rounded-full px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800"
+        >
+          {choices.otherLabel}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+/** A guide Vita picked itself: what it is and how long, then Start or Not this. */
+const GuidePreview: React.FC<{
+  title: string;
+  steps: number;
+  t: Strings;
+  active: boolean;
+  onStart: () => void;
+  onNotThis: () => void;
+}> = ({ title, steps, t, active, onStart, onNotThis }) => (
+  <div
+    data-testid="vita-guide-preview"
+    className="rounded-xl border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-900/20"
+  >
+    <div className="flex items-start gap-2">
+      <Compass className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{t.steps(steps)}</div>
+      </div>
+    </div>
+    <div className="mt-2.5 flex items-center gap-2">
+      <button
+        type="button"
+        data-testid="vita-guide-start"
+        onClick={onStart}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+      >
+        {t.start}
+      </button>
+      {active && (
+        <button
+          type="button"
+          data-testid="vita-guide-not-this"
+          onClick={onNotThis}
+          className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-white dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          {t.notThis}
+        </button>
+      )}
+    </div>
+  </div>
+);
 
 const RateBtn: React.FC<{ active?: boolean; label: string; onClick: () => void; children: React.ReactNode }> = ({
   active,
