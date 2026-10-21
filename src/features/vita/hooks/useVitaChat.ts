@@ -181,7 +181,20 @@ export function useVitaChat(
       const before = m.rating;
       patch(k, (x) => ({ ...x, rating }));
       try {
-        await client.feedback(m.messageId, rating, reason, comment);
+        const res = await client.feedback(m.messageId, rating, reason, comment);
+        // Vita answers a thumbs-up, or a thumbs-down once the reason is picked ("Sorry, what were
+        // you trying to do?"). One reply per answer: a new rating replaces it.
+        const line = res?.followUp?.trim();
+        // "Not what I asked" is answered by the dock offering the other tasks instead.
+        if (line && (rating === 'up' || (reason && reason !== 'not_relevant'))) {
+          const fk = `fu-${k}`;
+          setMessages((ms) => {
+            const rest = ms.filter((x) => x.key !== fk);
+            const at = rest.findIndex((x) => x.key === k);
+            const reply: VitaChatMessage = { key: fk, role: 'assistant', text: line, status: 'done', citations: [] };
+            return at < 0 ? [...rest, reply] : [...rest.slice(0, at + 1), reply, ...rest.slice(at + 1)];
+          });
+        }
       } catch {
         patch(k, (x) => ({ ...x, rating: before }));
         setNotice('Could not save your feedback. Please try again.');

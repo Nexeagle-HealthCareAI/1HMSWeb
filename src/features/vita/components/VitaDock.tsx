@@ -255,6 +255,7 @@ const VitaDock: React.FC = () => {
             baseUrl: VITA_API_URL,
             getHmsToken: () => useAuthStore.getState().getToken(),
             getHospitalId: () => useAuthStore.getState().hospitalId,
+            getDisplayName: () => useAuthStore.getState().user?.name ?? null,
             locale,
           })
         : null,
@@ -406,6 +407,7 @@ const VitaDock: React.FC = () => {
           onStop={guide.close}
           onRate={guide.rate}
           onClose={guide.close}
+          onStartNext={(id) => void showGuide(id)}
           onPause={guide.pause}
           onResume={guide.resume}
         />
