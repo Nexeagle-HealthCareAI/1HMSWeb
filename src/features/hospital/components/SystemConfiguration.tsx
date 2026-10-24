@@ -9,12 +9,14 @@ import {
   LayoutDashboard,
   Globe,
   Users,
-  Building2
+  Building2,
+  Siren
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { PublicDirectoryConfig } from './PublicDirectoryConfig';
+import { EmergencyTakeoverConfig } from './EmergencyTakeoverConfig';
 import { UserManagement } from '@/features/user-management/components/UserManagement';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
@@ -49,6 +51,12 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         label: t('systemConfiguration.navigation.publicDirectory.label', { defaultValue: 'Online Listing' }),
         description: t('systemConfiguration.navigation.publicDirectory.description', { defaultValue: 'Manage online visibility and doctor profiles' }),
         icon: Globe,
+      },
+      {
+        id: 'emergency',
+        label: t('systemConfiguration.navigation.emergency.label', { defaultValue: 'Emergency takeover' }),
+        description: t('systemConfiguration.navigation.emergency.description', { defaultValue: 'Appear to nearby patients in an emergency and get alerts' }),
+        icon: Siren,
       },
       {
         id: 'users',
@@ -198,6 +206,10 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
 
             <TabsContent value="publicDirectory">
               <PublicDirectoryConfig />
+            </TabsContent>
+
+            <TabsContent value="emergency">
+              <EmergencyTakeoverConfig />
             </TabsContent>
 
             <TabsContent value="users">
