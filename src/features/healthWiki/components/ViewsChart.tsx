@@ -10,11 +10,11 @@ export default function ViewsChart({ values }: { values: number[] }) {
             key={i}
             title={`${v} ${v === 1 ? 'view' : 'views'}`}
             style={{ height: `${Math.max(4, (v / max) * 100)}%` }}
-            className={i === values.length - 1 ? 'flex-1 rounded-t bg-indigo-600' : 'flex-1 rounded-t bg-indigo-200'}
+            className={i === values.length - 1 ? 'flex-1 rounded-t bg-primary' : 'flex-1 rounded-t bg-primary/30'}
           />
         ))}
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-slate-500"><span>{values.length} days ago</span><span>Today: {last}</span></div>
+      <div className="mt-1 flex justify-between text-[11px] text-muted-foreground"><span>{values.length} days ago</span><span>Today: {last}</span></div>
     </div>
   );
 }
