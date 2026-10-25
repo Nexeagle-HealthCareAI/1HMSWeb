@@ -14,7 +14,7 @@ export default function ViewsChart({ values }: { values: number[] }) {
           />
         ))}
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-muted-foreground"><span>{values.length} days ago</span><span>Today: {last}</span></div>
+      <div className="mt-1 flex justify-between text-[11px] text-slate-500 dark:text-zinc-400"><span>{values.length} days ago</span><span>Today: {last}</span></div>
     </div>
   );
 }

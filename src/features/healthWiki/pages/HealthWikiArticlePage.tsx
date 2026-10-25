@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, Heart } from 'lucide-react';
+import { BookOpen, Eye, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { healthWikiErrorMessage } from '../api/healthWikiApi';
 import { useHealthWikiBase } from '../baseContext';
 import ArticlePreview from '../components/ArticlePreview';
+import { HealthWikiHeader, HealthWikiPage } from '../components/HealthWikiHeader';
 import ViewsChart from '../components/ViewsChart';
 import { useArticle, useReview } from '../hooks';
 import { MIN_CHANGE_COMMENT, type ArticleDetail } from '../types';
@@ -37,10 +38,10 @@ function DecisionPanel({ article }: { article: ArticleDetail }) {
   };
 
   return (
-    <aside aria-label="Your review" className="space-y-4 rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-4">
-      <h2 className="font-bold text-foreground">Your review</h2>
-      <div className="space-y-0.5 rounded-xl border border-border bg-muted p-3 text-xs text-muted-foreground">
-        <p className="font-semibold text-foreground">The badge will show</p>
+    <aside aria-label="Your review" className="space-y-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 lg:sticky lg:top-4">
+      <h2 className="font-bold text-slate-900 dark:text-zinc-50">Your review</h2>
+      <div className="space-y-0.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800 p-3 text-xs text-slate-500 dark:text-zinc-400">
+        <p className="font-semibold text-slate-900 dark:text-zinc-50">The badge will show</p>
         <p>{r.name}</p>
         {(r.qualification || r.speciality) && <p>{[r.qualification, r.speciality].filter(Boolean).join(' • ')}</p>}
         {r.registrationNumber ? <p>Reg. {r.registrationNumber}{r.registrationCouncil ? ` · ${r.registrationCouncil}` : ''}</p> : <p className="text-amber-700 dark:text-amber-300">No registration number on your profile yet.</p>}
@@ -57,14 +58,14 @@ function DecisionPanel({ article }: { article: ArticleDetail }) {
         </div>
       ) : (
         <>
-          <label className="flex cursor-pointer items-start gap-3 text-sm text-foreground">
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-900 dark:text-zinc-50">
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-emerald-600" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
             <span>I have checked this article for medical accuracy.</span>
           </label>
           <Button className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={!checked || review.isPending} onClick={() => setConfirming(true)}>Approve and publish</Button>
 
-          <div className="space-y-1.5 border-t border-border pt-4">
-            <label htmlFor="hw-changes" className="block text-sm font-semibold text-foreground">Need changes?</label>
+          <div className="space-y-1.5 border-t border-slate-200 dark:border-zinc-800 pt-4">
+            <label htmlFor="hw-changes" className="block text-sm font-semibold text-slate-900 dark:text-zinc-50">Need changes?</label>
             <Textarea id="hw-changes" rows={4} placeholder="Tell the writer what to fix. For example: add when to see a doctor." value={comment} onChange={(e) => setComment(e.target.value)} />
             {commentError && <p role="alert" className="text-xs font-medium text-red-600 dark:text-red-400">{commentError}</p>}
           </div>
@@ -77,18 +78,18 @@ function DecisionPanel({ article }: { article: ArticleDetail }) {
 
 function PerformancePanel({ article }: { article: ArticleDetail }) {
   return (
-    <aside aria-label="Performance" className="space-y-4 rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-4">
-      <h2 className="font-bold text-foreground">Performance</h2>
+    <aside aria-label="Performance" className="space-y-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 lg:sticky lg:top-4">
+      <h2 className="font-bold text-slate-900 dark:text-zinc-50">Performance</h2>
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-muted p-3"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Eye className="h-3.5 w-3.5" aria-hidden="true" /> Views so far</p><p className="text-2xl font-bold tabular-nums text-foreground">{num(article.views)}</p></div>
-        <div className="rounded-xl bg-muted p-3"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Heart className="h-3.5 w-3.5" aria-hidden="true" /> Likes</p><p className="text-2xl font-bold tabular-nums text-foreground">{num(article.likes)}</p></div>
+        <div className="rounded-xl bg-slate-50 dark:bg-zinc-800 p-3"><p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"><Eye className="h-3.5 w-3.5" aria-hidden="true" /> Views so far</p><p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-zinc-50">{num(article.views)}</p></div>
+        <div className="rounded-xl bg-slate-50 dark:bg-zinc-800 p-3"><p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"><Heart className="h-3.5 w-3.5" aria-hidden="true" /> Likes</p><p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-zinc-50">{num(article.likes)}</p></div>
       </div>
       {article.dailyViews.length > 0 ? (
-        <div><p className="mb-1 text-sm font-semibold text-foreground">Views, last {article.dailyViews.length} days</p><ViewsChart values={article.dailyViews} /></div>
+        <div><p className="mb-1 text-sm font-semibold text-slate-900 dark:text-zinc-50">Views, last {article.dailyViews.length} days</p><ViewsChart values={article.dailyViews} /></div>
       ) : (
-        <p className="text-sm text-muted-foreground">Daily views appear once people start reading.</p>
+        <p className="text-sm text-slate-500 dark:text-zinc-400">Daily views appear once people start reading.</p>
       )}
-      <p className="rounded-xl bg-muted p-3 text-xs text-muted-foreground">Shown as <b>Medically reviewed by {article.reviewer.name}</b>{article.publishedAt ? ` since ${new Date(article.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}.</p>
+      <p className="rounded-xl bg-slate-50 dark:bg-zinc-800 p-3 text-xs text-slate-500 dark:text-zinc-400">Shown as <b>Medically reviewed by {article.reviewer.name}</b>{article.publishedAt ? ` since ${new Date(article.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}.</p>
     </aside>
   );
 }
@@ -99,30 +100,31 @@ export default function HealthWikiArticlePage() {
   const base = useHealthWikiBase();
   const { data, isLoading, error, refetch } = useArticle(slug);
 
-  if (isLoading) return <div className="p-6 text-center text-muted-foreground" role="status">Loading…</div>;
+  if (isLoading) return <div className="p-6 text-center text-slate-500 dark:text-zinc-400" role="status">Loading…</div>;
   if (error || !data) {
     return (
       <div className="mx-auto max-w-lg p-6 text-center" role="alert">
-        <p className="font-semibold text-foreground">Could not load this article</p>
-        <p className="mb-4 text-sm text-muted-foreground">{healthWikiErrorMessage(error, 'It may have been moved or you may not have access.')}</p>
+        <p className="font-semibold text-slate-900 dark:text-zinc-50">Could not load this article</p>
+        <p className="mb-4 text-sm text-slate-500 dark:text-zinc-400">{healthWikiErrorMessage(error, 'It may have been moved or you may not have access.')}</p>
         <div className="flex justify-center gap-2"><Button variant="outline" onClick={() => void refetch()}>Try again</Button><Button variant="outline" onClick={() => navigate(base)}>Back to Health Wiki</Button></div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4 sm:p-6">
-      <button type="button" onClick={() => navigate(base)} className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-primary"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Health Wiki</button>
-      <h1 className="text-2xl font-bold leading-tight text-foreground">{data.title}</h1>
-      <p className="-mt-2 text-sm text-muted-foreground">
-        {data.status === 'IN_REVIEW' ? `Written by ${data.authorName}${data.waitingDays !== null ? ` · sent for your review ${data.waitingDays} ${data.waitingDays === 1 ? 'day' : 'days'} ago` : ''}` : `Published · reviewed by you`}
-      </p>
+    <HealthWikiPage>
+      <HealthWikiHeader
+        icon={BookOpen}
+        title={data.title}
+        back={{ label: 'Health Wiki', onClick: () => navigate(base) }}
+        subtitle={data.status === 'IN_REVIEW' ? `Written by ${data.authorName}${data.waitingDays !== null ? ` · sent for your review ${data.waitingDays} ${data.waitingDays === 1 ? 'day' : 'days'} ago` : ''}` : 'Published · reviewed by you'}
+      />
       {data.status === 'IN_REVIEW' && !data.canDecide && <p role="status" className="rounded-xl bg-sky-50 dark:bg-sky-950/40 px-4 py-3 text-sm text-sky-900 dark:text-sky-100">This article is not assigned to you, so you can read it but not decide.</p>}
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <ArticlePreview article={data} />
         {data.status === 'IN_REVIEW' ? (data.canDecide ? <DecisionPanel article={data} /> : null) : <PerformancePanel article={data} />}
       </div>
-    </div>
+    </HealthWikiPage>
   );
 }

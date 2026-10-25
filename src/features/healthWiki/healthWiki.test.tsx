@@ -164,7 +164,7 @@ describe('Topics and writing', () => {
     expect(screen.getByText(/Which age group does this cover/)).toBeInTheDocument();
   });
 
-  it('suggests a topic and asks for a writer', async () => {
+  it('suggests a topic, which the team writes and the doctor reviews', async () => {
     renderTopics();
     await userEvent.click(await screen.findByRole('button', { name: 'Suggest a topic' }));
     const form = screen.getByRole('form', { name: 'Suggest a topic' });
@@ -173,7 +173,8 @@ describe('Topics and writing', () => {
     await userEvent.type(within(form).getByLabelText('Topic'), 'Sodium and the heart');
     await userEvent.type(within(form).getByLabelText('What would you write about?'), 'How much salt is too much.');
     await userEvent.type(within(form).getByLabelText('Why does it matter?'), 'Patients ask.');
-    await userEvent.click(within(form).getByRole('checkbox', { name: /someone else to write it/i }));
+    expect(within(form).getByText(/The NexEagle team writes this one/)).toBeInTheDocument();
+    expect(within(form).queryByRole('checkbox')).toBeNull();
     await userEvent.click(within(form).getByRole('button', { name: 'Send to the team' }));
     expect(await screen.findByText('Sodium and the heart')).toBeInTheDocument();
     expect(screen.getAllByText('Writer requested')).toHaveLength(2);
