@@ -10,13 +10,15 @@ import {
   Globe,
   Users,
   Building2,
-  Siren
+  Siren,
+  Footprints
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { PublicDirectoryConfig } from './PublicDirectoryConfig';
 import { EmergencyTakeoverConfig } from './EmergencyTakeoverConfig';
+import { VisitGuideConfig } from './VisitGuideConfig';
 import { UserManagement } from '@/features/user-management/components/UserManagement';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
@@ -51,6 +53,12 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         label: t('systemConfiguration.navigation.publicDirectory.label', { defaultValue: 'Online Listing' }),
         description: t('systemConfiguration.navigation.publicDirectory.description', { defaultValue: 'Manage online visibility and doctor profiles' }),
         icon: Globe,
+      },
+      {
+        id: 'visitGuide',
+        label: t('systemConfiguration.navigation.visitGuide.label', { defaultValue: 'Patient visit guide' }),
+        description: t('systemConfiguration.navigation.visitGuide.description', { defaultValue: 'What Doctor Dekho patients read on the day of their visit' }),
+        icon: Footprints,
       },
       {
         id: 'emergency',
@@ -206,6 +214,10 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
 
             <TabsContent value="publicDirectory">
               <PublicDirectoryConfig />
+            </TabsContent>
+
+            <TabsContent value="visitGuide">
+              <VisitGuideConfig />
             </TabsContent>
 
             <TabsContent value="emergency">
