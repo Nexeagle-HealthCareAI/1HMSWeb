@@ -53,6 +53,27 @@ describe('Inbox', () => {
     expect(screen.getByLabelText('842 views and 61 likes')).toBeInTheDocument();
   });
 
+  it('opens a published article on Doctor Dekho, in the same tab, with a way back to EasyHMS', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, assign } });
+    try {
+      renderAt('/health-wiki');
+      await userEvent.click(await screen.findByRole('tab', { name: /Published/ }));
+      await userEvent.click(await screen.findByText('Understanding Type 2 Diabetes'));
+      expect(assign).toHaveBeenCalledOnce();
+      expect(assign.mock.calls[0][0]).toMatch(/\/health\/conditions\/diabetes-type-2\?from=1hms$/);
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
+  it('offers a link to the live page from a published article', async () => {
+    renderAt('/health-wiki/diabetes-type-2');
+    const link = await screen.findByRole('link', { name: 'View on Doctor Dekho' });
+    expect(link).toHaveAttribute('href', expect.stringMatching(/\/health\/conditions\/diabetes-type-2\?from=1hms$/));
+  });
+
   it('opens an article from the list', async () => {
     renderAt('/health-wiki');
     await userEvent.click(await screen.findByText('Thyroid Basics: Hypo and Hyperthyroidism'));

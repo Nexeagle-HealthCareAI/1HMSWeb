@@ -8,6 +8,7 @@ import { useInbox, useWriteHandoff } from '../hooks';
 import { ARTICLE_TYPE_LABEL, type InboxArticle, type InboxTab } from '../types';
 import { healthWikiErrorMessage } from '../api/healthWikiApi';
 import { useHealthWikiBase } from '../baseContext';
+import { liveArticleUrl } from '../liveUrl';
 import { HealthWikiHeader, HealthWikiPage, HealthWikiTabs, headerGhostBtn, headerPrimaryBtn } from '../components/HealthWikiHeader';
 
 const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -114,7 +115,7 @@ export default function HealthWikiInboxPage() {
         </div>
       ) : (
         <ul className="space-y-3" role="tabpanel">
-          {list.map((a) => <Row key={a.slug} a={a} tab={tab} onOpen={() => navigate(`${base}/${a.slug}`)} />)}
+          {list.map((a) => <Row key={a.slug} a={a} tab={tab} onOpen={() => (tab === 'published' ? window.location.assign(liveArticleUrl(a.slug)) : navigate(`${base}/${a.slug}`))} />)}
         </ul>
       )}
     </HealthWikiPage>

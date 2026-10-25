@@ -7,7 +7,8 @@ import { toast } from '@/hooks/use-toast';
 import { healthWikiErrorMessage } from '../api/healthWikiApi';
 import { useHealthWikiBase } from '../baseContext';
 import ArticlePreview from '../components/ArticlePreview';
-import { HealthWikiHeader, HealthWikiPage } from '../components/HealthWikiHeader';
+import { HealthWikiHeader, HealthWikiPage, headerPrimaryBtn } from '../components/HealthWikiHeader';
+import { liveArticleUrl } from '../liveUrl';
 import ViewsChart from '../components/ViewsChart';
 import { useArticle, useReview } from '../hooks';
 import { MIN_CHANGE_COMMENT, type ArticleDetail } from '../types';
@@ -117,6 +118,7 @@ export default function HealthWikiArticlePage() {
         icon={BookOpen}
         title={data.title}
         back={{ label: 'Health Wiki', onClick: () => navigate(base) }}
+        actions={data.status === 'PUBLISHED' ? <a href={liveArticleUrl(data.slug)} className={headerPrimaryBtn}>View on Doctor Dekho</a> : undefined}
         subtitle={data.status === 'IN_REVIEW' ? `Written by ${data.authorName}${data.waitingDays !== null ? ` · sent for your review ${data.waitingDays} ${data.waitingDays === 1 ? 'day' : 'days'} ago` : ''}` : 'Published · reviewed by you'}
       />
       {data.status === 'IN_REVIEW' && !data.canDecide && <p role="status" className="rounded-xl bg-sky-50 dark:bg-sky-950/40 px-4 py-3 text-sm text-sky-900 dark:text-sky-100">This article is not assigned to you, so you can read it but not decide.</p>}
