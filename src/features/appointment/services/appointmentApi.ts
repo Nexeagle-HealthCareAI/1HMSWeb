@@ -337,6 +337,14 @@ export interface AppointmentDetail {
   consultPaid?: boolean;
   consultAmount?: number;
   consultReceiptNo?: string | null;
+  // Vita "takes you there" (only when the patient agreed to share; never a location). EtaAt is UTC, PlannedLeaveAt hospital time.
+  journeyStatus?: 'planned' | 'on_the_way' | 'late' | 'arrived' | 'cancelled' | null;
+  journeyTravelMode?: 'drive' | 'auto_cab' | 'transit' | 'walk' | null;
+  journeyPlannedLeaveAt?: string | null;
+  journeyEtaAt?: string | null;
+  journeyLateByMinutes?: number | null;
+  journeyDistanceKm?: number | null;
+  journeyUpdatedAt?: string | null;
 }
 
 export interface ConsultTimelineVisit {
