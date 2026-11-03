@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -18,6 +18,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // e2e/ holds the Playwright suite (npm run test:e2e, against a running app); vitest must not collect it.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     css: false,
     // Default 'forks' pool spawns child processes, which timed out entirely in this
     // sandboxed environment ([vitest-pool-runner]: Timeout waiting for worker to respond).

@@ -1,0 +1,16 @@
+# Copy to 1HMSWeb/vita.yaml
+# repo-native runs `npm ci` when node_modules is missing, vitest, and the Playwright e2e suite (e2e/) against the run's
+# target URL as E2E_BASE_URL; its login comes from Vita's secrets VITA_E2E_LOGIN_EMAIL / VITA_E2E_LOGIN_PASSWORD
+# (a Dev test account; never a real user). Without them the e2e setup fails and the case is reported, not hidden.
+app: 1hms
+repo: 1HMSWeb
+kind: vite-spa
+skills: [repo-native, ui-journey, visual-a11y-i18n, prod-sanity]
+targets:
+  dev:  { url: https://1hms-dev.nexeagle.com, health: / , container: easyhms-web-dev }
+  prod: { url: https://1hms.nexeagle.com, health: /, mode: read-only, container: easyhms-web-prod }
+contracts:
+  auth: { kind: jwt, login: /auth/user/login, roles: [Admin, Doctor, AdminDoctor, Receptionist, Nurse, Accountant] }
+consumers: []
+budgets: { pr_minutes: 10, pr_tokens_inr: 50, nightly_minutes: 60 }
+secrets: [VITA_E2E_LOGIN_EMAIL, VITA_E2E_LOGIN_PASSWORD]
