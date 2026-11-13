@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { VITA_API_URL } from '@/features/vita/config';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store';
 import { useAppStore } from '@/store/appStore';
@@ -6,6 +7,7 @@ import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
+import { usePendingCount } from '@/features/healthWiki/hooks';
 import { useLogout } from '@/hooks/useLogout';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
 import { SubscriptionExpiryBanner } from '@/features/subscription/components/SubscriptionExpiryBanner';
@@ -77,6 +79,7 @@ import {
   AlertTriangle,
   FileBadge2,
   Megaphone,
+  BookOpen,
   CheckSquare,
   XSquare,
   HeartPulse,
@@ -179,6 +182,9 @@ const GamifiedClock = ({ currentTime }: { currentTime: Date }) => {
 };
 // ----------------------------------------
 
+// Vita assistant dock (Ctrl+K). Loaded only when VITE_VITA_API_URL is set.
+const VitaDock = lazy(() => import('@/features/vita/components/VitaDock'));
+
 interface MainLayoutProps {
   children: React.ReactNode;
 }
@@ -189,6 +195,8 @@ interface NavigationItem {
   icon: React.ComponentType<any>;
   path: string;
   subItems?: NavigationItem[];
+  /** Small count shown on the icon, for example articles waiting for review. */
+  badge?: number;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
@@ -248,25 +256,30 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     return userDetailsResponse?.mobileNumber || 'User';
   };
 
+  // Articles waiting for this doctor's review. Only asked for when the doctor holds the permission.
+  const canUseHealthWiki = RoleService.hasPermission('health_wiki');
+  const { data: healthWikiPending } = usePendingCount(canUseHealthWiki);
+
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
     { id: 'configuration', name: t('header.configuration') || 'Hospital Info', icon: Building2, path: '/configuration' },
-    { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
+    { id: 'subscription', name: t('mainNav.subscription'), icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
     { id: 'appointment-dashboard', name: t('header.appointments') || 'Appointments', icon: Calendar, path: '/appointment-dashboard' },
     { id: 'patients', name: t('header.patients') || 'Patients', icon: Users, path: '/patients' },
-    { id: 'ipd-workspace', name: 'IPD', icon: Hotel, path: '/ipd-workspace' },
+    { id: 'ipd-workspace', name: t('mainNav.ipd'), icon: Hotel, path: '/ipd-workspace' },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'abdm', name: 'ABHA / ABDM', icon: FileBadge2, path: '/abdm' },
-    { id: 'pathology', name: 'Pathology Lab', icon: FlaskConical, path: '/pathology' },
-    { id: 'pharmacy-retail', name: 'Pharmacy Retail', icon: Pill, path: '/pharmacy-retail' },
-    { id: 'inventory', name: 'Inventory', icon: Boxes, path: '/inventory' },
-    { id: 'ot-board', name: 'OT Board', icon: ActivityIcon, path: '/ot-board' },
-    { id: 'icu-board', name: 'ICU Board', icon: HeartPulse, path: '/icu-board' },
-    { id: 'nursing-station', name: 'Nursing Station', icon: ClipboardList, path: '/nursing-station' },
-    { id: 'leads', name: 'HCRM', icon: Megaphone, path: '/leads' },
-    { id: 'hr', name: '1HR Suite', icon: Users2, path: '/hr' },
+    { id: 'abdm', name: t('mainNav.abdm'), icon: FileBadge2, path: '/abdm' },
+    { id: 'pathology', name: t('mainNav.pathology'), icon: FlaskConical, path: '/pathology' },
+    { id: 'pharmacy-retail', name: t('mainNav.pharmacy'), icon: Pill, path: '/pharmacy-retail' },
+    { id: 'inventory', name: t('mainNav.inventory'), icon: Boxes, path: '/inventory' },
+    { id: 'ot-board', name: t('mainNav.otBoard'), icon: ActivityIcon, path: '/ot-board' },
+    { id: 'icu-board', name: t('mainNav.icuBoard'), icon: HeartPulse, path: '/icu-board' },
+    { id: 'nursing-station', name: t('mainNav.nursingStation'), icon: ClipboardList, path: '/nursing-station' },
+    { id: 'leads', name: t('mainNav.hcrm'), icon: Megaphone, path: '/leads' },
+    { id: 'health-wiki', name: 'Health Wiki', icon: BookOpen, path: '/health-wiki', badge: healthWikiPending },
+    { id: 'hr', name: t('mainNav.hr'), icon: Users2, path: '/hr' },
   ];
 
   // Filter navigation items by real backend-granted PermissionKeys (boardAccess.ts is the
@@ -356,7 +369,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       isDisabled && 'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-white/65',
                     )}
                   >
-                    <item.icon className={cn('h-[18px] w-[18px] shrink-0 transition-transform duration-200', !isDisabled && 'group-hover:scale-110')} />
+                    <span className="relative">
+                      <item.icon className={cn('h-[18px] w-[18px] shrink-0 transition-transform duration-200', !isDisabled && 'group-hover:scale-110')} />
+                      {!!item.badge && (
+                        <span aria-label={`${item.badge} waiting`} className="absolute -right-2.5 -top-2 min-w-[16px] rounded-full bg-amber-400 px-1 text-center text-[10px] font-bold leading-4 text-slate-900">{item.badge}</span>
+                      )}
+                    </span>
                     <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 w-full px-0.5">{item.name}</span>
                   </button>
 
@@ -727,6 +745,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         )}
       </div>
 
+      {VITA_API_URL && (
+        <Suspense fallback={null}>
+          <VitaDock />
+        </Suspense>
+      )}
     </div>
   );
 };

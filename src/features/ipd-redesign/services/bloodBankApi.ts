@@ -108,7 +108,9 @@ export interface RecordTransfusionInput {
     vitalsAfter?: string;
     reaction: TransfusionReaction;
     reactionNotes?: string;
-    witnessName: string;
+    // The witness is a real second staff member; the server takes the name from their profile.
+    witnessUserId: string;
+    witnessName?: string;
     notes?: string;
     chargeId?: string;
     rate?: number;

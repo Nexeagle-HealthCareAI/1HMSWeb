@@ -25,6 +25,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EmploymentTypeBadge, TrackBadge, SeverityBadge } from './ShiftBadge';
+import { ConsultantFeeConfigForm } from './ConsultantFeeConfigForm';
+import { useConsultantFeeConfig } from '../hrApi';
 import type { HrEmployee } from '../types';
 import { format, differenceInDays, parseISO } from 'date-fns';
 
@@ -68,6 +70,8 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: React.Rea
 
 export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({ employee, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [isFeeConfigOpen, setIsFeeConfigOpen] = useState(false);
+  const { data: liveFeeConfig } = useConsultantFeeConfig(employee?.id ?? '');
 
   if (!employee) return null;
   const avatarGradient = getAvatarColor(employee.id);
@@ -316,41 +320,40 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({ employee, isOpen
                             </div>
                           </div>
                         </div>
-                      ) : employee.payrollTrack === 'TRACK_B_CONSULTANT' && employee.consultantFeeConfig ? (
+                      ) : employee.payrollTrack === 'TRACK_B_CONSULTANT' && liveFeeConfig ? (
                         <div className="rounded-2xl border border-purple-200 dark:border-purple-800/50 bg-purple-50/50 dark:bg-purple-950/20 p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50">
-                              <IndianRupee className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                                <IndianRupee className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                              </div>
+                              <span className="text-sm font-bold text-purple-700 dark:text-purple-300">Track B — Consultant (Section 194J)</span>
                             </div>
-                            <span className="text-sm font-bold text-purple-700 dark:text-purple-300">Track B — Consultant (Section 194J)</span>
+                            <button
+                              onClick={() => setIsFeeConfigOpen(true)}
+                              className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline"
+                            >
+                              Edit
+                            </button>
                           </div>
 
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-500 dark:text-gray-400">Monthly Retainer</span>
-                              <span className="font-bold text-gray-900 dark:text-white">{formatINR(employee.consultantFeeConfig.monthlyRetainer)}</span>
+                              <span className="font-bold text-gray-900 dark:text-white">{formatINR(liveFeeConfig.monthlyRetainer)}</span>
                             </div>
                             <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
                               <span>OPD Revenue Share</span>
-                              <span className="font-medium">{employee.consultantFeeConfig.opdSharePercent}%</span>
+                              <span className="font-medium">{liveFeeConfig.opdSharePercent}%</span>
                             </div>
                             <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
                               <span>IPD Round Visit Fee</span>
-                              <span className="font-mono font-medium">{formatINR(employee.consultantFeeConfig.ipdVisitFee)}/visit</span>
+                              <span className="font-mono font-medium">{formatINR(liveFeeConfig.ipdVisitFee)}/visit</span>
                             </div>
-
-                            {employee.consultantFeeConfig.surgeryShareConfig.length > 0 && (
-                              <>
-                                <Separator className="my-1" />
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Surgery Package Cuts</div>
-                                {employee.consultantFeeConfig.surgeryShareConfig.map(s => (
-                                  <div key={s.packageName} className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                                    <span>{s.packageName}</span>
-                                    <span className="font-mono font-medium">{formatINR(s.consultantShare)}/case</span>
-                                  </div>
-                                ))}
-                              </>
-                            )}
+                            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                              <span>Admin Surcharge</span>
+                              <span className="font-mono font-medium">{formatINR(liveFeeConfig.adminSurcharge)}/month</span>
+                            </div>
                             <Separator className="my-1" />
                             <div className="flex justify-between text-xs text-rose-600 dark:text-rose-400">
                               <span>TDS (Section 194J)</span>
@@ -358,8 +361,21 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({ employee, isOpen
                             </div>
                           </div>
                         </div>
+                      ) : employee.payrollTrack === 'TRACK_B_CONSULTANT' ? (
+                        <div className="text-center py-10 space-y-3">
+                          <p className="text-gray-400 text-sm">No fee config set — payroll run will fail for this consultant until it's configured.</p>
+                          <Button size="sm" onClick={() => setIsFeeConfigOpen(true)}>Configure Fee Structure</Button>
+                        </div>
                       ) : (
                         <div className="text-center py-10 text-gray-400 text-sm">No payroll structure configured</div>
+                      )}
+
+                      {employee.payrollTrack === 'TRACK_B_CONSULTANT' && (
+                        <ConsultantFeeConfigForm
+                          hrEmployeeId={employee.id}
+                          isOpen={isFeeConfigOpen}
+                          onClose={() => setIsFeeConfigOpen(false)}
+                        />
                       )}
                     </div>
                   )}

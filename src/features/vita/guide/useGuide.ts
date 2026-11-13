@@ -1,0 +1,188 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import i18n from 'i18next';
+import type { VitaClient } from '../api/vitaClient';
+import { findTarget } from './finder';
+import { GuideRunner, type RunnerState } from './runner';
+import type { GuidePayload, GuideRunEvent } from './types';
+
+/** Label of a 1HMS i18n key in the screen's current language (1HMS's own i18next instance). */
+export function translateKey(key: string): string | null {
+  try {
+    if (!i18n.isInitialized || !i18n.exists(key)) return null;
+    const v = i18n.t(key);
+    return typeof v === 'string' && v !== key ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+const FLUSH_MS = 1500;
+/** Look for the target again at most this often while the page keeps changing. */
+const REFRESH_MS = 120;
+/** While the target is not found, look again this often even if nothing seems to change. */
+const POLL_MS = 300;
+
+/**
+ * Do mode: press a 1HMS button the way a person does. Radix menus and tabs react to the press
+ * (pointerdown / mousedown), plain buttons and dialog triggers to the click.
+ */
+export function clickLikeUser(el: HTMLElement): void {
+  el.scrollIntoView({ block: 'center', inline: 'nearest' });
+  const r = el.getBoundingClientRect();
+  const at = { bubbles: true, cancelable: true, composed: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 0 };
+  const P = typeof PointerEvent === 'function' ? PointerEvent : MouseEvent;
+  el.dispatchEvent(new P('pointerdown', { ...at, pointerType: 'mouse', isPrimary: true } as PointerEventInit));
+  el.dispatchEvent(new MouseEvent('mousedown', at));
+  el.focus({ preventScroll: true });
+  el.dispatchEvent(new P('pointerup', { ...at, pointerType: 'mouse', isPrimary: true } as PointerEventInit));
+  el.dispatchEvent(new MouseEvent('mouseup', at));
+  el.click();
+}
+
+/** A node that belongs to Vita (dock, guide card, ring): its changes are not 1HMS changes. */
+function isVita(n: Node): boolean {
+  const el = n instanceof Element ? n : n.parentElement;
+  return !!el?.closest('[data-vita-ui]');
+}
+
+/**
+ * Runs one guide at a time on the page and reports progress to Vita (batched).
+ * `pathname` is the router's current path: route steps finish when it matches.
+ */
+export function useGuide(
+  client: VitaClient | null,
+  pathname: string,
+  opts: { navigate?: (route: string) => void } = {},
+) {
+  const navRef = useRef(opts.navigate);
+  navRef.current = opts.navigate;
+  const [state, setState] = useState<RunnerState | null>(null);
+  const runner = useRef<GuideRunner | null>(null);
+  const runId = useRef<string | null>(null);
+  const queue = useRef<GuideRunEvent[]>([]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const observer = useRef<MutationObserver | null>(null);
+  const stopWatching = useRef<(() => void) | null>(null);
+
+  const flush = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const id = runId.current;
+    const events = queue.current.splice(0, 50);
+    if (!client || !id || !events.length) return;
+    void client.guideEvents(id, events).catch(() => {
+      /* progress is best effort: the guide keeps working offline */
+    });
+    if (queue.current.length) timer.current = setTimeout(flush, FLUSH_MS);
+  }, [client]);
+
+  const report = useCallback(
+    (e: GuideRunEvent) => {
+      queue.current.push(e);
+      if (e.type === 'completed' || e.type === 'abandoned' || e.type === 'rated') flush();
+      else if (!timer.current) timer.current = setTimeout(flush, FLUSH_MS);
+    },
+    [flush],
+  );
+
+  const detach = useCallback(() => {
+    observer.current?.disconnect();
+    observer.current = null;
+    stopWatching.current?.();
+    stopWatching.current = null;
+    runner.current?.destroy();
+  }, []);
+
+  const start = useCallback(
+    (guide: GuidePayload) => {
+      if (runner.current && runner.current.state.status === 'running') runner.current.stop();
+      detach();
+      flush();
+      runId.current = guide.runId ?? null;
+      const r = new GuideRunner(guide, {
+        find: (t) => findTarget(t, { translate: translateKey }),
+        getPath: () => window.location.pathname,
+        report,
+        onChange: (s) => setState(s),
+        // Do mode: Vita clicks the safe steps and opens screens (guide.drive decides).
+        act: { click: clickLikeUser, navigate: (route) => navRef.current?.(route) },
+      });
+      runner.current = r;
+      r.start();
+      // 1HMS re-renders all the time (dialogs open, lists load): look for the target again.
+      // First change: look on the next frame (no waiting). Then at most every REFRESH_MS while
+      // the page keeps changing. Vita's own ring, card and chat are ignored: they move with
+      // every frame and would make it look again and again for nothing.
+      let scheduled = false;
+      let last = 0;
+      const look = () => {
+        scheduled = false;
+        last = performance.now();
+        runner.current?.refresh();
+      };
+      const schedule = () => {
+        if (scheduled) return;
+        scheduled = true;
+        const wait = Math.max(0, REFRESH_MS - (performance.now() - last));
+        if (wait === 0) requestAnimationFrame(look);
+        else setTimeout(() => requestAnimationFrame(look), wait);
+      };
+      const mo = new MutationObserver((records) => {
+        if (records.every((r) => isVita(r.target))) return;
+        schedule();
+      });
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'aria-hidden', 'data-state', 'open'] });
+      // Some changes don't touch the page structure (a dialog finishing its open animation, a
+      // panel shown with CSS). While the target is not found, check again a few times a second.
+      const poll = setInterval(() => {
+        if (runner.current?.state.status === 'running' && !runner.current.state.found) schedule();
+      }, POLL_MS);
+      const onEnd = () => schedule();
+      document.addEventListener('animationend', onEnd, true);
+      document.addEventListener('transitionend', onEnd, true);
+      stopWatching.current = () => {
+        clearInterval(poll);
+        document.removeEventListener('animationend', onEnd, true);
+        document.removeEventListener('transitionend', onEnd, true);
+      };
+      observer.current = mo;
+    },
+    [detach, flush, report],
+  );
+
+  useEffect(() => {
+    runner.current?.locationChanged();
+  }, [pathname]);
+
+  useEffect(
+    () => () => {
+      if (runner.current?.state.status === 'running') runner.current.stop();
+      detach();
+      flush();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const rate = useCallback((rating: 'up' | 'down') => report({ type: 'rated', rating }), [report]);
+
+  const close = useCallback(() => {
+    if (runner.current?.state.status === 'running') runner.current.stop();
+    detach();
+    runner.current = null;
+    setState(null);
+  }, [detach]);
+
+  return {
+    state,
+    active: !!state,
+    start,
+    next: () => runner.current?.next(),
+    back: () => runner.current?.back(),
+    stop: () => runner.current?.stop(),
+    pause: () => runner.current?.pause(),
+    resume: () => runner.current?.resume(),
+    rate,
+    close,
+  };
+}

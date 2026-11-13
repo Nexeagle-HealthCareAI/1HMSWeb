@@ -98,6 +98,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=${{ vars.DEV_API_BASE_URL || 'https://1hms-dev-api.nexeagle.com' }}
+            VITE_VITA_API_URL=${{ vars.DEV_VITA_API_URL || 'https://vita-dev.nexeagle.com' }}
             VITE_DEMO_LOGIN_EMAIL=${{ secrets.VITE_DEMO_LOGIN_EMAIL }}
             VITE_DEMO_LOGIN_PASSWORD=${{ secrets.VITE_DEMO_LOGIN_PASSWORD }}
             VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
@@ -173,6 +174,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=${{ vars.PROD_API_BASE_URL || 'https://1hms-api.nexeagle.com' }}
+            VITE_VITA_API_URL=${{ vars.PROD_VITA_API_URL || 'https://vita.nexeagle.com' }}
             VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}

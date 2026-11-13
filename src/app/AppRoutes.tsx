@@ -5,34 +5,16 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RouteGuard } from '@/components/guards/RouteGuard';
 import { getRequiredPermissions } from '@/config/boardAccess';
+import { getLandingPath } from '@/config/landing';
+import NoAccessPage from '@/components/shared/NoAccessPage';
 
-// Helper to break infinite redirect loops for invalid roles
-const InvalidRoleLogout = () => {
-  React.useEffect(() => {
-    useAuthStore.getState().logout();
-  }, []);
-  return <Navigate to="/login" replace />;
-};
-
-// Role-based redirect component
+// Role-based landing: resolved from the user's granted permissions (config/landing.ts), so every
+// seeded role (incl. Pharmacist / Lab Technician / Coordinator) lands on a page it can open. A user
+// with no permitted board sees a "no access" screen instead of being silently logged out.
 const RoleBasedRedirect = () => {
-  const userRole = useAuthStore.getState().getUserRole();
-
-  if (userRole === 'Admin') {
-    return <Navigate to="/admin" replace />;
-  } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    const isMobile = window.innerWidth < 1024;
-    return <Navigate to={isMobile ? "/appointment-dashboard" : "/dashboard"} replace />;
-  } else if (userRole === 'Receptionist') {
-    return <Navigate to="/appointment-dashboard" replace />;
-  } else if (userRole === 'Nurse') {
-    return <Navigate to="/nursing-station" replace />;
-  } else if (userRole === 'Accountant') {
-    return <Navigate to="/billing" replace />;
-  } else {
-    // Default fallback - log out and redirect to login if role is not recognized
-    return <InvalidRoleLogout />;
-  }
+  const store = useAuthStore.getState();
+  const target = getLandingPath(store.getUserRoles(), store.getPermissions(), window.innerWidth < 1024);
+  return target ? <Navigate to={target} replace /> : <NoAccessPage />;
 };
 
 // Lazy load pages for better performance
@@ -66,10 +48,13 @@ const DocBoardPreview = lazy(() => import('@/features/doctor/pages/DocBoardPrevi
 const PatientProfilePagePreview = lazy(() => import('@/features/patient/pages/PatientProfilePagePreview').then(module => ({ default: module.default })));
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
-const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
 
+const HealthWikiInboxPage = lazy(() => import('@/features/healthWiki/pages/HealthWikiInboxPage'));
+const HealthWikiTopicsPage = lazy(() => import('@/features/healthWiki/pages/HealthWikiTopicsPage'));
+const HealthWikiArticlePage = lazy(() => import('@/features/healthWiki/pages/HealthWikiArticlePage'));
+// DEV-ONLY: unauthenticated Health Wiki preview with example data (see route below).
+const HealthWikiPreview = lazy(() => import('@/features/healthWiki/pages/HealthWikiPreview'));
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
-const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
@@ -261,6 +246,18 @@ export const AppRoutes: React.FC = () => {
             element={
               <MainLayout>
                 <DocBoardPreview />
+              </MainLayout>
+            }
+          />
+        )}
+
+        {/* DEV-ONLY: unauthenticated Health Wiki preview with example data, for UI iteration. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/health-wiki-preview/*"
+            element={
+              <MainLayout>
+                <HealthWikiPreview />
               </MainLayout>
             }
           />
@@ -527,6 +524,38 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
+            {/* Health Wiki - articles waiting for this doctor's medical review, and the ones they approved */}
+            <Route
+              path="/health-wiki"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki')}>
+                  <MainLayout>
+                    <HealthWikiInboxPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/health-wiki/topics"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki/topics')}>
+                  <MainLayout>
+                    <HealthWikiTopicsPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/health-wiki/:slug"
+              element={
+                <RouteGuard requiredPermissions={getRequiredPermissions('/health-wiki/x')}>
+                  <MainLayout>
+                    <HealthWikiArticlePage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
             {/* Redirect /docboard to /dashboard for consistency */}
             <Route
               path="/docboard"
@@ -554,30 +583,6 @@ export const AppRoutes: React.FC = () => {
                 </RouteGuard>
               }
             />
-            <Route
-              path="/appointment-oversight"
-              element={
-                <RouteGuard requiredPermissions={getRequiredPermissions('/appointment-oversight')}>
-                  <MainLayout>
-                    <AppointmentOversight />
-                  </MainLayout>
-                </RouteGuard>
-              }
-            />
-
-            {/* AI Routes - Restricted to Doctor and AdminDoctor roles */}
-            <Route
-              path="/doc-ai"
-              element={
-                <RouteGuard requiredPermissions={getRequiredPermissions('/doc-ai')}>
-                  <MainLayout>
-                    <DocAI />
-                  </MainLayout>
-                </RouteGuard>
-              }
-            />
-
-
 
             {/* Profile Routes */}
             <Route

@@ -1,3 +1,4 @@
+import { useDischargeCustomFields } from '../hooks/useDischargeCustomFields';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer } from 'lucide-react';
@@ -36,11 +37,8 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
     // member printing from the dashboard must see the same letterhead the assigned doctor would.
     const { fields: layoutFields, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
 
-    const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-    useEffect(() => {
-        const raw = localStorage.getItem(`discharge-custom-fields:${admission.admissionId}`);
-        setCustomFieldValues(raw ? JSON.parse(raw) : {});
-    }, [admission.admissionId]);
+    // Read-only here: the print button never writes custom fields, it only prints what was saved.
+    const { values: customFieldValues } = useDischargeCustomFields(admission.admissionId, true);
 
     const handlePrint = async (e: React.MouseEvent) => {
         e.stopPropagation();

@@ -28,6 +28,10 @@ ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
 # Dev build sets it (see deploy-web.yml) so dev posters point at dev's Doctor Dekho.
 ARG VITE_DOCTORDEKHO_URL
 ENV VITE_DOCTORDEKHO_URL=$VITE_DOCTORDEKHO_URL
+# Vita AI assistant API (the Ctrl+K dock). Dev and prod builds pass different values; unset hides
+# the dock completely (src/features/vita/config.ts).
+ARG VITE_VITA_API_URL
+ENV VITE_VITA_API_URL=$VITE_VITA_API_URL
 RUN npm run build:prod
 
 # ───────────────────────── Serve stage ─────────────────────────

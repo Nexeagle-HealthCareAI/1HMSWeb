@@ -269,6 +269,23 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
         }
     };
 
+    const addAddendum = async (phase: ChecklistPhaseKey) => {
+        if (!detail) return;
+        const text = window.prompt('Addendum (a correction or clarification, kept with your name and the time):')?.trim();
+        if (!text) return;
+        if (text.length < 5) {
+            toast({ title: 'Addendum too short', description: 'Enter at least 5 characters.', variant: 'destructive' });
+            return;
+        }
+        try {
+            await surgeryCaseApi.addChecklistAddendum(detail.surgeryCaseId, phase === 'signIn' ? 'SignIn' : phase === 'timeOut' ? 'TimeOut' : 'SignOut', text);
+            toast({ title: 'Addendum added.' });
+            loadDetail();
+        } catch (err) {
+            toast({ title: 'Could not add addendum', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        }
+    };
+
     const submitIntraOp = async () => {
         if (!detail) return;
         setIntraOpBusy(true);
@@ -407,7 +424,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
         return (
             <div>
                 <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-                    <StepHeader icon={Icon} tone={stepTone} title={`WHO Checklist — ${meta.label}`} subtitle={completedAt ? undefined : 'Optional — complete whenever ready'} />
+                    <StepHeader icon={Icon} tone={stepTone} title={`WHO Checklist — ${meta.label}`} subtitle={completedAt ? undefined : 'Every item must be confirmed to complete this phase'} />
                     {completedAt && (
                         <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">
                             Completed {formatIstDateTime(completedAt)}
@@ -422,6 +439,20 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                                 {item.label}
                             </div>
                         ))}
+                        {(() => {
+                            const c = d.checklist;
+                            const by = phase === 'signIn' ? c?.signInCompletedBy : phase === 'timeOut' ? c?.timeOutCompletedBy : c?.signOutCompletedBy;
+                            const notes = phase === 'signIn' ? c?.signInNotes : phase === 'timeOut' ? c?.timeOutNotes : c?.signOutNotes;
+                            return (
+                                <>
+                                    {by && <p className="text-[11px] text-slate-400 pt-1">Completed by {by}. A completed phase cannot be changed.</p>}
+                                    {notes && <p className="text-[11px] text-slate-500 whitespace-pre-line border-l-2 border-slate-200 pl-2">{notes}</p>}
+                                </>
+                            );
+                        })()}
+                        <div className="pt-1">
+                            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => addAddendum(phase)}>Add addendum</Button>
+                        </div>
                     </div>
                 ) : isActive ? (
                     <div className="space-y-2">
@@ -432,7 +463,7 @@ export const SurgeryCasePanel: React.FC<Props> = ({ admissionId, isActive, otPla
                             </label>
                         ))}
                         <div className="flex justify-end pt-1">
-                            <Button size="sm" className="h-10 sm:h-9 text-xs w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={checklistBusy === phase} onClick={() => submitChecklistPhase(phase)}>
+                            <Button size="sm" className="h-10 sm:h-9 text-xs w-full sm:w-auto bg-brand-600 hover:bg-brand-700" disabled={checklistBusy === phase || !meta.items.every(i => items[i.key])} onClick={() => submitChecklistPhase(phase)}>
                                 {checklistBusy === phase ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />} Complete {meta.label.split(' ')[0]}
                             </Button>
                         </div>

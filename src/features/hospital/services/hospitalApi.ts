@@ -20,6 +20,9 @@ export interface HospitalRegistrationRequest {
   country: string;
   pincode: string;
   timeZone: string;
+  // GPS position pinned on the map at registration (both or neither).
+  latitude?: number;
+  longitude?: number;
   gstin?: string;
   pan?: string;
   nabhNumber?: string;

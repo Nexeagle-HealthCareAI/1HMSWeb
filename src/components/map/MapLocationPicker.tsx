@@ -26,6 +26,8 @@ interface MapLocationPickerProps {
   disabled?: boolean;
   searchPlaceholder?: string;
   className?: string;
+  // Mobile: one finger scrolls the page past the map, two fingers move it (stops the map swallowing the scroll inside long forms).
+  cooperativeGestures?: boolean;
 }
 
 // Combined address-search + draggable-pin map for capturing a hospital/lab's GPS location.
@@ -37,7 +39,8 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   onLocationChange,
   disabled = false,
   searchPlaceholder = 'Search for an address or place...',
-  className
+  className,
+  cooperativeGestures = false
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -63,7 +66,8 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         container: mapContainerRef.current,
         style: 'mapbox://styles/mapbox/streets-v12',
         center: hasCoordinates ? [longitude as number, latitude as number] : DEFAULT_CENTER,
-        zoom: hasCoordinates ? PIN_ZOOM : DEFAULT_ZOOM
+        zoom: hasCoordinates ? PIN_ZOOM : DEFAULT_ZOOM,
+        cooperativeGestures
       });
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
       mapRef.current = map;

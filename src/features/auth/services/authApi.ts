@@ -58,6 +58,8 @@ export interface ResetPasswordRequest {
 
 export interface SetPasswordRequest {
   userId: string;
+  // The admin's own name (saved on their profile).
+  fullName?: string;
   email: string;
   password: string;
 }

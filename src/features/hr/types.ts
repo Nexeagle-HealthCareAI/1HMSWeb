@@ -170,7 +170,7 @@ export interface AttendanceExceptionDto {
   attendanceDate: string;
   punchIn?: string;
   punchOut?: string;
-  exceptionType: 'LATE' | 'MISSING_OUT_PUNCH' | 'MISSING_IN_PUNCH' | 'UNSCHEDULED';
+  exceptionType: 'LATE' | 'MISSING_OUT_PUNCH' | 'MISSING_IN_PUNCH' | 'UNSCHEDULED' | 'ABSENT';
   description: string;
 }
 
@@ -238,9 +238,33 @@ export interface HrConsultantFeeConfig {
   monthlyRetainer: number;
   opdSharePercent: number;    // e.g. 60 = 60%
   ipdVisitFee: number;        // per IPD round visit
+  adminSurcharge: number;
   surgeryShareConfig: SurgeryShareConfig[];
   effectiveFrom: string;
   isActive: boolean;
+}
+
+// Shape returned by GET/PUT /hr/consultant-fee-config/{hrEmployeeId}
+export interface ConsultantFeeConfigDto {
+  hrConsultantFeeConfigId: string;
+  hrEmployeeId: string;
+  effectiveFrom: string;
+  monthlyRetainer: number;
+  opdSharePercent: number;
+  ipdVisitFee: number;
+  adminSurcharge: number;
+  surgeryShareConfigJson: string | null;
+  isActive: boolean;
+}
+
+export interface UpsertConsultantFeeConfigRequest {
+  hrEmployeeId: string;
+  effectiveFrom: string;
+  monthlyRetainer: number;
+  opdSharePercent: number;
+  ipdVisitFee: number;
+  adminSurcharge: number;
+  surgeryShareConfigJson: string | null;
 }
 
 export interface SurgeryShareConfig {
@@ -315,6 +339,18 @@ export interface HrLicenseAlert {
   credentialType: string;
   expiryDate: string;
   daysUntilExpiry: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+}
+
+// Full detail record from GET /hr/license-alerts (one row per expiring document,
+// vs. HrLicenseAlert which is the capped preview embedded in the KPI summary).
+export interface LicenseAlertDto {
+  hrEmployeeId: string;
+  employeeName: string;
+  designation: string;
+  documentName: string;
+  expiryDate: string;
+  daysLeft: number;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
 }
 
@@ -456,3 +492,89 @@ export interface DispatchPayslipsResponseModel {
 }
 
 
+
+// ─── Biometric attendance devices ───────────────────────────────────────────
+
+export interface BiometricDevice {
+  hrBiometricDeviceId: string;
+  name: string;
+  serialNumber: string;
+  vendor: string;
+  model?: string | null;
+  location?: string | null;
+  isActive: boolean;
+  /** UTC, but serialised without a "Z" — parse with asUtc() before showing it. */
+  lastSeenAt?: string | null;
+  lastSeenIp?: string | null;
+  /** The device's own wall-clock time for its newest scan (no timezone). */
+  lastPunchTime?: string | null;
+  /** Heard from within the last 10 minutes (decided server-side). */
+  isOnline: boolean;
+}
+
+/** A PIN that has scanned at a device but isn't linked to an employee yet. */
+export interface UnmappedDeviceUser {
+  deviceUserId: string;
+  scanCount: number;
+  firstSeen: string;
+  lastSeen: string;
+}
+
+/** An employee <-> device PIN link that already exists. */
+export interface EmployeeDeviceLink {
+  hrEmployeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  deviceUserId: string;
+}
+
+export interface RegisterBiometricDeviceRequest {
+  hospitalId: string;
+  name: string;
+  serialNumber: string;
+  model?: string;
+  location?: string;
+}
+
+export interface RegisterBiometricDeviceResponse {
+  success: boolean;
+  message?: string;
+  device?: BiometricDevice;
+  /** Shown exactly once, here. Only its hash is stored server-side. */
+  token?: string;
+}
+
+export interface RotateBiometricDeviceTokenResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+}
+
+export interface MapDeviceUserResponse {
+  success: boolean;
+  message?: string;
+  attendanceDaysUpdated: number;
+}
+
+// ─── Manual attendance override ─────────────────────────────────────────────
+
+/** PRESENT | LATE | HALF_DAY | ABSENT | ON_LEAVE */
+export type AttendanceOverrideStatus = 'PRESENT' | 'LATE' | 'HALF_DAY' | 'ABSENT' | 'ON_LEAVE';
+
+export interface SetAttendanceOverrideRequest {
+  employeeId: string;
+  /** ISO date, e.g. "2026-08-10" */
+  attendanceDate: string;
+  status: AttendanceOverrideStatus;
+  /** Full ISO datetime. Omit to leave an existing punch time untouched. */
+  punchIn?: string;
+  punchOut?: string;
+  notes?: string;
+  reason: string;
+}
+
+export interface SetAttendanceOverrideResponse {
+  success: boolean;
+  message?: string;
+  attendanceLogId?: string;
+}

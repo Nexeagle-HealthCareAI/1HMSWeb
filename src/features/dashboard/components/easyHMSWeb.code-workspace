@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../CMS"
+		},
+		{
+			"path": "../../../../../CMSAPI"
+		},
+		{
+			"path": "../../../../../CMSDatabase"
+		},
+		{
+			"path": "../../../../../easyHMSAPI"
+		},
+		{
+			"path": "../../../../../easyHMSDatabase"
+		},
+		{
+			"path": "../../../../../easyHMSNightJob"
+		},
+		{
+			"path": "../../../../../NexEagleWebsite"
+		},
+		{
+			"path": "../../../../../WHatspp Backened"
+		}
+	],
+	"settings": {}
+}

@@ -31,6 +31,8 @@ export interface AbdmAddressSuggestionsResponse {
 }
 
 export interface AbdmProfileResponse {
+  // One-time proof returned by login/verify-otp; accounts/link requires it.
+  linkToken?: string;
   success: boolean;
   message?: string;
   // Authenticated session handle from a just-completed OTP verification — pass to the
@@ -159,8 +161,16 @@ export const abdmApi = {
     apiClient.delete<{ success: boolean; message?: string }>(`/abdm/accounts/${encodeURIComponent(abhaAccountId)}?hospitalId=${encodeURIComponent(hospitalId)}`),
 
   // Create ABHA — Aadhaar OTP
-  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string) =>
-    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber }),
+  // The server owns the consent wording and its version; the screen shows exactly what this returns.
+  getConsentText: () =>
+    apiClient.get<{ code: string; version: string; text: string }>('/abdm/consent/text'),
+
+  // Records that the patient (or guardian) agreed. The returned consentId must accompany the Aadhaar OTP request (valid 30 min, 3 OTPs).
+  recordConsent: (hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string) =>
+    apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string }>('/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName }),
+
+  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber, consentId }),
 
   // mobile is mandatory on ABDM's side even when it matches the Aadhaar-linked number.
   verifyAadhaarOtp: (hospitalId: string, txnId: string, otp: string, mobile: string) =>
@@ -187,16 +197,10 @@ export const abdmApi = {
   verifyLoginOtp: (hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number') =>
     apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint }),
 
+  // Linking is server-verified: the API stores the profile ABDM returned for this one-time linkToken (from verifyLoginOtp), never the
+  // demographics a client sends. The token is single-use and expires after 15 minutes.
   saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse) =>
-    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', {
-      hospitalId,
-      abhaNumber: profile.abhaNumber,
-      abhaAddress: profile.abhaAddress,
-      fullName: profile.fullName,
-      gender: profile.gender,
-      dateOfBirth: profile.dateOfBirth,
-      mobile: profile.mobile,
-    }),
+    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', { hospitalId, linkToken: profile.linkToken }),
 
   // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live
   // sessionTxnId, then update mobile (OTP-gated) or email (direct) using it.
@@ -265,4 +269,135 @@ export const abdmApi = {
 
   verifyReactivateOtp: (hospitalId: string, txnId: string, otp: string) =>
     apiClient.post<AbdmProfileResponse>('/abdm/profile/reactivate/verify-otp', { hospitalId, txnId, otp }),
+
+  // ---- M2: link visits (care contexts) to the patient's ABHA ----------------------------
+  // Starts linking and returns at once; linkStatus says where it has got to, and later reads of
+  // getCareContexts show it move on as ABDM's callbacks arrive.
+  linkCareContext: (hospitalId: string, sourceType: AbdmCareContextSource, sourceId: string) =>
+    apiClient.post<AbdmCareContextResponse>('/abdm/care-contexts/link', { hospitalId, sourceType, sourceId }),
+
+  getCareContexts: (hospitalId: string, patientId?: string) =>
+    apiClient.get<AbdmCareContextListResponse>(
+      `/abdm/care-contexts?hospitalId=${encodeURIComponent(hospitalId)}${patientId ? `&patientId=${encodeURIComponent(patientId)}` : ''}`),
+
+  getM2Readiness: (hospitalId: string) =>
+    apiClient.get<AbdmM2Readiness>(`/abdm/m2/readiness?hospitalId=${encodeURIComponent(hospitalId)}`),
+
+  getExchanges: (hospitalId: string, take = 100) =>
+    apiClient.get<AbdmExchangeListResponse>(`/abdm/exchanges?hospitalId=${encodeURIComponent(hospitalId)}&take=${take}`),
+
+  getInboundRequests: (hospitalId: string, take = 100) =>
+    apiClient.get<AbdmInboundListResponse>(`/abdm/inbound-requests?hospitalId=${encodeURIComponent(hospitalId)}&take=${take}`),
 };
+
+// ---- M2 shapes ---------------------------------------------------------------------------
+
+export type AbdmCareContextSource = 'OPD' | 'IPD';
+export type AbdmLinkStatus = 'NOT_LINKED' | 'TOKEN_REQUESTED' | 'LINK_REQUESTED' | 'LINKED' | 'FAILED';
+
+export interface AbdmCareContext {
+  careContextId: string;
+  patientId: string;
+  sourceType: AbdmCareContextSource;
+  sourceId: string;
+  referenceNumber: string;
+  display: string;
+  hiTypes: string[];
+  abhaAddress?: string | null;
+  linkStatus: AbdmLinkStatus;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+  linkedAt?: string | null;
+  updatedAt: string;
+}
+
+export interface AbdmCareContextResponse {
+  success: boolean;
+  message?: string;
+  careContext?: AbdmCareContext;
+}
+
+export interface AbdmCareContextListResponse {
+  success: boolean;
+  message?: string;
+  careContexts: AbdmCareContext[];
+}
+
+export interface AbdmReadinessIssue {
+  level: 'blocker' | 'warning';
+  text: string;
+}
+
+export interface AbdmM2Readiness {
+  success: boolean;
+  message?: string;
+  hipId?: string | null;
+  bridgeSettingsPresent: boolean;
+  lastCallbackAt?: string | null;
+  issues: AbdmReadinessIssue[];
+}
+
+export type AbdmExchangeStatus = 'SENT' | 'ACCEPTED' | 'DONE' | 'REFUSED' | 'ANSWERED' | 'NO_ANSWER';
+
+export interface AbdmExchange {
+  requestId: string;
+  kind: string;
+  subjectRef?: string | null;
+  status: AbdmExchangeStatus;
+  httpStatus?: number | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  sentAt: string;
+  acceptedAt?: string | null;
+  answeredAt?: string | null;
+  waitMs?: number | null;
+  callbackPath?: string | null;
+  callbackHeaders?: string | null;
+}
+
+export interface AbdmExchangeListResponse {
+  success: boolean;
+  message?: string;
+  callbackWindowSeconds: number;
+  exchanges: AbdmExchange[];
+}
+
+export interface AbdmInboundRequest {
+  path: string;
+  verdict: string;
+  facilityId?: string | null;
+  headerNames: string;
+  receivedAt: string;
+  processedAt?: string | null;
+  processError?: string | null;
+  unanswered: boolean;
+}
+
+export interface AbdmInboundListResponse {
+  success: boolean;
+  message?: string;
+  requests: AbdmInboundRequest[];
+}
+
+/** Backend DateTime values are naive UTC — read them as UTC, not local time. */
+export const abdmUtc = (iso: string) => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`);
+
+/** What each link status means to a receptionist: the step, not a spinner. */
+export const abdmLinkStatusText = (c: Pick<AbdmCareContext, 'linkStatus' | 'lastErrorCode' | 'lastErrorMessage'>): string => {
+  switch (c.linkStatus) {
+    case 'TOKEN_REQUESTED': return 'Asking ABDM for a link token';
+    case 'LINK_REQUESTED': return 'Linking this visit with ABDM';
+    case 'LINKED': return 'Linked to the patient\'s ABHA';
+    case 'FAILED':
+      return c.lastErrorCode === 'ABDM-1092'
+        ? 'ABDM still remembers an earlier refused request for this patient. That first refusal names the cause; wait a few minutes before trying again.'
+        : `Link failed${c.lastErrorCode ? ` (${c.lastErrorCode})` : ''}: ${c.lastErrorMessage ?? 'no reason given'}`;
+    default: return 'Not linked to ABHA';
+  }
+};
+
+/** ABDM keeps a refused link-token request for at least ~69 s and answers a repeat with
+ * ABDM-1092, so a retry inside that window cannot work. */
+export const abdmCanRetry = (c: Pick<AbdmCareContext, 'linkStatus' | 'lastErrorCode' | 'updatedAt'>): boolean =>
+  c.linkStatus === 'NOT_LINKED'
+  || (c.linkStatus === 'FAILED' && (c.lastErrorCode !== 'ABDM-1092' || Date.now() - abdmUtc(c.updatedAt).getTime() > 3 * 60_000));

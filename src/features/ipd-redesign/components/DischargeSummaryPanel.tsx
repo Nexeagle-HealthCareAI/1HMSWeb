@@ -11,6 +11,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
+import { useDischargeCustomFields } from '../hooks/useDischargeCustomFields';
+import { AbdmLinkButton } from '@/features/abdm/components/AbdmLinkButton';
 import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
 import { bedBoardApi } from '../services/bedBoardApi';
 import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocuments';
@@ -112,17 +114,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         }
     }, [layoutDoctorId, hospitalId]);
 
-    // Custom field values aren't backed by a DischargeSummary column yet (Phase 1/UI-only pass —
-    // real persistence lands with the rest of the backend). Kept per-admission in localStorage
-    // purely so a demo doesn't lose data on reload.
-    const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+    // Custom field values persist on the server (discharge-summary/custom-fields). A signed summary
+    // is frozen: the server rejects writes, so the hook is read-only once signed.
+    const { values: customFieldValues, setValues: setCustomFieldValues, saveError: customFieldSaveError } =
+        useDischargeCustomFields(admission.admissionId, isSigned);
     useEffect(() => {
-        const raw = localStorage.getItem(`discharge-custom-fields:${admission.admissionId}`);
-        setCustomFieldValues(raw ? JSON.parse(raw) : {});
-    }, [admission.admissionId]);
-    useEffect(() => {
-        localStorage.setItem(`discharge-custom-fields:${admission.admissionId}`, JSON.stringify(customFieldValues));
-    }, [customFieldValues, admission.admissionId]);
+        if (customFieldSaveError) toast({ title: 'Custom fields not saved', description: customFieldSaveError, variant: 'destructive' });
+    }, [customFieldSaveError]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const isCash = admission.payerType === 'CASH';
     const isDischarged = admission.statusCode === 'DISCHARGED';
@@ -259,9 +257,14 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     };
 
     const revokeSign = async () => {
+        const reason = window.prompt('Why is the signed discharge summary being reopened? (at least 5 characters; kept in the audit trail)')?.trim();
+        if (!reason || reason.length < 5) {
+            toast({ title: 'A reason is required', description: 'Enter at least 5 characters to reopen a signed discharge summary.', variant: 'destructive' });
+            return;
+        }
         setUnsigning(true);
         try {
-            await dischargeSummaryApi.unsign(admission.admissionId);
+            await dischargeSummaryApi.unsign(admission.admissionId, reason);
             toast({ title: 'Signature revoked. The summary is now editable.' });
             load();
         } catch (err) {
@@ -878,11 +881,15 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <Check className="h-4 w-4 text-emerald-600 shrink-0" />
                         <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
                     </div>
-                    {isActive && (
-                        <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100 self-start sm:self-auto">
-                            {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-1 self-start sm:self-auto">
+                        {/* A signed discharge summary is what makes the admission worth linking to ABHA. */}
+                        <AbdmLinkButton hospitalId={hospitalId} sourceType="IPD" sourceId={admission.admissionId} variant="full" />
+                        {isActive && (
+                            <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
+                                {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
 

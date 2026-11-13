@@ -352,7 +352,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     useEffect(() => {
         if (!open) return;
         bedBoardApi.getBoard()
-            .then(items => setAvailableBeds(items.filter(b => b.isActive && !b.admissionId)))
+            .then(items => setAvailableBeds(items.filter(b => b.isActive && !b.admissionId && (b.statusCode ?? 'AVAILABLE') === 'AVAILABLE')))
             .catch(() => setAvailableBeds([]));
         admissionApi.getHospitalDoctors().then(setDoctors).catch(() => setDoctors([]));
         consentApi.getTemplates('GENERAL_ADMISSION')

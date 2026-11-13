@@ -90,8 +90,10 @@ export interface MedicalStatItem {
 export interface UI_KPI_Bucket {
     label: string;
     count: number;
-    trend: string;
-    percentageChange: number;
+    // The API does not return a period-over-period comparison yet. Left undefined (never a fake 0 /
+    // 'neutral') so the UI hides the trend badge instead of showing a made-up "+0%".
+    trend?: string;
+    percentageChange?: number;
 }
 
 export interface UI_AnalyticsKPI {
@@ -137,7 +139,7 @@ const mapToBucket = (val: number | TimeBucket, explicitOverall?: number): UI_Ana
         return {
             overall: val,
             byBucket: buckets.reduce((acc, key) => {
-                acc[key] = { label: key, count: val, trend: 'neutral', percentageChange: 0 };
+                acc[key] = { label: key, count: val };
                 return acc;
             }, {} as Record<TimeBucketKey, UI_KPI_Bucket>)
         };
@@ -151,8 +153,6 @@ const mapToBucket = (val: number | TimeBucket, explicitOverall?: number): UI_Ana
             acc[key] = {
                 label: key,
                 count: val[key] || 0,
-                trend: 'neutral',
-                percentageChange: 0
             };
             return acc;
         }, {} as Record<TimeBucketKey, UI_KPI_Bucket>)

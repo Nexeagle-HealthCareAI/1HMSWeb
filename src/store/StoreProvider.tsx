@@ -3,6 +3,7 @@ import { useAuthStore } from './authStore';
 import { useAppStore } from './appStore';
 import { useUserStore } from './userStore';
 import { useThemeStore } from './themeStore';
+import { hasRegistrationDraft } from '@/features/auth/services/registrationDraft';
 
 interface StoreProviderProps {
   children: ReactNode;
@@ -36,7 +37,9 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     
     if (token) {
       // If we have a token, ensure user is authenticated
-      if (!isAuthenticated) {
+      // A person who verified their mobile but has not finished registering has a token and user id but is NOT signed in: restoring
+      // them here would skip the hospital and name steps and land them on the dashboard (registrationDraft.ts).
+      if (!isAuthenticated && !hasRegistrationDraft()) {
         // Restore authentication state if token exists but isAuthenticated is false
         const userId = useAuthStore.getState().getUserId();
         if (userId) {

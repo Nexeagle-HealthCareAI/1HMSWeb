@@ -1,11 +1,14 @@
 import React, { useId, useState, useEffect } from 'react';
-import { Eye, EyeOff, Mail, Lock, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, CheckCircle, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ValidationUtils } from '@/utils/validation';
 
 interface EmailPasswordSetupProps {
+  // The admin's own name. Saved on their profile and shown on prescriptions, bills and audit trails.
+  fullName: string;
+  onFullNameChange: (name: string) => void;
   email: string;
   password: string;
   isLoading: boolean;
@@ -17,6 +20,8 @@ interface EmailPasswordSetupProps {
 }
 
 export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
+  fullName,
+  onFullNameChange,
   email,
   password,
   isLoading,
@@ -30,10 +35,11 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStrength, setPasswordStrength] = useState<{ isValid: boolean; strength: 'weak' | 'medium' | 'strong'; errors: string[] }>({ isValid: false, strength: 'weak', errors: [] });
-  const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; confirmPassword?: string }>({});
   const [passwordMatchStatus, setPasswordMatchStatus] = useState<'idle' | 'matching' | 'not-matching'>('idle');
   // See PasswordLoginForm.tsx's useId() comment - LoginLayout renders its children twice.
   const emailFieldId = useId();
+  const nameFieldId = useId();
   const passwordFieldId = useId();
   const confirmPasswordFieldId = useId();
 
@@ -58,6 +64,11 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
       setPasswordMatchStatus('idle');
     }
   }, [password, confirmPassword]);
+
+  const handleNameChange = (value: string) => {
+    onFullNameChange(value.replace(/\s{2,}/g, ' ').slice(0, 100));
+    if (errors.fullName) setErrors(prev => ({ ...prev, fullName: undefined }));
+  };
 
   const handleEmailChange = (value: string) => {
     const sanitizedEmail = ValidationUtils.sanitizeInput(value);
@@ -98,7 +109,11 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
   };
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string; confirmPassword?: string } = {};
+    const newErrors: { fullName?: string; email?: string; password?: string; confirmPassword?: string } = {};
+
+    if (fullName.trim().length < 2) {
+      newErrors.fullName = 'Enter your full name';
+    }
 
     // Validate email (email is optional but if provided, it must be valid)
     const emailError = ValidationUtils.validateEmail(email);
@@ -155,8 +170,33 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
           Set Up Your Account
         </h2>
         <p className="text-xs text-gray-600">
-          Add your email and create a password to complete your registration
+          Add your name, email and a password to complete your registration
         </p>
+      </div>
+
+      {/* Name Input */}
+      <div className="space-y-1">
+        <Label htmlFor={nameFieldId} className="text-xs font-medium">
+          Your Full Name
+        </Label>
+        <div className="relative">
+          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id={nameFieldId}
+            type="text"
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="e.g. Dr. Anita Sharma"
+            className={`h-10 pl-10 text-sm ${errors.fullName ? 'border-red-500' : ''}`}
+            disabled={isLoading}
+          />
+        </div>
+        {errors.fullName && (
+          <div className="text-xs text-red-600 mt-1">
+            {errors.fullName}
+          </div>
+        )}
       </div>
 
       {/* Email Input */}
@@ -327,7 +367,7 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
         <Button
           type="button"
           onClick={handleComplete}
-          disabled={isLoading || !passwordStrength.isValid || passwordMatchStatus !== 'matching' || !email.trim()}
+          disabled={isLoading || fullName.trim().length < 2 || !passwordStrength.isValid || passwordMatchStatus !== 'matching' || !email.trim()}
           className="flex-1 h-10 text-sm bg-primary text-white"
         >
           {isLoading ? (

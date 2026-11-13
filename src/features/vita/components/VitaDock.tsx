@@ -1,0 +1,968 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  ArrowUp,
+  BookOpen,
+  ChevronRight,
+  Compass,
+  ExternalLink,
+  History,
+  Loader2,
+  MessageSquarePlus,
+  MousePointerClick,
+  Sparkles,
+  Square,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+import { cn } from '@/lib/utils';
+import {
+  VitaClient,
+  type VitaChoice,
+  type VitaChoiceRef,
+  type VitaLocale,
+  type VitaScreenLink,
+} from '../api/vitaClient';
+import { useVitaChat, type VitaChatMessage } from '../hooks/useVitaChat';
+import { canOpen, screenContext } from '../screens';
+import { VitaMarkdown } from './VitaMarkdown';
+import { VITA_API_URL } from '../config';
+import { useGuide } from '../guide/useGuide';
+import { GuideOverlay } from '../guide/GuideOverlay';
+import { GuideCard } from '../guide/GuideCard';
+import { VitaLayer, VITA_ESCAPE, VITA_Z } from './VitaLayer';
+import { GUIDE_T, type GuideStrings } from '../guide/text';
+import type { GuidePayload } from '../guide/types';
+
+
+const LS_LOCALE = 'vita.locale';
+const LS_OPEN = 'vita.open';
+const LS_MODE = 'vita.mode';
+
+const T = {
+  en: {
+    title: 'Vita',
+    subtitle: 'Your 1HMS guide',
+    placeholder: 'Ask how to do something in 1HMS…',
+    hello: 'Hi! I can explain how any 1HMS screen works and take you there.',
+    try: 'Try asking',
+    sources: 'From the guide',
+    open: 'Open',
+    helpful: 'Helpful',
+    notHelpful: 'Not helpful',
+    why: 'What was wrong?',
+    thanks: 'Thanks for the feedback.',
+    commentPh: 'Tell us more (optional)',
+    send: 'Send',
+    stop: 'Stop',
+    newChat: 'New chat',
+    history: 'Your chats',
+    noHistory: 'No earlier chats.',
+    back: 'Back',
+    stopped: 'Stopped.',
+    disclaimer: 'Vita explains how to use 1HMS. It never gives medical advice.',
+    searching: 'Looking in the 1HMS guide…',
+    thinking: 'Thinking…',
+    reasons: { wrong: 'Wrong', incomplete: 'Incomplete', not_relevant: 'Not what I asked', too_long: 'Too long', other: 'Other' },
+    fab: 'Ask Vita',
+    start: 'Start',
+    notThis: 'Not this',
+    steps: (n: number) => (n === 1 ? '1 step' : `${n} steps`),
+    onScreen: 'Shown on screen',
+    errors: {
+      timeout: 'Vita took too long. Please try again.',
+      agent_error: 'Vita had a problem. Please try again.',
+      internal_error: 'Vita had a problem. Please try again.',
+      worker_lost: 'Vita lost this reply. Please ask again.',
+      conversation_busy: 'Vita is still answering. Please wait a moment.',
+      session_expired: 'Your Vita session ended. Please ask again.',
+      stream_timeout: 'The reply took too long to arrive. Please ask again.',
+      connection_lost: 'The connection dropped. Please check the internet and ask again.',
+      network: 'Vita is not reachable right now. Please check the internet.',
+    } as Record<string, string>,
+  },
+  hi: {
+    title: 'Vita',
+    subtitle: 'आपका 1HMS गाइड',
+    placeholder: '1HMS में कुछ भी कैसे करें, पूछें…',
+    hello: 'नमस्ते! मैं 1HMS की किसी भी स्क्रीन का तरीका बता सकती हूँ और वहाँ ले जा सकती हूँ।',
+    try: 'ऐसे पूछें',
+    sources: 'गाइड से',
+    open: 'खोलें',
+    helpful: 'मददगार',
+    notHelpful: 'मददगार नहीं',
+    why: 'क्या गलत था?',
+    thanks: 'धन्यवाद!',
+    commentPh: 'और बताएँ (वैकल्पिक)',
+    send: 'भेजें',
+    stop: 'रोकें',
+    newChat: 'नई चैट',
+    history: 'आपकी चैट',
+    noHistory: 'कोई पुरानी चैट नहीं।',
+    back: 'वापस',
+    stopped: 'रोक दिया।',
+    disclaimer: 'Vita 1HMS चलाना सिखाती है। यह कोई डॉक्टरी सलाह नहीं देती।',
+    searching: '1HMS गाइड में देख रही हूँ…',
+    thinking: 'सोच रही हूँ…',
+    reasons: { wrong: 'गलत', incomplete: 'अधूरा', not_relevant: 'सवाल से अलग', too_long: 'बहुत लंबा', other: 'अन्य' },
+    fab: 'Vita से पूछें',
+    start: 'शुरू करें',
+    notThis: 'यह नहीं',
+    steps: (n: number) => `${n} चरण`,
+    onScreen: 'स्क्रीन पर दिखेगा',
+    errors: {
+      timeout: 'Vita को जवाब देने में ज़्यादा समय लगा। कृपया फिर से पूछें।',
+      agent_error: 'Vita में कोई दिक्कत आई। कृपया फिर से पूछें।',
+      internal_error: 'Vita में कोई दिक्कत आई। कृपया फिर से पूछें।',
+      worker_lost: 'यह जवाब बीच में रुक गया। कृपया फिर से पूछें।',
+      conversation_busy: 'Vita अभी पिछला जवाब दे रही है। थोड़ा रुकें।',
+      session_expired: 'Vita का सेशन खत्म हो गया। कृपया फिर से पूछें।',
+      stream_timeout: 'जवाब आने में ज़्यादा समय लगा। कृपया फिर से पूछें।',
+      connection_lost: 'कनेक्शन टूट गया। इंटरनेट देखें और फिर से पूछें।',
+      network: 'Vita से अभी संपर्क नहीं हो रहा। इंटरनेट देखें।',
+    } as Record<string, string>,
+  },
+} as const;
+
+type Strings = (typeof T)['en'] | (typeof T)['hi'];
+
+/** Starter questions per board (screen id from boardAccess.ts). */
+const SUGGESTIONS: Record<string, { en: string[]; hi: string[] }> = {
+  'appointment-dashboard': {
+    en: ['How do I reschedule an appointment?', 'What does the Vitals status mean?', 'How do I cancel an appointment?'],
+    hi: ['Appointment reschedule kaise kare?', 'Vitals status ka matlab kya hai?', 'Appointment cancel kaise kare?'],
+  },
+  'appointment-booking': {
+    en: ['How do I book an appointment for a patient?', 'How are token numbers given?', 'Can I book for a future date?'],
+    hi: ['Patient ka appointment kaise book kare?', 'Token number kaise milta hai?', 'Aage ki date ka booking ho sakta hai?'],
+  },
+  billing: {
+    en: ['How do I collect a payment?', 'How do I give a refund?', 'Where do I see today’s collection?'],
+    hi: ['Payment kaise collect kare?', 'Refund kaise de?', 'Aaj ka collection kaha dekhe?'],
+  },
+  'ipd-workspace': {
+    en: ['How do I admit a patient?', 'How do I transfer a bed?', 'How do I discharge a patient?'],
+    hi: ['Patient admit kaise kare?', 'Bed transfer kaise kare?', 'Discharge kaise kare?'],
+  },
+  'pharmacy-retail': {
+    en: ['How do I sell medicines to a walk-in patient?', 'How do I take back medicines from a patient?', 'Which medicines are about to expire?'],
+    hi: ['Walk-in patient ko dawai kaise bechein?', 'Patient se dawai wapas kaise le?', 'Kaun si dawai expire hone wali hai?'],
+  },
+  'billing-ledger': {
+    en: ['How do I take a payment on a bill?', 'How do I add a charge to a bill?', 'Why can’t I add a charge to this bill?'],
+    hi: ['Bill par payment kaise le?', 'Bill me charge kaise jode?', 'Is bill me charge kyu nahi jud raha?'],
+  },
+  dashboard: {
+    en: ['How do I write a prescription?', 'How do I order lab tests?', 'How do I mark a patient as done?'],
+    hi: ['Prescription kaise likhe?', 'Lab test kaise order kare?', 'Patient ko done kaise kare?'],
+  },
+  calendar: {
+    en: ['How do I mark a doctor on leave?', 'How do I change a doctor’s hours?', 'Why are no slots showing?'],
+    hi: ['Doctor ki leave kaise lagaye?', 'Doctor ka time kaise badle?', 'Slot kyu nahi dikh rahe?'],
+  },
+  patients: {
+    en: ['How do I find a patient?', 'How do I edit patient details?', 'How do I merge duplicate patients?'],
+    hi: ['Patient kaise dhunde?', 'Patient ki details kaise badle?', 'Duplicate patient kaise merge kare?'],
+  },
+  'nursing-station': {
+    en: ['How do I chart a medicine dose?', 'How do I record vitals?', 'How do I give shift handover?'],
+    hi: ['MAR me dose kaise record kare?', 'Vitals kaise bhare?', 'Shift handover kaise de?'],
+  },
+  'ot-board': {
+    en: ['How do I book an OT for a surgery?', 'Why can’t I move the case to theatre?', 'How do I record implants used?'],
+    hi: ['Surgery ke liye OT kaise book kare?', 'Case theatre me kyu nahi ja raha?', 'Implant kaise record kare?'],
+  },
+  'icu-board': {
+    en: ['What does the ICU board show?', 'How do I record APACHE II?', 'How do I record ventilator settings?'],
+    hi: ['ICU board me kya dikhta hai?', 'APACHE II kaise bhare?', 'Ventilator settings kaise likhe?'],
+  },
+  pathology: {
+    en: ['How do I create a lab order?', 'How do I enter results?', 'How do I generate the report?'],
+    hi: ['Lab order kaise banaye?', 'Result kaise bhare?', 'Report kaise banaye?'],
+  },
+  inventory: {
+    en: ['How do I check stock?', 'How do I make a purchase order?', 'How do I transfer stock to another store?'],
+    hi: ['Stock kaise dekhe?', 'Purchase order kaise banaye?', 'Stock doosre store me kaise bheje?'],
+  },
+  admin: {
+    en: ['How do I add a new staff user?', 'How do I reset a staff password?', 'How do I change a user’s role?'],
+    hi: ['Naya staff user kaise jode?', 'Staff ka password kaise reset kare?', 'User ka role kaise badle?'],
+  },
+  configuration: {
+    en: ['How do I change the rate of a service?', 'How do I add new beds?', 'How do I change doctor fees?'],
+    hi: ['Service ka rate kaise badle?', 'Naye bed kaise jode?', 'Doctor ki fees kaise badle?'],
+  },
+  hr: {
+    en: ['How do I run payroll?', 'How do I approve leave?', 'How do I correct attendance?'],
+    hi: ['Payroll kaise chalaye?', 'Chhutti kaise approve kare?', 'Attendance kaise sudhare?'],
+  },
+  abdm: {
+    en: ['How do I create an ABHA number?', 'How do I link an existing ABHA?', 'How does scan and share work?'],
+    hi: ['ABHA number kaise banaye?', 'Pehle se bana ABHA kaise jode?', 'Scan and share kaise chalta hai?'],
+  },
+  subscription: {
+    en: ['How do I renew the subscription?', 'Why can’t I save anything?'],
+    hi: ['Subscription kaise renew kare?', 'Kuch save kyu nahi ho raha?'],
+  },
+};
+const DEFAULT_SUGGESTIONS = {
+  en: ['How do I book an appointment?', 'How do I register a new patient?', 'Open billing'],
+  hi: ['Appointment kaise book kare?', 'Naya patient kaise register kare?', 'Billing kholo'],
+};
+
+const readLS = (k: string): string | null => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const writeLS = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* private mode: ignore */
+  }
+};
+
+const VitaDock: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const token = useAuthStore((s) => s.token);
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const [open, setOpen] = useState(() => readLS(LS_OPEN) === '1');
+  const [view, setView] = useState<'chat' | 'history'>('chat');
+  const [locale, setLocaleState] = useState<VitaLocale>(() => (readLS(LS_LOCALE) === 'hi' ? 'hi' : 'en'));
+  const [input, setInput] = useState('');
+  const [mode, setMode] = useState<'ask' | 'guide' | 'do'>(() => {
+    const m = readLS(LS_MODE);
+    return m === 'guide' || m === 'do' ? m : 'ask';
+  });
+  const [guideOn, setGuideOn] = useState(false);
+  const [doOn, setDoOn] = useState(false);
+  const t: Strings = T[locale];
+  const gt: GuideStrings = GUIDE_T[locale];
+
+  // One client per page load; it reads the 1HMS token on every call (tokens rotate).
+  const client = useMemo(
+    () =>
+      VITA_API_URL
+        ? new VitaClient({
+            baseUrl: VITA_API_URL,
+            getHmsToken: () => useAuthStore.getState().getToken(),
+            getHospitalId: () => useAuthStore.getState().hospitalId,
+            getDisplayName: () => useAuthStore.getState().user?.name ?? null,
+            locale,
+          })
+        : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const onNavigate = useCallback(
+    (s: VitaScreenLink) => {
+      if (canOpen(s, useAuthStore.getState().permissions ?? [])) navigate(s.route);
+    },
+    [navigate],
+  );
+  // Do mode: Vita opens a step's screen itself, only one this user may open.
+  const guideNavigate = useCallback(
+    (route: string) => {
+      if (canOpen({ route, screenId: '', label: '' }, useAuthStore.getState().permissions ?? [])) navigate(route);
+    },
+    [navigate],
+  );
+  const guide = useGuide(client, location.pathname, { navigate: guideNavigate });
+  const startGuide = guide.start;
+  const chat = useVitaChat(client, { onNavigate, onGuide: (g: GuidePayload) => startGuide(g) });
+
+  // Vita says whether Guide Mode is on for this deployment (it can be switched off server-side).
+  useEffect(() => {
+    if (!open || !client || !token) return;
+    let live = true;
+    client
+      .features()
+      .then((f) => {
+        if (!live) return;
+        setGuideOn(!!f.guide);
+        setDoOn(!!f.guide && !!f.do);
+      })
+      .catch(() => {
+        if (!live) return;
+        setGuideOn(false);
+        setDoOn(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [open, client, token]);
+  useEffect(() => writeLS(LS_MODE, mode), [mode]);
+
+  const showGuide = useCallback(
+    async (guideId: string, fallback?: GuidePayload) => {
+      if (!client) return;
+      try {
+        startGuide(await client.guide(guideId, locale));
+      } catch {
+        if (fallback) startGuide({ ...fallback, runId: undefined });
+      }
+    },
+    [client, locale, startGuide],
+  );
+
+  // Switching hospital in 1HMS: chats are per hospital, so start a fresh one (the client opens a
+  // new Vita session for that hospital on the next question).
+  const hospitalId = useAuthStore((st) => st.hospitalId);
+  const firstHospital = useRef(hospitalId);
+  useEffect(() => {
+    if (hospitalId !== firstHospital.current) {
+      firstHospital.current = hospitalId;
+      chat.newChat();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hospitalId]);
+
+  // Ending the 1HMS login ends the Vita session too.
+  useEffect(() => {
+    if (!token && client) void client.end();
+  }, [token, client]);
+
+  useEffect(() => writeLS(LS_OPEN, open ? '1' : '0'), [open]);
+
+  // Ctrl+K / Cmd+K toggles the dock from anywhere; Esc closes it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setOpen((o) => !o);
+      } else if (e.key === 'Escape' && open && !guide.active) {
+        setOpen(false);
+      }
+    };
+    // An Escape pressed inside Vita arrives as VITA_ESCAPE (so an open 1HMS drawer stays open).
+    const onVitaEscape = () => {
+      if (open && !guide.active) setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener(VITA_ESCAPE, onVitaEscape);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(VITA_ESCAPE, onVitaEscape);
+    };
+  }, [open, guide.active]);
+
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (open && view === 'chat') setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open, view]);
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const last = chat.messages[chat.messages.length - 1];
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chat.messages.length, last?.text, last?.status]);
+
+  if (!client || !token) return null;
+
+  const screen = screenContext(location.pathname);
+  const suggestions = (screen && SUGGESTIONS[screen.screenId ?? '']) || DEFAULT_SUGGESTIONS;
+
+  const sendMode = mode === 'do' && doOn ? 'do' : guideOn && mode !== 'ask' ? 'guide' : undefined;
+  const submit = (text = input) => {
+    if (!text.trim() || chat.busy) return;
+    setInput('');
+    void chat.send(text, screen, sendMode);
+  };
+  /** A tapped choice: its label is what the user "said"; Vita gets the ids. */
+  const choose = (label: string, ref: VitaChoiceRef) => {
+    if (chat.busy) return;
+    void chat.send(label, screen, sendMode, ref);
+  };
+  const lastBot = [...chat.messages].reverse().find((m) => m.role === 'assistant')?.key;
+
+  const switchLocale = () => {
+    const l: VitaLocale = locale === 'en' ? 'hi' : 'en';
+    setLocaleState(l);
+    writeLS(LS_LOCALE, l);
+    void chat.setLocale(l);
+  };
+
+  if (guide.state) {
+    const perms = permissions ?? [];
+    return (
+      <VitaLayer>
+        <GuideOverlay state={guide.state} />
+        <GuideCard
+          state={guide.state}
+          t={gt}
+          canOpenScreen={(route) => canOpen({ route, screenId: '', label: '' }, perms)}
+          onOpenScreen={(route) => navigate(route)}
+          onBack={guide.back}
+          onNext={guide.next}
+          onStop={guide.close}
+          onRate={guide.rate}
+          onClose={guide.close}
+          onStartNext={(id) => void showGuide(id)}
+          onPause={guide.pause}
+          onResume={guide.resume}
+        />
+      </VitaLayer>
+    );
+  }
+
+  return (
+    <VitaLayer>
+      {!open && (
+        <button
+          type="button"
+          data-vita-ui="fab"
+          onClick={() => setOpen(true)}
+          style={{ zIndex: VITA_Z.fab }}
+          className="fixed right-4 bottom-[84px] lg:bottom-6 lg:right-6 flex items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 py-3 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 active:scale-95 transition"
+          aria-label={t.fab}
+          title={`${t.fab} (Ctrl+K)`}
+        >
+          <Sparkles className="h-5 w-5" />
+          <span className="text-sm font-semibold hidden sm:inline">{t.fab}</span>
+          <kbd className="hidden lg:inline rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
+        </button>
+      )}
+
+      {open && (
+        <section
+          role="dialog"
+          data-vita-ui="dock"
+          style={{ zIndex: VITA_Z.dock }}
+          aria-label="Vita assistant"
+          className={cn(
+            'fixed flex flex-col bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800',
+            'inset-0 lg:inset-auto lg:right-6 lg:bottom-6 lg:w-[420px] lg:h-[min(680px,calc(100vh-48px))] lg:rounded-2xl overflow-hidden',
+          )}
+        >
+          {/* header */}
+          <header className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-brand-600 to-brand-700 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold leading-tight">{t.title}</div>
+              <div className="text-[11px] text-white/80 truncate">{t.subtitle}</div>
+            </div>
+            <HeaderBtn
+              label={t.history}
+              onClick={() => {
+                setView(view === 'history' ? 'chat' : 'history');
+                if (view !== 'history') void chat.loadHistory();
+              }}
+              active={view === 'history'}
+            >
+              <History className="h-4 w-4" />
+            </HeaderBtn>
+            <HeaderBtn
+              label={t.newChat}
+              onClick={() => {
+                chat.newChat();
+                setView('chat');
+              }}
+              disabled={chat.busy}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </HeaderBtn>
+            <button
+              type="button"
+              onClick={switchLocale}
+              className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-white/15"
+              title={locale === 'en' ? 'हिंदी में' : 'In English'}
+            >
+              {locale === 'en' ? 'हिं' : 'EN'}
+            </button>
+            <HeaderBtn label="Close (Esc)" onClick={() => setOpen(false)}>
+              <X className="h-4 w-4" />
+            </HeaderBtn>
+          </header>
+
+          {guideOn && view === 'chat' && (
+            <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 dark:border-gray-800">
+              <div className="flex rounded-full bg-gray-100 p-0.5 text-xs font-semibold dark:bg-gray-800" role="radiogroup" aria-label="Mode">
+                {(doOn ? (['ask', 'guide', 'do'] as const) : (['ask', 'guide'] as const)).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === m}
+                    onClick={() => setMode(m)}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1',
+                      mode === m ? 'bg-white text-brand-700 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500',
+                    )}
+                  >
+                    {m === 'do' ? (
+                      <MousePointerClick className="h-3.5 w-3.5" />
+                    ) : m === 'guide' ? (
+                      <Compass className="h-3.5 w-3.5" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {m === 'do' ? gt.doIt : m === 'guide' ? gt.guide : gt.ask}
+                  </button>
+                ))}
+              </div>
+              {mode !== 'ask' && (
+                <span className="min-w-0 flex-1 truncate text-[11px] text-gray-400" title={mode === 'do' ? gt.doHint : gt.modeHint}>
+                  {mode === 'do' ? gt.doHint : gt.modeHint}
+                </span>
+              )}
+            </div>
+          )}
+
+          {chat.notice && (
+            <div className="flex items-center justify-between gap-2 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+              <span>{chat.notice}</span>
+              <button type="button" onClick={chat.dismissNotice} aria-label="Dismiss">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {view === 'history' ? (
+            <HistoryView
+              t={t}
+              items={chat.history}
+              onOpen={(id) => {
+                void chat.openConversation(id);
+                setView('chat');
+              }}
+              onDelete={(id) => void chat.deleteConversation(id)}
+              onBack={() => setView('chat')}
+            />
+          ) : (
+            <>
+              <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" aria-live="polite">
+                {chat.messages.length === 0 ? (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-brand-50 dark:bg-brand-900/20 p-4 text-sm text-gray-800 dark:text-gray-100">{t.hello}</div>
+                    <div>
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{t.try}</div>
+                      <div className="flex flex-col gap-2">
+                        {suggestions[locale].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => submit(s)}
+                            className="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:border-brand-400 hover:bg-brand-50/50 dark:hover:bg-gray-800"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  chat.messages.map((m) =>
+                    m.role === 'user' ? (
+                      <div key={m.key} className="flex justify-end">
+                        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-600 px-3.5 py-2 text-sm text-white whitespace-pre-wrap break-words">
+                          {m.text}
+                        </div>
+                      </div>
+                    ) : (
+                      <AssistantMessage
+                        key={m.key}
+                        m={m}
+                        t={t}
+                        permissions={permissions ?? []}
+                        onOpen={(s) => navigate(s.route)}
+                        onRate={(k, r, reason, comment) => {
+                          chat.rate(k, r, reason, comment);
+                          // "Not what I asked" on the latest answer: Vita offers the other tasks.
+                          if (r === 'down' && reason === 'not_relevant' && k === lastBot && !chat.busy) {
+                            choose(t.notThis, { kind: 'not_this', id: m.card ?? m.guide?.id ?? '' });
+                          }
+                        }}
+                        gt={gt}
+                        onShowGuide={guideOn ? showGuide : undefined}
+                        last={m.key === lastBot && !chat.busy}
+                        onChoose={choose}
+                        onStart={() => chat.startGuide(m.key)}
+                      />
+                    ),
+                  )
+                )}
+              </div>
+
+              <footer className="border-t border-gray-100 dark:border-gray-800 p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+                <div className="flex items-end gap-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 focus-within:border-brand-400">
+                  <textarea
+                    ref={inputRef}
+                    rows={1}
+                    value={input}
+                    maxLength={2000}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        submit();
+                      }
+                    }}
+                    placeholder={t.placeholder}
+                    className="max-h-32 min-h-[24px] flex-1 resize-none bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none"
+                  />
+                  {chat.busy ? (
+                    <button
+                      type="button"
+                      onClick={chat.stop}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
+                      aria-label={t.stop}
+                      title={t.stop}
+                    >
+                      <Square className="h-3.5 w-3.5" fill="currentColor" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => submit()}
+                      disabled={!input.trim()}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white disabled:opacity-40"
+                      aria-label={t.send}
+                      title={t.send}
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1.5 text-center text-[10.5px] text-gray-400">{t.disclaimer}</p>
+              </footer>
+            </>
+          )}
+        </section>
+      )}
+    </VitaLayer>
+  );
+};
+
+const HeaderBtn: React.FC<{
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+}> = ({ label, onClick, children, active, disabled }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-label={label}
+    title={label}
+    className={cn('rounded-lg p-1.5 hover:bg-white/15 disabled:opacity-40', active && 'bg-white/20')}
+  >
+    {children}
+  </button>
+);
+
+type Reason = 'wrong' | 'incomplete' | 'not_relevant' | 'too_long' | 'other';
+
+const AssistantMessage: React.FC<{
+  m: VitaChatMessage;
+  t: Strings;
+  permissions: readonly string[];
+  onOpen: (s: VitaScreenLink) => void;
+  onRate: (key: string, r: 'up' | 'down', reason?: Reason, comment?: string) => void;
+  gt: GuideStrings;
+  onShowGuide?: (guideId: string, fallback?: GuidePayload) => void;
+  /** The latest answer and Vita is not busy: its choices and Start can be used. */
+  last?: boolean;
+  onChoose?: (label: string, ref: VitaChoiceRef) => void;
+  onStart?: () => void;
+}> = ({ m, t, permissions, onOpen, onRate, gt, onShowGuide, last, onChoose, onStart }) => {
+  const [askWhy, setAskWhy] = useState(false);
+  const [comment, setComment] = useState('');
+  const [thanked, setThanked] = useState(false);
+  const waiting = m.status === 'pending' || (m.status === 'streaming' && !m.text);
+
+  return (
+    <div className="flex gap-2.5">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+        <Sparkles className="h-3.5 w-3.5" />
+      </div>
+      <div className="min-w-0 flex-1 space-y-2">
+        {waiting ? (
+          <div className="flex items-center gap-2 py-1 text-sm text-gray-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {m.stage === 'searching' ? t.searching : t.thinking}
+          </div>
+        ) : (
+          <div className={cn('text-gray-800 dark:text-gray-100', m.status === 'error' && 'text-red-600 dark:text-red-400')}>
+            <VitaMarkdown text={m.status === 'error' && m.errorCode && t.errors[m.errorCode] ? t.errors[m.errorCode] : m.text} />
+            {m.status === 'streaming' && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-brand-500 align-middle" />}
+            {m.status === 'cancelled' && <p className="mt-1 text-xs text-gray-400">{t.stopped}</p>}
+          </div>
+        )}
+
+        {m.citations.length > 0 && m.status !== 'error' && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="flex items-center gap-1 text-[11px] font-medium text-gray-400">
+              <BookOpen className="h-3 w-3" /> {t.sources}
+            </span>
+            {m.citations
+              .filter((c, i, all) => !c.title || all.findIndex((x) => x.title === c.title) === i)
+              .map((c) => (
+              <span
+                key={`${c.docId}-${c.section}`}
+                className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                title={c.title ? `${c.docId} §${c.section} — ${c.title}` : `${c.docId} §${c.section}`}
+              >
+                {c.title || `${c.docId} §${c.section}`}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {m.status === 'done' && m.guide && m.awaitingStart && (
+          <GuidePreview
+            title={m.guide.title}
+            steps={m.guide.steps.length}
+            t={t}
+            active={!!last}
+            onStart={() => onStart?.()}
+            onNotThis={() => onChoose?.(t.notThis, { kind: 'not_this', id: m.guide!.id })}
+          />
+        )}
+
+        {m.status === 'done' && m.choices && last && onChoose && (
+          <ChoiceList choices={m.choices} t={t} onChoose={onChoose} />
+        )}
+
+        {onShowGuide && m.status === 'done' && (m.offer || m.guide) && !m.awaitingStart && (
+          <button
+            type="button"
+            data-testid="show-guide"
+            onClick={() => onShowGuide(m.offer?.guideId ?? m.guide!.id, m.guide)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"
+          >
+            <Compass className="h-3.5 w-3.5" /> {gt.showMe}
+          </button>
+        )}
+
+        {m.screen && canOpen(m.screen, permissions) && m.status !== 'error' && (
+          <button
+            type="button"
+            onClick={() => onOpen(m.screen!)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-300"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> {t.open} {m.screen.label}
+          </button>
+        )}
+
+        {m.status === 'done' && m.messageId && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <RateBtn
+                active={m.rating === 'up'}
+                label={t.helpful}
+                onClick={() => {
+                  onRate(m.key, 'up');
+                  setAskWhy(false);
+                  setThanked(true);
+                }}
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+              </RateBtn>
+              <RateBtn
+                active={m.rating === 'down'}
+                label={t.notHelpful}
+                onClick={() => {
+                  onRate(m.key, 'down');
+                  setAskWhy(true);
+                  setThanked(false);
+                }}
+              >
+                <ThumbsDown className="h-3.5 w-3.5" />
+              </RateBtn>
+              {thanked && <span className="ml-1 text-[11px] text-gray-400">{t.thanks}</span>}
+            </div>
+            {askWhy && (
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-2.5 space-y-2">
+                <div className="text-xs font-medium text-gray-600 dark:text-gray-300">{t.why}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Object.keys(t.reasons) as Reason[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => {
+                        onRate(m.key, 'down', r, comment);
+                        setAskWhy(false);
+                        setThanked(true);
+                      }}
+                      className="rounded-full border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200 hover:border-brand-400"
+                    >
+                      {t.reasons[r]}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  maxLength={1000}
+                  placeholder={t.commentPh}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent px-2 py-1 text-xs focus:outline-none focus:border-brand-400"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/** Vita's question (or "Something else?" / "Next") as buttons. Tasks with an on-screen guide
+ *  carry the compass. */
+const ChoiceList: React.FC<{
+  choices: NonNullable<VitaChatMessage['choices']>;
+  t: Strings;
+  onChoose: (label: string, ref: VitaChoiceRef) => void;
+}> = ({ choices, t, onChoose }) => (
+  <div className="space-y-1.5" data-testid="vita-choices" data-purpose={choices.purpose}>
+    {choices.header && <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{choices.header}</div>}
+    <div className="flex flex-col gap-1.5">
+      {choices.items.map((c: VitaChoice) => (
+        <button
+          key={`${c.kind}:${c.id}`}
+          type="button"
+          data-testid="vita-choice"
+          data-kind={c.kind}
+          data-id={c.id}
+          onClick={() => onChoose(c.label, { kind: c.kind, id: c.id })}
+          className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-800 hover:border-brand-400 hover:bg-brand-50/60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+        >
+          <span className="min-w-0 flex-1">{c.label}</span>
+          {c.kind === 'guide' && (
+            <span title={t.onScreen} aria-label={t.onScreen} className="text-violet-600 dark:text-violet-400">
+              <Compass className="h-3.5 w-3.5" />
+            </span>
+          )}
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300 group-hover:text-brand-500" />
+        </button>
+      ))}
+      {choices.other && choices.otherLabel && (
+        <button
+          type="button"
+          data-testid="vita-choice-other"
+          onClick={() => onChoose(choices.otherLabel!, { kind: 'other', id: '' })}
+          className="self-start rounded-full px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800"
+        >
+          {choices.otherLabel}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+/** A guide Vita picked itself: what it is and how long, then Start or Not this. */
+const GuidePreview: React.FC<{
+  title: string;
+  steps: number;
+  t: Strings;
+  active: boolean;
+  onStart: () => void;
+  onNotThis: () => void;
+}> = ({ title, steps, t, active, onStart, onNotThis }) => (
+  <div
+    data-testid="vita-guide-preview"
+    className="rounded-xl border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-900/20"
+  >
+    <div className="flex items-start gap-2">
+      <Compass className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{t.steps(steps)}</div>
+      </div>
+    </div>
+    <div className="mt-2.5 flex items-center gap-2">
+      <button
+        type="button"
+        data-testid="vita-guide-start"
+        onClick={onStart}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+      >
+        {t.start}
+      </button>
+      {active && (
+        <button
+          type="button"
+          data-testid="vita-guide-not-this"
+          onClick={onNotThis}
+          className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-white dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          {t.notThis}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+const RateBtn: React.FC<{ active?: boolean; label: string; onClick: () => void; children: React.ReactNode }> = ({
+  active,
+  label,
+  onClick,
+  children,
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={label}
+    aria-pressed={!!active}
+    title={label}
+    className={cn(
+      'rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800',
+      active && 'text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-300',
+    )}
+  >
+    {children}
+  </button>
+);
+
+const HistoryView: React.FC<{
+  t: Strings;
+  items: { id: string; title: string; lastTurnAt: string }[];
+  onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
+  onBack: () => void;
+}> = ({ t, items, onOpen, onDelete, onBack }) => (
+  <div className="flex-1 overflow-y-auto px-2 py-2">
+    <button type="button" onClick={onBack} className="mb-1 px-2 py-1 text-xs font-semibold text-brand-600">
+      ← {t.back}
+    </button>
+    {items.length === 0 ? (
+      <p className="px-3 py-6 text-center text-sm text-gray-400">{t.noHistory}</p>
+    ) : (
+      <ul>
+        {items.map((c) => (
+          <li key={c.id} className="group flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <button type="button" onClick={() => onOpen(c.id)} className="min-w-0 flex-1 text-left">
+              <div className="truncate text-sm text-gray-800 dark:text-gray-100">{c.title}</div>
+              <div className="text-[11px] text-gray-400">
+                {new Date(c.lastTurnAt).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(c.id)}
+              className="rounded p-1 text-gray-300 opacity-0 hover:text-red-500 group-hover:opacity-100"
+              aria-label="Delete chat"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
+
+export default VitaDock;

@@ -155,6 +155,8 @@ export interface PathologyReportDto {
 export interface EnterPathologyResultRequest {
   resultValuesJson: string;
   interpretation?: string;
+  // Required by the server when the line already has a report (kept in the result history; the report becomes AMENDED).
+  amendmentReason?: string;
 }
 
 export interface PathologyTestMaster {
@@ -381,6 +383,13 @@ export const pathologyService = {
 
   generateReport: async (hospitalId: string, orderId: string, orderLineId: string, request: GeneratePathologyReportRequest): Promise<GeneratePathologyReportResponse> => {
     const response = await api.post<GeneratePathologyReportResponse>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/lines/${orderLineId}/report`, request);
+    return response.data;
+  },
+
+  // Pathologist sign-off. Required before the report counts as approved (and, when the hospital's lab billing
+  // trigger is "On report approval", this is the moment the charge is posted).
+  verifyReport: async (hospitalId: string, orderId: string, reportId: string, request: { pathologistName: string; pathologistRegNo: string }): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post<{ success: boolean; message?: string }>(`/api/v1/PathologyOrder/${hospitalId}/${orderId}/report/${reportId}/verify`, request);
     return response.data;
   },
 

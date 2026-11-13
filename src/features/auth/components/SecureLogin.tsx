@@ -323,8 +323,8 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           otp: ''
         });
       } catch (mutateError) {
-        if (sanitizedUserid === 'aquib@gmail.com' && sanitizedPassword === 'Test@1234') {
-          console.log('[LOGIN-DEBUG] API failed, using local bypass for aquib@gmail.com');
+        // DEV-ONLY offline preview login (compiled out of production builds).
+        if (import.meta.env.DEV && sanitizedUserid === 'aquib@gmail.com' && sanitizedPassword === 'Test@1234') {
           const authStore = useAuthStore.getState();
           authStore.clearSession();
           authStore.setToken('mock-jwt-token-bypass');
@@ -360,7 +360,6 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       }
 
       if (response.success) {
-        console.log('[LOGIN-DEBUG] 1. login response success, userId=', response.userId);
         // Clear any existing auth data first to prevent stale data
         const authStore = useAuthStore.getState();
         authStore.clearSession();
@@ -373,7 +372,6 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         // invalid and force a logout + redirect back to /login mid-flight — which is what was
         // happening (first with userRole, then again with hospitalId once that gap was closed).
         setToken(response.accessToken!);
-        console.log('[LOGIN-DEBUG] 2. token set');
 
         // fetchAndStoreUserPermissions never actually throws (it catches its own API errors and
         // resolves { success: false, ... }), so the try/catch below was never the thing that could
@@ -388,16 +386,12 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         if (response.userId && response.accessToken) {
           try {
             permResult = await fetchAndStoreUserPermissions(response.userId, response.accessToken);
-            console.log('[LOGIN-DEBUG] 3. permissions fetched, result=', permResult, 'storedRole=', useAuthStore.getState().userRole, 'storedRoles=', useAuthStore.getState().userRoles);
           } catch (error) {
-            console.warn('[LOGIN-DEBUG] 3. permissions fetch THREW (caught):', error);
           }
         } else {
-          console.log('[LOGIN-DEBUG] 3. SKIPPED permissions fetch — missing userId or accessToken', { userId: response.userId, hasToken: !!response.accessToken });
         }
 
         if (!permResult?.success || !useAuthStore.getState().userRole) {
-          console.warn('[LOGIN-DEBUG] 3b. No role after permissions fetch — aborting login instead of continuing role-less.', permResult);
           useAuthStore.getState().clearSession();
           toast({
             title: "Couldn't finish signing you in",
@@ -411,28 +405,21 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
         if (response.userId) {
           hospitalResult = await fetchAndStoreHospitalMapping(response.userId);
-          console.log('[LOGIN-DEBUG] 4. hospital mapping result=', hospitalResult, 'hospitalId=', useAuthStore.getState().hospitalId, 'hospitalAccessRestricted=', useAuthStore.getState().hospitalAccessRestricted);
 
           if (hospitalResult === 'found') {
             try {
               const { doctorApi } = await import('@/features/doctor/services/doctorApi');
               await doctorApi.getDoctorProfile(response.userId);
-              console.log('[LOGIN-DEBUG] 5. doctor profile fetch resolved (no throw)');
             } catch (doctorError: any) {
               if (doctorError?.response?.status === 404) {
-                console.warn('[LOGIN-DEBUG] 5. Doctor profile not found (404):', doctorError);
               } else {
-                console.warn('[LOGIN-DEBUG] 5. Doctor profile fetch failed (non-blocking):', doctorError);
               }
             }
           } else {
-            console.info('[LOGIN-DEBUG] 5. SKIPPED doctor profile fetch — hospital info incomplete');
           }
         } else {
-          console.log('[LOGIN-DEBUG] 4. SKIPPED hospital mapping — missing userId');
         }
 
-        console.log('[LOGIN-DEBUG] 6. about to call setUser()');
         // Only now — once role, hospital mapping, and doctor profile have all settled — flip
         // isAuthenticated, so nothing downstream ever observes a partially-authenticated state.
         setUser({
@@ -441,10 +428,8 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           mobile: sanitizedUserid,
           name: sanitizedUserid,
         });
-        console.log('[LOGIN-DEBUG] 7. setUser() done, isAuthenticated=', useAuthStore.getState().isAuthenticated, 'userRole=', useAuthStore.getState().userRole);
 
         invalidateAuth();
-        console.log('[LOGIN-DEBUG] 8. invalidateAuth() done');
 
         if (DEMO_LOGIN_EMAIL && sanitizedUserid.toLowerCase() === DEMO_LOGIN_EMAIL.toLowerCase()) {
           recordDemoLoginLead();
@@ -456,9 +441,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             ? "Welcome back!"
             : "Welcome back! Complete your hospital information for full access.",
         });
-        console.log('[LOGIN-DEBUG] 9. about to call onLogin()');
         onLogin();
-        console.log('[LOGIN-DEBUG] 10. onLogin() returned');
       } else {
         handleFailedLogin();
       }

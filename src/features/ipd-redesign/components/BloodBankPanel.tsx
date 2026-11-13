@@ -12,6 +12,7 @@ import {
     type BloodComponent, type BloodGroup, type CrossmatchResult, type TransfusionReaction,
 } from '../services/bloodBankApi';
 import { formatIstDateTime } from '../utils/istDate';
+import { nursingStationApi, type HospitalNurseItem } from '../services/nursingStationApi';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
 interface Props {
@@ -51,7 +52,8 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
     const [vitalsAfter, setVitalsAfter] = useState('');
     const [reaction, setReaction] = useState<TransfusionReaction>('NONE');
     const [reactionNotes, setReactionNotes] = useState('');
-    const [witnessName, setWitnessName] = useState('');
+    const [witnessUserId, setWitnessUserId] = useState('');
+    const [witnessOptions, setWitnessOptions] = useState<HospitalNurseItem[]>([]);
     const [transfuseBusy, setTransfuseBusy] = useState(false);
 
     const load = () => {
@@ -97,7 +99,8 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
         setVitalsAfter('');
         setReaction('NONE');
         setReactionNotes('');
-        setWitnessName('');
+        setWitnessUserId('');
+        nursingStationApi.listNurses().then(setWitnessOptions).catch(() => setWitnessOptions([]));
     };
 
     const submitTransfuse = async () => {
@@ -106,8 +109,8 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
             toast({ title: 'Volume given is required', variant: 'destructive' });
             return;
         }
-        if (!witnessName.trim()) {
-            toast({ title: 'Witness name is required', variant: 'destructive' });
+        if (!witnessUserId) {
+            toast({ title: 'Select the staff member who witnessed the bedside check', variant: 'destructive' });
             return;
         }
         if (reaction !== 'NONE' && !reactionNotes.trim()) {
@@ -126,7 +129,8 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                 vitalsAfter: vitalsAfter.trim() || undefined,
                 reaction,
                 reactionNotes: reactionNotes.trim() || undefined,
-                witnessName: witnessName.trim(),
+                witnessUserId,
+                witnessName: witnessOptions.find(n => n.userId === witnessUserId)?.fullName ?? undefined,
             });
             toast({ title: 'Transfusion recorded.' });
             setTransfuseBagId(null);
@@ -243,8 +247,11 @@ export const BloodBankPanel: React.FC<Props> = ({ admissionId, isActive }) => {
                                 <Input type="number" min={1} value={volumeGivenMl} onChange={e => setVolumeGivenMl(e.target.value)} className="h-9 mt-1" />
                             </div>
                             <div>
-                                <Label className="text-[11px] font-semibold text-slate-600">Witness name</Label>
-                                <Input value={witnessName} onChange={e => setWitnessName(e.target.value)} className="h-9 mt-1" />
+                                <Label className="text-[11px] font-semibold text-slate-600">Bedside witness (a second staff member)</Label>
+                                <select value={witnessUserId} onChange={e => setWitnessUserId(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                    <option value="">Select staff member…</option>
+                                    {witnessOptions.map(n => <option key={n.userId} value={n.userId}>{n.fullName || n.mobileNumber}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <Label className="text-[11px] font-semibold text-slate-600">Vitals before</Label>

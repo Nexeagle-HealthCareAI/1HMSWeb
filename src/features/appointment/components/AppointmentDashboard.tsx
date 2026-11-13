@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { JourneyBadge } from './JourneyBadge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -2012,7 +2013,10 @@ export const AppointmentDashboard = () => {
 
                             {/* Current Status */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              <span className="scale-[0.85] origin-left inline-block">{getStatusBadge(appointment.finalStatusCode, appointment)}</span>
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span className="scale-[0.85] origin-left inline-block">{getStatusBadge(appointment.finalStatusCode, appointment)}</span>
+                                <JourneyBadge appointment={appointment} />
+                              </div>
                             </TableCell>
 
                             {/* Case */}
@@ -2233,6 +2237,9 @@ export const AppointmentDashboard = () => {
                               {/* Status Badge */}
                               <div className="mt-1.5 scale-[0.8] origin-left pointer-events-none">
                                 {getStatusBadge(appointment.finalStatusCode, appointment)}
+                              </div>
+                              <div className="mt-1">
+                                <JourneyBadge appointment={appointment} />
                               </div>
 
                               {/* Actions Row */}

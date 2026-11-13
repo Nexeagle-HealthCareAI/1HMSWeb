@@ -121,7 +121,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   // Validation schema
   const DoctorSchema = useMemo(() => (
     z.object({
-      licenseNumber: z.string().min(1, t('docProfile.errors.licenseRequired')),
+      licenseNumber: z.string().min(1, t('docProfile.errors.licenseRequired'))
+        .refine((v) => v.trim().toUpperCase() !== 'PENDING', { message: t('docProfile.errors.licenseRequired') }),
       qualifications: z.array(z.string()).min(1, t('docProfile.errors.qualificationsRequired')),
       specializations: z.array(z.string()).min(1, t('docProfile.errors.specializationsRequired')),
       experienceYears: z
@@ -148,11 +149,12 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
       setDoctorId(doctorData.doctorId);
       setProfileData({
         userId: doctorData.userId || userId || '',
-        licenseNumber: doctorData.licenseNumber || '',
+        licenseNumber: (doctorData.licenseNumber || '').trim().toUpperCase() === 'PENDING' ? '' : (doctorData.licenseNumber || ''),
         qualification: doctorData.qualifications || [],
         experienceYears: doctorData.experienceYears || 0,
         medicalCouncil: doctorData.medicalCouncil || '',
-        registrationYear: doctorData.registrationYear || new Date().getFullYear(),
+        // an unconfirmed profile must have its year typed in, not silently defaulted to this year
+        registrationYear: doctorData.registrationYear || (doctorData.isProfileConfirmed === false ? 0 : new Date().getFullYear()),
         bio: doctorData.bio || '',
         primaryDepartment: doctorData.primaryDepartmentName || '',
         department: doctorData.doctorDepartments?.[0]?.departmentId || '',

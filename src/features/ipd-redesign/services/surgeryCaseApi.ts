@@ -216,6 +216,15 @@ export const surgeryCaseApi = {
         }
     },
 
+    // A completed phase is never edited; a correction or clarification is appended as an attributed addendum.
+    addChecklistAddendum: async (surgeryCaseId: string, phase: 'SignIn' | 'TimeOut' | 'SignOut', text: string, hospitalId?: string) => {
+        try {
+            return await ipdApiClient.post('/surgery-case/checklist/addendum', { hospitalId: hospitalIdOrThrow(hospitalId), surgeryCaseId, phase, text });
+        } catch (err) {
+            throw new Error(messageFrom(err, 'Could not add the addendum.'));
+        }
+    },
+
     saveIntraOp: async (surgeryCaseId: string, input: IntraOpRecordInput, hospitalId?: string) => {
         try {
             return await ipdApiClient.post('/surgery-case/intra-op', { hospitalId: hospitalIdOrThrow(hospitalId), surgeryCaseId, ...input });

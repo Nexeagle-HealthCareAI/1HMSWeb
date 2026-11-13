@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { usePrescriptionFieldLayout } from '@/features/prescription/hooks/usePrescriptionFieldLayout';
 import { useAuthStore } from '@/store/authStore';
+import { PrescriptionSafetyAlerts } from './PrescriptionSafetyAlerts';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { prescriptionFieldConfigApi } from '@/features/prescription/services/prescriptionFieldConfigApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -720,7 +721,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
       const pid = searchParams.get('patientId') || patientId;
       if (pid) {
         try {
-          const hid = getHospitalId?.() || searchParams.get('hospitalId') || '4de8ea65-71aa-4800-8167-60147d78ea58';
+          // No hard-coded fallback hospital: a missing hospital must never silently read another tenant.
+          const hid = getHospitalId?.() || searchParams.get('hospitalId');
+          if (!hid) return;
           const data = await patientProfileApi.getPatientProfile(hid, pid);
           setPatientProfile(data);
         } catch (error) {
@@ -4498,6 +4501,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 'Medications',
                 <div className="space-y-4 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                   {/* Header removed */}
+
+                  <PrescriptionSafetyAlerts
+                    hospitalId={getHospitalId?.()}
+                    patientId={resolvedPatientId}
+                    medications={prescriptionData.medications}
+                    onAcknowledge={(summary) =>
+                      setPrescriptionData(prev => ({
+                        ...prev,
+                        privateNotes: [...(prev.privateNotes || []), { content: summary, type: 'Safety acknowledgement', sharedWithStaff: false, pinned: false }],
+                      }))
+                    }
+                  />
 
                   {prescriptionData.medications.length === 0 && (
                     <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-white/50 dark:bg-slate-900/60 px-4 py-6 text-center space-y-3">
