@@ -34,12 +34,12 @@ import { useGuide } from '../guide/useGuide';
 import { GuideOverlay } from '../guide/GuideOverlay';
 import { GuideCard } from '../guide/GuideCard';
 import { VitaLayer, VITA_ESCAPE, VITA_Z } from './VitaLayer';
+import { useVitaUi } from '../store';
 import { GUIDE_T, type GuideStrings } from '../guide/text';
 import type { GuidePayload } from '../guide/types';
 
 
 const LS_LOCALE = 'vita.locale';
-const LS_OPEN = 'vita.open';
 const LS_MODE = 'vita.mode';
 
 const T = {
@@ -234,7 +234,10 @@ const VitaDock: React.FC = () => {
   const token = useAuthStore((s) => s.token);
   const permissions = useAuthStore((s) => s.permissions);
 
-  const [open, setOpen] = useState(() => readLS(LS_OPEN) === '1');
+  // Open state is shared with the top-nav "Ask Vita" button (see ../store).
+  const open = useVitaUi((s) => s.open);
+  const setOpen = useVitaUi((s) => s.setOpen);
+  const toggleOpen = useVitaUi((s) => s.toggle);
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [locale, setLocaleState] = useState<VitaLocale>(() => (readLS(LS_LOCALE) === 'hi' ? 'hi' : 'en'));
   const [input, setInput] = useState('');
@@ -331,14 +334,12 @@ const VitaDock: React.FC = () => {
     if (!token && client) void client.end();
   }, [token, client]);
 
-  useEffect(() => writeLS(LS_OPEN, open ? '1' : '0'), [open]);
-
-  // Ctrl+K / Cmd+K toggles the dock from anywhere; Esc closes it.
+  // Ctrl+K / Cmd+K toggles the drawer from anywhere; Esc closes it.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setOpen((o) => !o);
+        toggleOpen();
       } else if (e.key === 'Escape' && open && !guide.active) {
         setOpen(false);
       }
@@ -353,7 +354,7 @@ const VitaDock: React.FC = () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener(VITA_ESCAPE, onVitaEscape);
     };
-  }, [open, guide.active]);
+  }, [open, guide.active, setOpen, toggleOpen]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -417,31 +418,19 @@ const VitaDock: React.FC = () => {
 
   return (
     <VitaLayer>
-      {!open && (
-        <button
-          type="button"
-          data-vita-ui="fab"
-          onClick={() => setOpen(true)}
-          style={{ zIndex: VITA_Z.fab }}
-          className="fixed right-4 bottom-[84px] lg:bottom-6 lg:right-6 flex items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 py-3 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 active:scale-95 transition"
-          aria-label={t.fab}
-          title={`${t.fab} (Ctrl+K)`}
-        >
-          <Sparkles className="h-5 w-5" />
-          <span className="text-sm font-semibold hidden sm:inline">{t.fab}</span>
-          <kbd className="hidden lg:inline rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
-        </button>
-      )}
-
       {open && (
         <section
+          id="vita-drawer"
           role="dialog"
           data-vita-ui="dock"
           style={{ zIndex: VITA_Z.dock }}
           aria-label="Vita assistant"
           className={cn(
-            'fixed flex flex-col bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800',
-            'inset-0 lg:inset-auto lg:right-6 lg:bottom-6 lg:w-[420px] lg:h-[min(680px,calc(100vh-48px))] lg:rounded-2xl overflow-hidden',
+            // Right-hand side drawer, full height. Not modal: the 1HMS screen stays usable beside it,
+            // so a guide can point at things on the page while the drawer is open.
+            'fixed inset-y-0 right-0 flex h-[100dvh] w-full sm:w-[420px] flex-col overflow-hidden',
+            'bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl',
+            'animate-in slide-in-from-right duration-200',
           )}
         >
           {/* header */}
