@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { VITA_API_URL } from '@/features/vita/config';
+import { VitaNavButton } from '@/features/vita/components/VitaNavButton';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store';
 import { useAppStore } from '@/store/appStore';
@@ -453,6 +454,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <span className="text-sm font-medium">{personalProfileLabel} ({profileScore}%)</span>
                 </Button>
               )}
+
+              {/* Vita assistant: opens the side drawer (also Ctrl+K) */}
+              {VITA_API_URL && <VitaNavButton />}
 
               {/* Alerts */}
               <div className="hidden md:block">
