@@ -6,7 +6,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertTriangle, UserPlus, Link2, Loader2, FileBadge2, Pencil, HelpCircle, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
@@ -17,10 +20,20 @@ import { AbdmGuidePanel } from './AbdmGuidePanel';
 import { ReactivateAbhaDialog } from './ReactivateAbhaDialog';
 import { CounterScanPanel } from './CounterScanPanel';
 import { RecordLinkingPanel } from './RecordLinkingPanel';
+import { HiuPanel } from './HiuPanel';
+import { canUseAbdm } from '../hooks/useAbdmCareContexts';
+import { filterAbhaAccounts } from '../utils/filterAbhaAccounts';
+import { usePendingAbhaScan } from '../store/pendingScan';
+import { useNavigate } from 'react-router-dom';
+
+type BoardTab = 'counter' | 'accounts' | 'records' | 'received' | 'setup' | 'log';
+const TAB_KEY = 'abdm-board-tab';
+const TABS: BoardTab[] = ['counter', 'accounts', 'records', 'received', 'setup', 'log'];
 
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
   const hospitalId = useAuthStore(s => s.hospitalId) || '';
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -30,6 +43,28 @@ export const AbdmDashboard: React.FC = () => {
   const [removing, setRemoving] = useState(false);
   const [accounts, setAccounts] = useState<AbhaAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [waiting, setWaiting] = useState(0);
+  const [tab, setTab] = useState<BoardTab>(() => {
+    try {
+      const saved = sessionStorage.getItem(TAB_KEY) as BoardTab | null;
+      return saved && TABS.includes(saved) ? saved : 'counter';
+    } catch { return 'counter'; }
+  });
+  const changeTab = (v: string) => {
+    setTab(v as BoardTab);
+    try { sessionStorage.setItem(TAB_KEY, v); } catch { /* storage unavailable: non-fatal */ }
+  };
+
+  // Same query the record-sharing panel uses, so this adds no extra request.
+  const readiness = useQuery({
+    queryKey: ['abdm', 'm2-readiness', hospitalId],
+    queryFn: () => abdmApi.getM2Readiness(hospitalId),
+    enabled: !!hospitalId && canUseAbdm(),
+    staleTime: 30_000,
+  });
+  const setupIssues = readiness.data?.issues ?? [];
+  const shownAccounts = filterAbhaAccounts(accounts, search);
 
   const load = async () => {
     if (!hospitalId) { setLoading(false); return; }
@@ -67,101 +102,80 @@ export const AbdmDashboard: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header Section */}
+    <div className="p-6 max-w-7xl mx-auto space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-xl text-primary">
-              <FileBadge2 className="h-8 w-8" />
+              <FileBadge2 className="h-6 w-6" aria-hidden="true" />
             </div>
-            Ayushman Bharat Digital Mission (ABDM)
+            ABHA / ABDM
           </h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl">
-            Manage patient ABHA (Ayushman Bharat Health Account) records. Create new IDs, link existing accounts, and maintain digital health identities for your facility.
+          <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl">
+            Patients' ABHA accounts, counter scans and record sharing for this hospital.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2 bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md transition-all" onClick={() => setGuideOpen(true)}>
-            <HelpCircle className="h-4 w-4" /> 
-            Integration Guide
+        <Button variant="outline" className="gap-2 bg-white dark:bg-zinc-950" onClick={() => setGuideOpen(true)}>
+          <HelpCircle className="h-4 w-4" aria-hidden="true" /> Staff guide
+        </Button>
+      </div>
+
+      {setupIssues.length > 0 && tab !== 'setup' && (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-4 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" aria-hidden="true" />
+          <p className="flex-1 min-w-0 text-sm text-amber-900 dark:text-amber-200">
+            <strong>Setup needs attention.</strong> {setupIssues[0].text}
+            {setupIssues.length > 1 ? ` (and ${setupIssues.length - 1} more)` : ''}
+          </p>
+          <Button variant="outline" size="sm" className="border-amber-400 text-amber-900 bg-white hover:bg-amber-100" onClick={() => changeTab('setup')}>
+            Open Setup
           </Button>
         </div>
-      </div>
+      )}
 
-      {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-md hover:border-blue-500/50 transition-all cursor-pointer group bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-zinc-950 border-blue-100 dark:border-blue-900/30" onClick={() => setCreateOpen(true)}>
-          <CardContent className="p-6 flex flex-col items-start gap-4">
-            <div className="p-3 bg-blue-500 text-white rounded-2xl shadow-sm group-hover:scale-110 group-hover:shadow-blue-200 dark:group-hover:shadow-blue-900 transition-all">
-              <UserPlus className="h-6 w-6" />
+      <Tabs value={tab} onValueChange={changeTab}>
+        <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="counter" className="gap-2">
+            Counter
+            {waiting > 0 && <Badge className="h-5 min-w-5 px-1.5 justify-center" aria-label={`${waiting} waiting`}>{waiting}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="accounts">ABHA accounts</TabsTrigger>
+          <TabsTrigger value="records">Shared records</TabsTrigger>
+          <TabsTrigger value="received">From other hospitals</TabsTrigger>
+          <TabsTrigger value="setup" className="gap-2">
+            Setup
+            {setupIssues.length > 0 && <span className="h-2 w-2 rounded-sm bg-amber-600" aria-label="needs attention" />}
+          </TabsTrigger>
+          <TabsTrigger value="log">Activity log</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="counter" className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Patients who scan the hospital QR with their ABHA app appear here. Book appointment takes you to the booking page; choose a doctor and time, and the patient form opens with their details filled.
+          </p>
+          <CounterScanPanel hospitalId={hospitalId} mode="counter" onHandled={onWizardDone} onOpenSetup={() => changeTab('setup')} onWaitingCount={setWaiting}
+            onBook={(item) => { usePendingAbhaScan.getState().setScan(item); navigate('/appointment-booking'); }}
+          />
+        </TabsContent>
+
+        <TabsContent value="accounts" className="space-y-4">
+          <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Input
+                aria-label="Search ABHA accounts"
+                className="pl-9 h-10"
+                placeholder="Search by patient, ABHA number or mobile"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
-            <div>
-              <h3 className="font-semibold text-lg text-blue-950 dark:text-blue-100">Create New ABHA</h3>
-              <p className="text-sm text-blue-700/70 dark:text-blue-400/70 mt-1 leading-relaxed">Enroll a patient using their Aadhaar and mobile number.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button className="h-10 gap-2" onClick={() => setCreateOpen(true)}><UserPlus className="h-4 w-4" aria-hidden="true" /> Create ABHA</Button>
+              <Button variant="secondary" className="h-10 gap-2" onClick={() => setLinkOpen(true)}><Link2 className="h-4 w-4" aria-hidden="true" /> Link existing</Button>
+              <Button variant="outline" className="h-10 gap-2" onClick={() => setReactivateOpen(true)}><RotateCcw className="h-4 w-4" aria-hidden="true" /> Reactivate</Button>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md hover:border-emerald-500/50 transition-all cursor-pointer group bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-zinc-950 border-emerald-100 dark:border-emerald-900/30" onClick={() => setLinkOpen(true)}>
-          <CardContent className="p-6 flex flex-col items-start gap-4">
-            <div className="p-3 bg-emerald-500 text-white rounded-2xl shadow-sm group-hover:scale-110 group-hover:shadow-emerald-200 dark:group-hover:shadow-emerald-900 transition-all">
-              <Link2 className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg text-emerald-950 dark:text-emerald-100">Link Existing ABHA</h3>
-              <p className="text-sm text-emerald-700/70 dark:text-emerald-400/70 mt-1 leading-relaxed">Attach an existing ABHA to your hospital records securely.</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md hover:border-amber-500/50 transition-all cursor-pointer group bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-zinc-950 border-amber-100 dark:border-amber-900/30" onClick={() => setReactivateOpen(true)}>
-          <CardContent className="p-6 flex flex-col items-start gap-4">
-            <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-sm group-hover:scale-110 group-hover:shadow-amber-200 dark:group-hover:shadow-amber-900 transition-all">
-              <RotateCcw className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg text-amber-950 dark:text-amber-100">Reactivate ABHA</h3>
-              <p className="text-sm text-amber-700/70 dark:text-amber-400/70 mt-1 leading-relaxed">Restore a deactivated or inactive ABHA account quickly.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <CounterScanPanel hospitalId={hospitalId} onHandled={onWizardDone} />
-
-      <RecordLinkingPanel hospitalId={hospitalId} />
-
-      <CreateAbhaWizard hospitalId={hospitalId} open={createOpen} onOpenChange={setCreateOpen} onDone={onWizardDone} />
-      <LinkExistingAbhaWizard hospitalId={hospitalId} open={linkOpen} onOpenChange={setLinkOpen} onDone={onWizardDone} />
-      <EditAbhaProfileWizard
-        hospitalId={hospitalId}
-        account={editAccount}
-        open={!!editAccount}
-        onOpenChange={(v) => { if (!v) setEditAccount(null); }}
-        onUpdated={onWizardDone}
-      />
-      <ReactivateAbhaDialog hospitalId={hospitalId} open={reactivateOpen} onOpenChange={setReactivateOpen} onReactivated={onWizardDone} />
-      <AbdmGuidePanel open={guideOpen} onOpenChange={setGuideOpen} />
-
-      <AlertDialog open={!!removeAccount} onOpenChange={(v) => { if (!v) setRemoveAccount(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this ABHA account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This only removes <span className="font-mono">{removeAccount?.abhaNumber}</span> from this hospital's local records.
-              It does not deactivate or delete the ABHA number itself on ABDM — the patient's actual ABHA account is unaffected.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemove} disabled={removing} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
-              {removing && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />} Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
+          </div>
       {/* Accounts Table */}
       <Card className="border-border/50 shadow-sm overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 bg-muted/20">
@@ -183,9 +197,11 @@ export const AbdmDashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold mb-1">No ABHA Accounts Found</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Get started by creating a new ABHA or linking an existing one using the quick actions above.
+                Create an ABHA or link an existing one with the buttons above, or do it while booking an appointment.
               </p>
             </div>
+          ) : shownAccounts.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">No account matches "{search.trim()}".</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -194,13 +210,13 @@ export const AbdmDashboard: React.FC = () => {
                     <th className="py-4 px-6 font-medium">Patient Details</th>
                     <th className="py-4 px-6 font-medium">ABHA Details</th>
                     <th className="py-4 px-6 font-medium">Contact</th>
-                    <th className="py-4 px-6 font-medium">Source</th>
+                    <th className="py-4 px-6 font-medium">How added</th>
                     <th className="py-4 px-6 font-medium">Added On</th>
                     <th className="py-4 px-6" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
-                  {accounts.map(a => (
+                  {shownAccounts.map(a => (
                     <tr key={a.abhaAccountId} className="hover:bg-muted/30 transition-colors group">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
@@ -266,6 +282,55 @@ export const AbdmDashboard: React.FC = () => {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="records">
+          <RecordLinkingPanel hospitalId={hospitalId} view="records" />
+        </TabsContent>
+
+        <TabsContent value="received">
+          {canUseAbdm() && <HiuPanel hospitalId={hospitalId} />}
+        </TabsContent>
+
+        <TabsContent value="setup" className="space-y-4">
+          <CounterScanPanel hospitalId={hospitalId} mode="setup" />
+          <RecordLinkingPanel hospitalId={hospitalId} view="setup" />
+        </TabsContent>
+
+        <TabsContent value="log">
+          <RecordLinkingPanel hospitalId={hospitalId} view="log" />
+        </TabsContent>
+      </Tabs>
+
+      <CreateAbhaWizard hospitalId={hospitalId} open={createOpen} onOpenChange={setCreateOpen} onDone={onWizardDone} />
+      <LinkExistingAbhaWizard hospitalId={hospitalId} open={linkOpen} onOpenChange={setLinkOpen} onDone={onWizardDone} />
+      <EditAbhaProfileWizard
+        hospitalId={hospitalId}
+        account={editAccount}
+        open={!!editAccount}
+        onOpenChange={(v) => { if (!v) setEditAccount(null); }}
+        onUpdated={onWizardDone}
+      />
+      <ReactivateAbhaDialog hospitalId={hospitalId} open={reactivateOpen} onOpenChange={setReactivateOpen} onReactivated={onWizardDone} />
+      <AbdmGuidePanel open={guideOpen} onOpenChange={setGuideOpen} />
+
+      <AlertDialog open={!!removeAccount} onOpenChange={(v) => { if (!v) setRemoveAccount(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this ABHA account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This only removes <span className="font-mono">{removeAccount?.abhaNumber}</span> from this hospital's local records.
+              It does not deactivate or delete the ABHA number itself on ABDM — the patient's actual ABHA account is unaffected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} disabled={removing} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+              {removing && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />} Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

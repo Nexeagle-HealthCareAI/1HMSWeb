@@ -15,6 +15,8 @@ import { AbdmLinkButton } from './AbdmLinkButton';
 
 interface Props {
   hospitalId: string;
+  // 'all' (default) is the original single card; the others are its parts, one per ABHA board tab.
+  view?: 'all' | 'records' | 'setup' | 'log';
 }
 
 const when = (iso?: string | null) =>
@@ -66,7 +68,7 @@ const STATUS_SHORT: Record<AbdmCareContext['linkStatus'], string> = {
  * views — every call we made with the answer it got, and every request ABDM made of us. Header
  * values are never shown, only their names and lengths.
  */
-export const RecordLinkingPanel: React.FC<Props> = ({ hospitalId }) => {
+export const RecordLinkingPanel: React.FC<Props> = ({ hospitalId, view = 'all' }) => {
   const enabled = !!hospitalId && canUseAbdm();
 
   const readiness = useQuery({
@@ -102,15 +104,17 @@ export const RecordLinkingPanel: React.FC<Props> = ({ hospitalId }) => {
       <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <FileStack className="h-5 w-5 text-indigo-600" />
-          Health records linked to ABHA
+          {view === 'setup' ? 'Record sharing readiness' : view === 'log' ? 'Calls to and from ABDM' : 'Health records linked to ABHA'}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        {view === 'setup' && <p className="text-sm text-muted-foreground">What ABDM needs from this server before patients can find and receive their records.</p>}
+        {view === 'log' && <p className="text-sm text-muted-foreground">Every call 1HMS made with the answer it got, and every request ABDM made of this hospital.</p>}
+        <p className={`text-sm text-muted-foreground ${view === 'setup' || view === 'log' ? 'hidden' : ''}`}>
           Link a completed OPD visit (Doctor board) or a signed discharge (IPD) so the patient sees it in their ABHA app.
           {rows.length > 0 && <> {linked} linked · {notFindable} not yet findable elsewhere.</>}
         </p>
       </CardHeader>
       <CardContent className="p-4 space-y-4">
-        {readiness.isLoading ? (
+        {(view === 'all' || view === 'setup') && (readiness.isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Checking ABDM setup…</div>
         ) : issues.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-emerald-700">
@@ -125,11 +129,12 @@ export const RecordLinkingPanel: React.FC<Props> = ({ hospitalId }) => {
               <AlertDescription>{issue.text}</AlertDescription>
             </Alert>
           ))
-        )}
+        ))}
 
-        <Tabs defaultValue="visits">
-          <TabsList>
-            <TabsTrigger value="visits">Linked visits ({rows.length})</TabsTrigger>
+        {view !== 'setup' && (
+        <Tabs key={view} defaultValue={view === 'log' ? 'activity' : 'visits'}>
+          <TabsList className={view === 'records' ? 'hidden' : undefined}>
+            {view !== 'log' && <TabsTrigger value="visits">Linked visits ({rows.length})</TabsTrigger>}
             <TabsTrigger value="activity">ABDM activity</TabsTrigger>
             <TabsTrigger value="requests">Requests from ABDM{unanswered > 0 ? ` (${unanswered} unanswered)` : ''}</TabsTrigger>
           </TabsList>
@@ -178,6 +183,7 @@ export const RecordLinkingPanel: React.FC<Props> = ({ hospitalId }) => {
             <InboundTable requests={inbound.data?.requests ?? []} />
           </TabsContent>
         </Tabs>
+        )}
       </CardContent>
     </Card>
   );

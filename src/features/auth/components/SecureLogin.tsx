@@ -523,7 +523,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
     // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
     // flags, not just success, or a total delivery failure looks identical to a real send.
-    if (response.isWhatsappSent || response.isEmailSent) {
+    if (response.devCode) {
+      // Tester number on the Dev server: nothing is sent, the code is shown on the page.
+      toast({ title: "Test number", description: "Nothing was sent. Your code is shown on the page." });
+    } else if (response.isWhatsappSent || response.isEmailSent) {
       toast({
         title: "OTP Sent",
         description: "Please check your mobile for the verification code"
@@ -705,7 +708,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       // Backend still returns success=true even when both WhatsApp and Email delivery fail (the
       // OTP is generated/stored regardless, so support can retrieve it) — check the delivery
       // flags, not just success, or a total delivery failure looks identical to a real send.
-      if (response.success && (response.isWhatsappSent || response.isEmailSent)) {
+      if (response.success && response.devCode) {
+        // Tester number on the Dev server: nothing is sent, the code is shown on the page.
+        toast({ title: "Test number", description: "Nothing was sent. Your code is shown on the page." });
+      } else if (response.success && (response.isWhatsappSent || response.isEmailSent)) {
         toast({
           title: "OTP Sent!",
           description: "Please check your mobile for the verification code"
