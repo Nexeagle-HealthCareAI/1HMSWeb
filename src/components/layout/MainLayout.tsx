@@ -10,6 +10,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
 import { usePendingCount } from '@/features/healthWiki/hooks';
 import { useLogout } from '@/hooks/useLogout';
+import { TesterResetDialog, TesterResetMenuItem } from '@/features/auth/components/TesterResetMenuItem';
 import { useSubscriptionApi } from '@/features/subscription/hooks/useSubscriptionApi';
 import { SubscriptionExpiryBanner } from '@/features/subscription/components/SubscriptionExpiryBanner';
 import { FreeTierUsageBadge } from '@/features/subscription/components/FreeTierUsageBadge';
@@ -519,6 +520,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       onCheckedChange={setLowBandwidthMode}
                     />
                   </DropdownMenuItem>
+                  <TesterResetMenuItem />
                   <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:bg-red-50 dark:focus:bg-red-500/10 cursor-pointer font-medium">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -530,6 +532,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </header>
         </div>
 
+        <TesterResetDialog />
         {showExpiryWarning && <SubscriptionExpiryBanner endDate={subscriptionStatus!.subscriptionEndDate!} />}
         {isSubscriptionExpired && <SubscriptionReadOnlyBanner isAdminRole={isAdminRole} />}
         <SubscriptionUpsellModal isAdminRole={isAdminRole} />
