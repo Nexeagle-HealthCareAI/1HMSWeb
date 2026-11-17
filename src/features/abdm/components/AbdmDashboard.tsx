@@ -20,14 +20,15 @@ import { AbdmGuidePanel } from './AbdmGuidePanel';
 import { ReactivateAbhaDialog } from './ReactivateAbhaDialog';
 import { CounterScanPanel } from './CounterScanPanel';
 import { RecordLinkingPanel } from './RecordLinkingPanel';
+import { HiuPanel } from './HiuPanel';
 import { canUseAbdm } from '../hooks/useAbdmCareContexts';
 import { filterAbhaAccounts } from '../utils/filterAbhaAccounts';
 import { usePendingAbhaScan } from '../store/pendingScan';
 import { useNavigate } from 'react-router-dom';
 
-type BoardTab = 'counter' | 'accounts' | 'records' | 'setup' | 'log';
+type BoardTab = 'counter' | 'accounts' | 'records' | 'received' | 'setup' | 'log';
 const TAB_KEY = 'abdm-board-tab';
-const TABS: BoardTab[] = ['counter', 'accounts', 'records', 'setup', 'log'];
+const TABS: BoardTab[] = ['counter', 'accounts', 'records', 'received', 'setup', 'log'];
 
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
@@ -140,6 +141,7 @@ export const AbdmDashboard: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="accounts">ABHA accounts</TabsTrigger>
           <TabsTrigger value="records">Shared records</TabsTrigger>
+          <TabsTrigger value="received">From other hospitals</TabsTrigger>
           <TabsTrigger value="setup" className="gap-2">
             Setup
             {setupIssues.length > 0 && <span className="h-2 w-2 rounded-sm bg-amber-600" aria-label="needs attention" />}
@@ -284,6 +286,10 @@ export const AbdmDashboard: React.FC = () => {
 
         <TabsContent value="records">
           <RecordLinkingPanel hospitalId={hospitalId} view="records" />
+        </TabsContent>
+
+        <TabsContent value="received">
+          {canUseAbdm() && <HiuPanel hospitalId={hospitalId} />}
         </TabsContent>
 
         <TabsContent value="setup" className="space-y-4">
