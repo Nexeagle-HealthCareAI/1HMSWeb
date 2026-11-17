@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft, Link2 } from 'lucide-react';
-import { LinkExistingAbhaWizard } from '@/features/abdm/components/LinkExistingAbhaWizard';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft, Lock } from 'lucide-react';
+import { AbhaStrip, type AbhaVerified } from '@/features/abdm/components/AbhaStrip';
+import { abhaPrefill, lockedByAbha, type AbhaProfileLike, type AbhaSource } from '@/features/abdm/utils/abhaPrefill';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse, type AppointmentDetail } from '../services/appointmentApi';
@@ -197,7 +198,36 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [linkAbhaOpen, setLinkAbhaOpen] = useState(false);
+  // ABHA verified in this sitting. It only counts while the form still carries the same number,
+  // so clearing or switching the patient unlocks the fields without extra bookkeeping.
+  const [abhaVerified, setAbhaVerified] = useState<(AbhaVerified & { locked: { name: boolean; gender: boolean; age: boolean } }) | null>(null);
+  const abhaActive = !!abhaVerified && abhaVerified.abhaNumber === formData.abhaId;
+  const abhaLock = abhaActive ? abhaVerified!.locked : { name: false, gender: false, age: false };
+
+  const handleAbhaVerified = (profile: AbhaProfileLike, source: AbhaSource) => {
+    if (!profile.abhaNumber) return;
+    const fill = abhaPrefill(profile);
+    // An existing patient keeps the details on their record; only the ABHA number is attached.
+    const fresh = !formData.patientId;
+    setFormData(prev => ({
+      ...prev,
+      abhaId: profile.abhaNumber!,
+      ...(fresh ? {
+        name: fill.name ?? prev.name,
+        gender: fill.gender ?? prev.gender,
+        age: fill.age ?? prev.age,
+        ageUnit: fill.age ? (fill.ageUnit ?? prev.ageUnit) : prev.ageUnit,
+        phone: prev.phone || fill.phone || '',
+        address: prev.address || fill.address || '',
+      } : {}),
+    }));
+    setAbhaVerified({
+      abhaNumber: profile.abhaNumber,
+      abhaAddress: profile.abhaAddress,
+      source,
+      locked: fresh ? lockedByAbha(fill) : { name: false, gender: false, age: false },
+    });
+  };
   const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   // Fuzzy duplicate detection (only while entering a brand-new patient).
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
@@ -880,39 +910,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           {/* Main Form */}
           <div className="w-full">
             <form id="patient-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5 items-start">
-              {/* ABHA link banner — first thing staff see, highlighted so it isn't missed */}
-              <div className="xl:col-span-12 rounded-2xl border-2 border-dashed border-brand-300 dark:border-brand-800 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-transparent px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-8 w-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0 shadow-md shadow-brand-600/20">
-                    <CreditCard className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-brand-900 dark:text-brand-300">ABHA (Ayushman Bharat Health Account)</p>
-                    {formData.abhaId ? (
-                      <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 truncate">{formData.abhaId}</p>
-                    ) : (
-                      <p className="text-[11px] text-brand-600/80 dark:text-brand-400/70 truncate">Not linked yet</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {formData.abhaId && (
-                    <Badge variant="outline" className="hidden sm:flex text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-400 gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Linked
-                    </Badge>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={formData.abhaId ? 'outline' : 'default'}
-                    className={`h-8 rounded-full text-xs font-bold ${!formData.abhaId ? 'bg-brand-600 hover:bg-brand-700 text-white' : ''}`}
-                    onClick={() => setLinkAbhaOpen(true)}
-                    disabled={!hospitalId}
-                  >
-                    <Link2 className="h-3.5 w-3.5 mr-1.5" /> {formData.abhaId ? 'Change' : 'Link ABHA'}
-                  </Button>
-                </div>
-              </div>
+              {/* ABHA strip: first thing staff see. Verified details fill and lock the fields below. */}
+              <AbhaStrip
+                hospitalId={hospitalId}
+                abhaId={formData.abhaId}
+                verified={abhaActive ? abhaVerified : null}
+                onVerified={handleAbhaVerified}
+                onClear={() => { setAbhaVerified(null); setFormData(prev => ({ ...prev, abhaId: '' })); }}
+              />
 
               {/* Duplicate-patient warning (new patient only) */}
               {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (() => {
@@ -960,6 +965,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     Required fields
                   </span>
                 </div>
+                {(abhaLock.name || abhaLock.age || abhaLock.gender) && (
+                  <p id="abha-lock-note" className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                    Name, age and gender come from ABHA and can't be changed here. Use Change on the ABHA strip to undo.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
                   <div className="md:col-span-2">
                     <Label htmlFor="name" className="text-sm md:text-base font-medium dark:text-gray-300">
@@ -970,13 +981,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         <Input
                           id="name"
                           value={formData.name}
+                          readOnly={abhaLock.name}
+                          aria-describedby={abhaLock.name ? 'abha-lock-note' : undefined}
                           onChange={(e) => {
+                            if (abhaLock.name) return;
                             const val = e.target.value;
                             setFormData(prev => ({ ...prev, name: val, patientId: '' }));
                           }}
                           placeholder={t('patientForm.personal.namePlaceholder')}
                           autoComplete="off"
-                          className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)} ${formData.patientId ? 'pr-10' : ''}`}
+                          className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)} ${formData.patientId ? 'pr-10' : ''} ${abhaLock.name ? 'bg-muted cursor-not-allowed' : ''}`}
                         />
                         {formData.patientId && (
                           <button
@@ -1254,7 +1268,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           inputMode="numeric"
                           pattern="[0-9]*"
                           value={formData.age}
+                          readOnly={abhaLock.age}
+                          aria-describedby={abhaLock.age ? 'abha-lock-note' : undefined}
                           onChange={(e) => {
+                            if (abhaLock.age) return;
                             const val = e.target.value.replace(/[^0-9]/g, '');
                             setFormData(prev => ({ ...prev, age: val }));
                           }}
@@ -1266,6 +1283,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <button
                               key={val}
                               type="button"
+                              disabled={abhaLock.age}
                               onClick={() => setFormData(prev => ({ ...prev, ageUnit: val }))}
                               className={`px-2.5 text-[11px] font-bold rounded-sm transition-all duration-200 ${formData.ageUnit === val ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                             >
@@ -1288,7 +1306,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           <button
                             key={gender}
                             type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, gender }))}
+                            disabled={abhaLock.gender && formData.gender !== gender}
+                            aria-pressed={formData.gender === gender}
+                            onClick={() => { if (!abhaLock.gender) setFormData(prev => ({ ...prev, gender })); }}
                             className={`flex-1 text-[11px] md:text-xs font-bold rounded-sm transition-all duration-200 ${formData.gender === gender ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                           >
                             {gender}
@@ -1615,15 +1635,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         </DialogContent>
       </Dialog>
 
-      {hospitalId && (
-        <LinkExistingAbhaWizard
-          hospitalId={hospitalId}
-          open={linkAbhaOpen}
-          onOpenChange={setLinkAbhaOpen}
-          onDone={() => { /* accounts list refresh not needed inline here */ }}
-          onLinked={(profile) => setFormData(prev => ({ ...prev, abhaId: profile.abhaNumber || prev.abhaId }))}
-        />
-      )}
     </Dialog>
   );
 };

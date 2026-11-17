@@ -20,9 +20,15 @@ interface Props {
   hospitalId: string;
   // Fired after a scanned profile is marked handled, so the parent can refresh its ABHA account list.
   onHandled?: () => void;
+  // 'full' (default) shows everything; 'counter' hides the setup fields; 'setup' shows only them.
+  mode?: 'full' | 'counter' | 'setup';
+  // Counter mode: how the parent takes staff to the setup fields.
+  onOpenSetup?: () => void;
+  // Reports how many scans are waiting, for a tab badge.
+  onWaitingCount?: (count: number) => void;
 }
 
-export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled }) => {
+export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode = 'full', onOpenSetup, onWaitingCount }) => {
   const { toast } = useToast();
   const svgWrapRef = useRef<HTMLDivElement>(null);
 
@@ -59,11 +65,15 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled }) => 
     return () => { active = false; };
   }, [hospitalId]);
 
+  const onWaitingCountRef = useRef(onWaitingCount);
+  onWaitingCountRef.current = onWaitingCount;
+
   const loadShares = useCallback(async () => {
     if (!hospitalId || !hipId) return;
     try {
       const res = await abdmApi.getProfileShares(hospitalId, showHandled ? undefined : { status: 'NEW' });
       setItems(res.items || []);
+      onWaitingCountRef.current?.((res.items || []).filter(i => i.statusCode !== 'HANDLED').length);
     } catch { /* transient — the next poll retries */ }
   }, [hospitalId, hipId, showHandled]);
 
@@ -146,14 +156,18 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled }) => 
     <Card className="shadow-sm">
       <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <QrCode className="h-5 w-5 text-primary" /> Counter QR &middot; scan &amp; share
+          {mode === 'setup'
+            ? <><Settings2 className="h-5 w-5 text-primary" /> Facility and callback</>
+            : <><QrCode className="h-5 w-5 text-primary" /> Counter QR &middot; scan &amp; share</>}
         </CardTitle>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setShowSetup(s => !s)}>
-          <Settings2 className="h-4 w-4" /> Setup
-        </Button>
+        {mode === 'full' && (
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setShowSetup(s => !s)}>
+            <Settings2 className="h-4 w-4" /> Setup
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-5">
-        {showSetup && (
+        {(mode === 'setup' || (mode === 'full' && showSetup)) && (
           <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <div className="space-y-1.5">
@@ -173,8 +187,15 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled }) => 
           </div>
         )}
 
-        {!hipId ? (
-          <p className="text-sm text-muted-foreground">Enter your facility&apos;s HIP / HFR ID in Setup to generate the counter QR.</p>
+        {mode === 'setup' ? (
+          <p className="text-sm text-muted-foreground">
+            {hipId ? <>Facility ID <span className="font-mono">{hipId}</span> is saved. The counter QR is on the Counter tab.</> : 'Save your facility ID to generate the counter QR.'}
+          </p>
+        ) : !hipId ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">Enter your facility&apos;s HIP / HFR ID in Setup to generate the counter QR.</p>
+            {mode === 'counter' && onOpenSetup && <Button variant="outline" size="sm" onClick={onOpenSetup}>Open Setup</Button>}
+          </div>
         ) : !qrValue ? (
           <p className="text-sm text-muted-foreground">The ABDM share-profile URL isn&apos;t configured for this environment yet.</p>
         ) : (
