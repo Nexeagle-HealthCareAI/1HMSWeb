@@ -30,9 +30,11 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
+  // Fired with the new (or already existing) ABHA when staff close the success step.
+  onCreated?: (result: AbdmEnrollResponse) => void;
 }
 
-export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone }) => {
+export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone, onCreated }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('consent');
   const [busy, setBusy] = useState(false);
@@ -289,6 +291,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const stepIndex = steps.indexOf(step);
 
   const finishAndClose = () => {
+    if (finalResult?.abhaNumber) onCreated?.(finalResult);
     onDone();
     handleOpenChange(false);
   };
