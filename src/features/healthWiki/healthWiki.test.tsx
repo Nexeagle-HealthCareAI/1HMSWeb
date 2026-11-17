@@ -7,8 +7,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const toast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({ toast: (...a: unknown[]) => toast(...a), useToast: () => ({ toast }) }));
 
-import { forceHealthWikiMock } from './api/healthWikiApi';
-import { resetMockHealthWiki } from './api/mockHealthWikiApi';
+import { forceHealthWikiMock, healthWikiErrorMessage } from './api/healthWikiApi';
+import { mockHealthWikiApi, resetMockHealthWiki } from './api/mockHealthWikiApi';
 import ArticleBody from './components/ArticleBody';
 import ViewsChart from './components/ViewsChart';
 import HealthWikiArticlePage from './pages/HealthWikiArticlePage';
@@ -34,6 +34,20 @@ const renderAt = (path: string) => {
 beforeEach(() => { resetMockHealthWiki(); toast.mockClear(); });
 
 describe('Inbox', () => {
+  it('shows the try-again card, not a crash, when the inbox comes back empty without an error', async () => {
+    const spy = vi.spyOn(mockHealthWikiApi, 'inbox').mockResolvedValueOnce(null as never);
+    renderAt('/health-wiki');
+    expect(await screen.findByText('Could not load your Health Wiki')).toBeInTheDocument();
+    expect(screen.getByText('Try again in a moment.')).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it('error messages fall back when there is no error object', () => {
+    expect(healthWikiErrorMessage(null, 'Fallback')).toBe('Fallback');
+    expect(healthWikiErrorMessage(undefined)).toBe('Something went wrong. Try again.');
+    expect(healthWikiErrorMessage({ response: { data: { message: 'From the API' } } })).toBe('From the API');
+  });
+
   it('shows the two badges with counts, oldest waiting first', async () => {
     renderAt('/health-wiki');
     const pending = await screen.findByRole('tab', { name: /Pending at you/ });
