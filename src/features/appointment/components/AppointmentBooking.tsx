@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon, HelpCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon, HelpCircle, ArrowLeft, QrCode } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
 import { DateSelector } from './DateSelector';
 import { ShiftTabs } from './ShiftTabs';
 import { TimeSlots } from './TimeSlots';
 import { PatientForm } from './PatientForm';
+import { usePendingAbhaScan } from '@/features/abdm/store/pendingScan';
 import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
 import { Button } from '@/components/ui/button';
@@ -170,6 +171,8 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   const [selectedShift, setSelectedShift] = useState('morning');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [showPatientForm, setShowPatientForm] = useState(false);
+  // A counter scan picked on the ABHA board, waiting for a doctor and a time.
+  const pendingScan = usePendingAbhaScan(st => (st.scan && Date.now() - st.setAt <= 10 * 60 * 1000 ? st.scan : null));
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showTokenPrint, setShowTokenPrint] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
@@ -801,6 +804,16 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+      {pendingScan && !showPatientForm && (
+        <div role="status" className="flex flex-wrap items-center gap-3 border-b border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 px-4 py-2.5">
+          <QrCode className="h-4 w-4 text-emerald-700 shrink-0" aria-hidden="true" />
+          <p className="flex-1 min-w-0 text-sm text-emerald-900 dark:text-emerald-200">
+            <strong>Booking for {pendingScan.fullName || 'the scanned patient'}</strong> (counter scan, ABHA {pendingScan.abhaNumber}).
+            {' '}Choose a doctor and a time; the patient form will open with their details filled.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => usePendingAbhaScan.getState().setScan(null)}>Cancel</Button>
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row items-stretch">
 
         {/* ═══════════════════════════ SIDEBAR ═══════════════════════════ */}

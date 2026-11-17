@@ -10,6 +10,8 @@ export interface AbhaVerified {
   abhaNumber: string;
   abhaAddress?: string;
   source: AbhaSource;
+  // The counter scan this came from, so it can be marked handled once the booking is saved.
+  profileShareId?: string;
 }
 
 interface Props {
