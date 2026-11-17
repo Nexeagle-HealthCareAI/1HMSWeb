@@ -11,6 +11,8 @@ export interface AbhaProfileLike {
   dateOfBirth?: string;
   mobile?: string;
   address?: string;
+  // Present when the profile came from a counter scan.
+  profileShareId?: string;
 }
 
 export interface AbhaPrefill {

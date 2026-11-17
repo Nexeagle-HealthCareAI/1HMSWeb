@@ -20,16 +20,20 @@ import { AbdmGuidePanel } from './AbdmGuidePanel';
 import { ReactivateAbhaDialog } from './ReactivateAbhaDialog';
 import { CounterScanPanel } from './CounterScanPanel';
 import { RecordLinkingPanel } from './RecordLinkingPanel';
+import { HiuPanel } from './HiuPanel';
 import { canUseAbdm } from '../hooks/useAbdmCareContexts';
 import { filterAbhaAccounts } from '../utils/filterAbhaAccounts';
+import { usePendingAbhaScan } from '../store/pendingScan';
+import { useNavigate } from 'react-router-dom';
 
-type BoardTab = 'counter' | 'accounts' | 'records' | 'setup' | 'log';
+type BoardTab = 'counter' | 'accounts' | 'records' | 'received' | 'setup' | 'log';
 const TAB_KEY = 'abdm-board-tab';
-const TABS: BoardTab[] = ['counter', 'accounts', 'records', 'setup', 'log'];
+const TABS: BoardTab[] = ['counter', 'accounts', 'records', 'received', 'setup', 'log'];
 
 export const AbdmDashboard: React.FC = () => {
   const { toast } = useToast();
   const hospitalId = useAuthStore(s => s.hospitalId) || '';
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -137,6 +141,7 @@ export const AbdmDashboard: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="accounts">ABHA accounts</TabsTrigger>
           <TabsTrigger value="records">Shared records</TabsTrigger>
+          <TabsTrigger value="received">From other hospitals</TabsTrigger>
           <TabsTrigger value="setup" className="gap-2">
             Setup
             {setupIssues.length > 0 && <span className="h-2 w-2 rounded-sm bg-amber-600" aria-label="needs attention" />}
@@ -146,9 +151,11 @@ export const AbdmDashboard: React.FC = () => {
 
         <TabsContent value="counter" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Patients who scan the hospital QR with their ABHA app appear here. To register one, open Book an appointment and choose Counter scans on the ABHA strip.
+            Patients who scan the hospital QR with their ABHA app appear here. Book appointment takes you to the booking page; choose a doctor and time, and the patient form opens with their details filled.
           </p>
-          <CounterScanPanel hospitalId={hospitalId} mode="counter" onHandled={onWizardDone} onOpenSetup={() => changeTab('setup')} onWaitingCount={setWaiting} />
+          <CounterScanPanel hospitalId={hospitalId} mode="counter" onHandled={onWizardDone} onOpenSetup={() => changeTab('setup')} onWaitingCount={setWaiting}
+            onBook={(item) => { usePendingAbhaScan.getState().setScan(item); navigate('/appointment-booking'); }}
+          />
         </TabsContent>
 
         <TabsContent value="accounts" className="space-y-4">
@@ -279,6 +286,10 @@ export const AbdmDashboard: React.FC = () => {
 
         <TabsContent value="records">
           <RecordLinkingPanel hospitalId={hospitalId} view="records" />
+        </TabsContent>
+
+        <TabsContent value="received">
+          {canUseAbdm() && <HiuPanel hospitalId={hospitalId} />}
         </TabsContent>
 
         <TabsContent value="setup" className="space-y-4">

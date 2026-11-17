@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { QrCode, Printer, Loader2, Copy, CheckCircle2, Settings2, Radio } from 'lucide-react';
+import { CalendarPlus, QrCode, Printer, Loader2, Copy, CheckCircle2, Settings2, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmProfileShareItem } from '../services/abdmApi';
 
@@ -26,9 +26,11 @@ interface Props {
   onOpenSetup?: () => void;
   // Reports how many scans are waiting, for a tab badge.
   onWaitingCount?: (count: number) => void;
+  // When given, each waiting scan gets a "Book appointment" button that calls this.
+  onBook?: (item: AbdmProfileShareItem) => void;
 }
 
-export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode = 'full', onOpenSetup, onWaitingCount }) => {
+export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode = 'full', onOpenSetup, onWaitingCount, onBook }) => {
   const { toast } = useToast();
   const svgWrapRef = useRef<HTMLDivElement>(null);
 
@@ -257,8 +259,13 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
                         <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => copyAbha(item.abhaNumber)} disabled={!item.abhaNumber}>
                           <Copy className="h-3.5 w-3.5" /> ABHA
                         </Button>
+                        {item.statusCode !== 'HANDLED' && onBook && item.abhaNumber && (
+                          <Button size="sm" className="h-8 gap-1.5" onClick={() => onBook(item)}>
+                            <CalendarPlus className="h-3.5 w-3.5" /> Book appointment
+                          </Button>
+                        )}
                         {item.statusCode !== 'HANDLED' && (
-                          <Button size="sm" className="h-8 gap-1.5" onClick={() => markHandled(item)} disabled={handlingId === item.profileShareId}>
+                          <Button size="sm" variant={onBook ? 'outline' : 'default'} className="h-8 gap-1.5" onClick={() => markHandled(item)} disabled={handlingId === item.profileShareId}>
                             {handlingId === item.profileShareId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                             Mark handled
                           </Button>

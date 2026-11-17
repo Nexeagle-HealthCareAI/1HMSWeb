@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft, Lock } from 'lucide-react';
 import { AbhaStrip, type AbhaVerified } from '@/features/abdm/components/AbhaStrip';
+import { usePendingAbhaScan } from '@/features/abdm/store/pendingScan';
+import { abdmApi } from '@/features/abdm/services/abdmApi';
 import { abhaPrefill, lockedByAbha, type AbhaProfileLike, type AbhaSource } from '@/features/abdm/utils/abhaPrefill';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -225,9 +227,18 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       abhaNumber: profile.abhaNumber,
       abhaAddress: profile.abhaAddress,
       source,
+      profileShareId: source === 'scan' ? profile.profileShareId : undefined,
       locked: fresh ? lockedByAbha(fill) : { name: false, gender: false, age: false },
     });
   };
+
+  // Arriving from "Book appointment" on a counter scan (ABHA board): fill from that scan, once.
+  useEffect(() => {
+    if (editAppointment) return;
+    const scan = usePendingAbhaScan.getState().take();
+    if (scan) handleAbhaVerified(scan, 'scan');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
   // Fuzzy duplicate detection (only while entering a brand-new patient).
   const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
@@ -677,6 +688,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         throw new Error('Hospital ID is required to book appointment');
       }
       const response = await bookAppointment(appointmentRequest, hospitalId);
+      // The scan has done its job: take it off the counter's waiting list. Best effort.
+      if (abhaActive && abhaVerified?.profileShareId) {
+        void abdmApi.handleProfileShare(hospitalId, abhaVerified.profileShareId).catch(() => { /* stays on the list; staff can mark it handled */ });
+      }
       console.log('Appointment booking response:', response);
       console.log('Using patientId from API response:', response.patientId);
       console.log('Fallback generated patientId:', generatedPatientId);
@@ -1276,7 +1291,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             setFormData(prev => ({ ...prev, age: val }));
                           }}
                           placeholder={t('patientForm.personal.agePlaceholder')}
-                          className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-md bg-transparent px-3 text-sm md:text-base"
+                          className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-md bg-transparent px-2 min-w-[2.75rem] text-sm md:text-base"
                         />
                         <div className="flex bg-muted/40 p-0.5 h-full shrink-0 border-l border-input">
                           {[{ val: 'Y', label: 'Year' }, { val: 'M', label: 'Month' }, { val: 'D', label: 'Day' }].map(({ val, label }) => (
@@ -1285,7 +1300,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                               type="button"
                               disabled={abhaLock.age}
                               onClick={() => setFormData(prev => ({ ...prev, ageUnit: val }))}
-                              className={`px-2.5 text-[11px] font-bold rounded-sm transition-all duration-200 ${formData.ageUnit === val ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                              className={`px-1.5 text-[11px] font-bold rounded-sm transition-all duration-200 ${formData.ageUnit === val ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                             >
                               {label}
                             </button>
