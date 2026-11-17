@@ -30,6 +30,13 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
       dependencies: ['setup'],
+      testIgnore: /registration-onboarding\.spec\.ts/,
+    },
+    {
+      // Sign-up and onboarding with a tester number: starts signed out, so no saved login (e2e/README.md).
+      name: 'onboarding',
+      testMatch: /registration-onboarding\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
 });

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Phone, RefreshCw } from 'lucide-react';
 import { ValidationUtils } from '@/utils/validation';
+import { devOtpFor, useDevOtp } from '@/features/auth/services/devOtp';
 
 export interface SharedMobileVerificationProps {
   // Core props
@@ -87,6 +88,8 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   // responsive breakpoints, so hardcoded ids here would collide across both live instances.
   const mobileFieldId = useId();
   const otpFieldId = useId();
+  // Set only for a tester number on the Dev server (features/auth/services/devOtp.ts); null everywhere else.
+  const devCode = devOtpFor(useDevOtp(), mobile);
 
   const showHeader = Boolean(title || subtitle);
   const resolvedTitle = title ?? (showHeader ? getDefaultTitle() : undefined);
@@ -292,6 +295,29 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
       {/* OTP Input */}
       {otpSent && (
         <div className="space-y-3">
+          {/* Dev server + tester number: the code comes back from the API instead of WhatsApp. Never set in production. */}
+          {devCode && (
+            <div
+              role="status"
+              data-testid="dev-otp"
+              className="flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100"
+            >
+              <span>
+                Test number. Your code is{' '}
+                <span data-testid="dev-otp-code" className="font-mono text-base font-semibold tracking-widest">{devCode}</span>
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0 border-amber-400 bg-white text-amber-900 hover:bg-amber-100 dark:bg-transparent dark:text-amber-100"
+                onClick={() => onOtpChange(devCode)}
+                disabled={isLoading}
+              >
+                Use it
+              </Button>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor={otpFieldId} className="text-sm font-medium">
               {t('mobileVerification.labels.otp')}
