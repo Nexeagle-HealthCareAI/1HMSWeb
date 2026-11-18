@@ -266,7 +266,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const loadSuggestions = async (tx: string) => {
     setBusy(true);
     try {
-      const res = await abdmApi.getAbhaAddressSuggestions(tx);
+      const res = await abdmApi.getAbhaAddressSuggestions(tx, hospitalId);
       if (res.success) {
         const list = res.suggestions || [];
         setSuggestions(list);

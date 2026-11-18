@@ -185,8 +185,11 @@ export const abdmApi = {
   verifyMobileOtp: (hospitalId: string, txnId: string, otp: string) =>
     apiClient.post<AbdmEnrollResponse>('/abdm/mobile/verify-otp', { hospitalId, txnId, otp }),
 
-  getAbhaAddressSuggestions: (txnId: string) =>
-    apiClient.get<AbdmAddressSuggestionsResponse>(`/abdm/abha-address/suggestions?txnId=${encodeURIComponent(txnId)}`),
+  // hospitalId only places the call in that hospital's activity log.
+  getAbhaAddressSuggestions: (txnId: string, hospitalId?: string) =>
+    apiClient.get<AbdmAddressSuggestionsResponse>(
+      `/abdm/abha-address/suggestions?txnId=${encodeURIComponent(txnId)}${hospitalId ? `&hospitalId=${encodeURIComponent(hospitalId)}` : ''}`
+    ),
 
   createAbhaAddress: (hospitalId: string, txnId: string, abhaAddress: string) =>
     apiClient.post<AbdmEnrollResponse>('/abdm/abha-address', { hospitalId, txnId, abhaAddress }),
