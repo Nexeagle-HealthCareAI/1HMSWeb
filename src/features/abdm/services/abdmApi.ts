@@ -189,18 +189,28 @@ export const abdmApi = {
     apiClient.post<AbdmEnrollResponse>('/abdm/abha-address', { hospitalId, txnId, abhaAddress }),
 
   // Link existing ABHA — Mobile/Aadhaar OTP login
-  requestLoginOtp: (hospitalId: string, loginId: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number', otpSystem: 'abdm' | 'aadhaar') =>
+  // otpSystem is where the OTP goes: the ABHA mobile ('abdm') or the Aadhaar mobile ('aadhaar'). An ABHA number or an ABHA
+  // address can be verified either way (test cases VRFY_ABHA_101, 102, 201, 202).
+  requestLoginOtp: (hospitalId: string, loginId: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number' | 'abha-address', otpSystem: 'abdm' | 'aadhaar') =>
     apiClient.post<AbdmOtpTxnResponse>('/abdm/login/generate-otp', { hospitalId, loginId, loginHint, otpSystem }),
 
   // loginHint must match what was passed to requestLoginOtp for this txnId — ABDM validates the
   // verify call's scope strictly against it.
-  verifyLoginOtp: (hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number') =>
-    apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint }),
+  // An ABHA address login also sends back the address and where its OTP went.
+  verifyLoginOtp: (
+    hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number' | 'abha-address',
+    address?: { loginId: string; otpSystem: 'abdm' | 'aadhaar' },
+  ) =>
+    apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint, ...(address ?? {}) }),
 
   // Linking is server-verified: the API stores the profile ABDM returned for this one-time linkToken (from verifyLoginOtp), never the
   // demographics a client sends. The token is single-use and expires after 15 minutes.
-  saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse) =>
-    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', { hospitalId, linkToken: profile.linkToken }),
+  // A profile the patient shared by scanning the counter QR has no OTP and no linkToken: the API then saves from its own
+  // record of that share (profileShareId), which ABDM delivered.
+  saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse, profileShareId?: string | null) =>
+    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', {
+      hospitalId, linkToken: profile.linkToken, ...(profileShareId && !profile.linkToken ? { profileShareId } : {}),
+    }),
 
   // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live
   // sessionTxnId, then update mobile (OTP-gated) or email (direct) using it.

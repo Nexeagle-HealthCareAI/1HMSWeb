@@ -1,0 +1,47 @@
+import { describe, it, expect } from 'vitest';
+import { isAbhaAddress, isValidAadhaar } from './aadhaar';
+
+// No number that passes the check is written here: an Aadhaar-looking number in a repository may be
+// somebody's. The one valid ending of a stem is worked out by the test.
+const validFrom = (firstEleven: string) => {
+  const valid = Array.from({ length: 10 }, (_, d) => `${firstEleven}${d}`).filter(isValidAadhaar);
+  expect(valid).toHaveLength(1);
+  return valid[0];
+};
+
+describe('isValidAadhaar', () => {
+  it('accepts a number with a correct check digit, with or without spaces', () => {
+    for (const stem of ['23456789012', '99999999001', '50000000000']) {
+      const n = validFrom(stem);
+      expect(isValidAadhaar(`${n.slice(0, 4)} ${n.slice(4, 8)} ${n.slice(8)}`)).toBe(true);
+    }
+  });
+
+  it('refuses a mistyped number before anything is sent', () => {
+    const n = validFrom('23456789012');
+    for (let i = 1; i < 12; i += 1) {
+      const wrong = n.slice(0, i) + ((Number(n[i]) + 1) % 10) + n.slice(i + 1);
+      expect(isValidAadhaar(wrong), `digit ${i} wrong`).toBe(false);
+    }
+    for (let i = 1; i < 11; i += 1) {
+      if (n[i] === n[i + 1]) continue;
+      const swapped = n.slice(0, i) + n[i + 1] + n[i] + n.slice(i + 2);
+      expect(isValidAadhaar(swapped), `digits ${i} and ${i + 1} swapped`).toBe(false);
+    }
+    expect(isValidAadhaar('123412341234')).toBe(false); // starts with 1
+    expect(isValidAadhaar('23456789012')).toBe(false);
+    expect(isValidAadhaar('23456789012a')).toBe(false);
+    expect(isValidAadhaar('')).toBe(false);
+    expect(isValidAadhaar(undefined)).toBe(false);
+  });
+});
+
+describe('isAbhaAddress', () => {
+  it('knows an ABHA address from a number or a half-typed one', () => {
+    expect(isAbhaAddress('asha.rao@abdm')).toBe(true);
+    expect(isAbhaAddress(' Asha_Rao1@SBX ')).toBe(true);
+    expect(isAbhaAddress('asha')).toBe(false);
+    expect(isAbhaAddress('as@abdm')).toBe(false);
+    expect(isAbhaAddress('91-1234-5678-9012')).toBe(false);
+  });
+});

@@ -18,5 +18,7 @@ describe('abdmHiuApi', () => {
   it('escapes what it puts in a URL', () => {
     void abdmHiuApi.getRecords('h 1', 'P&1');
     expect(apiClient.get).toHaveBeenCalledWith('/abdm/hiu/records?hospitalId=h%201&patientId=P%261');
+    void abdmHiuApi.checkConsent('h 1', 'c/1');
+    expect(apiClient.post).toHaveBeenCalledWith('/abdm/hiu/consents/c%2F1/check?hospitalId=h%201', {});
   });
 });

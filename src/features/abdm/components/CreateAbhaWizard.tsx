@@ -9,6 +9,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/comp
 import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
+import { INVALID_AADHAAR, isValidAadhaar } from '../utils/aadhaar';
 
 type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile-otp' | 'address' | 'success';
 
@@ -133,6 +134,8 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const sendAadhaarOtp = async () => {
     const clean = aadhaar.replace(/\D/g, '');
     if (clean.length !== 12) { toast({ title: 'Enter a valid 12-digit Aadhaar number', variant: 'destructive' }); return; }
+    // The check digit too: a mistyped number never reaches ABDM (CRT_ABHA_104).
+    if (!isValidAadhaar(clean)) { toast({ title: INVALID_AADHAAR, variant: 'destructive' }); return; }
     setBusy(true);
     try {
       const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId);
