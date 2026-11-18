@@ -28,6 +28,8 @@ export interface AbdmAddressSuggestionsResponse {
   message?: string;
   txnId?: string;
   suggestions: string[];
+  /** "@sbx" on the sandbox, "@abdm" on live. */
+  addressSuffix?: string;
 }
 
 export interface AbdmProfileResponse {

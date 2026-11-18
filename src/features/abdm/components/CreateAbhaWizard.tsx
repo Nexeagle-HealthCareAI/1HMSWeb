@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
-import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
+import { FileBadge2, Loader2, CheckCircle2, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
 import { INVALID_AADHAAR, isValidAadhaar } from '../utils/aadhaar';
@@ -52,6 +52,12 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const [mobileOtp, setMobileOtp] = useState('');
   const [txnId, setTxnId] = useState('');
   const [enrollResult, setEnrollResult] = useState<AbdmEnrollResponse | null>(null);
+  // "@sbx" on the sandbox, "@abdm" on live: the server says which.
+  const [addressSuffix, setAddressSuffix] = useState('@abdm');
+  // The ABHA card, shown on the last screen (M1: the card is offered once the ABHA is created).
+  const [cardBlob, setCardBlob] = useState<Blob | null>(null);
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
+  const [cardBusy, setCardBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [chosenAddress, setChosenAddress] = useState('');
   const [customAddress, setCustomAddress] = useState('');
@@ -90,6 +96,10 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setMobileOtp('');
     setTxnId('');
     setEnrollResult(null);
+    setAddressSuffix('@abdm');
+    if (cardUrl) URL.revokeObjectURL(cardUrl);
+    setCardBlob(null);
+    setCardUrl(null);
     setSuggestions([]);
     setChosenAddress('');
     setCustomAddress('');
@@ -260,6 +270,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       if (res.success) {
         const list = res.suggestions || [];
         setSuggestions(list);
+        if (res.addressSuffix) setAddressSuffix(res.addressSuffix);
         // Pre-select the first suggestion so "Create ABHA address" works immediately without
         // forcing an extra click when the user is happy with a suggested one.
         if (list.length > 0) setChosenAddress(list[0]);
@@ -289,6 +300,28 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     } finally {
       setBusy(false);
     }
+  };
+
+  const loadCard = async (): Promise<Blob | null> => {
+    if (cardBlob) return cardBlob;
+    setCardBusy(true);
+    try {
+      const blob = await abdmApi.getAbhaCardBlob(hospitalId, finalResult?.txnId || txnId);
+      setCardBlob(blob);
+      setCardUrl(URL.createObjectURL(blob));
+      return blob;
+    } catch (e) {
+      const err = e as { response?: { data?: { Message?: string } }; message?: string };
+      fail(err?.response?.data?.Message || err?.message || 'Could not fetch the ABHA card.');
+      return null;
+    } finally {
+      setCardBusy(false);
+    }
+  };
+
+  const downloadCard = async () => {
+    const blob = await loadCard();
+    if (blob) abdmApi.downloadBlob(blob, `ABHA-Card-${finalResult?.abhaNumber ?? 'new'}`);
   };
 
   const steps: Step[] = ['consent', 'aadhaar', 'aadhaar-otp', 'mobile-otp', 'address', 'success'];
@@ -442,7 +475,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
               {suggestions.map(s => (
                 <div key={s} className="flex items-center gap-2 border rounded-md p-2">
                   <RadioGroupItem value={s} id={s} />
-                  <label htmlFor={s} className="text-sm cursor-pointer">{s}@abdm</label>
+                  <label htmlFor={s} className="text-sm cursor-pointer">{s}{addressSuffix}</label>
                 </div>
               ))}
               <div className="flex items-center gap-2 border rounded-md p-2">
@@ -468,6 +501,19 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
             <p className="text-sm text-muted-foreground">{finalResult.fullName}</p>
             <p className="text-sm">ABHA number: <span className="font-mono">{finalResult.abhaNumber}</span></p>
             {finalResult.abhaAddress && <p className="text-sm">ABHA address: <span className="font-mono">{finalResult.abhaAddress}</span></p>}
+            {cardUrl && cardBlob && (
+              cardBlob.type === 'application/pdf'
+                ? <iframe src={cardUrl} title="ABHA card" className="w-full h-64 border rounded-md" />
+                : <img src={cardUrl} alt="ABHA card" className="w-full border rounded-md" />
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => loadCard()} disabled={cardBusy || !!cardUrl} className="gap-2">
+                {cardBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" aria-hidden="true" />} View ABHA card
+              </Button>
+              <Button variant="outline" onClick={downloadCard} disabled={cardBusy} className="gap-2">
+                <Download className="h-4 w-4" aria-hidden="true" /> Download card
+              </Button>
+            </div>
             <Button onClick={finishAndClose} className="w-full">Done</Button>
           </div>
         )}
