@@ -92,6 +92,11 @@ export const abdmHiuApi = {
     apiClient.get<{ success: boolean; consents: AbdmHiuConsent[] }>(
       `/abdm/hiu/consents?hospitalId=${q(hospitalId)}${patientId ? `&patientId=${q(patientId)}` : ''}`),
 
+  /** For a request that has waited: asks ABDM where it stands. The answer arrives a moment later, so reload after. */
+  checkConsent: (hospitalId: string, consentRowId: string) =>
+    apiClient.post<{ success: boolean; consentAsked: boolean; transferStatus?: string | null; message?: string | null }>(
+      `/abdm/hiu/consents/${q(consentRowId)}/check?hospitalId=${q(hospitalId)}`, {}),
+
   getRecords: (hospitalId: string, patientId: string) =>
     apiClient.get<{ success: boolean; records: AbdmReceivedRecordSummary[] }>(
       `/abdm/hiu/records?hospitalId=${q(hospitalId)}&patientId=${q(patientId)}`),

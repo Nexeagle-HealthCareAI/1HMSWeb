@@ -65,6 +65,29 @@ export const HiuPanel: React.FC<Props> = ({ hospitalId }) => {
 
   const [openRecord, setOpenRecord] = useState<AbdmReceivedRecord | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
+
+  // A request that has waited: ask ABDM where it stands (the patient may have answered while the
+  // notice to us was lost). ABDM answers on its own channel, so the list is read again shortly after.
+  const check = async (consentRowId: string) => {
+    setCheckingId(consentRowId);
+    try {
+      const res = await abdmHiuApi.checkConsent(hospitalId, consentRowId);
+      if (res.message && !res.consentAsked) {
+        toast({ title: 'Could not check with ABDM', description: res.message, variant: 'destructive' });
+      } else {
+        toast({
+          title: 'Asked ABDM',
+          description: res.transferStatus ? `Records: ${res.transferStatus.toLowerCase()}. The list will update in a moment.` : 'The list will update in a moment.',
+        });
+      }
+      setTimeout(() => { void load(patientId); }, 4000);
+    } catch (e) {
+      toast({ title: 'Could not check with ABDM', description: errorText(e), variant: 'destructive' });
+    } finally {
+      setCheckingId(null);
+    }
+  };
 
   const load = useCallback(async (id: string) => {
     if (!hospitalId || !id) return;
@@ -212,6 +235,11 @@ export const HiuPanel: React.FC<Props> = ({ hospitalId }) => {
                     {c.status === 'FAILED' && c.failureReason && <p className="text-xs text-red-700 mt-1">{c.failureReason}</p>}
                     {c.status === 'GRANTED' && <p className="text-xs text-muted-foreground mt-1">Kept until {day(c.expiresAt)}</p>}
                   </div>
+                  {(c.status === 'REQUESTED' || c.status === 'GRANTED') && c.consentRequestId && (
+                    <Button variant="outline" size="sm" onClick={() => check(c.consentRowId)} disabled={checkingId === c.consentRowId}>
+                      {checkingId === c.consentRowId ? 'Checking…' : 'Check with ABDM'}
+                    </Button>
+                  )}
                   <Badge className={STATUS_CLASS[c.status] ?? 'bg-slate-100 text-slate-700'}>{abdmHiuStatusText[c.status] ?? c.status}</Badge>
                 </div>
               ))}
