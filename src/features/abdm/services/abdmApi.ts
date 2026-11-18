@@ -169,8 +169,9 @@ export const abdmApi = {
   recordConsent: (hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string) =>
     apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string }>('/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName }),
 
-  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string) =>
-    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber, consentId }),
+  // resend: ABDM resends the OTP of the request already open for this consent, instead of starting a new one.
+  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string, resend = false) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber, consentId, ...(resend ? { resend: true } : {}) }),
 
   // mobile is mandatory on ABDM's side even when it matches the Aadhaar-linked number.
   verifyAadhaarOtp: (hospitalId: string, txnId: string, otp: string, mobile: string) =>

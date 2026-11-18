@@ -157,7 +157,8 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setBusy(true);
     try {
       const clean = aadhaar.replace(/\D/g, '');
-      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId);
+      // A resend, not a new request: the server asks ABDM again under the same transaction (CRT_ABHA_106).
+      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId, true);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
       setAadhaarResends(n => n + 1);
