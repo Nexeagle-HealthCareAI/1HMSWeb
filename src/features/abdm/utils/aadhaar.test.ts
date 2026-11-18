@@ -42,6 +42,8 @@ describe('isAbhaAddress', () => {
     expect(isAbhaAddress(' Asha_Rao1@SBX ')).toBe(true);
     expect(isAbhaAddress('asha')).toBe(false);
     expect(isAbhaAddress('as@abdm')).toBe(false);
+    expect(isAbhaAddress('asha@gmail')).toBe(false);
+    expect(isAbhaAddress('asha.@abdm')).toBe(false);
     expect(isAbhaAddress('91-1234-5678-9012')).toBe(false);
   });
 });
