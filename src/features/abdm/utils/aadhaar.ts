@@ -27,6 +27,6 @@ export const isValidAadhaar = (value: string | null | undefined): boolean => {
 
 /** name@abdm (name@sbx in the sandbox). */
 export const isAbhaAddress = (value: string | null | undefined): boolean =>
-  /^[a-z0-9][a-z0-9._]{2,30}@[a-z]{2,10}$/.test((value ?? '').trim().toLowerCase());
+  /^[a-z0-9][a-z0-9_.]+[a-z0-9]@(abdm|sbx)$/.test((value ?? '').trim().toLowerCase());
 
 export const INVALID_AADHAAR = 'That is not a valid Aadhaar number. Check the 12 digits and try again.';
