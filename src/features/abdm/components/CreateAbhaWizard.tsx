@@ -133,7 +133,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       setConsentId(res.consentId);
       setStep('aadhaar');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -156,7 +156,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       toast({ title: 'OTP sent', description: res.message || 'Check the Aadhaar-linked mobile number.' });
       setStep('aadhaar-otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -175,7 +175,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       startCooldown(setAadhaarCooldown);
       toast({ title: 'OTP resent', description: res.message });
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -206,7 +206,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         await sendMobileOtp(nextTxnId, cleanMobile);
       }
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -225,7 +225,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       toast({ title: 'OTP sent', description: res.message || 'Check the mobile number.' });
       setStep('mobile-otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     }
   };
 
@@ -241,7 +241,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       startCooldown(setMobileCooldown);
       toast({ title: 'OTP resent', description: res.message });
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -257,7 +257,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       setEnrollResult(res);
       await loadSuggestions(res.txnId || txnId);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -279,7 +279,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       }
       setStep('address');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
       setStep('address');
     } finally {
       setBusy(false);
@@ -296,7 +296,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       setFinalResult(res);
       setStep('success');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -311,8 +311,8 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       setCardUrl(URL.createObjectURL(blob));
       return blob;
     } catch (e) {
-      const err = e as { response?: { data?: { Message?: string } }; message?: string };
-      fail(err?.response?.data?.Message || err?.message || 'Could not fetch the ABHA card.');
+      const err = e as { response?: { data?: { Message?: string; message?: string } }; message?: string };
+      fail((err?.response?.data?.Message ?? err?.response?.data?.message) || err?.message || 'Could not fetch the ABHA card.');
       return null;
     } finally {
       setCardBusy(false);

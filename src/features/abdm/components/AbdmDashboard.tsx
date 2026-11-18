@@ -91,7 +91,7 @@ export const AbdmDashboard: React.FC = () => {
       setRemoveAccount(null);
       void load();
     } catch (e: any) {
-      toast({ title: 'Could not remove', description: e?.response?.data?.Message || e?.message, variant: 'destructive' });
+      toast({ title: 'Could not remove', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message, variant: 'destructive' });
     } finally {
       setRemoving(false);
     }

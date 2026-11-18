@@ -114,7 +114,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to continue.' });
       setStep('otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -142,7 +142,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setCurrentMobile(res.mobile || currentMobile);
       setStep('edit');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -159,7 +159,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       toast({ title: 'OTP sent', description: res.message || 'Check the new mobile number.' });
       setMobileEdit('otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -179,7 +179,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       toast({ title: 'Mobile number updated', description: res.message });
       onUpdated();
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -197,7 +197,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       // this app entirely). Don't optimistically show the new email as already active.
       toast({ title: 'Verification link sent', description: res.message });
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -213,7 +213,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setProfilePhoto(res.profilePhoto || '');
       toast({ title: 'Profile refreshed from ABDM' });
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -227,7 +227,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setQrUrl(url);
       setQrOpen(true);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message || 'Could not fetch the QR code.');
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message || 'Could not fetch the QR code.');
     } finally {
       setQrBusy(false);
     }
@@ -242,7 +242,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       setCardUrl(URL.createObjectURL(blob));
       setCardOpen(true);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message || 'Could not fetch the ABHA card.');
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message || 'Could not fetch the ABHA card.');
     } finally {
       setCardBusy(false);
     }
@@ -263,7 +263,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to confirm deactivation.' });
       setDeactivateStep('otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -280,7 +280,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
       onUpdated();
       onOpenChange(false);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }

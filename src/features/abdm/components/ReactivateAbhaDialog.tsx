@@ -52,7 +52,7 @@ export const ReactivateAbhaDialog: React.FC<Props> = ({ hospitalId, open, onOpen
       toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to continue.' });
       setStep('otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -68,7 +68,7 @@ export const ReactivateAbhaDialog: React.FC<Props> = ({ hospitalId, open, onOpen
       setStep('done');
       onReactivated();
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
