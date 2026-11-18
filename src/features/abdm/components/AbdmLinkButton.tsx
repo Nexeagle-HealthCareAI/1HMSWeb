@@ -43,7 +43,7 @@ export const AbdmLinkButton: React.FC<Props> = ({ hospitalId, sourceType, source
       });
     } catch (e: any) {
       // Refusals decided before sending (no ABHA, no records yet, no HIP ID) come back as 400.
-      toast({ title: 'Could not link to ABHA', description: e?.response?.data?.Message || e?.response?.data?.message || e?.message, variant: 'destructive' });
+      toast({ title: 'Could not link to ABHA', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.response?.data?.message || e?.message, variant: 'destructive' });
     }
   };
 

@@ -172,7 +172,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     try {
       if (await send(true)) lastSend.current = () => send(false);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -184,7 +184,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     try {
       if (await lastSend.current()) setResends(n => n + 1);
     } catch (e) {
-      const err = e as { response?: { data?: { Message?: string } }; message?: string };
+      const err = e as { response?: { data?: { Message?: string; message?: string } }; message?: string };
       fail(err.response?.data?.Message || err.message);
     } finally {
       setBusy(false);
@@ -209,7 +209,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
         setStep('pick');
       }
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -226,7 +226,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     try {
       if (await send(true)) lastSend.current = () => send(false);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -245,7 +245,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
       setProfile(res);
       setStep('confirm');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -263,7 +263,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
       onDone();
       handleOpenChange(false);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }

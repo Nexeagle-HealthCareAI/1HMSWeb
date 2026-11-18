@@ -101,7 +101,7 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
       setHipId(value);
       toast({ title: 'HIP ID saved' });
     } catch (e: any) {
-      toast({ title: 'Could not save', description: e?.response?.data?.Message || e?.message, variant: 'destructive' });
+      toast({ title: 'Could not save', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message, variant: 'destructive' });
     } finally {
       setSavingHip(false);
     }
@@ -113,7 +113,7 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
       const res = await abdmApi.registerBridgeUrl();
       toast({ title: 'Callback registered with ABDM', description: res.abdmResponse || res.message });
     } catch (e: any) {
-      toast({ title: 'Could not register callback', description: e?.response?.data?.Message || e?.message, variant: 'destructive' });
+      toast({ title: 'Could not register callback', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message, variant: 'destructive' });
     } finally {
       setRegistering(false);
     }
@@ -142,7 +142,7 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
       await loadShares();
       onHandled?.();
     } catch (e: any) {
-      toast({ title: 'Could not update', description: e?.response?.data?.Message || e?.message, variant: 'destructive' });
+      toast({ title: 'Could not update', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message, variant: 'destructive' });
     } finally {
       setHandlingId(null);
     }

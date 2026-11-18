@@ -31,7 +31,7 @@ const STATUS_CLASS: Record<AbdmHiuConsentStatus, string> = {
 
 const errorText = (e: unknown): string | undefined => {
   const err = e as { response?: { data?: { Message?: string; message?: string } }; message?: string } | undefined;
-  return err?.response?.data?.Message || err?.response?.data?.message || err?.message;
+  return (err?.response?.data?.Message ?? err?.response?.data?.message) || err?.response?.data?.message || err?.message;
 };
 const isNotFound = (e: unknown) => (e as { response?: { status?: number } } | undefined)?.response?.status === 404;
 
