@@ -136,7 +136,7 @@ export const AppointmentDashboard = () => {
   const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
 
   // Sorting state
-  type SortColumn = 'patientId' | 'patientName' | 'doctorName' | 'tokenNo' | 'appointmentDate' | 'status' | 'printToken' | 'labReports' | 'case' | 'actions' | 'printPrescription' | 'isCompleted';
+  type SortColumn = 'patientId' | 'patientName' | 'doctorName' | 'tokenNo' | 'appointmentDate' | 'status' | 'printToken' | 'bookingType' | 'labReports' | 'case' | 'actions' | 'printPrescription' | 'isCompleted';
   const [sortColumn, setSortColumn] = useState<SortColumn>('tokenNo');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showVitalsForm, setShowVitalsForm] = useState(false);
@@ -987,6 +987,10 @@ export const AppointmentDashboard = () => {
         case 'status':
           valA = a.finalStatusCode?.toLowerCase() || '';
           valB = b.finalStatusCode?.toLowerCase() || '';
+          break;
+        case 'bookingType':
+          valA = a.bookingSource === 'NEXEAGLE_PUBLIC' ? 1 : 0;
+          valB = b.bookingSource === 'NEXEAGLE_PUBLIC' ? 1 : 0;
           break;
         case 'printToken':
         case 'labReports':
@@ -1858,7 +1862,8 @@ export const AppointmentDashboard = () => {
                         {renderSortableHeader(t('appointmentDashboard.table.doctorName'), 'doctorName')}
                         {renderSortableHeader(t('appointmentDashboard.table.tokenNo'), 'tokenNo')}
                         {activeTab === 'current' && renderSortableHeader(t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' }), 'printToken')}
-                        {renderSortableHeader(
+                        {renderSortableHeader(t('appointmentDashboard.table.bookingType', { defaultValue: 'Booking Type' }), 'bookingType')}
+                        {activeTab !== 'current' && renderSortableHeader(
                           activeTab === 'past'
                             ? t('appointmentDashboard.table.lastAppointmentDate')
                             : activeTab === 'future'
@@ -1881,7 +1886,7 @@ export const AppointmentDashboard = () => {
                     <TableBody>
                       {filteredAppointments.length === 0 ? (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={activeTab === 'future' ? 8 : 9} className="text-center py-12">
+                          <TableCell colSpan={activeTab === 'past' ? 11 : 10} className="text-center py-12">
                             <div className="flex flex-col items-center gap-3">
                               <div className="w-12 h-12 bg-brand-50 dark:bg-brand-900/30 rounded-full flex items-center justify-center shadow-inner">
                                 <CalendarDays className="h-6 w-6 text-brand-400 dark:text-brand-500" />
@@ -1978,7 +1983,21 @@ export const AppointmentDashboard = () => {
                               </TableCell>
                             )}
 
-                            {/* Appointment Time / Last Appointment Date / Appointment Date */}
+                            {/* Booking Type — Walk-in (front desk) vs Online (public self-booking). bookingSource is stamped once at creation. */}
+                            <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                              {appointment.bookingSource === 'NEXEAGLE_PUBLIC' ? (
+                                <Badge className="bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-[10px] px-2 py-0.5 font-bold shadow-sm">
+                                  ● {t('appointmentDashboard.bookingType.online', { defaultValue: 'Online' })}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] px-2 py-0.5 font-bold shadow-sm">
+                                  {t('appointmentDashboard.bookingType.walkIn', { defaultValue: 'Walk-in' })}
+                                </Badge>
+                              )}
+                            </TableCell>
+
+                            {/* Appointment Time / Last Appointment Date / Appointment Date — hidden on Current (replaced by Booking Type) */}
+                            {activeTab !== 'current' && (
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               {activeTab === 'past' ? (
                                 <div className="flex flex-col gap-0.5">
@@ -2009,6 +2028,7 @@ export const AppointmentDashboard = () => {
                                 </div>
                               )}
                             </TableCell>
+                            )}
 
                             {/* Current Status */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
