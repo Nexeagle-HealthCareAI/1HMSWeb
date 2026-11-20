@@ -237,12 +237,20 @@ export const abdmApi = {
 
   // Create ABHA — Aadhaar OTP
   // The server owns the consent wording and its version; the screen shows exactly what this returns.
+  // text is NHA's terms and conditions; declarations are the five ticked one by one (CRT_ABHA_102).
   getConsentText: () =>
-    apiClient.get<{ code: string; version: string; text: string }>('/abdm/consent/text'),
+    apiClient.get<{
+      code: string; version: string; text: string; declarations?: string[];
+      workerConfirmation?: string; beneficiaryConfirmationTemplate?: string;
+    }>('/abdm/consent/text'),
 
   // Records that the patient (or guardian) agreed. The returned consentId must accompany the Aadhaar OTP request (valid 30 min, 3 OTPs).
-  recordConsent: (hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string) =>
-    apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string }>('/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName }),
+  recordConsent: (
+    hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string,
+    ticks?: { declarations: boolean[]; workerConfirmed: boolean; beneficiaryConfirmed: boolean },
+  ) =>
+    apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string; recordedAt?: string; recordedBy?: string }>(
+      '/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName, ...(ticks ?? {}) }),
 
   // resend: ABDM resends the OTP of the request already open for this consent, instead of starting a new one.
   generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string, resend = false) =>
