@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isAbhaAddress, isValidAadhaar } from './aadhaar';
+import { abhaAddressRules, isAbhaAddress, isValidAadhaar, onlyDigits } from './aadhaar';
 
 // No number that passes the check is written here: an Aadhaar-looking number in a repository may be
 // somebody's. The one valid ending of a stem is worked out by the test.
@@ -47,3 +47,29 @@ describe('isAbhaAddress', () => {
     expect(isAbhaAddress('91-1234-5678-9012')).toBe(false);
   });
 });
+
+describe('onlyDigits (CRT_ABHA_105: the OTP box takes digits only)', () => {
+  it('drops letters and special characters and cuts to the length', () => {
+    expect(onlyDigits('12a4!5', 6)).toBe('1245');
+    expect(onlyDigits('abcdef', 6)).toBe('');
+    expect(onlyDigits('12345678', 6)).toBe('123456');
+  });
+});
+
+describe('abhaAddressRules (CRT_ABHA_112)', () => {
+  const met = (name: string) => abhaAddressRules(name, '@sbx').map(r => r.met);
+  it('passes an address that keeps every rule', () => expect(met('asha.k_90')).toEqual([true, true, true]));
+  it('counts the suffix in the length', () => {
+    expect(met('abc')[0]).toBe(false);
+    expect(met('abcd')[0]).toBe(true);
+    expect(met('abcdefghijklmno')[0]).toBe(false);
+  });
+  it('allows one dot and one underscore, neither first nor last', () => {
+    expect(met('as.ha.k')[1]).toBe(false);
+    expect(met('as_h_a')[1]).toBe(false);
+    expect(met('asha-k')[1]).toBe(false);
+    expect(met('.ashak')[2]).toBe(false);
+    expect(met('ashak_')[2]).toBe(false);
+  });
+});
+
