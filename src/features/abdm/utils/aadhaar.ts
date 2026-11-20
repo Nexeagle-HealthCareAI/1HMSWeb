@@ -32,4 +32,22 @@ export const isAbhaAddress = (value: string | null | undefined): boolean =>
 /** Digits only, cut to a length: OTP, mobile and Aadhaar boxes take nothing else (CRT_ABHA_105). */
 export const onlyDigits = (value: string, max: number): string => value.replace(/\D/g, '').slice(0, max);
 
+// The third resend attempt (CRT_ABHA_106, VRFY_ABHA_304, 405): nothing is sent, this is shown.
+export const MAX_RESENDS_MESSAGE = 'Maximum OTP resend attempts reached. Please try again after 30 mins';
+
 export const INVALID_AADHAAR = 'That is not a valid Aadhaar number. Check the 12 digits and try again.';
+
+// The ABHA address rules printed beside the free field (CRT_ABHA_112): 8 to 18 characters including
+// the suffix, letters and digits, at most one dot and one underscore, neither first nor last.
+export interface AddressRule { label: string; met: boolean }
+
+export const abhaAddressRules = (name: string, suffix: string): AddressRule[] => {
+  const n = name.trim();
+  const total = n.length + suffix.length;
+  return [
+    { label: `8 to 18 characters, including ${suffix}`, met: n.length > 0 && total >= 8 && total <= 18 },
+    { label: 'Letters and digits only, with at most one dot (.) and one underscore (_)', met: /^[A-Za-z0-9._]+$/.test(n) && (n.match(/\./g) ?? []).length <= 1 && (n.match(/_/g) ?? []).length <= 1 },
+    { label: 'Does not start or end with a dot or an underscore', met: n.length > 0 && !/^[._]|[._]$/.test(n) },
+  ];
+};
+

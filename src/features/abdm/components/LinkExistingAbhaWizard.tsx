@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Link2, Loader2, CheckCircle2, Search, QrCode } from 'lucide-react';
+import { Link2, Loader2, CheckCircle2, Search, QrCode, AlertTriangle, FileBadge2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AbhaRegisterPatient } from './AbhaRegisterPatient';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmProfileResponse, type AbdmFindAbhaCandidate, type AbdmProfileShareItem } from '../services/abdmApi';
-import { INVALID_AADHAAR, isAbhaAddress, isValidAadhaar, onlyDigits } from '../utils/aadhaar';
+import { INVALID_AADHAAR, MAX_RESENDS_MESSAGE, isAbhaAddress, isValidAadhaar, onlyDigits } from '../utils/aadhaar';
 
 type Step = 'login' | 'pick' | 'otp' | 'confirm';
 type LoginHint = 'mobile' | 'aadhaar' | 'abha-number' | 'abha-address';
@@ -23,15 +25,15 @@ const HINT_LABEL: Record<LoginHint, string> = {
 // An ABHA number or address can be proved by an OTP to either mobile; the patient chooses.
 const choosesOtp = (hint: LoginHint) => hint === 'abha-number' || hint === 'abha-address';
 
-// Resend: at most 2, each after a 60 second wait (VRFY_ABHA_305), as on the Create ABHA screen.
+// Resend: at most 2, each after a 60 second wait (VRFY_ABHA_304, 405), as on the Create ABHA screen.
 const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_RESENDS = 2;
 
 const STEP_LABELS: Record<Step, string> = {
   login: 'Identify the ABHA holder',
-  pick: 'Choose an ABHA number',
+  pick: 'Choose an ABHA profile',
   otp: 'Verify OTP',
-  confirm: 'Confirm & save',
+  confirm: 'Register patient',
 };
 
 interface Props {
@@ -42,9 +44,16 @@ interface Props {
   // Fired with the fetched profile right after it's saved — lets a host form (appointment
   // booking, IPD admission) pull the ABHA number into its own field without re-fetching.
   onLinked?: (profile: AbdmProfileResponse) => void;
+  // On the ABDM page the wizard registers the patient itself (VRFY_ABHA_306, 308, tagging). Inside a
+  // form that is already a registration form (appointment booking, IPD admission) it hands the
+  // profile back to that form instead.
+  registerHere?: boolean;
+  // No ABHA on the mobile or Aadhaar: offer to create one (VRFY_ABHA_303, 403). The Aadhaar typed
+  // here is passed on so creation never asks for it again.
+  onCreateAbha?: (aadhaar?: string) => void;
 }
 
-export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone, onLinked }) => {
+export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone, onLinked, registerHere = false, onCreateAbha }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('login');
   const [busy, setBusy] = useState(false);
@@ -73,6 +82,16 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
   useEffect(() => () => { if (cooldownTimer.current) clearInterval(cooldownTimer.current); }, []);
   const [txnId, setTxnId] = useState('');
   const [profile, setProfile] = useState<AbdmProfileResponse | null>(null);
+  // Where ABDM says the OTP went ("OTP sent to ... ending with ******1234"), kept on the OTP screen.
+  const [sentTo, setSentTo] = useState('');
+  // No ABHA found for what was typed: NHA's fixed message, and the way to create one.
+  const [notFound, setNotFound] = useState<{ message: string; aadhaar?: string } | null>(null);
+  const [pickedIndex, setPickedIndex] = useState<number | null>(null);
+  const [resendLimitHit, setResendLimitHit] = useState(false);
+  // The Aadhaar login shows the published consent before the number is sent (VRFY_ABHA_401).
+  const [consentText, setConsentText] = useState('');
+  const [aadhaarConsent, setAadhaarConsent] = useState(false);
+  const [aadhaarFocused, setAadhaarFocused] = useState(false);
 
   // "Find ABHA" mode — for a holder who doesn't remember their exact ABHA number/address but has
   // the mobile/Aadhaar it's linked to. A search can surface more than one linked ABHA.
@@ -126,6 +145,25 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     setSearchTxnId('');
     setRecentScans([]);
     setPickedShareId(null);
+    setSentTo('');
+    setNotFound(null);
+    setPickedIndex(null);
+    setResendLimitHit(false);
+    setAadhaarConsent(false);
+  };
+
+  useEffect(() => {
+    if (!open || loginHint !== 'aadhaar' || consentText) return;
+    abdmApi.getConsentText().then(res => setConsentText(res.text)).catch(() => { /* shown as unavailable below */ });
+  }, [open, loginHint, consentText]);
+
+  // A refusal meaning "no ABHA here" carries notFound; any other refusal is shown as ABDM sent it.
+  const noAbha = (e: unknown): boolean => {
+    const err = e as { response?: { data?: { notFound?: boolean; message?: string; Message?: string } } };
+    const data = err?.response?.data;
+    if (!data?.notFound) return false;
+    setNotFound({ message: data.message || data.Message || 'No ABHA found.', aadhaar: loginHint === 'aadhaar' ? loginId.replace(/\D/g, '') : undefined });
+    return true;
   };
 
   const handleOpenChange = (v: boolean) => {
@@ -153,7 +191,8 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
   const otpSent = (res: { txnId?: string; message?: string }, first: boolean) => {
     setTxnId(res.txnId!);
     setOtp('');
-    if (first) setResends(0);
+    setSentTo(res.message || '');
+    if (first) { setResends(0); setResendLimitHit(false); }
     startCooldown();
     toast({ title: first ? 'OTP sent' : 'OTP sent again', description: res.message || 'Enter the OTP to continue.' });
     setStep('otp');
@@ -161,7 +200,9 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
 
   const sendOtp = async () => {
     const clean = loginId.trim();
+    setNotFound(null);
     if (!typedIsUsable(clean)) return;
+    if (loginHint === 'aadhaar' && !aadhaarConsent) { toast({ title: 'Read the consent and tick "I agree" first', variant: 'destructive' }); return; }
     const send = async (first: boolean) => {
       const res = await abdmApi.requestLoginOtp(hospitalId, clean, loginHint, otpSystem);
       if (!res.success || !res.txnId) { fail(res.message); return false; }
@@ -172,14 +213,16 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     try {
       if (await send(true)) lastSend.current = () => send(false);
     } catch (e: any) {
-      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
+      if (!noAbha(e)) fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
   };
 
   const resendOtp = async () => {
-    if (cooldown > 0 || resends >= MAX_RESENDS || !lastSend.current) return;
+    // A third attempt calls nothing and says why (VRFY_ABHA_304, 405).
+    if (resends >= MAX_RESENDS) { setResendLimitHit(true); return; }
+    if (cooldown > 0 || !lastSend.current) return;
     setBusy(true);
     try {
       if (await lastSend.current()) setResends(n => n + 1);
@@ -191,25 +234,23 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
     }
   };
 
-  // "I don't remember my ABHA number" — search by mobile/Aadhaar first; a single match skips
-  // straight to OTP, multiple matches show a picker.
+  // "I don't remember my ABHA number": search by mobile first and list every ABHA on it, even a
+  // single one. No OTP is sent until a profile is chosen (VRFY_ABHA_302, 304).
   const searchForAbha = async () => {
     const clean = loginId.trim();
     const searchBy = loginHint === 'aadhaar' ? 'aadhaar' : 'mobile';
+    setNotFound(null);
     if (!typedIsUsable(clean)) return;
     setBusy(true);
     try {
       const res = await abdmApi.findAbhaSearch(hospitalId, clean, searchBy);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setSearchTxnId(res.txnId);
-      if (res.candidates.length === 1) {
-        await generateOtpForCandidate(res.txnId, res.candidates[0].index, searchBy);
-      } else {
-        setCandidates(res.candidates);
-        setStep('pick');
-      }
+      setCandidates(res.candidates);
+      setPickedIndex(null);
+      setStep('pick');
     } catch (e: any) {
-      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
+      if (!noAbha(e)) fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -342,12 +383,44 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
               <Input
                 id="abha-login-id"
                 value={loginId}
-                onChange={e => setLoginId(e.target.value)}
+                onChange={e => {
+                  const v = e.target.value;
+                  setLoginId(loginHint === 'aadhaar' ? onlyDigits(v, 12) : loginHint === 'mobile' ? onlyDigits(v, 10) : v);
+                  setNotFound(null);
+                }}
+                // The Aadhaar number is masked once entered (VRFY_ABHA_401).
+                type={loginHint === 'aadhaar' && loginId.length === 12 && !aadhaarFocused ? 'password' : 'text'}
+                onFocus={() => setAadhaarFocused(true)}
+                onBlur={() => setAadhaarFocused(false)}
                 placeholder={loginHint === 'abha-address' ? 'name@abdm' : 'Enter to receive an OTP'}
                 inputMode={loginHint === 'abha-address' ? 'email' : 'numeric'}
                 autoCapitalize="none"
               />
+              {loginHint === 'aadhaar' && loginId.length === 12 && (
+                <p className="text-xs text-muted-foreground font-mono">XXXX XXXX {loginId.slice(-4)}</p>
+              )}
             </div>
+            {loginHint === 'aadhaar' && !findMode && (
+              <div className="space-y-2">
+                <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground max-h-40 overflow-y-auto">
+                  {consentText || 'Loading the consent wording...'}
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox id="aadhaar-login-consent" checked={aadhaarConsent} onCheckedChange={v => setAadhaarConsent(v === true)} className="mt-0.5" />
+                  <label htmlFor="aadhaar-login-consent" className="text-sm cursor-pointer">I agree to the above, for verifying my ABHA with my Aadhaar.</label>
+                </div>
+              </div>
+            )}
+            {notFound && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 space-y-2" role="alert">
+                <p className="text-sm flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" /> {notFound.message}</p>
+                {onCreateAbha && (
+                  <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => { const a = notFound.aadhaar; handleOpenChange(false); onCreateAbha(a); }}>
+                    <FileBadge2 className="h-4 w-4" aria-hidden="true" /> Create a new ABHA{notFound.aadhaar ? ' with this Aadhaar' : ''}
+                  </Button>
+                )}
+              </div>
+            )}
             {choosesOtp(loginHint) && (
               <div className="space-y-2">
                 <Label>Send the OTP to</Label>
@@ -383,26 +456,40 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
 
         {step === 'pick' && (
           <>
-            <p className="text-sm text-muted-foreground">More than one ABHA number is linked — choose one.</p>
-            <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {candidates.length === 1 ? `One ABHA profile is linked to this ${loginHint === 'aadhaar' ? 'Aadhaar' : 'mobile'} number.` : `${candidates.length} ABHA profiles are linked to this ${loginHint === 'aadhaar' ? 'Aadhaar' : 'mobile'} number.`} Choose the patient's, then send the OTP.
+            </p>
+            <div className="space-y-2" role="radiogroup" aria-label="ABHA profiles">
               {candidates.map(c => (
-                <button
+                <label
                   key={c.index}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => generateOtpForCandidate(searchTxnId, c.index, loginHint === 'aadhaar' ? 'aadhaar' : 'mobile')}
-                  className="w-full text-left rounded-xl border p-3 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                  className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${pickedIndex === c.index ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                 >
-                  <p className="font-mono text-sm">{c.abhaNumber}</p>
-                  <p className="text-xs text-muted-foreground">{[c.name, c.gender].filter(Boolean).join(' · ') || '—'}</p>
-                </button>
+                  <input type="radio" name="abha-candidate" className="mt-1" checked={pickedIndex === c.index} onChange={() => setPickedIndex(c.index)} disabled={busy} />
+                  <span className="min-w-0">
+                    <span className="block font-mono text-sm">{c.abhaNumber}</span>
+                    {c.abhaAddress && <span className="block font-mono text-xs text-muted-foreground truncate">{c.abhaAddress}</span>}
+                    <span className="block text-xs text-muted-foreground">{[c.name, c.gender].filter(Boolean).join(' · ') || '—'}</span>
+                  </span>
+                </label>
               ))}
             </div>
+            <Button
+              className="w-full"
+              disabled={busy || pickedIndex === null}
+              onClick={() => pickedIndex !== null && generateOtpForCandidate(searchTxnId, pickedIndex, loginHint === 'aadhaar' ? 'aadhaar' : 'mobile')}
+            >
+              {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Send OTP
+            </Button>
           </>
         )}
 
         {step === 'otp' && (
           <>
+            {sentTo && <p className="text-sm rounded-lg bg-muted/40 p-2.5">{sentTo}</p>}
+            {findMode && pickedIndex !== null && (
+              <p className="text-xs text-muted-foreground">For ABHA <span className="font-mono">{candidates.find(c => c.index === pickedIndex)?.abhaNumber}</span></p>
+            )}
             <div className="space-y-2">
               <Label>Enter the 6-digit OTP</Label>
               <Input value={otp} onChange={e => setOtp(onlyDigits(e.target.value, 6))} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
@@ -410,24 +497,33 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
             <Button onClick={verifyOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
-            <div className="text-center">
-              {resends >= MAX_RESENDS ? (
-                <p className="text-xs text-muted-foreground">No more resends. Go back and start again if the OTP did not arrive.</p>
-              ) : (
-                <button
-                  type="button"
-                  onClick={resendOtp}
-                  disabled={busy || cooldown > 0}
-                  className="text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground"
-                >
-                  {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
-                </button>
-              )}
+            <div className="text-center space-y-1">
+              <button
+                type="button"
+                onClick={resendOtp}
+                disabled={busy || (cooldown > 0 && resends < MAX_RESENDS)}
+                className="text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground"
+              >
+                {cooldown > 0 && resends < MAX_RESENDS ? `Resend OTP in ${cooldown}s` : `Resend OTP (${Math.max(0, MAX_RESENDS - resends)} left)`}
+              </button>
+              {resendLimitHit && <p className="text-xs text-red-700" role="alert">{MAX_RESENDS_MESSAGE}</p>}
             </div>
           </>
         )}
 
-        {step === 'confirm' && profile && (
+        {step === 'confirm' && profile && registerHere && (profile.linkToken || pickedShareId) && (
+          <AbhaRegisterPatient
+            hospitalId={hospitalId}
+            profile={profile}
+            linkToken={profile.linkToken}
+            profileShareId={pickedShareId}
+            sessionTxnId={profile.txnId}
+            mobileUpdate={loginHint === 'abha-address' ? 'unsupported' : 'abha-token'}
+            onFinished={() => { onLinked?.(profile); onDone(); handleOpenChange(false); }}
+          />
+        )}
+
+        {step === 'confirm' && profile && !(registerHere && (profile.linkToken || pickedShareId)) && (
           <div className="space-y-3">
             <div className="text-center py-2">
               <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />

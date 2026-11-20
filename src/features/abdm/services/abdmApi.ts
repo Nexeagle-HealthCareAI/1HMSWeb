@@ -21,6 +21,16 @@ export interface AbdmEnrollResponse {
   mobileVerified?: boolean;
   isNew?: boolean;
   abhaAccountId?: string;
+  // The rest of the profile, for the registration form (VRFY_ABHA_101, 305).
+  email?: string;
+  address?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  pincode?: string;
+  profilePhoto?: string;
+  // One-time proof this ABHA was verified here: registers the patient from it.
+  linkToken?: string;
 }
 
 export interface AbdmAddressSuggestionsResponse {
@@ -47,8 +57,70 @@ export interface AbdmProfileResponse {
   dateOfBirth?: string;
   mobile?: string;
   email?: string;
-  // Only populated by getProfile() (§9 Get Profile) — base64 JPEG.
+  // Base64 JPEG, when ABDM sends one.
   profilePhoto?: string;
+  address?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  pincode?: string;
+  // false: a non-KYC ABHA, which cannot download a card.
+  kycVerified?: boolean;
+}
+
+// A patient of this hospital, as the registration step shows it beside the ABHA.
+export interface AbhaPatientSummary {
+  patientId: string;
+  fullName?: string;
+  mobile?: string;
+  email?: string;
+  sex?: string;
+  age?: number;
+  ageUnit?: string;
+  dateOfBirth?: string;
+  addressLine?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+  abhaId?: string;
+  registeredAt?: string;
+  matchedOn: string[];
+}
+
+export interface MatchAbhaPatientResponse {
+  success: boolean;
+  message?: string;
+  // The patient this ABHA is already on (VRFY_ABHA_308).
+  alreadyLinked?: AbhaPatientSummary | null;
+  // Patients who may be this person (CRT_ABHA_116), best first.
+  candidates: AbhaPatientSummary[];
+}
+
+export interface RegisterAbhaPatientRequest {
+  hospitalId: string;
+  linkToken?: string;
+  profileShareId?: string | null;
+  // An existing patient to put the ABHA on; empty registers a new one.
+  patientId?: string;
+  // Editable fields only: name, date of birth and gender are the ABHA's and are not sent.
+  mobile?: string;
+  email?: string;
+  addressLine?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+}
+
+export interface RegisterAbhaPatientResponse {
+  success: boolean;
+  message?: string;
+  patientId?: string;
+  created?: boolean;
+  abhaAccountId?: string;
+  // The ABHA is already on this patient: nothing was saved.
+  alreadyLinkedPatientId?: string;
 }
 
 export interface SaveAbhaAccountResponse {
@@ -90,6 +162,7 @@ export interface AbdmFindAbhaCandidate {
   abhaNumber: string;
   name?: string;
   gender?: string;
+  abhaAddress?: string;
 }
 
 export interface AbdmFindAbhaSearchResponse {
@@ -216,6 +289,17 @@ export const abdmApi = {
   saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse, profileShareId?: string | null) =>
     apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', {
       hospitalId, linkToken: profile.linkToken, ...(profileShareId && !profile.linkToken ? { profileShareId } : {}),
+    }),
+
+  // Registering a patient from a verified ABHA. match reads the proof without using it; register uses it.
+  matchAbhaPatient: (hospitalId: string, linkToken?: string, profileShareId?: string | null) =>
+    apiClient.post<MatchAbhaPatientResponse>('/abdm/patients/match', {
+      hospitalId, linkToken, ...(profileShareId && !linkToken ? { profileShareId } : {}),
+    }),
+
+  registerAbhaPatient: (request: RegisterAbhaPatientRequest) =>
+    apiClient.post<RegisterAbhaPatientResponse>('/abdm/patients/register', {
+      ...request, ...(request.profileShareId && !request.linkToken ? {} : { profileShareId: undefined }),
     }),
 
   // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live

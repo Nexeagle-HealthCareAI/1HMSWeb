@@ -35,6 +35,8 @@ export const AbdmDashboard: React.FC = () => {
   const hospitalId = useAuthStore(s => s.hospitalId) || '';
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
+  // An Aadhaar typed on the login screen that holds no ABHA, carried into Create ABHA (VRFY_ABHA_403).
+  const [createAadhaar, setCreateAadhaar] = useState<string | undefined>(undefined);
   const [linkOpen, setLinkOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -302,8 +304,22 @@ export const AbdmDashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <CreateAbhaWizard hospitalId={hospitalId} open={createOpen} onOpenChange={setCreateOpen} onDone={onWizardDone} />
-      <LinkExistingAbhaWizard hospitalId={hospitalId} open={linkOpen} onOpenChange={setLinkOpen} onDone={onWizardDone} />
+      <CreateAbhaWizard
+        hospitalId={hospitalId}
+        open={createOpen}
+        onOpenChange={(v) => { setCreateOpen(v); if (!v) setCreateAadhaar(undefined); }}
+        onDone={onWizardDone}
+        registerHere
+        initialAadhaar={createAadhaar}
+      />
+      <LinkExistingAbhaWizard
+        hospitalId={hospitalId}
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        onDone={onWizardDone}
+        registerHere
+        onCreateAbha={(aadhaar) => { setCreateAadhaar(aadhaar); setCreateOpen(true); }}
+      />
       <EditAbhaProfileWizard
         hospitalId={hospitalId}
         account={editAccount}
