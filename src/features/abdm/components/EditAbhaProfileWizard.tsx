@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { UserCog, Loader2, CheckCircle2, Pencil, RefreshCw, QrCode, Download, PowerOff, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbhaAccountSummary } from '../services/abdmApi';
+import { onlyDigits } from '../utils/aadhaar';
 
 type Step = 'verify' | 'otp' | 'edit';
 type LoginHint = 'mobile' | 'aadhaar' | 'abha-number';
@@ -336,7 +337,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
             <>
               <div className="space-y-2">
                 <Label>Enter the 6-digit OTP</Label>
-                <Input value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
+                <Input value={otp} onChange={e => setOtp(onlyDigits(e.target.value, 6))} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
               </div>
               <Button onClick={verifyIdentity} disabled={busy} className="w-full">
                 {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
@@ -359,7 +360,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
                 )}
                 {mobileEdit === 'entering' && (
                   <div className="space-y-2">
-                    <Input value={newMobile} onChange={e => setNewMobile(e.target.value)} maxLength={10} inputMode="numeric" placeholder="New 10-digit mobile number" />
+                    <Input value={newMobile} onChange={e => setNewMobile(onlyDigits(e.target.value, 10))} maxLength={10} inputMode="numeric" placeholder="New 10-digit mobile number" />
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setMobileEdit('idle'); setNewMobile(''); }}>Cancel</Button>
                       <Button type="button" size="sm" className="flex-1" onClick={sendMobileUpdateOtp} disabled={busy}>
@@ -370,7 +371,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
                 )}
                 {mobileEdit === 'otp' && (
                   <div className="space-y-2">
-                    <Input value={mobileOtp} onChange={e => setMobileOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder={`OTP sent to ${newMobile}`} />
+                    <Input value={mobileOtp} onChange={e => setMobileOtp(onlyDigits(e.target.value, 6))} maxLength={6} inputMode="numeric" placeholder={`OTP sent to ${newMobile}`} />
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setMobileEdit('idle'); setNewMobile(''); setMobileOtp(''); }}>Cancel</Button>
                       <Button type="button" size="sm" className="flex-1" onClick={verifyMobileUpdate} disabled={busy}>
@@ -434,7 +435,7 @@ export const EditAbhaProfileWizard: React.FC<Props> = ({ hospitalId, account, op
                 )}
                 {deactivateStep === 'otp' && (
                   <div className="space-y-2">
-                    <Input value={deactivateOtp} onChange={e => setDeactivateOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
+                    <Input value={deactivateOtp} onChange={e => setDeactivateOtp(onlyDigits(e.target.value, 6))} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setDeactivateStep('idle'); setDeactivateOtp(''); }}>Cancel</Button>
                       <Button type="button" variant="destructive" size="sm" className="flex-1" onClick={verifyDeactivate} disabled={busy}>

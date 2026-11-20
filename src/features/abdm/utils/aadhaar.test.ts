@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isAbhaAddress, isValidAadhaar } from './aadhaar';
+import { isAbhaAddress, isValidAadhaar, onlyDigits } from './aadhaar';
 
 // No number that passes the check is written here: an Aadhaar-looking number in a repository may be
 // somebody's. The one valid ending of a stem is worked out by the test.
@@ -45,5 +45,13 @@ describe('isAbhaAddress', () => {
     expect(isAbhaAddress('asha@gmail')).toBe(false);
     expect(isAbhaAddress('asha.@abdm')).toBe(false);
     expect(isAbhaAddress('91-1234-5678-9012')).toBe(false);
+  });
+});
+
+describe('onlyDigits (CRT_ABHA_105: the OTP box takes digits only)', () => {
+  it('drops letters and special characters and cuts to the length', () => {
+    expect(onlyDigits('12a4!5', 6)).toBe('1245');
+    expect(onlyDigits('abcdef', 6)).toBe('');
+    expect(onlyDigits('12345678', 6)).toBe('123456');
   });
 });

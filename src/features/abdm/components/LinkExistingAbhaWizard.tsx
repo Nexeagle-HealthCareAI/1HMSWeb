@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Link2, Loader2, CheckCircle2, Search, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmProfileResponse, type AbdmFindAbhaCandidate, type AbdmProfileShareItem } from '../services/abdmApi';
-import { INVALID_AADHAAR, isAbhaAddress, isValidAadhaar } from '../utils/aadhaar';
+import { INVALID_AADHAAR, isAbhaAddress, isValidAadhaar, onlyDigits } from '../utils/aadhaar';
 
 type Step = 'login' | 'pick' | 'otp' | 'confirm';
 type LoginHint = 'mobile' | 'aadhaar' | 'abha-number' | 'abha-address';
@@ -405,7 +405,7 @@ export const LinkExistingAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOp
           <>
             <div className="space-y-2">
               <Label>Enter the 6-digit OTP</Label>
-              <Input value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
+              <Input value={otp} onChange={e => setOtp(onlyDigits(e.target.value, 6))} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
             </div>
             <Button onClick={verifyOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify

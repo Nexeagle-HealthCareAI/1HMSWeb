@@ -29,4 +29,7 @@ export const isValidAadhaar = (value: string | null | undefined): boolean => {
 export const isAbhaAddress = (value: string | null | undefined): boolean =>
   /^[a-z0-9][a-z0-9_.]+[a-z0-9]@(abdm|sbx)$/.test((value ?? '').trim().toLowerCase());
 
+/** Digits only, cut to a length: OTP, mobile and Aadhaar boxes take nothing else (CRT_ABHA_105). */
+export const onlyDigits = (value: string, max: number): string => value.replace(/\D/g, '').slice(0, max);
+
 export const INVALID_AADHAAR = 'That is not a valid Aadhaar number. Check the 12 digits and try again.';

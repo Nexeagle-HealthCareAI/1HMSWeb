@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { FileBadge2, Loader2, CheckCircle2, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
-import { INVALID_AADHAAR, isValidAadhaar } from '../utils/aadhaar';
+import { INVALID_AADHAAR, isValidAadhaar, onlyDigits } from '../utils/aadhaar';
 
 type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile-otp' | 'address' | 'success';
 
@@ -385,7 +386,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
           <>
             <div className="space-y-2">
               <Label>Aadhaar number</Label>
-              <InputOTP maxLength={12} value={aadhaar} onChange={setAadhaar} containerClassName="justify-center flex-wrap gap-y-2">
+              <InputOTP maxLength={12} pattern={REGEXP_ONLY_DIGITS} inputMode="numeric" value={aadhaar} onChange={setAadhaar} containerClassName="justify-center flex-wrap gap-y-2">
                 <InputOTPGroup>
                   {[0, 1, 2, 3].map(i => <InputOTPSlot key={i} index={i} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
                 </InputOTPGroup>
@@ -409,13 +410,15 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
           <>
             <div className="space-y-2">
               <Label>Primary mobile number for this ABHA account</Label>
-              <Input value={mobile} onChange={e => setMobile(e.target.value)} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
+              <Input value={mobile} onChange={e => setMobile(onlyDigits(e.target.value, 10))} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
               <p className="text-xs text-muted-foreground">Can be the same as the Aadhaar-linked mobile, or a different one — ABDM verifies it either way.</p>
             </div>
             <div className="space-y-2">
               <Label>Enter the OTP sent to the Aadhaar-linked mobile</Label>
               <InputOTP
                 maxLength={6}
+                pattern={REGEXP_ONLY_DIGITS}
+                inputMode="numeric"
                 value={aadhaarOtp}
                 onChange={setAadhaarOtp}
                 containerClassName="justify-center"
@@ -446,7 +449,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
           <>
             <div className="space-y-2">
               <Label>Enter the OTP sent to {mobile}</Label>
-              <InputOTP maxLength={6} value={mobileOtp} onChange={setMobileOtp} containerClassName="justify-center" onComplete={value => verifyMobileOtp(value)}>
+              <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} inputMode="numeric" value={mobileOtp} onChange={setMobileOtp} containerClassName="justify-center" onComplete={value => verifyMobileOtp(value)}>
                 <InputOTPGroup>
                   {[0, 1, 2, 3, 4, 5].map(i => <InputOTPSlot key={i} index={i} />)}
                 </InputOTPGroup>
