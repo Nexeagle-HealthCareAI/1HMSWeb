@@ -1,6 +1,7 @@
 import { apiClient, ApiResponse } from '@/services/axiosClient';
 import { API_ENDPOINTS } from '@/app/api';
 import { useAuthStore } from '@/store/authStore';
+import { clearDevOtp, rememberDevOtp } from './devOtp';
 
 // Types
 export interface LoginRequest {
@@ -32,6 +33,8 @@ export interface SendOTPResponse {
   isEmailSent: boolean;
   message: string;
   userId: string;
+  /** Dev server + tester number only: the code itself, shown on the page (nothing is sent). */
+  devCode?: string | null;
 }
 
 export interface VerifyOTPRequest {
@@ -116,13 +119,18 @@ export const authApi = {
   },
 
   // Send OTP
-  sendOTP: (data: SendOTPRequest): Promise<SendOTPResponse> => {
-    return apiClient.post(API_ENDPOINTS.AUTH.SEND_OTP, data);
+  sendOTP: async (data: SendOTPRequest): Promise<SendOTPResponse> => {
+    const response = await apiClient.post<SendOTPResponse>(API_ENDPOINTS.AUTH.SEND_OTP, data);
+    // A tester number on the Dev server gets its code back here; the code-entry screen shows it (devOtp.ts).
+    rememberDevOtp(data.mobileNumber, response?.devCode);
+    return response;
   },
 
   // Verify OTP
-  verifyOTP: (data: VerifyOTPRequest): Promise<VerifyOTPResponse> => {
-    return apiClient.post(API_ENDPOINTS.AUTH.OTP_CHECKER, data);
+  verifyOTP: async (data: VerifyOTPRequest): Promise<VerifyOTPResponse> => {
+    const response = await apiClient.post<VerifyOTPResponse>(API_ENDPOINTS.AUTH.OTP_CHECKER, data);
+    if (response?.success) clearDevOtp();
+    return response;
   },
     // Set password (for registration)
   setPassword: (data: SetPasswordRequest): Promise<SetPasswordResponse> => {

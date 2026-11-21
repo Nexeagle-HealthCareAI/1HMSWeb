@@ -72,9 +72,11 @@ export const GuideCard: React.FC<{
   onStop: () => void;
   onRate: (r: 'up' | 'down') => void;
   onClose: () => void;
+  /** Start one of the "usually next" guides from the done card. */
+  onStartNext?: (guideId: string) => void;
   onPause?: () => void;
   onResume?: () => void;
-}> = ({ state, t, canOpenScreen, onOpenScreen, onBack, onNext, onStop, onRate, onClose, onPause, onResume }) => {
+}> = ({ state, t, canOpenScreen, onOpenScreen, onBack, onNext, onStop, onRate, onClose, onStartNext, onPause, onResume }) => {
   const [rated, setRated] = useState<'up' | 'down' | null>(null);
   const { guide, step } = state;
   const target = openableScreen(step?.screen ?? null);
@@ -117,9 +119,27 @@ export const GuideCard: React.FC<{
         {finished ? (
           <div className="space-y-2 text-center">
             <div className="text-base font-bold" data-testid="guide-done">
-              {t.done}
+              {guide.done?.say ? <BoldText text={guide.done.say} /> : t.done}
             </div>
-            <div className="text-xs text-gray-500">{t.doneSub}</div>
+            {!guide.done?.say && <div className="text-xs text-gray-500">{t.doneSub}</div>}
+            {onStartNext && !!guide.done?.next?.length && (
+              <div className="space-y-1 pt-1 text-left" data-testid="guide-next-tasks">
+                {guide.done.nextHeader && <div className="text-[11px] font-medium text-gray-500">{guide.done.nextHeader}</div>}
+                {guide.done.next.map((g) => (
+                  <button
+                    key={g.guideId}
+                    type="button"
+                    data-testid="guide-next-task"
+                    onClick={() => onStartNext(g.guideId)}
+                    className="flex w-full items-center gap-2 rounded-lg border border-violet-200 px-2 py-1.5 text-xs font-medium text-violet-800 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-200 dark:hover:bg-violet-900/30"
+                  >
+                    <Compass className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1 truncate">{g.title}</span>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex justify-center gap-2 pt-1">
               {(['up', 'down'] as const).map((r) => (
                 <button

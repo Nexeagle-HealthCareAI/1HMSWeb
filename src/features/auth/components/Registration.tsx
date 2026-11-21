@@ -448,7 +448,13 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       const otpResponse = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
       console.log('✅ SendOTP API response:', otpResponse);
 
-      if (!otpResponse.success || (!otpResponse.isWhatsappSent && !otpResponse.isEmailSent)) {
+      if (otpResponse.devCode) {
+        // Tester number on the Dev server: nothing is sent, the code is shown on the next step.
+        toast({
+          title: "Test number",
+          description: "Nothing was sent. Your code is shown on the page."
+        });
+      } else if (!otpResponse.success || (!otpResponse.isWhatsappSent && !otpResponse.isEmailSent)) {
         // OTP delivery (WhatsApp/Email) can fail for infra reasons outside the user's control, but
         // the code is generated and stored server-side before delivery is even attempted — so
         // verification still works against that stored value. Don't block the step; just warn
@@ -506,10 +512,9 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       
       setResendTimer(30);     
       
-      toast({
-        title: "OTP Resent!",
-        description: "Please check your mobile for the new verification code"
-      });
+      toast(otpResponse.devCode
+        ? { title: "Test number", description: "Nothing was sent. Your new code is shown on the page." }
+        : { title: "OTP Resent!", description: "Please check your mobile for the new verification code" });
     } catch (error) {
       console.error('Error in resendOTP:', error);
       toast({

@@ -21,6 +21,16 @@ export interface AbdmEnrollResponse {
   mobileVerified?: boolean;
   isNew?: boolean;
   abhaAccountId?: string;
+  // The rest of the profile, for the registration form (VRFY_ABHA_101, 305).
+  email?: string;
+  address?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  pincode?: string;
+  profilePhoto?: string;
+  // One-time proof this ABHA was verified here: registers the patient from it.
+  linkToken?: string;
 }
 
 export interface AbdmAddressSuggestionsResponse {
@@ -28,6 +38,8 @@ export interface AbdmAddressSuggestionsResponse {
   message?: string;
   txnId?: string;
   suggestions: string[];
+  /** "@sbx" on the sandbox, "@abdm" on live. */
+  addressSuffix?: string;
 }
 
 export interface AbdmProfileResponse {
@@ -45,8 +57,70 @@ export interface AbdmProfileResponse {
   dateOfBirth?: string;
   mobile?: string;
   email?: string;
-  // Only populated by getProfile() (§9 Get Profile) — base64 JPEG.
+  // Base64 JPEG, when ABDM sends one.
   profilePhoto?: string;
+  address?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  pincode?: string;
+  // false: a non-KYC ABHA, which cannot download a card.
+  kycVerified?: boolean;
+}
+
+// A patient of this hospital, as the registration step shows it beside the ABHA.
+export interface AbhaPatientSummary {
+  patientId: string;
+  fullName?: string;
+  mobile?: string;
+  email?: string;
+  sex?: string;
+  age?: number;
+  ageUnit?: string;
+  dateOfBirth?: string;
+  addressLine?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+  abhaId?: string;
+  registeredAt?: string;
+  matchedOn: string[];
+}
+
+export interface MatchAbhaPatientResponse {
+  success: boolean;
+  message?: string;
+  // The patient this ABHA is already on (VRFY_ABHA_308).
+  alreadyLinked?: AbhaPatientSummary | null;
+  // Patients who may be this person (CRT_ABHA_116), best first.
+  candidates: AbhaPatientSummary[];
+}
+
+export interface RegisterAbhaPatientRequest {
+  hospitalId: string;
+  linkToken?: string;
+  profileShareId?: string | null;
+  // An existing patient to put the ABHA on; empty registers a new one.
+  patientId?: string;
+  // Editable fields only: name, date of birth and gender are the ABHA's and are not sent.
+  mobile?: string;
+  email?: string;
+  addressLine?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+}
+
+export interface RegisterAbhaPatientResponse {
+  success: boolean;
+  message?: string;
+  patientId?: string;
+  created?: boolean;
+  abhaAccountId?: string;
+  // The ABHA is already on this patient: nothing was saved.
+  alreadyLinkedPatientId?: string;
 }
 
 export interface SaveAbhaAccountResponse {
@@ -88,6 +162,7 @@ export interface AbdmFindAbhaCandidate {
   abhaNumber: string;
   name?: string;
   gender?: string;
+  abhaAddress?: string;
 }
 
 export interface AbdmFindAbhaSearchResponse {
@@ -162,15 +237,24 @@ export const abdmApi = {
 
   // Create ABHA — Aadhaar OTP
   // The server owns the consent wording and its version; the screen shows exactly what this returns.
+  // text is NHA's terms and conditions; declarations are the five ticked one by one (CRT_ABHA_102).
   getConsentText: () =>
-    apiClient.get<{ code: string; version: string; text: string }>('/abdm/consent/text'),
+    apiClient.get<{
+      code: string; version: string; text: string; declarations?: string[];
+      workerConfirmation?: string; beneficiaryConfirmationTemplate?: string;
+    }>('/abdm/consent/text'),
 
   // Records that the patient (or guardian) agreed. The returned consentId must accompany the Aadhaar OTP request (valid 30 min, 3 OTPs).
-  recordConsent: (hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string) =>
-    apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string }>('/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName }),
+  recordConsent: (
+    hospitalId: string, consentVersion: string, givenBy: 'PATIENT' | 'GUARDIAN', subjectName?: string,
+    ticks?: { declarations: boolean[]; workerConfirmed: boolean; beneficiaryConfirmed: boolean },
+  ) =>
+    apiClient.post<{ success: boolean; message?: string; consentId?: string; expiresAt?: string; recordedAt?: string; recordedBy?: string }>(
+      '/abdm/consent', { hospitalId, consentVersion, givenBy, subjectName, ...(ticks ?? {}) }),
 
-  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string) =>
-    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber, consentId }),
+  // resend: ABDM resends the OTP of the request already open for this consent, instead of starting a new one.
+  generateAadhaarOtp: (hospitalId: string, aadhaarNumber: string, consentId: string, resend = false) =>
+    apiClient.post<AbdmOtpTxnResponse>('/abdm/aadhaar/generate-otp', { hospitalId, aadhaarNumber, consentId, ...(resend ? { resend: true } : {}) }),
 
   // mobile is mandatory on ABDM's side even when it matches the Aadhaar-linked number.
   verifyAadhaarOtp: (hospitalId: string, txnId: string, otp: string, mobile: string) =>
@@ -182,25 +266,49 @@ export const abdmApi = {
   verifyMobileOtp: (hospitalId: string, txnId: string, otp: string) =>
     apiClient.post<AbdmEnrollResponse>('/abdm/mobile/verify-otp', { hospitalId, txnId, otp }),
 
-  getAbhaAddressSuggestions: (txnId: string) =>
-    apiClient.get<AbdmAddressSuggestionsResponse>(`/abdm/abha-address/suggestions?txnId=${encodeURIComponent(txnId)}`),
+  // hospitalId only places the call in that hospital's activity log.
+  getAbhaAddressSuggestions: (txnId: string, hospitalId?: string) =>
+    apiClient.get<AbdmAddressSuggestionsResponse>(
+      `/abdm/abha-address/suggestions?txnId=${encodeURIComponent(txnId)}${hospitalId ? `&hospitalId=${encodeURIComponent(hospitalId)}` : ''}`
+    ),
 
   createAbhaAddress: (hospitalId: string, txnId: string, abhaAddress: string) =>
     apiClient.post<AbdmEnrollResponse>('/abdm/abha-address', { hospitalId, txnId, abhaAddress }),
 
   // Link existing ABHA — Mobile/Aadhaar OTP login
-  requestLoginOtp: (hospitalId: string, loginId: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number', otpSystem: 'abdm' | 'aadhaar') =>
+  // otpSystem is where the OTP goes: the ABHA mobile ('abdm') or the Aadhaar mobile ('aadhaar'). An ABHA number or an ABHA
+  // address can be verified either way (test cases VRFY_ABHA_101, 102, 201, 202).
+  requestLoginOtp: (hospitalId: string, loginId: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number' | 'abha-address', otpSystem: 'abdm' | 'aadhaar') =>
     apiClient.post<AbdmOtpTxnResponse>('/abdm/login/generate-otp', { hospitalId, loginId, loginHint, otpSystem }),
 
   // loginHint must match what was passed to requestLoginOtp for this txnId — ABDM validates the
   // verify call's scope strictly against it.
-  verifyLoginOtp: (hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number') =>
-    apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint }),
+  // An ABHA address login also sends back the address and where its OTP went.
+  verifyLoginOtp: (
+    hospitalId: string, txnId: string, otp: string, loginHint: 'mobile' | 'aadhaar' | 'abha-number' | 'abha-address',
+    address?: { loginId: string; otpSystem: 'abdm' | 'aadhaar' },
+  ) =>
+    apiClient.post<AbdmProfileResponse>('/abdm/login/verify-otp', { hospitalId, txnId, otp, loginHint, ...(address ?? {}) }),
 
   // Linking is server-verified: the API stores the profile ABDM returned for this one-time linkToken (from verifyLoginOtp), never the
   // demographics a client sends. The token is single-use and expires after 15 minutes.
-  saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse) =>
-    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', { hospitalId, linkToken: profile.linkToken }),
+  // A profile the patient shared by scanning the counter QR has no OTP and no linkToken: the API then saves from its own
+  // record of that share (profileShareId), which ABDM delivered.
+  saveLinkedAccount: (hospitalId: string, profile: AbdmProfileResponse, profileShareId?: string | null) =>
+    apiClient.post<SaveAbhaAccountResponse>('/abdm/accounts/link', {
+      hospitalId, linkToken: profile.linkToken, ...(profileShareId && !profile.linkToken ? { profileShareId } : {}),
+    }),
+
+  // Registering a patient from a verified ABHA. match reads the proof without using it; register uses it.
+  matchAbhaPatient: (hospitalId: string, linkToken?: string, profileShareId?: string | null) =>
+    apiClient.post<MatchAbhaPatientResponse>('/abdm/patients/match', {
+      hospitalId, linkToken, ...(profileShareId && !linkToken ? { profileShareId } : {}),
+    }),
+
+  registerAbhaPatient: (request: RegisterAbhaPatientRequest) =>
+    apiClient.post<RegisterAbhaPatientResponse>('/abdm/patients/register', {
+      ...request, ...(request.profileShareId && !request.linkToken ? {} : { profileShareId: undefined }),
+    }),
 
   // Edit profile — re-verify via OTP (requestLoginOtp/verifyLoginOtp above) to get a live
   // sessionTxnId, then update mobile (OTP-gated) or email (direct) using it.

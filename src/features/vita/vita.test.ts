@@ -285,6 +285,30 @@ describe('VitaClient', () => {
     expect(evs).toEqual([{ type: 'error', code: 'connection_lost', message: expect.any(String) }]);
   });
 
+  it('sends the name 1HMS shows at login, and only when there is one', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const { fetchImpl } = fakeVita({
+      'POST /v1/sessions': (_u, init) => {
+        bodies.push(JSON.parse(String(init.body)));
+        return session(bodies.length);
+      },
+      'POST /v1/chat': () => json({ turnId: 't1', conversationId: 'c1', streamUrl: '/v1/turns/t1/events' }, 202),
+    });
+    await new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'h', getDisplayName: () => ' Dr. Asha Verma ', fetchImpl }).ask('hi');
+    await new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'h', getDisplayName: () => null, fetchImpl }).ask('hi');
+    expect(bodies[0].displayName).toBe('Dr. Asha Verma');
+    expect('displayName' in bodies[1]).toBe(false);
+  });
+
+  it("returns Vita's reply to a rating", async () => {
+    const { fetchImpl } = fakeVita({
+      'POST /v1/sessions': () => session(1),
+      'POST /v1/messages/m1/feedback': () => json({ messageId: 'm1', rating: 'down', followUp: 'Sorry, I got that wrong.' }),
+    });
+    const c = new VitaClient({ baseUrl: 'https://vita.test', getHmsToken: () => 'h', fetchImpl });
+    expect((await c.feedback('m1', 'down', 'wrong')).followUp).toBe('Sorry, I got that wrong.');
+  });
+
   it('sends feedback', async () => {
     const { fetchImpl, calls } = fakeVita({
       'POST /v1/sessions': () => session(1),

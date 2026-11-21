@@ -6,17 +6,21 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
-import { FileBadge2, Loader2, CheckCircle2 } from 'lucide-react';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { FileBadge2, Loader2, CheckCircle2, Download, Eye, AlertTriangle, Check, X } from 'lucide-react';
+import { AbhaRegisterPatient } from './AbhaRegisterPatient';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi, type AbdmEnrollResponse } from '../services/abdmApi';
+import { INVALID_AADHAAR, MAX_RESENDS_MESSAGE, abhaAddressRules, isValidAadhaar, onlyDigits } from '../utils/aadhaar';
 
-type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile-otp' | 'address' | 'success';
+type Step = 'consent' | 'aadhaar' | 'aadhaar-otp' | 'mobile-otp' | 'existing' | 'address' | 'success';
 
 const STEP_LABELS: Record<Step, string> = {
   consent: 'Consent',
   aadhaar: 'Aadhaar number',
   'aadhaar-otp': 'Verify Aadhaar OTP',
   'mobile-otp': 'Verify mobile OTP',
+  existing: 'ABHA already exists',
   address: 'Choose ABHA address',
   success: 'Done',
 };
@@ -30,15 +34,31 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
+  // Fired with the new (or already existing) ABHA when staff close the success step.
+  onCreated?: (result: AbdmEnrollResponse) => void;
+  // On the ABDM page the last step registers the patient (CRT_ABHA_116, tagging). Inside a form that
+  // is itself a registration form, the result goes back to that form instead.
+  registerHere?: boolean;
+  // An Aadhaar already typed on another screen (VRFY_ABHA_403): creation never asks for it again.
+  initialAadhaar?: string;
 }
 
-export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone }) => {
+export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChange, onDone, onCreated, registerHere = false, initialAadhaar }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('consent');
   const [busy, setBusy] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   // The wording comes from the server (it owns the text and the version); consent is recorded server-side before any OTP is requested.
-  const [consentText, setConsentText] = useState<{ version: string; text: string } | null>(null);
+  const [consentText, setConsentText] = useState<{
+    version: string; text: string; declarations: string[]; workerConfirmation: string; beneficiaryTemplate: string;
+  } | null>(null);
+  // The five declarations, each its own checkbox; the second (another document) stays unticked in an
+  // Aadhaar flow. Then the worker's and the beneficiary's confirmations (CRT_ABHA_102).
+  const [declarations, setDeclarations] = useState<boolean[]>([false, false, false, false, false]);
+  const [workerConfirmed, setWorkerConfirmed] = useState(false);
+  const [beneficiaryConfirmed, setBeneficiaryConfirmed] = useState(false);
+  // The stored record, shown back on screen once consent is recorded.
+  const [consentRecord, setConsentRecord] = useState<{ at?: string; by?: string; id: string } | null>(null);
   const [consentGivenBy, setConsentGivenBy] = useState<'PATIENT' | 'GUARDIAN'>('PATIENT');
   const [consentSubject, setConsentSubject] = useState('');
   const [consentId, setConsentId] = useState('');
@@ -49,10 +69,20 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   const [mobileOtp, setMobileOtp] = useState('');
   const [txnId, setTxnId] = useState('');
   const [enrollResult, setEnrollResult] = useState<AbdmEnrollResponse | null>(null);
+  // "@sbx" on the sandbox, "@abdm" on live: the server says which.
+  const [addressSuffix, setAddressSuffix] = useState('@abdm');
+  // The ABHA card, shown on the last screen (M1: the card is offered once the ABHA is created).
+  const [cardBlob, setCardBlob] = useState<Blob | null>(null);
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
+  const [cardBusy, setCardBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [chosenAddress, setChosenAddress] = useState('');
   const [customAddress, setCustomAddress] = useState('');
   const [finalResult, setFinalResult] = useState<AbdmEnrollResponse | null>(null);
+  // "ABHA address already exists." from ABDM: go on with the existing one or type a new one (CRT_ABHA_112).
+  const [addressTaken, setAddressTaken] = useState('');
+  const [sentTo, setSentTo] = useState('');
+  const [resendLimitHit, setResendLimitHit] = useState(false);
 
   // Resend-OTP: max 2 resends per OTP step, each gated by a 60s cooldown (CRT_ABHA_106).
   const [aadhaarResends, setAadhaarResends] = useState(0);
@@ -78,6 +108,10 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setStep('consent');
     setBusy(false);
     setConsentChecked(false);
+    setDeclarations([false, false, false, false, false]);
+    setWorkerConfirmed(false);
+    setBeneficiaryConfirmed(false);
+    setConsentRecord(null);
     setConsentId('');
     setConsentGivenBy('PATIENT');
     setConsentSubject('');
@@ -87,10 +121,17 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     setMobileOtp('');
     setTxnId('');
     setEnrollResult(null);
+    setAddressSuffix('@abdm');
+    if (cardUrl) URL.revokeObjectURL(cardUrl);
+    setCardBlob(null);
+    setCardUrl(null);
     setSuggestions([]);
     setChosenAddress('');
     setCustomAddress('');
     setFinalResult(null);
+    setAddressTaken('');
+    setSentTo('');
+    setResendLimitHit(false);
     setAadhaarResends(0);
     setAadhaarCooldown(0);
     setMobileResends(0);
@@ -107,7 +148,10 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   useEffect(() => {
     if (!open || consentText) return;
     abdmApi.getConsentText()
-      .then(res => setConsentText({ version: res.version, text: res.text }))
+      .then(res => setConsentText({
+        version: res.version, text: res.text, declarations: res.declarations ?? [],
+        workerConfirmation: res.workerConfirmation ?? '', beneficiaryTemplate: res.beneficiaryConfirmationTemplate ?? '',
+      }))
       .catch(() => toast({ title: 'Could not load the consent wording', description: 'Check your connection and reopen this window.', variant: 'destructive' }));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -115,12 +159,22 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     if (!consentText) return;
     setBusy(true);
     try {
-      const res = await abdmApi.recordConsent(hospitalId, consentText.version, consentGivenBy, consentSubject.trim() || undefined);
+      const res = await abdmApi.recordConsent(hospitalId, consentText.version, consentGivenBy, consentSubject.trim() || undefined, {
+        declarations, workerConfirmed, beneficiaryConfirmed,
+      });
       if (!res.success || !res.consentId) { fail(res.message); return; }
       setConsentId(res.consentId);
-      setStep('aadhaar');
+      setConsentRecord({ id: res.consentId, at: res.recordedAt, by: res.recordedBy });
+      const carried = (initialAadhaar ?? '').replace(/\D/g, '');
+      if (carried.length === 12 && isValidAadhaar(carried)) {
+        // Typed already on the login screen: send the OTP for it straight away.
+        setAadhaar(carried);
+        await sendAadhaarOtp(carried, res.consentId);
+      } else {
+        setStep('aadhaar');
+      }
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -128,38 +182,45 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
 
   const fail = (message?: string) => toast({ title: 'Something went wrong', description: message || 'Please try again.', variant: 'destructive' });
 
-  const sendAadhaarOtp = async () => {
-    const clean = aadhaar.replace(/\D/g, '');
+  const sendAadhaarOtp = async (typed?: string, consent?: string) => {
+    const clean = (typed ?? aadhaar).replace(/\D/g, '');
     if (clean.length !== 12) { toast({ title: 'Enter a valid 12-digit Aadhaar number', variant: 'destructive' }); return; }
+    // The check digit too: a mistyped number never reaches ABDM (CRT_ABHA_104).
+    if (!isValidAadhaar(clean)) { toast({ title: INVALID_AADHAAR, variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId);
+      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consent ?? consentId);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
+      setSentTo(res.message || '');
+      setResendLimitHit(false);
       setAadhaarResends(0);
       startCooldown(setAadhaarCooldown);
       toast({ title: 'OTP sent', description: res.message || 'Check the Aadhaar-linked mobile number.' });
       setStep('aadhaar-otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
   };
 
   const resendAadhaarOtp = async () => {
-    if (aadhaarCooldown > 0 || aadhaarResends >= MAX_RESENDS) return;
+    // A third attempt calls nothing and says why (CRT_ABHA_106).
+    if (aadhaarResends >= MAX_RESENDS) { setResendLimitHit(true); return; }
+    if (aadhaarCooldown > 0) return;
     setBusy(true);
     try {
       const clean = aadhaar.replace(/\D/g, '');
-      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId);
+      // A resend, not a new request: the server asks ABDM again under the same transaction (CRT_ABHA_106).
+      const res = await abdmApi.generateAadhaarOtp(hospitalId, clean, consentId, true);
       if (!res.success || !res.txnId) { fail(res.message); return; }
       setTxnId(res.txnId);
       setAadhaarResends(n => n + 1);
       startCooldown(setAadhaarCooldown);
       toast({ title: 'OTP resent', description: res.message });
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -182,7 +243,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       const nextTxnId = res.txnId || txnId;
       setTxnId(nextTxnId);
       if (res.mobileVerified) {
-        await loadSuggestions(nextTxnId);
+        await afterIdentityVerified(res, nextTxnId);
       } else {
         // The mobile just submitted didn't match the Aadhaar-linked one, so ABDM still needs it
         // OTP-verified separately — the number is already known, so go straight to sending that
@@ -190,7 +251,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         await sendMobileOtp(nextTxnId, cleanMobile);
       }
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -204,17 +265,20 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       // one — must carry it forward or the next verify call will reference a stale transaction
       // (same pattern as verifyAadhaarOtp/verifyMobileOtp below).
       setTxnId(res.txnId || tx);
+      setSentTo(res.message || '');
+      setResendLimitHit(false);
       setMobileResends(0);
       startCooldown(setMobileCooldown);
       toast({ title: 'OTP sent', description: res.message || 'Check the mobile number.' });
       setStep('mobile-otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     }
   };
 
   const resendMobileOtp = async () => {
-    if (mobileCooldown > 0 || mobileResends >= MAX_RESENDS) return;
+    if (mobileResends >= MAX_RESENDS) { setResendLimitHit(true); return; }
+    if (mobileCooldown > 0) return;
     setBusy(true);
     try {
       const clean = mobile.replace(/\D/g, '');
@@ -225,7 +289,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       startCooldown(setMobileCooldown);
       toast({ title: 'OTP resent', description: res.message });
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -238,22 +302,39 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
     try {
       const res = await abdmApi.verifyMobileOtp(hospitalId, txnId, clean);
       if (!res.success) { fail(res.message); return; }
-      setEnrollResult(res);
-      await loadSuggestions(res.txnId || txnId);
+      // Keep what the Aadhaar step returned (address, photo, the existing-ABHA flag) and add the verified mobile.
+      const merged = { ...(enrollResult ?? {}), ...Object.fromEntries(Object.entries(res).filter(([, v]) => v !== undefined && v !== null && v !== '')) } as AbdmEnrollResponse;
+      merged.isNew = enrollResult?.isNew ?? res.isNew;
+      setEnrollResult(merged);
+      await afterIdentityVerified(merged, res.txnId || txnId);
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
   };
 
+  // An Aadhaar that already holds an ABHA is not a stop: show it, and let the person go on with it
+  // or add a new ABHA address to it (CRT_ABHA_112, 113, 114).
+  const afterIdentityVerified = async (res: AbdmEnrollResponse, tx: string) => {
+    if (res.isNew === false) { setTxnId(tx); setStep('existing'); return; }
+    await loadSuggestions(tx);
+  };
+
+  const proceedWithExisting = () => {
+    if (!enrollResult) return;
+    setFinalResult({ ...enrollResult, txnId: enrollResult.txnId || txnId });
+    setStep('success');
+  };
+
   const loadSuggestions = async (tx: string) => {
     setBusy(true);
     try {
-      const res = await abdmApi.getAbhaAddressSuggestions(tx);
+      const res = await abdmApi.getAbhaAddressSuggestions(tx, hospitalId);
       if (res.success) {
         const list = res.suggestions || [];
         setSuggestions(list);
+        if (res.addressSuffix) setAddressSuffix(res.addressSuffix);
         // Pre-select the first suggestion so "Create ABHA address" works immediately without
         // forcing an extra click when the user is happy with a suggested one.
         if (list.length > 0) setChosenAddress(list[0]);
@@ -262,7 +343,7 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
       }
       setStep('address');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
       setStep('address');
     } finally {
       setBusy(false);
@@ -270,25 +351,56 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
   };
 
   const confirmAddress = async () => {
-    const address = (chosenAddress === '__custom__' ? customAddress : chosenAddress).trim();
+    const custom = chosenAddress === '__custom__';
+    const address = (custom ? customAddress : chosenAddress).trim().replace(/@(sbx|abdm)$/i, '');
     if (!address) { toast({ title: 'Choose or enter an ABHA address', variant: 'destructive' }); return; }
+    if (custom && !abhaAddressRules(address, addressSuffix).every(r => r.met)) {
+      toast({ title: 'The ABHA address does not meet the rules shown', variant: 'destructive' }); return;
+    }
+    setAddressTaken('');
     setBusy(true);
     try {
       const res = await abdmApi.createAbhaAddress(hospitalId, txnId, address);
       if (!res.success) { fail(res.message); return; }
-      setFinalResult(res);
+      // The Aadhaar step's profile (address, photo) with the new address and the proof to register.
+      setFinalResult({ ...(enrollResult ?? {}), ...Object.fromEntries(Object.entries(res).filter(([, v]) => v !== undefined && v !== null && v !== '')) } as AbdmEnrollResponse);
       setStep('success');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      const message = (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message || '';
+      if (/exist/i.test(message)) setAddressTaken(`${address}${addressSuffix}`);
+      else fail(message);
     } finally {
       setBusy(false);
     }
   };
 
-  const steps: Step[] = ['consent', 'aadhaar', 'aadhaar-otp', 'mobile-otp', 'address', 'success'];
+  const loadCard = async (): Promise<Blob | null> => {
+    if (cardBlob) return cardBlob;
+    setCardBusy(true);
+    try {
+      const blob = await abdmApi.getAbhaCardBlob(hospitalId, finalResult?.txnId || txnId);
+      setCardBlob(blob);
+      setCardUrl(URL.createObjectURL(blob));
+      return blob;
+    } catch (e) {
+      const err = e as { response?: { data?: { Message?: string; message?: string } }; message?: string };
+      fail((err?.response?.data?.Message ?? err?.response?.data?.message) || err?.message || 'Could not fetch the ABHA card.');
+      return null;
+    } finally {
+      setCardBusy(false);
+    }
+  };
+
+  const downloadCard = async () => {
+    const blob = await loadCard();
+    if (blob) abdmApi.downloadBlob(blob, `ABHA-Card-${finalResult?.abhaNumber ?? 'new'}`);
+  };
+
+  const steps: Step[] = ['consent', 'aadhaar', 'aadhaar-otp', 'mobile-otp', 'existing', 'address', 'success'];
   const stepIndex = steps.indexOf(step);
 
   const finishAndClose = () => {
+    if (finalResult?.abhaNumber) onCreated?.(finalResult);
     onDone();
     handleOpenChange(false);
   };
@@ -316,9 +428,35 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
         {step === 'consent' && (
           <>
-            <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground max-h-64 overflow-y-auto">
+            <p className="text-sm font-semibold">Terms and Conditions</p>
+            <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground max-h-56 overflow-y-auto">
               {consentText ? consentText.text : 'Loading the consent wording...'}
             </div>
+            <div className="flex items-start gap-2">
+              <Checkbox id="abha-consent" checked={consentChecked} onCheckedChange={v => setConsentChecked(v === true)} className="mt-0.5" />
+              <label htmlFor="abha-consent" className="text-sm cursor-pointer font-medium">I agree</label>
+            </div>
+            {consentText && consentText.declarations.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">I hereby declare that:</p>
+                {consentText.declarations.map((d, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`abha-decl-${i}`}
+                      checked={declarations[i]}
+                      onCheckedChange={v => setDeclarations(prev => prev.map((x, k) => (k === i ? v === true : x)))}
+                      className="mt-0.5"
+                    />
+                    <label htmlFor={`abha-decl-${i}`} className="text-xs leading-relaxed cursor-pointer">{d}</label>
+                  </div>
+                ))}
+                {declarations[1] && (
+                  <p className="text-xs rounded-md bg-amber-50 text-amber-900 border border-amber-200 p-2">
+                    Creating an ABHA with a document other than Aadhaar is not offered here. Untick it to go on with Aadhaar.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <span className="text-muted-foreground">Consent given by</span>
               <label className="inline-flex items-center gap-1.5 cursor-pointer">
@@ -328,14 +466,31 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
                 <input type="radio" name="consent-given-by" checked={consentGivenBy === 'GUARDIAN'} onChange={() => setConsentGivenBy('GUARDIAN')} /> Guardian
               </label>
             </div>
-            <Input value={consentSubject} onChange={e => setConsentSubject(e.target.value)} placeholder="Name of the person giving consent (optional)" maxLength={200} />
-            <div className="flex items-start gap-2">
-              <Checkbox id="abha-consent" checked={consentChecked} onCheckedChange={v => setConsentChecked(v === true)} className="mt-0.5" />
-              <label htmlFor="abha-consent" className="text-sm cursor-pointer">
-                I have read and agree to the above consent for sharing my Aadhaar details and creating an ABHA number.
-              </label>
-            </div>
-            <Button onClick={recordConsentAndContinue} disabled={!consentChecked || !consentText || busy} className="w-full">
+            <Input value={consentSubject} onChange={e => setConsentSubject(e.target.value)} placeholder="Beneficiary's name" maxLength={200} />
+            {consentText?.workerConfirmation && (
+              <div className="flex items-start gap-2 pl-4">
+                <Checkbox id="abha-worker" checked={workerConfirmed} onCheckedChange={v => setWorkerConfirmed(v === true)} className="mt-0.5" />
+                <label htmlFor="abha-worker" className="text-xs leading-relaxed cursor-pointer">{consentText.workerConfirmation}</label>
+              </div>
+            )}
+            {consentText?.beneficiaryTemplate && (
+              <div className="flex items-start gap-2 pl-4">
+                <Checkbox id="abha-beneficiary" checked={beneficiaryConfirmed} onCheckedChange={v => setBeneficiaryConfirmed(v === true)} className="mt-0.5" />
+                <label htmlFor="abha-beneficiary" className="text-xs leading-relaxed cursor-pointer">
+                  {consentText.beneficiaryTemplate.replace('{name}', consentSubject.trim() || 'the beneficiary')}
+                </label>
+              </div>
+            )}
+            <Button
+              onClick={recordConsentAndContinue}
+              disabled={
+                !consentText || busy || !consentChecked
+                || (consentText.declarations.length > 0 && (declarations[1] || !declarations.every((t, i) => i === 1 || t)))
+                || (!!consentText.workerConfirmation && !workerConfirmed)
+                || (!!consentText.beneficiaryTemplate && !beneficiaryConfirmed)
+              }
+              className="w-full"
+            >
               {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Continue
             </Button>
           </>
@@ -343,15 +498,20 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
 
         {step === 'aadhaar' && (
           <>
+            {consentRecord && (
+              <p className="text-xs rounded-md bg-emerald-50 text-emerald-900 border border-emerald-200 p-2">
+                Consent recorded{consentRecord.at ? ` on ${new Date(consentRecord.at).toLocaleString()}` : ''}{consentRecord.by ? `, confirmed by ${consentRecord.by}` : ''}. Record {consentRecord.id.slice(0, 8)}.
+              </p>
+            )}
             <div className="space-y-2">
               <Label>Aadhaar number</Label>
-              <InputOTP maxLength={12} value={aadhaar} onChange={setAadhaar} containerClassName="justify-center flex-wrap gap-y-2">
+              <InputOTP maxLength={12} pattern={REGEXP_ONLY_DIGITS} inputMode="numeric" value={aadhaar} onChange={setAadhaar} containerClassName="justify-center flex-wrap gap-y-2">
                 <InputOTPGroup>
-                  {[0, 1, 2, 3].map(i => <InputOTPSlot key={i} index={i} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
+                  {[0, 1, 2, 3].map(i => <InputOTPSlot key={i} index={i} masked={aadhaar.length === 12} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
                 </InputOTPGroup>
                 <InputOTPSeparator />
                 <InputOTPGroup>
-                  {[4, 5, 6, 7].map(i => <InputOTPSlot key={i} index={i} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
+                  {[4, 5, 6, 7].map(i => <InputOTPSlot key={i} index={i} masked={aadhaar.length === 12} className="h-9 w-7 text-sm sm:h-10 sm:w-8" />)}
                 </InputOTPGroup>
                 <InputOTPSeparator />
                 <InputOTPGroup>
@@ -359,7 +519,8 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
                 </InputOTPGroup>
               </InputOTP>
             </div>
-            <Button onClick={sendAadhaarOtp} disabled={busy} className="w-full">
+            {aadhaar.length === 12 && <p className="text-xs text-center text-muted-foreground">The Aadhaar number is masked once entered. Retype it to change it.</p>}
+            <Button onClick={() => sendAadhaarOtp()} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Send OTP
             </Button>
           </>
@@ -367,15 +528,18 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
 
         {step === 'aadhaar-otp' && (
           <>
+            {sentTo && <p className="text-sm rounded-lg bg-muted/40 p-2.5">{sentTo}</p>}
             <div className="space-y-2">
               <Label>Primary mobile number for this ABHA account</Label>
-              <Input value={mobile} onChange={e => setMobile(e.target.value)} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
+              <Input value={mobile} onChange={e => setMobile(onlyDigits(e.target.value, 10))} maxLength={10} inputMode="numeric" placeholder="10-digit mobile number" />
               <p className="text-xs text-muted-foreground">Can be the same as the Aadhaar-linked mobile, or a different one — ABDM verifies it either way.</p>
             </div>
             <div className="space-y-2">
               <Label>Enter the OTP sent to the Aadhaar-linked mobile</Label>
               <InputOTP
                 maxLength={6}
+                pattern={REGEXP_ONLY_DIGITS}
+                inputMode="numeric"
                 value={aadhaarOtp}
                 onChange={setAadhaarOtp}
                 containerClassName="justify-center"
@@ -389,24 +553,24 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
             <Button onClick={() => verifyAadhaarOtp()} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
-            {aadhaarResends < MAX_RESENDS && (
-              <button
-                type="button"
-                onClick={resendAadhaarOtp}
-                disabled={busy || aadhaarCooldown > 0}
-                className="w-full text-center text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground disabled:cursor-not-allowed"
-              >
-                {aadhaarCooldown > 0 ? `Resend OTP in ${aadhaarCooldown}s` : `Resend OTP (${MAX_RESENDS - aadhaarResends} left)`}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={resendAadhaarOtp}
+              disabled={busy || (aadhaarCooldown > 0 && aadhaarResends < MAX_RESENDS)}
+              className="w-full text-center text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground disabled:cursor-not-allowed"
+            >
+              {aadhaarCooldown > 0 && aadhaarResends < MAX_RESENDS ? `Resend OTP in ${aadhaarCooldown}s` : `Resend OTP (${Math.max(0, MAX_RESENDS - aadhaarResends)} left)`}
+            </button>
+            {resendLimitHit && <p className="text-xs text-center text-red-700" role="alert">{MAX_RESENDS_MESSAGE}</p>}
           </>
         )}
 
         {step === 'mobile-otp' && (
           <>
             <div className="space-y-2">
-              <Label>Enter the OTP sent to {mobile}</Label>
-              <InputOTP maxLength={6} value={mobileOtp} onChange={setMobileOtp} containerClassName="justify-center" onComplete={value => verifyMobileOtp(value)}>
+              {sentTo && <p className="text-sm rounded-lg bg-muted/40 p-2.5">{sentTo}</p>}
+              <Label>Enter the OTP sent to the mobile ending {mobile.slice(-4)}</Label>
+              <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} inputMode="numeric" value={mobileOtp} onChange={setMobileOtp} containerClassName="justify-center" onComplete={value => verifyMobileOtp(value)}>
                 <InputOTPGroup>
                   {[0, 1, 2, 3, 4, 5].map(i => <InputOTPSlot key={i} index={i} />)}
                 </InputOTPGroup>
@@ -415,27 +579,54 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
             <Button onClick={() => verifyMobileOtp()} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify
             </Button>
-            {mobileResends < MAX_RESENDS && (
-              <button
-                type="button"
-                onClick={resendMobileOtp}
-                disabled={busy || mobileCooldown > 0}
-                className="w-full text-center text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground disabled:cursor-not-allowed"
-              >
-                {mobileCooldown > 0 ? `Resend OTP in ${mobileCooldown}s` : `Resend OTP (${MAX_RESENDS - mobileResends} left)`}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={resendMobileOtp}
+              disabled={busy || (mobileCooldown > 0 && mobileResends < MAX_RESENDS)}
+              className="w-full text-center text-xs text-brand-600 dark:text-brand-400 underline underline-offset-2 disabled:no-underline disabled:text-muted-foreground disabled:cursor-not-allowed"
+            >
+              {mobileCooldown > 0 && mobileResends < MAX_RESENDS ? `Resend OTP in ${mobileCooldown}s` : `Resend OTP (${Math.max(0, MAX_RESENDS - mobileResends)} left)`}
+            </button>
+            {resendLimitHit && <p className="text-xs text-center text-red-700" role="alert">{MAX_RESENDS_MESSAGE}</p>}
           </>
+        )}
+
+        {step === 'existing' && enrollResult && (
+          <div className="space-y-3">
+            <p className="text-sm rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 flex gap-2" role="status">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" /> An ABHA already exists for this Aadhaar. No new ABHA number is made.
+            </p>
+            <div className="rounded-xl border p-3 text-sm space-y-1">
+              <p className="font-semibold">{enrollResult.fullName}</p>
+              <p>ABHA number: <span className="font-mono">{enrollResult.abhaNumber}</span></p>
+              {enrollResult.abhaAddress && <p>ABHA address: <span className="font-mono">{enrollResult.abhaAddress}</span></p>}
+            </div>
+            <Button onClick={proceedWithExisting} className="w-full">Proceed with the existing ABHA</Button>
+            <Button variant="outline" onClick={() => loadSuggestions(txnId)} disabled={busy} className="w-full">
+              {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create a new ABHA address for it
+            </Button>
+          </div>
         )}
 
         {step === 'address' && (
           <>
+            {addressTaken && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 space-y-2" role="alert">
+                <p className="text-sm">ABHA address already exists. <span className="font-mono">{addressTaken}</span></p>
+                <div className="grid grid-cols-1 gap-2">
+                  {enrollResult?.abhaAddress && (
+                    <Button size="sm" variant="outline" onClick={proceedWithExisting}>Go on with the existing address {enrollResult.abhaAddress}</Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => { setAddressTaken(''); setChosenAddress('__custom__'); setCustomAddress(''); }}>Create a new one</Button>
+                </div>
+              </div>
+            )}
             <Label>Choose an ABHA address</Label>
             <RadioGroup value={chosenAddress} onValueChange={setChosenAddress} className="space-y-2">
               {suggestions.map(s => (
                 <div key={s} className="flex items-center gap-2 border rounded-md p-2">
                   <RadioGroupItem value={s} id={s} />
-                  <label htmlFor={s} className="text-sm cursor-pointer">{s}@abdm</label>
+                  <label htmlFor={s} className="text-sm cursor-pointer">{s}{addressSuffix}</label>
                 </div>
               ))}
               <div className="flex items-center gap-2 border rounded-md p-2">
@@ -446,8 +637,20 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
                   placeholder="Type a custom ABHA address"
                   className="border-0 h-8 p-0 focus-visible:ring-0"
                 />
+                <span className="text-sm text-muted-foreground">{addressSuffix}</span>
               </div>
             </RadioGroup>
+            {/* The rules beside the free field, each green when met and red when not (CRT_ABHA_112). */}
+            <ul className="space-y-1 text-xs" aria-label="ABHA address rules">
+              {abhaAddressRules(customAddress.replace(/@(sbx|abdm)$/i, ''), addressSuffix).map(rule => (
+                <li key={rule.label} className={`flex items-start gap-1.5 ${chosenAddress !== '__custom__' || !customAddress ? 'text-muted-foreground' : rule.met ? 'text-green-700' : 'text-red-700'}`}>
+                  {chosenAddress === '__custom__' && customAddress && !rule.met
+                    ? <X className="h-3.5 w-3.5 shrink-0 mt-px" aria-label="not met" />
+                    : <Check className="h-3.5 w-3.5 shrink-0 mt-px" aria-label={chosenAddress === '__custom__' && customAddress ? 'met' : ''} />}
+                  {rule.label}
+                </li>
+              ))}
+            </ul>
             <Button onClick={confirmAddress} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create ABHA address
             </Button>
@@ -455,13 +658,44 @@ export const CreateAbhaWizard: React.FC<Props> = ({ hospitalId, open, onOpenChan
         )}
 
         {step === 'success' && finalResult && (
-          <div className="space-y-3 text-center py-4">
-            <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto" />
-            <p className="font-semibold">ABHA created</p>
-            <p className="text-sm text-muted-foreground">{finalResult.fullName}</p>
-            <p className="text-sm">ABHA number: <span className="font-mono">{finalResult.abhaNumber}</span></p>
-            {finalResult.abhaAddress && <p className="text-sm">ABHA address: <span className="font-mono">{finalResult.abhaAddress}</span></p>}
-            <Button onClick={finishAndClose} className="w-full">Done</Button>
+          <div className="space-y-3">
+            <div className="text-center">
+              <CheckCircle2 className="h-9 w-9 text-green-600 mx-auto" />
+              {/* "ABHA created" only when a new ABHA number was made (CRT_ABHA_113). */}
+              <p className="font-semibold">{enrollResult?.isNew === false || finalResult.isNew === false ? 'Existing ABHA verified' : 'ABHA created'}</p>
+            </div>
+            {registerHere && finalResult.linkToken ? (
+              <AbhaRegisterPatient
+                hospitalId={hospitalId}
+                profile={finalResult}
+                linkToken={finalResult.linkToken}
+                sessionTxnId={finalResult.txnId || txnId}
+                onFinished={finishAndClose}
+              />
+            ) : (
+              <div className="space-y-3 text-center">
+                <p className="text-sm text-muted-foreground">{finalResult.fullName}</p>
+                <p className="text-sm">ABHA number: <span className="font-mono">{finalResult.abhaNumber}</span></p>
+                {finalResult.abhaAddress && <p className="text-sm">ABHA address: <span className="font-mono">{finalResult.abhaAddress}</span></p>}
+                {[finalResult.gender, finalResult.dateOfBirth, finalResult.mobile ? `******${finalResult.mobile.slice(-4)}` : '', finalResult.district, finalResult.state].some(Boolean) && (
+                  <p className="text-xs text-muted-foreground">{[finalResult.gender, finalResult.dateOfBirth, finalResult.mobile ? `******${finalResult.mobile.slice(-4)}` : '', finalResult.district, finalResult.state].filter(Boolean).join(' · ')}</p>
+                )}
+                {cardUrl && cardBlob && (
+                  cardBlob.type === 'application/pdf'
+                    ? <iframe src={cardUrl} title="ABHA card" className="w-full h-64 border rounded-md" />
+                    : <img src={cardUrl} alt="ABHA card" className="w-full border rounded-md" />
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => loadCard()} disabled={cardBusy || !!cardUrl} className="gap-2">
+                    {cardBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" aria-hidden="true" />} View ABHA card
+                  </Button>
+                  <Button variant="outline" onClick={downloadCard} disabled={cardBusy} className="gap-2">
+                    <Download className="h-4 w-4" aria-hidden="true" /> Download card
+                  </Button>
+                </div>
+                <Button onClick={finishAndClose} className="w-full">Done</Button>
+              </div>
+            )}
           </div>
         )}
         </div>

@@ -50,6 +50,9 @@ export interface GuidePayload {
   preview?: boolean;
   /** A line shown with the guide, e.g. after a "before you start" answer. */
   note?: string;
+  /** Shown when every step is done: Vita's closing line and what staff usually do next (only
+   *  tasks this user may open). */
+  done?: { say: string; nextHeader?: string | null; next: GuideOffer[] };
 }
 
 export interface GuideOffer {

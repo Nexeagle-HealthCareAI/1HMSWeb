@@ -7,8 +7,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const toast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({ toast: (...a: unknown[]) => toast(...a), useToast: () => ({ toast }) }));
 
-import { forceHealthWikiMock } from './api/healthWikiApi';
-import { resetMockHealthWiki } from './api/mockHealthWikiApi';
+import { forceHealthWikiMock, healthWikiErrorMessage } from './api/healthWikiApi';
+import { mockHealthWikiApi, resetMockHealthWiki } from './api/mockHealthWikiApi';
 import ArticleBody from './components/ArticleBody';
 import ViewsChart from './components/ViewsChart';
 import HealthWikiArticlePage from './pages/HealthWikiArticlePage';
@@ -34,6 +34,20 @@ const renderAt = (path: string) => {
 beforeEach(() => { resetMockHealthWiki(); toast.mockClear(); });
 
 describe('Inbox', () => {
+  it('shows the try-again card, not a crash, when the inbox comes back empty without an error', async () => {
+    const spy = vi.spyOn(mockHealthWikiApi, 'inbox').mockResolvedValueOnce(null as never);
+    renderAt('/health-wiki');
+    expect(await screen.findByText('Could not load your Health Wiki')).toBeInTheDocument();
+    expect(screen.getByText('Try again in a moment.')).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it('error messages fall back when there is no error object', () => {
+    expect(healthWikiErrorMessage(null, 'Fallback')).toBe('Fallback');
+    expect(healthWikiErrorMessage(undefined)).toBe('Something went wrong. Try again.');
+    expect(healthWikiErrorMessage({ response: { data: { message: 'From the API' } } })).toBe('From the API');
+  });
+
   it('shows the two badges with counts, oldest waiting first', async () => {
     renderAt('/health-wiki');
     const pending = await screen.findByRole('tab', { name: /Pending at you/ });
@@ -51,6 +65,27 @@ describe('Inbox', () => {
     const rows = within(screen.getByRole('tabpanel')).getAllByRole('button');
     expect(rows[0]).toHaveTextContent('Understanding Type 2 Diabetes');
     expect(screen.getByLabelText('842 views and 61 likes')).toBeInTheDocument();
+  });
+
+  it('opens a published article on Doctor Dekho, in the same tab, with a way back to EasyHMS', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, assign } });
+    try {
+      renderAt('/health-wiki');
+      await userEvent.click(await screen.findByRole('tab', { name: /Published/ }));
+      await userEvent.click(await screen.findByText('Understanding Type 2 Diabetes'));
+      expect(assign).toHaveBeenCalledOnce();
+      expect(assign.mock.calls[0][0]).toMatch(/\/health\/conditions\/diabetes-type-2\?from=1hms$/);
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
+  it('offers a link to the live page from a published article', async () => {
+    renderAt('/health-wiki/diabetes-type-2');
+    const link = await screen.findByRole('link', { name: 'View on Doctor Dekho' });
+    expect(link).toHaveAttribute('href', expect.stringMatching(/\/health\/conditions\/diabetes-type-2\?from=1hms$/));
   });
 
   it('opens an article from the list', async () => {
@@ -164,7 +199,7 @@ describe('Topics and writing', () => {
     expect(screen.getByText(/Which age group does this cover/)).toBeInTheDocument();
   });
 
-  it('suggests a topic and asks for a writer', async () => {
+  it('suggests a topic, which the team writes and the doctor reviews', async () => {
     renderTopics();
     await userEvent.click(await screen.findByRole('button', { name: 'Suggest a topic' }));
     const form = screen.getByRole('form', { name: 'Suggest a topic' });
@@ -173,7 +208,8 @@ describe('Topics and writing', () => {
     await userEvent.type(within(form).getByLabelText('Topic'), 'Sodium and the heart');
     await userEvent.type(within(form).getByLabelText('What would you write about?'), 'How much salt is too much.');
     await userEvent.type(within(form).getByLabelText('Why does it matter?'), 'Patients ask.');
-    await userEvent.click(within(form).getByRole('checkbox', { name: /someone else to write it/i }));
+    expect(within(form).getByText(/The NexEagle team writes this one/)).toBeInTheDocument();
+    expect(within(form).queryByRole('checkbox')).toBeNull();
     await userEvent.click(within(form).getByRole('button', { name: 'Send to the team' }));
     expect(await screen.findByText('Sodium and the heart')).toBeInTheDocument();
     expect(screen.getAllByText('Writer requested')).toHaveLength(2);

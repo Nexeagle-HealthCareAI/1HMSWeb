@@ -31,6 +31,7 @@ export const healthWikiApi = {
 
 /** Message for a failed call: the API's own message when it sends one. */
 export const healthWikiErrorMessage = (e: unknown, fallback = 'Something went wrong. Try again.'): string => {
-  const err = e as { response?: { data?: { message?: string } }; message?: string };
-  return err.response?.data?.message || err.message || fallback;
+  // e is null when a page shows its error card for missing data without an error (an empty answer, or offline).
+  const err = e as { response?: { data?: { message?: string } }; message?: string } | null | undefined;
+  return err?.response?.data?.message || err?.message || fallback;
 };

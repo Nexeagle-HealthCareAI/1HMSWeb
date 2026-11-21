@@ -36,7 +36,9 @@ export interface VitaScreenContext {
 /** A task Vita offers as a button (vita docs/CONVERSATION.md). Tapping sends its label as the
  *  message plus `{kind, id}`; the server looks the task up again and checks access. */
 export interface VitaChoice {
-  kind: 'card' | 'guide' | 'before' | 'other' | 'not_this';
+  /** patient / doctor / slot / appointment / confirm: buttons of the Booking agent. Their ids are short keys
+   *  ("p1", "s-2026-11-18-1030", "yes") that only mean something inside that conversation. */
+  kind: 'card' | 'guide' | 'before' | 'other' | 'not_this' | 'patient' | 'doctor' | 'slot' | 'appointment' | 'confirm';
   id: string;
   label: string;
 }
@@ -87,6 +89,9 @@ export interface VitaClientOptions {
   getHmsToken: () => string | null;
   /** Hospital currently selected in 1HMS (multi-hospital users). Vita checks membership with 1HMS. */
   getHospitalId?: () => string | null;
+  /** The name 1HMS shows for the user ("Dr. Asha Verma"). Vita keeps only the first name, for
+   *  greetings ("Good morning, Dr Asha"); it is never sent to the AI. */
+  getDisplayName?: () => string | null;
   locale?: VitaLocale;
   fetchImpl?: typeof fetch;
 }
@@ -166,7 +171,12 @@ export class VitaClient {
     const r = await this.fetch(`${this.base}/v1/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hmsToken: hms, locale: this.locale, hospitalId: hospitalId ?? undefined }),
+      body: JSON.stringify({
+        hmsToken: hms,
+        locale: this.locale,
+        hospitalId: hospitalId ?? undefined,
+        displayName: this.opts.getDisplayName?.()?.trim().slice(0, 120) || undefined,
+      }),
     });
     const body = await readJson(r);
     if (!r.ok) throw toError(r.status, body);
@@ -328,7 +338,7 @@ export class VitaClient {
     rating: 'up' | 'down',
     reason?: 'wrong' | 'incomplete' | 'not_relevant' | 'too_long' | 'other',
     comment?: string,
-  ): Promise<unknown> {
+  ): Promise<{ followUp?: string | null }> {
     return this.json(`/v1/messages/${messageId}/feedback`, {
       method: 'POST',
       body: JSON.stringify({ rating, reason, comment: comment || undefined }),
@@ -383,7 +393,7 @@ function detailOf(body: unknown): string | null {
   return typeof d === 'string' ? d : null;
 }
 
-const CHOICE_KINDS = new Set(['card', 'guide', 'before']);
+const CHOICE_KINDS = new Set(['card', 'guide', 'before', 'patient', 'doctor', 'slot', 'appointment', 'confirm']);
 
 /** Only well-formed choices, at most four (the server never sends more). */
 function toChoices(d: Obj): VitaChoices | null {
