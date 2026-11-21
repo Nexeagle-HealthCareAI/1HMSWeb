@@ -1081,11 +1081,15 @@ export const AppointmentDashboard = () => {
       completed: 0,
       preAppointment: 0,
       totalOnlineToday: 0,
+      totalOnlineAll: 0,
       doctorStats: [] as { name: string; count: number; noShowCount: number }[]
     };
 
-    // Use all currently loaded appointments for stats (logic matches active tab/date range)
-    const currentViewAppointments = appointments;
+    // Use all currently loaded appointments for stats (logic matches active tab/date range).
+    // When a doctor is picked in the Doctor filter, the KPI tiles show that doctor's numbers only.
+    const currentViewAppointments = selectedDoctor === 'all'
+      ? appointments
+      : appointments.filter(apt => getDoctorFilterValue(apt.doctorId, apt.doctorName) === selectedDoctor);
 
     const doctorMap = new Map<string, { total: number; noShow: number }>();
 
@@ -1118,9 +1122,12 @@ export const AppointmentDashboard = () => {
       // creation and never touched again, so unlike finalStatusCode this doesn't drop once
       // front desk confirms a pending online booking.
       totalOnlineToday: currentViewAppointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
-      doctorStats
+      // Hospital-wide online count for the live chip (it should not change with the doctor filter).
+      totalOnlineAll: appointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
+      // One tile per doctor only when viewing all doctors; with a doctor picked, Total already is theirs.
+      doctorStats: selectedDoctor === 'all' ? doctorStats : []
     };
-  }, [appointments]);
+  }, [appointments, selectedDoctor]);
 
   // Initial load when component mounts
   useEffect(() => {
@@ -1366,9 +1373,15 @@ export const AppointmentDashboard = () => {
               </button>
             </>
           )}
+          {selectedDoctor !== 'all' && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 dark:border-brand-800/50 bg-brand-50 dark:bg-brand-900/30 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
+              Showing: {doctorOptions.find(d => d.value === selectedDoctor)?.label || 'Selected doctor'}
+              <button type="button" onClick={() => setSelectedDoctor('all')} className="ml-0.5 text-brand-500 hover:text-brand-700" aria-label="Show all doctors" title="Show all doctors">✕</button>
+            </span>
+          )}
           <LiveOnlineChip
             className="ml-auto"
-            count={kpiStats.totalOnlineToday}
+            count={kpiStats.totalOnlineAll}
             pulseToken={onlinePulse.pulseToken}
             hasFresh={hasFreshOnlineBooking}
             soundOn={onlinePulse.soundOn}
@@ -1749,6 +1762,7 @@ export const AppointmentDashboard = () => {
                     { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
+                      if (selectedDoctor !== 'all' && getDoctorFilterValue(a.doctorId, a.doctorName) !== selectedDoctor) return false;
                       const appointmentStartDate = new Date(a.startAt);
                       const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
                       const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
