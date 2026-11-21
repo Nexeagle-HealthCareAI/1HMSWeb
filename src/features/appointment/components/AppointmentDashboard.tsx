@@ -1074,6 +1074,11 @@ export const AppointmentDashboard = () => {
   }, [activeTab]);
 
   // KPI Calculations
+  // Footer line on each KPI card: the selected doctor's name, or 'All doctors'.
+  const kpiScopeLabel = selectedDoctor === 'all'
+    ? t('appointmentDashboard.allDoctors', { defaultValue: 'All doctors' })
+    : (doctorOptions.find(d => d.value === selectedDoctor)?.label || t('appointmentDashboard.selectedDoctor', { defaultValue: 'Selected doctor' }));
+
   const kpiStats = useMemo(() => {
     if (!appointments) return {
       total: 0,
@@ -1404,6 +1409,7 @@ export const AppointmentDashboard = () => {
               <span className="text-xs font-bold uppercase tracking-widest text-brand-900/70 dark:text-brand-300/80">Total</span>
             </div>
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
+            <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
           </div>
 
           {/* Online Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
@@ -1424,6 +1430,7 @@ export const AppointmentDashboard = () => {
                   value={kpiStats.preAppointment}
                   className="text-4xl font-mono font-black text-amber-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all"
                 />
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
             </div>
           )}
@@ -1458,6 +1465,7 @@ export const AppointmentDashboard = () => {
                   value={kpiStats.totalOnlineToday}
                   className="text-4xl font-mono font-black text-sky-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sky-600 group-hover:to-cyan-500 dark:group-hover:from-sky-400 dark:group-hover:to-cyan-400 transition-all"
                 />
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
             </div>
           </div>
@@ -1479,6 +1487,7 @@ export const AppointmentDashboard = () => {
                   </span>
                 </div>
                 <div className={`text-4xl font-mono font-black ${activeTab === 'past' ? 'text-gray-800 dark:text-white group-hover:from-gray-600 group-hover:to-slate-500 dark:group-hover:from-gray-400 dark:group-hover:to-slate-400' : 'text-rose-900 dark:text-white group-hover:from-rose-600 group-hover:to-pink-500 dark:group-hover:from-rose-400 dark:group-hover:to-pink-400'} relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-all`}>{kpiStats.vitalsRequired}</div>
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
 
               {/* Completed */}
@@ -1494,6 +1503,7 @@ export const AppointmentDashboard = () => {
                   <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Completed</span>
                 </div>
                 <div className="text-4xl font-mono font-black text-emerald-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-emerald-600 group-hover:to-teal-500 dark:group-hover:from-emerald-400 dark:group-hover:to-teal-400 transition-all">{kpiStats.completed}</div>
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
             </>
           )}
