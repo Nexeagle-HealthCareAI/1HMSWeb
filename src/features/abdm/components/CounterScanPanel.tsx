@@ -39,6 +39,7 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
   const [qrBaseUrl, setQrBaseUrl] = useState('');
   const [savingHip, setSavingHip] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [linkingFacility, setLinkingFacility] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
 
   const [counterId, setCounterId] = useState(() => {
@@ -104,6 +105,19 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
       toast({ title: 'Could not save', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message, variant: 'destructive' });
     } finally {
       setSavingHip(false);
+    }
+  };
+
+  const linkFacility = async () => {
+    setLinkingFacility(true);
+    try {
+      const res = await abdmApi.linkFacilityServices(hospitalId);
+      if (!res.success) { toast({ title: 'Facility not linked', description: res.message, variant: 'destructive' }); return; }
+      toast({ title: 'Facility linked to ABDM', description: [res.message, res.abdmResponse].filter(Boolean).join(' ') });
+    } catch (e: any) {
+      toast({ title: 'Facility not linked', description: (e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message, variant: 'destructive' });
+    } finally {
+      setLinkingFacility(false);
     }
   };
 
@@ -185,6 +199,12 @@ export const CounterScanPanel: React.FC<Props> = ({ hospitalId, onHandled, mode 
                 {registering && <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />} Register callback URL with ABDM
               </Button>
               <span>One-time, platform-wide. Needed before patients&apos; scans can reach this system.</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <Button variant="outline" size="sm" onClick={linkFacility} disabled={linkingFacility || !hipId}>
+                {linkingFacility && <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />} Link facility to ABDM (HIP and HIU)
+              </Button>
+              <span>Once per facility, after saving its ID. Without it ABDM refuses record linking with &quot;Invalid HIP ID&quot;.</span>
             </div>
           </div>
         )}

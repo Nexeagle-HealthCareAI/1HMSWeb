@@ -228,6 +228,12 @@ export const abdmApi = {
   registerBridgeUrl: () =>
     apiClient.post<{ message?: string; abdmResponse?: string }>('/abdm/bridge/register', {}),
 
+  // Links the saved facility ID to this software as HIP and HIU with ABDM's facility registry.
+  // Without it ABDM refuses every record-linking call with ABDM-1035 "Invalid HIP ID".
+  linkFacilityServices: (hospitalId: string, hipName?: string) =>
+    apiClient.post<{ success: boolean; message?: string; facilityId?: string; hipName?: string; abdmResponse?: string }>(
+      '/abdm/facility/link-services', { hospitalId, ...(hipName ? { hipName } : {}) }),
+
   getAccounts: (hospitalId: string) =>
     apiClient.get<GetAbhaAccountsResponse>(`/abdm/accounts?hospitalId=${encodeURIComponent(hospitalId)}`),
 
