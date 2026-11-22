@@ -1086,6 +1086,7 @@ export const AppointmentDashboard = () => {
       completed: 0,
       preAppointment: 0,
       totalOnlineToday: 0,
+      walkIn: 0,
       totalOnlineAll: 0,
       doctorStats: [] as { name: string; count: number; noShowCount: number }[]
     };
@@ -1127,6 +1128,7 @@ export const AppointmentDashboard = () => {
       // creation and never touched again, so unlike finalStatusCode this doesn't drop once
       // front desk confirms a pending online booking.
       totalOnlineToday: currentViewAppointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
+      walkIn: currentViewAppointments.filter(apt => apt.bookingSource !== 'NEXEAGLE_PUBLIC').length,
       // Hospital-wide online count for the live chip (it should not change with the doctor filter).
       totalOnlineAll: appointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
       // One tile per doctor only when viewing all doctors; with a doctor picked, Total already is theirs.
@@ -1406,34 +1408,11 @@ export const AppointmentDashboard = () => {
               <div className="p-2.5 bg-brand-100 dark:bg-brand-500/20 rounded-xl shadow-inner ring-1 ring-brand-500/30 group-hover:scale-110 group-hover:bg-brand-500 group-hover:text-white transition-all duration-300 text-brand-600 dark:text-brand-400">
                 <Calendar className="h-5 w-5" />
               </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-900/70 dark:text-brand-300/80">Total</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-900/70 dark:text-brand-300/80">{activeTab === 'future' ? 'Booked' : 'Total'}</span>
             </div>
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
             <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
           </div>
-
-          {/* Online Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
-          {kpiStats.preAppointment > 0 && (
-            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-                <CalendarClock className="h-20 w-20 text-amber-500 -rotate-12" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
-              <div className="flex items-center gap-4 mb-3 relative z-10">
-                <div className="p-2.5 bg-amber-100 dark:bg-amber-500/20 rounded-xl shadow-inner ring-1 ring-amber-500/30 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 text-amber-600 dark:text-amber-400">
-                  <CalendarClock className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' })}</span>
-              </div>
-              <div className="relative z-10 ml-1">
-                <AnimatedCount
-                  value={kpiStats.preAppointment}
-                  className="text-4xl font-mono font-black text-amber-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all"
-                />
-                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
-              </div>
-            </div>
-          )}
 
           {/* Online Bookings: total booked via public/online channels, regardless of current status --
               unlike the card above, this does not drop once front desk confirms a pending online
@@ -1451,7 +1430,7 @@ export const AppointmentDashboard = () => {
                 <div className="p-2.5 bg-sky-100 dark:bg-sky-500/20 rounded-xl shadow-inner ring-1 ring-sky-500/30 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white transition-all duration-300 text-sky-600 dark:text-sky-400">
                   <Globe className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-sky-900/70 dark:text-sky-300/80">{t('appointmentDashboard.statusFilters.totalOnlineToday', { defaultValue: 'Online Bookings Today' })}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-sky-900/70 dark:text-sky-300/80">Online</span>
                 <span className="ml-auto flex items-center gap-1.5">
                   <NewPill visible={hasFreshOnlineBooking} label={t('appointmentDashboard.onlineLive.new', { defaultValue: 'NEW' })} />
                   <span className="relative flex h-2 w-2" title="Live">
@@ -1462,6 +1441,7 @@ export const AppointmentDashboard = () => {
               </div>
               <div className="relative z-10 ml-1">
                 <AnimatedCount
+                  key={`online-${selectedDoctor}-${activeTab}`}
                   value={kpiStats.totalOnlineToday}
                   className="text-4xl font-mono font-black text-sky-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sky-600 group-hover:to-cyan-500 dark:group-hover:from-sky-400 dark:group-hover:to-cyan-400 transition-all"
                 />
@@ -1483,7 +1463,7 @@ export const AppointmentDashboard = () => {
                     {activeTab === 'past' ? <UserX className="h-5 w-5" /> : <Heart className="h-5 w-5" />}
                   </div>
                   <span className={`text-xs font-bold uppercase tracking-widest ${activeTab === 'past' ? 'text-gray-700/80 dark:text-gray-400' : 'text-rose-900/70 dark:text-rose-300/80'}`}>
-                    {activeTab === 'past' ? 'No Show' : 'Vitals Req'}
+                    {activeTab === 'past' ? 'No Show' : 'Vitals Due'}
                   </span>
                 </div>
                 <div className={`text-4xl font-mono font-black ${activeTab === 'past' ? 'text-gray-800 dark:text-white group-hover:from-gray-600 group-hover:to-slate-500 dark:group-hover:from-gray-400 dark:group-hover:to-slate-400' : 'text-rose-900 dark:text-white group-hover:from-rose-600 group-hover:to-pink-500 dark:group-hover:from-rose-400 dark:group-hover:to-pink-400'} relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-all`}>{kpiStats.vitalsRequired}</div>
@@ -1500,12 +1480,30 @@ export const AppointmentDashboard = () => {
                   <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl shadow-inner ring-1 ring-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 text-emerald-600 dark:text-emerald-400">
                     <UserCheck className="h-5 w-5" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Completed</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Done</span>
                 </div>
                 <div className="text-4xl font-mono font-black text-emerald-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-emerald-600 group-hover:to-teal-500 dark:group-hover:from-emerald-400 dark:group-hover:to-teal-400 transition-all">{kpiStats.completed}</div>
                 <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
             </>
+          )}
+
+          {/* Future tab: Walk-in = booked minus online (green, not red: a future walk-in is not an alert) */}
+          {activeTab === 'future' && (
+            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-1 transition-all duration-300 group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                <User className="h-20 w-20 text-emerald-500 -rotate-12" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-4 mb-3 relative z-10">
+                <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl shadow-inner ring-1 ring-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 text-emerald-600 dark:text-emerald-400">
+                  <User className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Walk-in</span>
+              </div>
+              <div className="text-4xl font-mono font-black text-emerald-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1">{kpiStats.walkIn}</div>
+              <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
+            </div>
           )}
 
           {/* Doctor Stats - Dynamically rendered */}
