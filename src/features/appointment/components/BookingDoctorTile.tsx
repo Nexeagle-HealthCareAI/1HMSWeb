@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueries } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -127,6 +127,21 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
 
   const pinnedId = !topView && listDoctors[0]?.booked > 0 ? listDoctors[0].doctorId : '';
 
+  // The highlighted doctor always matches the top of the list: when the department (or Top doctors)
+  // changes, and once on first load unless the user already picked someone, select the list's first doctor.
+  const lastKey = useRef<string | null>(null);
+  const userPicked = useRef(false);
+  const listKey = topView ? 'top' : departmentId;
+  useEffect(() => {
+    if (listDoctors.length === 0 || deptLoading) return;
+    const changed = lastKey.current !== listKey;
+    if (!changed) return;
+    const firstTime = lastKey.current === null;
+    lastKey.current = listKey;
+    if (firstTime && userPicked.current) return;
+    if (listDoctors[0].doctorId !== doctorId) pick(listDoctors[0]);
+  }, [listKey, listDoctors, deptLoading]);
+
   const pick = (d: TileDoctor) => {
     onPickDoctor({
       id: d.doctorId,
@@ -137,6 +152,8 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
       is_available: true,
     });
   };
+
+  const pickByUser = (d: TileDoctor) => { userPicked.current = true; pick(d); };
 
   const chooseDepartment = (id: string) => {
     setTopView(false);
@@ -215,7 +232,9 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
                 >
                   <span className="font-semibold">{d.departmentName}</span>
                   <span className="text-xs text-muted-foreground">
-                    {t('bookingPopup.doctorCount', { defaultValue: '{{count}} doctors', count: n })}
+                    {n === 1
+                      ? t('bookingPopup.doctorCountOne', { defaultValue: '1 doctor' })
+                      : t('bookingPopup.doctorCount', { defaultValue: '{{count}} doctors', count: n })}
                   </span>
                 </button>
               );
@@ -252,7 +271,7 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
                 key={`${d.departmentId}-${d.doctorId}`}
                 type="button"
                 aria-pressed={selected}
-                onClick={() => pick(d)}
+                onClick={() => pickByUser(d)}
                 className={`w-full min-h-[56px] p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all shrink-0 ${selected
                   ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 ring-1 ring-brand-600'
                   : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 hover:bg-brand-50/30'}`}
