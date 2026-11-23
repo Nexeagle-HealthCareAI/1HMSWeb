@@ -71,7 +71,7 @@ import {
   PaginationNext,
   PaginationPrevious
 } from '@/components/ui/pagination';
-import { AppointmentBooking } from './AppointmentBooking';
+import { BookingPopup } from './BookingPopup';
 import { TokenPrintModal } from './TokenPrintModal';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
@@ -1293,8 +1293,8 @@ export const AppointmentDashboard = () => {
     <>
       <OnlineBookingAlerts alerts={onlinePulse.alerts} onDismiss={onlinePulse.dismissAlert} onView={handleViewOnlineBooking} />
 
-      {/* Dashboard View - Hidden on desktop when booking is active */}
-      <div className={`flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4 ${showBooking ? 'md:hidden' : ''}`}>
+      {/* Dashboard View - stays visible behind the Book Appointment pop-up */}
+      <div className="flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4">
       {!isLowBandwidthMode && (
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-100/40 via-slate-50 to-slate-50 dark:from-brand-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
       )}
@@ -2973,39 +2973,10 @@ export const AppointmentDashboard = () => {
       </motion.div>
     </div >
 
-      {/* Booking Flow Overlay (Mobile Slide-up, Desktop Inline) */}
-      <AnimatePresence>
-        {showBooking && (
-          <motion.div
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[100] bg-gray-50 dark:bg-gray-950 flex flex-col md:relative md:z-auto md:bg-transparent md:animate-none md:!transform-none md:!opacity-100"
-          >
-            {/* Header: Native Top App Bar on Mobile, Standard Header on Desktop */}
-            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm relative z-10 shrink-0">
-              <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-3 md:py-3">
-                <button
-                  onClick={() => setShowBooking(false)}
-                  className="group flex items-center justify-center h-10 w-10 md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-1.5 rounded-full md:rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm font-semibold md:border md:border-gray-200 dark:md:border-gray-700"
-                >
-                  <ArrowLeft className="h-6 w-6 md:h-4 md:w-4 transition-transform group-hover:-translate-x-1" />
-                  <span className="hidden md:inline">{t('common.back')}</span>
-                </button>
-                <div className="hidden md:block h-5 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl md:text-base font-bold md:font-black text-gray-900 dark:text-white tracking-tight">{t('appointmentDashboard.bookNewAppointment')}</h1>
-                </div>
-              </div>
-            </div>
-            {/* Form Content */}
-            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
-              <AppointmentBooking refreshToken={bookingRefreshToken} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Book Appointment pop-up (F6): centered pop-up over the board, closes itself after booking */}
+      {showBooking && hospitalId && (
+        <BookingPopup hospitalId={hospitalId} onClose={() => setShowBooking(false)} />
+      )}
     </>
   );
 };

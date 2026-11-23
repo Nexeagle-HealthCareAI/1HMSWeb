@@ -179,6 +179,11 @@ interface PatientFormProps {
   // The parent still resolves/synthesizes selectedSlot+doctor (this form has no slot picker);
   // Reschedule remains the separate, dedicated path for actually changing doctor/date/time.
   editAppointment?: AppointmentDetail;
+  // Booking pop-up mode (F6). When given, this form is the centered booking pop-up and this node
+  // becomes its first tile (Doctor and date). The edit flow never passes it.
+  doctorDateTile?: React.ReactNode;
+  // Booking pop-up mode: set when a booking cannot be made yet (for example no free slot).
+  submitBlockedReason?: string;
 }
 
 export const PatientForm: React.FC<PatientFormProps> = ({
@@ -187,7 +192,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   hospitalId,
   onSubmit,
   onCancel,
-  editAppointment
+  editAppointment,
+  doctorDateTile,
+  submitBlockedReason
 }) => {
   const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState<PatientFormState>(createInitialFormState());
@@ -581,6 +588,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitBlockedReason) return;
     if (!validateForm()) {
       return;
     }
@@ -760,7 +768,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="w-full h-[100dvh] max-w-none max-h-none p-0 flex flex-col gap-0 rounded-none border-none shadow-none sm:w-[96vw] sm:max-w-[1600px] sm:h-[92vh] sm:max-h-[92vh] sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-2xl overflow-hidden bg-background dark:bg-gray-900 !m-0 !top-0 !left-0 !translate-x-0 !translate-y-0 sm:!top-1/2 sm:!left-1/2 sm:!-translate-x-1/2 sm:!-translate-y-1/2 data-[state=open]:sm:animate-in data-[state=closed]:sm:animate-out [&>button.absolute]:hidden">
+      <DialogContent className={`w-full h-[100dvh] max-w-none max-h-none p-0 flex flex-col gap-0 rounded-none border-none shadow-none ${doctorDateTile ? 'sm:w-[94vw] sm:max-w-[1240px] sm:h-[88vh] sm:max-h-[88vh]' : 'sm:w-[96vw] sm:max-w-[1600px] sm:h-[92vh] sm:max-h-[92vh]'} sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-2xl overflow-hidden bg-background dark:bg-gray-900 !m-0 !top-0 !left-0 !translate-x-0 !translate-y-0 sm:!top-1/2 sm:!left-1/2 sm:!-translate-x-1/2 sm:!-translate-y-1/2 data-[state=open]:sm:animate-in data-[state=closed]:sm:animate-out [&>button.absolute]:hidden`}>
         {/* Sticky Header */}
         <DialogHeader className="p-0 sm:p-4 border-b bg-white sm:bg-gradient-to-br sm:from-brand-50 sm:via-white sm:to-white dark:bg-gray-900 dark:sm:from-brand-950/30 dark:sm:via-gray-900 dark:sm:to-gray-900 z-10 shrink-0 text-left space-y-0 relative">
           
@@ -828,7 +836,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <Clock className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
-                  <span className="font-semibold">{formatTime(selectedSlot.time)}</span>
+                  <span className="font-semibold">{selectedSlot.time ? formatTime(selectedSlot.time) : '—'}</span>
                 </div>
                 <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
@@ -968,6 +976,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
                 );
               })()}
+              {/* Booking pop-up (F6): first tile = Doctor and date, supplied by the pop-up */}
+              {doctorDateTile && (
+                <Card className="xl:col-span-3 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow">
+                  {doctorDateTile}
+                </Card>
+              )}
               {/* Personal & Contact Information - Single Row */}
               <Card className="xl:col-span-5 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow mt-0">
                 <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
@@ -1444,7 +1458,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Card>
 
               {/* Emergency Contact + Consultation & Payment column */}
-              <div className="xl:col-span-3 flex flex-col gap-4 md:gap-5">
+              <div className={doctorDateTile ? 'xl:col-span-12 grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-5 items-start' : 'xl:col-span-3 flex flex-col gap-4 md:gap-5'}>
                 {/* Emergency Contact (optional) */}
                 <Card className="p-4 md:p-5 rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
@@ -1574,6 +1588,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
         {/* Sticky Footer */}
         <div className={`p-3 pb-[120px] sm:pb-4 md:p-4 border-t bg-background/95 shrink-0 flex justify-end gap-3 md:gap-4 mt-auto ${!isLowBandwidthMode ? 'backdrop-blur supports-[backdrop-filter]:bg-background/85' : ''}`}>
+          {submitBlockedReason && (
+            <p role="alert" className="mr-auto self-center text-sm font-medium text-amber-700 dark:text-amber-400">{submitBlockedReason}</p>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -1585,7 +1602,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <Button
             type="submit"
             form="patient-form"
-            disabled={isSubmitting || isBookingLoading || !isFormReady || isSubscriptionReadOnly}
+            disabled={isSubmitting || isBookingLoading || !isFormReady || isSubscriptionReadOnly || !!submitBlockedReason}
             className="flex-1 md:flex-none md:min-w-[280px] h-10 md:h-11 md:text-base bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 gap-2 shadow-lg shadow-brand-500/30"
           >
             {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
