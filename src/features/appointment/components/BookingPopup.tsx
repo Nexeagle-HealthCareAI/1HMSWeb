@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { addDays, format, isSameDay } from 'date-fns';
 import { CalendarIcon, Stethoscope, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -245,6 +245,10 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
+  // F8: chips for Today and the next 2 days; the calendar covers the rest, up to 90 days ahead.
+  const quickDays = [0, 1, 2].map((n) => addDays(startOfToday, n));
+  const lastBookableDay = addDays(startOfToday, 90);
+  const pickedOutside = !quickDays.some((d) => isSameDay(d, date));
 
   const doctorDateTile = (
     <div className="flex flex-col gap-4">
@@ -268,24 +272,47 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
 
       <div className="space-y-1.5">
         <Label className="text-sm font-medium dark:text-gray-300">{t('bookingPopup.date', { defaultValue: 'Date' })}</Label>
-        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="outline" className="w-full h-10 justify-start gap-2 font-medium">
-              <CalendarIcon className="h-4 w-4 text-brand-600" />
-              {format(date, 'EEE, d MMM yyyy')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-[100]" align="start">
-            <CalendarComponent
-              mode="single"
-              selected={date}
-              onSelect={(d) => { if (d) { setDate(d); setCalendarOpen(false); } }}
-              disabled={(d) => d < startOfToday}
-              initialFocus
-              className="p-3 pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="grid grid-cols-4 gap-2" role="group" aria-label={t('bookingPopup.date', { defaultValue: 'Date' })}>
+          {quickDays.map((d, i) => {
+            const on = isSameDay(d, date);
+            return (
+              <button
+                key={i}
+                type="button"
+                aria-pressed={on}
+                onClick={() => { setDate(d); setCalendarOpen(false); }}
+                className={`min-h-[52px] px-1 rounded-xl border flex flex-col items-center justify-center text-xs transition-colors ${on ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-300 text-foreground hover:border-brand-300 dark:bg-white/5 dark:border-white/10 dark:text-white'}`}
+              >
+                <span className="font-bold">{i === 0 ? t('bookingPopup.today', { defaultValue: 'Today' }) : format(d, 'EEE')}</span>
+                <span>{format(d, 'd MMM')}</span>
+              </button>
+            );
+          })}
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-expanded={calendarOpen}
+                aria-pressed={pickedOutside}
+                aria-label={t('bookingPopup.pickDateAria', { defaultValue: 'Pick another date from the calendar' })}
+                className={`min-h-[52px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs transition-colors ${pickedOutside ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-300 text-foreground hover:border-brand-300 dark:bg-white/5 dark:border-white/10 dark:text-white'}`}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span className="font-bold">{pickedOutside ? format(date, 'EEE d MMM') : t('bookingPopup.pickDate', { defaultValue: 'Pick date' })}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[100]" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={date}
+                onSelect={(d) => { if (d) { setDate(d); setCalendarOpen(false); } }}
+                disabled={(d) => d < startOfToday || d > lastBookableDay}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
         <p className="text-xs text-muted-foreground">
           {t('bookingPopup.autoTime', { defaultValue: 'Time is set automatically to the first free slot.' })}
         </p>
