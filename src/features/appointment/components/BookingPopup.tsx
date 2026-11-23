@@ -5,7 +5,6 @@ import { addDays, format, isSameDay } from 'date-fns';
 import { CalendarIcon, Stethoscope, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PatientForm } from './PatientForm';
@@ -322,34 +321,44 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
               </button>
             );
           })}
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-expanded={calendarOpen}
-                aria-pressed={pickedOutside}
-                aria-label={t('bookingPopup.pickDateAria', { defaultValue: 'Pick another date from the calendar' })}
-                className={`min-h-[52px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs transition-colors ${pickedOutside ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-300 text-foreground hover:border-brand-300 dark:bg-white/5 dark:border-white/10 dark:text-white'}`}
-              >
-                <CalendarIcon className="h-4 w-4" />
-                <span className="font-bold">{pickedOutside ? format(date, 'EEE d MMM') : t('bookingPopup.pickDate', { defaultValue: 'Pick date' })}</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 z-[100]" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={date}
-                onSelect={(d) => { if (d) { setDate(d); setCalendarOpen(false); } }}
-                disabled={(d) => d < startOfToday || d > lastBookableDay}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          <button
+            type="button"
+            aria-expanded={calendarOpen}
+            aria-pressed={pickedOutside || calendarOpen}
+            aria-label={t('bookingPopup.pickDateAria', { defaultValue: 'Pick another date from the calendar' })}
+            onClick={() => setCalendarOpen((o) => !o)}
+            className={`min-h-[52px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs transition-colors ${pickedOutside ? 'bg-brand-600 border-brand-600 text-white' : calendarOpen ? 'bg-brand-50 border-brand-400 text-brand-800 dark:bg-brand-900/30 dark:text-white' : 'bg-white border-gray-300 text-foreground hover:border-brand-300 dark:bg-white/5 dark:border-white/10 dark:text-white'}`}
+          >
+            <CalendarIcon className="h-4 w-4" />
+            <span className="font-bold">{pickedOutside ? format(date, 'EEE d MMM') : t('bookingPopup.pickDate', { defaultValue: 'Pick date' })}</span>
+          </button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {t('bookingPopup.autoTime', { defaultValue: 'Time is set automatically to the first free slot.' })}
-        </p>
+        {calendarOpen && (
+          <div className="rounded-xl border border-border/60 bg-white dark:bg-white/5 p-2">
+            <CalendarComponent
+              mode="single"
+              selected={date}
+              onSelect={(d) => { if (d) { setDate(d); setCalendarOpen(false); } }}
+              disabled={(d) => d < startOfToday || d > lastBookableDay}
+              initialFocus
+              showOutsideDays={false}
+              className="p-1 pointer-events-auto"
+              classNames={{
+                months: 'flex flex-col w-full',
+                month: 'space-y-2 w-full',
+                table: 'w-full border-collapse',
+                head_row: 'flex w-full',
+                head_cell: 'flex-1 text-muted-foreground font-normal text-xs',
+                row: 'flex w-full mt-1',
+                cell: 'flex-1 h-9 text-center text-sm p-0 relative',
+                day: 'h-9 w-full rounded-lg p-0 font-normal text-sm hover:bg-muted aria-selected:opacity-100',
+                day_selected: 'bg-brand-600 text-white hover:bg-brand-600 hover:text-white font-bold',
+                day_today: 'font-bold text-brand-700',
+                day_disabled: 'text-muted-foreground opacity-40 hover:bg-transparent',
+              }}
+            />
+          </div>
+        )}
         {todayStuck && !bookAnyway && (
           <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/10 p-3 flex flex-col gap-2" role="group" aria-label={t('bookingPopup.noSlotTodayTitle', { defaultValue: 'No free slot left today' })}>
             <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">{t('bookingPopup.noSlotTodayTitle', { defaultValue: 'No free slot left today' })}</p>

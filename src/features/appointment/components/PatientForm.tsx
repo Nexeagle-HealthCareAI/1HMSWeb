@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { LocationTypeahead } from './LocationTypeahead';
 import { useTranslation } from 'react-i18next';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle, Pencil, ArrowLeft, Lock } from 'lucide-react';
 import { AbhaStrip, type AbhaVerified } from '@/features/abdm/components/AbhaStrip';
@@ -206,6 +207,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  // True while City was filled by picking a block and has not been typed over by hand.
+  const cityFromBlockRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // ABHA verified in this sitting. It only counts while the form still carries the same number,
   // so clearing or switching the patient unlocks the fields without extra bookkeeping.
@@ -768,7 +771,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className={`w-full h-[100dvh] max-w-none max-h-none p-0 flex flex-col gap-0 rounded-none border-none shadow-none ${doctorDateTile ? 'sm:w-[94vw] sm:max-w-[1240px] sm:h-[88vh] sm:max-h-[88vh]' : 'sm:w-[96vw] sm:max-w-[1600px] sm:h-[92vh] sm:max-h-[92vh]'} sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-2xl overflow-hidden bg-background dark:bg-gray-900 !m-0 !top-0 !left-0 !translate-x-0 !translate-y-0 sm:!top-1/2 sm:!left-1/2 sm:!-translate-x-1/2 sm:!-translate-y-1/2 data-[state=open]:sm:animate-in data-[state=closed]:sm:animate-out [&>button.absolute]:hidden`}>
+      <DialogContent className={`w-full h-[100dvh] max-w-none max-h-none p-0 flex flex-col gap-0 rounded-none border-none shadow-none ${doctorDateTile ? 'sm:!top-8 sm:!right-8 sm:!bottom-24 sm:!left-8 lg:!bottom-8 lg:!left-24 sm:!w-auto sm:!h-auto sm:!max-h-none' : 'sm:w-[96vw] sm:max-w-[1600px] sm:h-[92vh] sm:max-h-[92vh]'} sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-2xl overflow-hidden bg-background dark:bg-gray-900 !m-0 !top-0 !left-0 !translate-x-0 !translate-y-0 ${doctorDateTile ? '' : 'sm:!top-1/2 sm:!left-1/2 sm:!-translate-x-1/2 sm:!-translate-y-1/2'} data-[state=open]:sm:animate-in data-[state=closed]:sm:animate-out [&>button.absolute]:hidden`}>
         {/* Sticky Header */}
         <DialogHeader className="p-0 sm:p-4 border-b bg-white sm:bg-gradient-to-br sm:from-brand-50 sm:via-white sm:to-white dark:bg-gray-900 dark:sm:from-brand-950/30 dark:sm:via-gray-900 dark:sm:to-gray-900 z-10 shrink-0 text-left space-y-0 relative">
           
@@ -823,6 +826,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           {/* Appointment Details (left) + Patient Search (top-right on desktop, stacked on mobile) */}
           <div className="px-3 pb-3 pt-2 sm:p-0 sm:mt-3 flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-3">
             <div className="overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 no-scrollbar lg:flex-1 lg:min-w-0">
+              {doctorDateTile && (
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('bookingPopup.currentSelection', { defaultValue: 'Current selection' })}</p>
+              )}
               <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-gray-50 dark:bg-gray-800/50 sm:bg-white/80 dark:sm:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-gray-200/60 sm:border-brand-200/60 dark:border-gray-700 dark:sm:border-brand-700 shadow-sm whitespace-nowrap text-gray-800 sm:text-brand-800 dark:text-gray-200 dark:sm:text-brand-200">
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <User className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
@@ -838,11 +844,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   <Clock className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
                   <span className="font-semibold">{selectedSlot.time ? formatTime(selectedSlot.time) : '—'}</span>
                 </div>
-                <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <span className="text-sm">⏱️</span>
-                  <span className="font-semibold">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
-                </div>
+                {!doctorDateTile && (
+                  <>
+                    <div className="h-4 md:h-5 w-px bg-gray-300 sm:bg-brand-300 dark:bg-gray-600 dark:sm:bg-brand-600" />
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <span className="text-sm">⏱️</span>
+                      <span className="font-semibold">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -851,7 +861,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <div className="flex items-center justify-between gap-2 h-10 px-3 rounded-xl border border-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/30 dark:border-emerald-700 shadow-sm">
                   <div className="flex items-center gap-1.5 min-w-0 text-emerald-800 dark:text-emerald-300">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    <span className="font-semibold text-sm truncate">{formData.name}</span>
+                    <span className="font-semibold text-sm truncate">{doctorDateTile ? t('bookingPopup.existingPatient', { defaultValue: 'Existing patient' }) : formData.name}</span>
                   </div>
                   <button
                     type="button"
@@ -862,7 +872,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     }}
                     className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 shrink-0 text-xs font-semibold underline underline-offset-2"
                   >
-                    Change
+                    {doctorDateTile ? t('bookingPopup.clear', { defaultValue: 'Clear' }) : 'Change'}
                   </button>
                 </div>
               ) : (
@@ -932,15 +942,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <div className="grid grid-cols-1 gap-4 md:gap-5 pb-3">
           {/* Main Form */}
           <div className="w-full">
-            <form id="patient-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5 items-start">
+            <form id="patient-form" onSubmit={handleSubmit} className={doctorDateTile ? 'flex flex-wrap items-start gap-4' : 'grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5 items-start'}>
               {/* ABHA strip: first thing staff see. Verified details fill and lock the fields below. */}
-              <AbhaStrip
-                hospitalId={hospitalId}
-                abhaId={formData.abhaId}
-                verified={abhaActive ? abhaVerified : null}
-                onVerified={handleAbhaVerified}
-                onClear={() => { setAbhaVerified(null); setFormData(prev => ({ ...prev, abhaId: '' })); }}
-              />
+              <div className={doctorDateTile ? 'basis-full w-full' : 'contents'}>
+                <AbhaStrip
+                  hospitalId={hospitalId}
+                  abhaId={formData.abhaId}
+                  verified={abhaActive ? abhaVerified : null}
+                  onVerified={handleAbhaVerified}
+                  onClear={() => { setAbhaVerified(null); setFormData(prev => ({ ...prev, abhaId: '' })); }}
+                />
+              </div>
 
               {/* Duplicate-patient warning (new patient only) */}
               {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (() => {
@@ -948,7 +960,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 const nearCertain = dupMatches.some(m => m.confidence === 'NEAR_CERTAIN');
                 const tone = abhaVerified ? 'emerald' : nearCertain ? 'rose' : 'amber';
                 return (
-                <div className={`xl:col-span-12 rounded-xl border shadow-sm overflow-hidden ${tone === 'emerald' ? 'border-emerald-300 bg-emerald-50/70' : tone === 'rose' ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
+                <div className={`xl:col-span-12 w-full rounded-xl border shadow-sm overflow-hidden ${tone === 'emerald' ? 'border-emerald-300 bg-emerald-50/70' : tone === 'rose' ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-black/5">
                     <AlertTriangle className={`h-4 w-4 shrink-0 ${tone === 'emerald' ? 'text-emerald-600' : tone === 'rose' ? 'text-rose-600' : 'text-amber-600'}`} />
                     <div className="min-w-0 flex-1">
@@ -978,12 +990,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               })()}
               {/* Booking pop-up (F6): first tile = Doctor and date, supplied by the pop-up */}
               {doctorDateTile && (
-                <Card className="xl:col-span-3 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="xl:col-span-3 flex-[1_1_300px] min-w-0 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow">
                   {doctorDateTile}
                 </Card>
               )}
               {/* Personal & Contact Information - Single Row */}
-              <Card className="xl:col-span-5 p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow mt-0">
+              <Card className={`xl:col-span-5 ${doctorDateTile ? 'flex-[1.35_1_340px] min-w-0' : ''} p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow mt-0`}>
                 <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-base md:text-lg text-foreground dark:text-white flex items-center gap-2">
                     <User className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
@@ -1269,8 +1281,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     )}
                   </div>
 
-                  <div className="md:col-span-2 flex flex-col md:flex-row gap-3 md:gap-4">
-                    <div className="flex-[0.8]">
+                  <div className={doctorDateTile ? 'md:col-span-2 flex flex-wrap gap-3 md:gap-4' : 'md:col-span-2 flex flex-col md:flex-row gap-3 md:gap-4'}>
+                    <div className={doctorDateTile ? 'flex-[1_1_170px] min-w-0' : 'flex-[0.8]'}>
                       <Label htmlFor="phone" className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.phone')} <span className="text-red-500">*</span>
                       </Label>
@@ -1286,7 +1298,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       )}
                     </div>
 
-                    <div className="flex-[1.2]">
+                    <div className={doctorDateTile ? 'flex-[1_1_200px] min-w-0' : 'flex-[1.2]'}>
                       <Label htmlFor="age" className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.age')} <span className="text-red-500">*</span>
                       </Label>
@@ -1326,7 +1338,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       )}
                     </div>
 
-                    <div className="flex-1">
+                    <div className={doctorDateTile ? 'basis-full' : 'flex-1'}>
                       <Label className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
                       </Label>
@@ -1352,6 +1364,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
 
                 {/* Additional details (optional) */}
+                {!doctorDateTile && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-3">
                   <div>
                     <Label className="text-sm md:text-base font-medium">Blood Group</Label>
@@ -1371,10 +1384,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="Optional" className="h-10 text-sm md:text-base mt-1.5" />
                   </div>
                 </div>
+                )}
               </Card>
 
+              {/* Right column in the pop-up: Address, then Consultation & Payment under it */}
+              <div className={doctorDateTile ? 'flex-[1_1_260px] min-w-0 flex flex-col gap-4' : 'contents'}>
               {/* Address Information */}
-              <Card className="xl:col-span-4 p-4 md:p-5 rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow">
+              <Card className={`xl:col-span-4 ${doctorDateTile ? 'w-full min-w-0' : ''} p-4 md:p-5 rounded-2xl border border-border/60 dark:bg-gray-800/60 shadow-sm hover:shadow-md transition-shadow`}>
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <MapPin className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
                     {t('patientForm.address.title')}
@@ -1400,6 +1416,22 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       <Label htmlFor="block" className="text-sm md:text-base font-medium">
                         Block / Locality <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                       </Label>
+                      {doctorDateTile ? (
+                        <LocationTypeahead
+                          id="block"
+                          kind="block"
+                          value={formData.block}
+                          onChange={(v) => setFormData(prev => ({ ...prev, block: v }))}
+                          onPickBlock={(p) => setFormData(prev => {
+                            // Auto mode: City follows the block while it is empty or was filled by a block pick.
+                            const follow = !prev.city || cityFromBlockRef.current;
+                            if (follow && p.city) cityFromBlockRef.current = true;
+                            return { ...prev, block: p.block, city: follow && p.city ? p.city : prev.city };
+                          })}
+                          placeholder="Type 2 letters, e.g. Bha"
+                          className="h-10 text-sm md:text-base mt-1.5"
+                        />
+                      ) : (
                       <Input
                         id="block"
                         value={formData.block}
@@ -1407,6 +1439,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         placeholder="Block, street or landmark"
                         className="h-10 text-sm md:text-base mt-1.5"
                       />
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 md:gap-4">
@@ -1414,6 +1447,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         <Label htmlFor="city" className="text-sm md:text-base font-medium">
                           {t('patientForm.address.city')}
                         </Label>
+                        {doctorDateTile ? (
+                        <LocationTypeahead
+                          id="city"
+                          kind="city"
+                          value={formData.city}
+                          onChange={(v) => { cityFromBlockRef.current = false; setFormData(prev => ({ ...prev, city: v })); }}
+                          placeholder={t('patientForm.address.cityPlaceholder')}
+                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.city ? "border-red-500" : ""} ${formData.patientId ? "bg-brand-50" : ""}`}
+                        />
+                        ) : (
                         <Input
                           id="city"
                           value={formData.city}
@@ -1421,6 +1464,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           placeholder={t('patientForm.address.cityPlaceholder')}
                           className={`h-10 text-sm md:text-base mt-1.5 ${errors.city ? "border-red-500" : ""} ${formData.patientId ? "bg-brand-50" : ""}`}
                         />
+                        )}
                         {errors.city && (
                           <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.city)}</p>
                         )}
@@ -1458,8 +1502,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Card>
 
               {/* Emergency Contact + Consultation & Payment column */}
-              <div className={doctorDateTile ? 'xl:col-span-12 grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-5 items-start' : 'xl:col-span-3 flex flex-col gap-4 md:gap-5'}>
+              <div className={doctorDateTile ? 'w-full grid grid-cols-1 gap-4 items-start empty:hidden' : 'xl:col-span-3 flex flex-col gap-4 md:gap-5'}>
                 {/* Emergency Contact (optional) */}
+                {!doctorDateTile && (
                 <Card className="p-4 md:p-5 rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <Phone className="h-4 w-4 md:h-5 md:w-5 text-rose-500" />
@@ -1487,6 +1532,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
                   </div>
                 </Card>
+                )}
 
                 {/* Consultation & Payment — shown when there is consult history or a fee to collect */}
                 {(timeline || showConsult) && (
@@ -1512,7 +1558,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                                 </span>
                               ) : t('patientForm.timeline.never', { defaultValue: 'Never' })}
                             </span>
-                            <span className="text-muted-foreground">{t('patientForm.timeline.freeSince', { defaultValue: 'Free follow-ups since' })}</span>
+                            <span className="text-muted-foreground">{doctorDateTile ? t('patientForm.timeline.freeSinceShort', { defaultValue: 'Free follow-ups' }) : t('patientForm.timeline.freeSince', { defaultValue: 'Free follow-ups since' })}</span>
                             <span className="text-right font-medium">{timeline.freeFollowUpCount}</span>
                             {!timeline.neverExpires && timeline.validUptoDate && (
                               <>
@@ -1535,7 +1581,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     )}
 
                     {/* Payment Section */}
-                    <div className="border-t pt-3 md:pt-4 space-y-3">
+                    <div className={showConsult ? 'border-t pt-3 md:pt-4 space-y-3' : 'hidden'}>
                       {showConsult && (
                         <div className="flex items-center justify-between rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-900/10 px-3 py-2">
                           <span className="text-sm md:text-base font-medium text-emerald-800 dark:text-emerald-300">
@@ -1579,6 +1625,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </div>
                 </Card>
                 )}
+              </div>
               </div>
 
             </form>

@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Search, User } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { doctorFeeService } from '@/features/hospital/services/doctorFeeService';
+import { publicDirectoryDoctorsApi } from '@/features/hospital/services/publicDirectoryDoctorsApi';
 import { appointmentApi, ApiDoctor, Department } from '../services/appointmentApi';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 
@@ -39,6 +42,15 @@ interface TileDoctor extends ApiDoctor {
   booked: number;
 }
 
+// "Dr Demo Rohan Mehta" -> "DM": first and last word of the name, without the title.
+const initialsOf = (name: string) => {
+  const words = (name || '').replace(/^dr\.?\s+/i, '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'Dr';
+  const first = words[0][0] ?? '';
+  const last = words.length > 1 ? words[words.length - 1][0] : '';
+  return (first + last).toUpperCase();
+};
+
 const MAX_DEPT_CHIPS = 4;
 const MAX_TOP_DOCTORS = 8;
 
@@ -62,6 +74,33 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
       gcTime: 10 * 60 * 1000,
     })),
   });
+
+  // Fee and photo for every doctor: one call each for the whole hospital (existing APIs).
+  // If a call fails (for example no permission), rows simply show initials and no fee.
+  const { data: feeData } = useQuery({
+    queryKey: ['doctorFees', hospitalId],
+    queryFn: () => doctorFeeService.list(hospitalId),
+    enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const { data: tileData } = useQuery({
+    queryKey: ['doctorPublicTiles', hospitalId],
+    queryFn: () => publicDirectoryDoctorsApi.listTiles(hospitalId),
+    enabled: !!hospitalId,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const feeByDoctor = useMemo(() => {
+    const map = new Map<string, number>();
+    (feeData?.items ?? []).forEach((f) => { if (Number(f.opdConsultFee) > 0) map.set(f.doctorId, Number(f.opdConsultFee)); });
+    return map;
+  }, [feeData]);
+  const photoByDoctor = useMemo(() => {
+    const map = new Map<string, string>();
+    (tileData?.doctors ?? []).forEach((x) => { if (x.photoUrl) map.set(x.doctorId, x.photoUrl); });
+    return map;
+  }, [tileData]);
 
   // Booked today per doctor (cancelled bookings do not count).
   const bookedByDoctor = useMemo(() => {
@@ -276,10 +315,11 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
                   ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 ring-1 ring-brand-600'
                   : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 hover:bg-brand-50/30'}`}
               >
-                <span className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center text-indigo-500" aria-hidden="true">
-                  <User className="h-6 w-6" />
-                </span>
-                <span className="flex flex-col min-w-0">
+                <Avatar className="h-11 w-11 shrink-0" aria-hidden="true">
+                  {photoByDoctor.get(d.doctorId) && <AvatarImage src={photoByDoctor.get(d.doctorId)} alt="" />}
+                  <AvatarFallback className="bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600 text-sm font-bold">{initialsOf(d.doctorName)}</AvatarFallback>
+                </Avatar>
+                <span className="flex flex-col min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5">
                     <span className="text-sm font-bold text-foreground dark:text-white">{d.doctorName}</span>
                     {(d.doctorId === pinnedId || (topView && d.booked > 0 && d === topDoctors[0])) && (
@@ -293,6 +333,15 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
                     {topView ? ` · ${d.departmentName}` : ''}
                   </span>
                 </span>
+                {feeByDoctor.has(d.doctorId) ? (
+                  <span className="ml-auto shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-foreground dark:bg-white/10 dark:text-white">
+                    ₹{feeByDoctor.get(d.doctorId)!.toLocaleString('en-IN')}
+                  </span>
+                ) : feeData ? (
+                  <span className="ml-auto shrink-0 rounded-full border border-dashed border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    {t('booking.feeNotSet', { defaultValue: 'Fee not set' })}
+                  </span>
+                ) : null}
               </button>
             );
           })
