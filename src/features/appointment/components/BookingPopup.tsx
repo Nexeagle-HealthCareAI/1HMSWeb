@@ -17,7 +17,6 @@ import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
 import { useDoctorSlots } from '../hooks/useDoctorSlots';
 import { useBookedSlots } from '../hooks/useBookedSlots';
 import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
-import { appointmentApi } from '../services/appointmentApi';
 
 // F6: the Book Appointment pop-up on the appointment board. One centered pop-up with the ABHA strip
 // on top and three tiles (Doctor and date, Patient, Address). The patient and address tiles are the
@@ -160,9 +159,7 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
   // The first free slot for this doctor and date (see pickFirstFreeSlot). todayStuck = it is today and
   // nothing usable is left: the receptionist then chooses tomorrow or books today anyway.
   const [bookAnyway, setBookAnyway] = useState(false);
-  const [searchingNext, setSearchingNext] = useState(false);
-  const [nextDayMessage, setNextDayMessage] = useState('');
-  useEffect(() => { setBookAnyway(false); setNextDayMessage(''); }, [doctor?.id, dateStr]);
+  useEffect(() => { setBookAnyway(false); }, [doctor?.id, dateStr]);
 
   const { slot, blockedReason, todayStuck } = useMemo<{ slot: PopupSlot | null; blockedReason: string; todayStuck: boolean }>(() => {
     const none = (blockedReason: string) => ({ slot: null, blockedReason, todayStuck: false });
@@ -194,33 +191,6 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
     const time = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
     return { id: `${doctor.id}-${dateStr}-${time}-overflow`, time, isBooked: false, doctorId: doctor.id, date: dateStr, slotDurationInMinutes: 10, shiftName: 'Overflow' };
   }, [bookAnyway, todayStuck, doctor, dateStr]);
-
-  // "Book for tomorrow": look at the next 7 days for this doctor and jump to the first day with a free slot.
-  const goToNextFreeDay = async () => {
-    if (!doctor) return;
-    setSearchingNext(true);
-    setNextDayMessage('');
-    try {
-      for (let i = 1; i <= 7; i++) {
-        const day = addDays(startOfToday, i);
-        const ds = format(day, 'yyyy-MM-dd');
-        const [sl, bk] = await Promise.all([
-          appointmentApi.getDoctorSlots(doctor.id, hospitalId, ds),
-          appointmentApi.getBookedSlots(doctor.id, hospitalId, ds),
-        ]);
-        if (pickFirstFreeSlot(sl, bk, doctor.id, ds, new Date()).slot) {
-          setDate(day);
-          return;
-        }
-      }
-      setNextDayMessage(t('bookingPopup.noFreeNext7', { defaultValue: 'No free slot in the next 7 days. Pick a date from the calendar.' }));
-    } catch {
-      setNextDayMessage(t('bookingPopup.slotsError', { defaultValue: 'Could not load this doctor’s slots. Please try again.' }));
-    } finally {
-      setSearchingNext(false);
-    }
-  };
-
 
   const refreshAfterBooking = () => {
     queryClient.invalidateQueries({ queryKey: ['bookedSlots'] });
@@ -384,14 +354,10 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
           <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/10 p-3 flex flex-col gap-2" role="group" aria-label={t('bookingPopup.noSlotTodayTitle', { defaultValue: 'No free slot left today' })}>
             <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">{t('bookingPopup.noSlotTodayTitle', { defaultValue: 'No free slot left today' })}</p>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="outline" disabled={searchingNext} onClick={goToNextFreeDay}>
-                {searchingNext ? <Loader2 className="h-4 w-4 animate-spin" /> : t('bookingPopup.bookTomorrow', { defaultValue: 'Book for tomorrow' })}
-              </Button>
               <Button type="button" size="sm" variant="outline" onClick={() => setBookAnyway(true)}>
                 {t('bookingPopup.bookTodayAnyway', { defaultValue: 'Book today anyway' })}
               </Button>
             </div>
-            {nextDayMessage && <p className="text-xs text-amber-900 dark:text-amber-200" role="status">{nextDayMessage}</p>}
           </div>
         )}
         {bookAnyway && overflowSlot && (
