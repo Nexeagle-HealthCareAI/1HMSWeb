@@ -5,13 +5,13 @@ import { format } from 'date-fns';
 import { CalendarIcon, Stethoscope, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PatientForm } from './PatientForm';
 import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
+import { BookingDoctorTile } from './BookingDoctorTile';
 import { useDepartments } from '../hooks/useDepartments';
 import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
 import { useDoctorSlots } from '../hooks/useDoctorSlots';
@@ -23,6 +23,7 @@ import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
 // existing PatientForm; this component supplies the first tile and assigns the time itself:
 // the first free slot of the chosen doctor on the chosen date (no slot grid, no time dropdown).
 // After a booking the existing steps follow, as before: vitals, then the print token screen.
+// F7: department and doctor choice lives in BookingDoctorTile (Top doctors, department chips, A to Z doctor list).
 
 interface PopupDoctor {
   id: string;
@@ -252,56 +253,18 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
         {t('bookingPopup.doctorAndDate', { defaultValue: 'Doctor and date' })}
       </h3>
 
-      <div className="space-y-1.5">
-        <Label className="text-sm font-medium dark:text-gray-300">{t('bookingPopup.department', { defaultValue: 'Department' })}</Label>
-        <Select value={departmentId} onValueChange={setDepartmentId}>
-          <SelectTrigger className="h-10 bg-background" aria-label={t('bookingPopup.department', { defaultValue: 'Department' })}>
-            <SelectValue placeholder={t('appointmentBooking.moreDepartments', { defaultValue: 'Select department' })} />
-          </SelectTrigger>
-          <SelectContent className="z-[100]">
-            {departments.map((d) => (
-              <SelectItem key={d.departmentId} value={d.departmentId}>{d.departmentName}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm font-medium dark:text-gray-300">{t('bookingPopup.doctor', { defaultValue: 'Doctor' })}</Label>
-        <div className="max-h-[260px] overflow-y-auto pr-1 space-y-2" role="group" aria-label={t('bookingPopup.doctor', { defaultValue: 'Doctor' })}>
-          {doctorsLoading ? (
-            <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500 animate-pulse">
-              {t('appointmentBooking.loadingDoctors', { defaultValue: 'Loading doctors…' })}
-            </div>
-          ) : (
-            doctors.map((d) => {
-              const selected = doctor.id === d.doctorId;
-              return (
-                <button
-                  key={d.doctorId}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setDoctor({
-                    id: d.doctorId,
-                    name: d.doctorName,
-                    department: departmentName,
-                    specialization: d.specializations?.length > 0 ? d.specializations.join(', ') : t('appointmentBooking.generalSpecialization', { defaultValue: 'General' }),
-                    is_available: true,
-                  })}
-                  className={`w-full p-3 rounded-xl border text-left transition-all text-sm ${selected
-                    ? 'border-brand-200 bg-brand-50 dark:border-brand-500/50 dark:bg-brand-500/10 shadow-sm'
-                    : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 hover:bg-brand-50/30'}`}
-                >
-                  <div className="font-semibold text-foreground dark:text-white">{d.doctorName}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {d.specializations?.length > 0 ? d.specializations.join(', ') : t('appointmentBooking.generalSpecialization', { defaultValue: 'General' })}
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
+      <BookingDoctorTile
+        hospitalId={hospitalId}
+        departments={departments}
+        departmentId={departmentId}
+        onDepartmentChange={setDepartmentId}
+        doctorId={doctor.id}
+        onPickDoctor={(d) => {
+          // Picking from "Top doctors" can be in another department: follow it so the slot lookups match.
+          if (d.departmentId && d.departmentId !== departmentId) setDepartmentId(d.departmentId);
+          setDoctor({ id: d.id, name: d.name, department: d.department, specialization: d.specialization, is_available: true });
+        }}
+      />
 
       <div className="space-y-1.5">
         <Label className="text-sm font-medium dark:text-gray-300">{t('bookingPopup.date', { defaultValue: 'Date' })}</Label>
