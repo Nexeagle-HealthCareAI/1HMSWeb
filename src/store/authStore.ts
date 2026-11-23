@@ -26,6 +26,19 @@ export interface HospitalSummary {
   isChainOwner?: boolean;
 }
 
+/** Fetches the signed-in user's hospitals again and puts them in the session, so a renamed hospital
+ * shows its new name in the header and the switcher without signing out. Best-effort: on failure the
+ * list stays as it was. */
+export const refreshMyHospitals = async (): Promise<void> => {
+  try {
+    const { hospitalApi } = await import('@/features/hospital/services/hospitalApi');
+    const mine = await hospitalApi.getMyHospitals();
+    if (mine.length) useAuthStore.getState().setHospitals(mine);
+  } catch {
+    /* non-blocking */
+  }
+};
+
 export interface AuthState {
   // State
   user: User | null;
