@@ -362,7 +362,7 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
         )}
         {bookAnyway && overflowSlot && (
           <p className="mt-2 text-xs text-amber-900 dark:text-amber-200" role="status">
-            {t('bookingPopup.anywayNote', { defaultValue: 'Booking today at {{time}}, outside the doctor’s slots. Confirm the doctor will see this patient.', time: overflowSlot.time })}{' '}
+            {t('bookingPopup.anywayNote', { defaultValue: 'Booking today at {{time}}, outside the doctor’s slots.', time: overflowSlot.time })}{' '}
             <button type="button" className="underline font-semibold" onClick={() => setBookAnyway(false)}>{t('bookingPopup.undo', { defaultValue: 'Undo' })}</button>
           </p>
         )}
