@@ -128,19 +128,19 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
   const pinnedId = !topView && listDoctors[0]?.booked > 0 ? listDoctors[0].doctorId : '';
 
   // The highlighted doctor always matches the top of the list: when the department (or Top doctors)
-  // changes, and once on first load unless the user already picked someone, select the list's first doctor.
-  const lastKey = useRef<string | null>(null);
+  // changes, and once on first load unless the user already picked someone, select the list's first
+  // doctor. The pop-up also picks a default doctor when the department changes, so this keeps
+  // re-checking (doctorId is a dependency) until the list's first doctor really is the selected one.
+  const handledKey = useRef<string | null>(null);
   const userPicked = useRef(false);
   const listKey = topView ? 'top' : departmentId;
   useEffect(() => {
     if (listDoctors.length === 0 || deptLoading) return;
-    const changed = lastKey.current !== listKey;
-    if (!changed) return;
-    const firstTime = lastKey.current === null;
-    lastKey.current = listKey;
-    if (firstTime && userPicked.current) return;
-    if (listDoctors[0].doctorId !== doctorId) pick(listDoctors[0]);
-  }, [listKey, listDoctors, deptLoading]);
+    if (handledKey.current === listKey) return;
+    if (handledKey.current === null && userPicked.current) { handledKey.current = listKey; return; }
+    if (listDoctors[0].doctorId === doctorId) { handledKey.current = listKey; return; }
+    pick(listDoctors[0]);
+  }, [listKey, listDoctors, deptLoading, doctorId]);
 
   const pick = (d: TileDoctor) => {
     onPickDoctor({
