@@ -17,6 +17,7 @@ import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
 import { useDoctorSlots } from '../hooks/useDoctorSlots';
 import { useBookedSlots } from '../hooks/useBookedSlots';
 import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
+import { appointmentApi } from '../services/appointmentApi';
 
 // F6: the Book Appointment pop-up on the appointment board. One centered pop-up with the ABHA strip
 // on top and three tiles (Doctor and date, Patient, Address). The patient and address tiles are the
@@ -51,6 +52,49 @@ const FALLBACK_TIMES = [
   '20:00', '20:30', '21:00', '21:30', '22:00', '22:30',
 ];
 
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+
+// F9: the first free slot of a doctor's day. For today a slot counts only while it has not ended yet
+// (a free slot that is running right now can be given; earlier ones never are). For other dates it is
+// simply the first free slot. 'passed' = free slots exist today but all have ended; 'full' = none free.
+const pickFirstFreeSlot = (
+  slotsResponse: any,
+  bookedResponse: any,
+  doctorId: string,
+  dateStr: string,
+  now: Date,
+): { slot: PopupSlot | null; reason: '' | 'leave' | 'full' | 'passed' } => {
+  if (slotsResponse?.isTimeOff) return { slot: null, reason: 'leave' };
+  const shiftDayDetails = slotsResponse?.shiftInfo?.[0]?.shiftDayDetails;
+  let slots: PopupSlot[];
+  if (shiftDayDetails && shiftDayDetails.length > 0) {
+    slots = generateTimeSlotsFromShiftInfo(shiftDayDetails, doctorId, dateStr).map((s: any) => ({
+      ...s,
+      slotDurationInMinutes: shiftDayDetails.find((shift: any) => shift.shiftName === s.shiftName)?.slotDurationInMinutes || 10,
+    }));
+  } else {
+    slots = FALLBACK_TIMES.map((time) => ({
+      id: `${doctorId}-${dateStr}-${time}`,
+      time,
+      isBooked: false,
+      doctorId,
+      date: dateStr,
+      slotDurationInMinutes: 10,
+      shiftName: 'Default',
+    }));
+  }
+  const booked: string[] = bookedResponse?.bookedSlots ?? [];
+  const free = slots.filter((s) => !booked.includes(s.time + ':00') && !s.isBooked);
+  if (free.length === 0) return { slot: null, reason: 'full' };
+  if (dateStr !== format(now, 'yyyy-MM-dd')) return { slot: free[0], reason: '' };
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const live = free.find((s) => toMinutes(s.time) + (s.slotDurationInMinutes || 10) > nowMin);
+  return live ? { slot: live, reason: '' } : { slot: null, reason: 'passed' };
+};
+
 interface BookingPopupProps {
   hospitalId: string;
   onClose: () => void;
@@ -67,6 +111,9 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
   // After booking: vitals, then the print token screen (same order as the old booking page).
   const [stage, setStage] = useState<'form' | 'vitals' | 'token'>('form');
   const [booked, setBooked] = useState<{ patient: any; doctorName: string; department: string; date: string } | null>(null);
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
 
   // Local date, not toISOString(): after midnight in India that would read as the day before.
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -110,51 +157,70 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
     }
   }, [doctors, doctorsLoading, departmentId, departmentName, doctor, t]);
 
-  // The first free slot for this doctor and date. For today, slots that have already passed are
-  // skipped when a later one is free.
-  const { slot, blockedReason } = useMemo<{ slot: PopupSlot | null; blockedReason: string }>(() => {
-    if (doctorsLoading) return { slot: null, blockedReason: t('bookingPopup.loading', { defaultValue: 'Loading…' }) };
+  // The first free slot for this doctor and date (see pickFirstFreeSlot). todayStuck = it is today and
+  // nothing usable is left: the receptionist then chooses tomorrow or books today anyway.
+  const [bookAnyway, setBookAnyway] = useState(false);
+  const [searchingNext, setSearchingNext] = useState(false);
+  const [nextDayMessage, setNextDayMessage] = useState('');
+  useEffect(() => { setBookAnyway(false); setNextDayMessage(''); }, [doctor?.id, dateStr]);
+
+  const { slot, blockedReason, todayStuck } = useMemo<{ slot: PopupSlot | null; blockedReason: string; todayStuck: boolean }>(() => {
+    const none = (blockedReason: string) => ({ slot: null, blockedReason, todayStuck: false });
+    if (doctorsLoading) return none(t('bookingPopup.loading', { defaultValue: 'Loading…' }));
     if (!departmentId || doctors.length === 0) {
-      return { slot: null, blockedReason: t('bookingPopup.noDoctors', { defaultValue: 'No doctors available in this department.' }) };
+      return none(t('bookingPopup.noDoctors', { defaultValue: 'No doctors available in this department.' }));
     }
-    if (!doctor) return { slot: null, blockedReason: t('bookingPopup.chooseDoctor', { defaultValue: 'Choose a doctor.' }) };
-    if (slotsLoading || bookedLoading || slotsFetching || bookedFetching) return { slot: null, blockedReason: t('bookingPopup.findingSlot', { defaultValue: 'Finding the first free slot…' }) };
+    if (!doctor) return none(t('bookingPopup.chooseDoctor', { defaultValue: 'Choose a doctor.' }));
+    if (slotsLoading || bookedLoading || slotsFetching || bookedFetching) return none(t('bookingPopup.findingSlot', { defaultValue: 'Finding the first free slot…' }));
     if (slotsError || !slotsResponse) {
-      return { slot: null, blockedReason: t('bookingPopup.slotsError', { defaultValue: 'Could not load this doctor’s slots. Please try again.' }) };
+      return none(t('bookingPopup.slotsError', { defaultValue: 'Could not load this doctor’s slots. Please try again.' }));
     }
-    if (slotsResponse.isTimeOff) {
-      return { slot: null, blockedReason: t('bookingPopup.onLeave', { defaultValue: 'This doctor is on leave on the chosen date.' }) };
-    }
-
-    const shiftDayDetails = slotsResponse.shiftInfo?.[0]?.shiftDayDetails;
-    let slots: PopupSlot[];
-    if (shiftDayDetails && shiftDayDetails.length > 0) {
-      slots = generateTimeSlotsFromShiftInfo(shiftDayDetails, doctor.id, dateStr).map((s) => ({
-        ...s,
-        slotDurationInMinutes: shiftDayDetails.find((shift) => shift.shiftName === s.shiftName)?.slotDurationInMinutes || 10,
-      }));
-    } else {
-      slots = FALLBACK_TIMES.map((time) => ({
-        id: `${doctor.id}-${dateStr}-${time}`,
-        time,
-        isBooked: false,
-        doctorId: doctor.id,
-        date: dateStr,
-        slotDurationInMinutes: 10,
-        shiftName: 'Default',
-      }));
-    }
-
-    const booked = bookedResponse?.bookedSlots ?? [];
-    const free = slots.filter((s) => !booked.includes(s.time + ':00') && !s.isBooked);
-    if (free.length === 0) {
-      return { slot: null, blockedReason: t('bookingPopup.noFreeSlot', { defaultValue: 'No free slot left for this doctor on this date.' }) };
-    }
+    const r = pickFirstFreeSlot(slotsResponse, bookedResponse, doctor.id, dateStr, new Date());
+    if (r.slot) return { slot: r.slot, blockedReason: '', todayStuck: false };
+    if (r.reason === 'leave') return none(t('bookingPopup.onLeave', { defaultValue: 'This doctor is on leave on the chosen date.' }));
     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
-    const nowTime = format(new Date(), 'HH:mm');
-    const pick = (isToday ? free.find((s) => s.time >= nowTime) : undefined) ?? free[0];
-    return { slot: pick, blockedReason: '' };
+    if (isToday) {
+      return { slot: null, blockedReason: t('bookingPopup.noSlotToday', { defaultValue: 'No free slot left today for this doctor. Choose tomorrow or book today anyway.' }), todayStuck: true };
+    }
+    return none(t('bookingPopup.noFreeSlot', { defaultValue: 'No free slot left for this doctor on this date.' }));
   }, [doctor, doctors.length, doctorsLoading, departmentId, slotsResponse, slotsLoading, slotsFetching, slotsError, bookedResponse, bookedLoading, bookedFetching, dateStr, t]);
+
+  // "Book today anyway": the doctor agrees to see the patient outside the slot list, so the time is the
+  // current time rounded up to 5 minutes.
+  const overflowSlot = useMemo<PopupSlot | null>(() => {
+    if (!bookAnyway || !todayStuck || !doctor) return null;
+    const now = new Date();
+    const mins = Math.min(Math.ceil((now.getHours() * 60 + now.getMinutes()) / 5) * 5, 23 * 60 + 59);
+    const time = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+    return { id: `${doctor.id}-${dateStr}-${time}-overflow`, time, isBooked: false, doctorId: doctor.id, date: dateStr, slotDurationInMinutes: 10, shiftName: 'Overflow' };
+  }, [bookAnyway, todayStuck, doctor, dateStr]);
+
+  // "Book for tomorrow": look at the next 7 days for this doctor and jump to the first day with a free slot.
+  const goToNextFreeDay = async () => {
+    if (!doctor) return;
+    setSearchingNext(true);
+    setNextDayMessage('');
+    try {
+      for (let i = 1; i <= 7; i++) {
+        const day = addDays(startOfToday, i);
+        const ds = format(day, 'yyyy-MM-dd');
+        const [sl, bk] = await Promise.all([
+          appointmentApi.getDoctorSlots(doctor.id, hospitalId, ds),
+          appointmentApi.getBookedSlots(doctor.id, hospitalId, ds),
+        ]);
+        if (pickFirstFreeSlot(sl, bk, doctor.id, ds, new Date()).slot) {
+          setDate(day);
+          return;
+        }
+      }
+      setNextDayMessage(t('bookingPopup.noFreeNext7', { defaultValue: 'No free slot in the next 7 days. Pick a date from the calendar.' }));
+    } catch {
+      setNextDayMessage(t('bookingPopup.slotsError', { defaultValue: 'Could not load this doctor’s slots. Please try again.' }));
+    } finally {
+      setSearchingNext(false);
+    }
+  };
+
 
   const refreshAfterBooking = () => {
     queryClient.invalidateQueries({ queryKey: ['bookedSlots'] });
@@ -243,8 +309,6 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
     );
   }
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
   // F8: chips for Today and the next 2 days; the calendar covers the rest, up to 90 days ahead.
   const quickDays = [0, 1, 2].map((n) => addDays(startOfToday, n));
   const lastBookableDay = addDays(startOfToday, 90);
@@ -316,11 +380,31 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
         <p className="text-xs text-muted-foreground">
           {t('bookingPopup.autoTime', { defaultValue: 'Time is set automatically to the first free slot.' })}
         </p>
+        {todayStuck && !bookAnyway && (
+          <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/10 p-3 flex flex-col gap-2" role="group" aria-label={t('bookingPopup.noSlotTodayTitle', { defaultValue: 'No free slot left today' })}>
+            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">{t('bookingPopup.noSlotTodayTitle', { defaultValue: 'No free slot left today' })}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" disabled={searchingNext} onClick={goToNextFreeDay}>
+                {searchingNext ? <Loader2 className="h-4 w-4 animate-spin" /> : t('bookingPopup.bookTomorrow', { defaultValue: 'Book for tomorrow' })}
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setBookAnyway(true)}>
+                {t('bookingPopup.bookTodayAnyway', { defaultValue: 'Book today anyway' })}
+              </Button>
+            </div>
+            {nextDayMessage && <p className="text-xs text-amber-900 dark:text-amber-200" role="status">{nextDayMessage}</p>}
+          </div>
+        )}
+        {bookAnyway && overflowSlot && (
+          <p className="mt-2 text-xs text-amber-900 dark:text-amber-200" role="status">
+            {t('bookingPopup.anywayNote', { defaultValue: 'Booking today at {{time}}, outside the doctor’s slots. Confirm the doctor will see this patient.', time: overflowSlot.time })}{' '}
+            <button type="button" className="underline font-semibold" onClick={() => setBookAnyway(false)}>{t('bookingPopup.undo', { defaultValue: 'Undo' })}</button>
+          </p>
+        )}
       </div>
     </div>
   );
 
-  const popupSlot: PopupSlot = slot ?? {
+  const popupSlot: PopupSlot = slot ?? overflowSlot ?? {
     id: 'no-slot',
     time: '',
     isBooked: true,
@@ -334,7 +418,7 @@ export const BookingPopup: React.FC<BookingPopupProps> = ({ hospitalId, onClose 
       doctor={doctor}
       hospitalId={hospitalId}
       doctorDateTile={doctorDateTile}
-      submitBlockedReason={blockedReason || undefined}
+      submitBlockedReason={(overflowSlot ? '' : blockedReason) || undefined}
       onSubmit={handleBooked}
       onCancel={onClose}
     />
