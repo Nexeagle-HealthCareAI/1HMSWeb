@@ -1087,8 +1087,7 @@ export const AppointmentDashboard = () => {
       preAppointment: 0,
       totalOnlineToday: 0,
       walkIn: 0,
-      totalOnlineAll: 0,
-      doctorStats: [] as { name: string; count: number; noShowCount: number }[]
+      totalOnlineAll: 0
     };
 
     // Use all currently loaded appointments for stats (logic matches active tab/date range).
@@ -1096,28 +1095,6 @@ export const AppointmentDashboard = () => {
     const currentViewAppointments = selectedDoctor === 'all'
       ? appointments
       : appointments.filter(apt => getDoctorFilterValue(apt.doctorId, apt.doctorName) === selectedDoctor);
-
-    const doctorMap = new Map<string, { total: number; noShow: number }>();
-
-    currentViewAppointments.forEach(apt => {
-      const docName = apt.doctorName || 'Unknown Doctor';
-      const currentStats = doctorMap.get(docName) || { total: 0, noShow: 0 };
-
-      currentStats.total += 1;
-
-      // Calculate No Show (VITALS_REQUIRED is considered No Show for Past appointments)
-      if (apt.finalStatusCode === 'VITALS_REQUIRED') {
-        currentStats.noShow += 1;
-      }
-
-      doctorMap.set(docName, currentStats);
-    });
-
-    const doctorStats = Array.from(doctorMap.entries()).map(([name, stats]) => ({
-      name,
-      count: stats.total,
-      noShowCount: stats.noShow
-    }));
 
     return {
       total: currentViewAppointments.length,
@@ -1130,9 +1107,7 @@ export const AppointmentDashboard = () => {
       totalOnlineToday: currentViewAppointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
       walkIn: currentViewAppointments.filter(apt => apt.bookingSource !== 'NEXEAGLE_PUBLIC').length,
       // Hospital-wide online count for the live chip (it should not change with the doctor filter).
-      totalOnlineAll: appointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
-      // One tile per doctor only when viewing all doctors; with a doctor picked, Total already is theirs.
-      doctorStats: selectedDoctor === 'all' ? doctorStats : []
+      totalOnlineAll: appointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length
     };
   }, [appointments, selectedDoctor]);
 
@@ -1505,31 +1480,6 @@ export const AppointmentDashboard = () => {
               <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
             </div>
           )}
-
-          {/* Doctor Stats - Dynamically rendered */}
-          {kpiStats.doctorStats.map((doc, idx) => (
-            <div key={idx} className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-1 transition-all duration-300 group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-                <User className="h-20 w-20 text-cyan-500 -rotate-12" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none" />
-              <div className="flex items-center gap-4 mb-3 relative z-10">
-                <div className="p-2.5 bg-cyan-100 dark:bg-cyan-500/20 rounded-xl shadow-inner ring-1 ring-cyan-500/30 group-hover:scale-110 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300 text-cyan-600 dark:text-cyan-400">
-                  <User className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-cyan-900/70 dark:text-cyan-300/80 truncate max-w-[100px]" title={doc.name}>{doc.name}</span>
-              </div>
-              <div className="relative z-10 ml-1">
-                <div className="text-4xl font-mono font-black text-cyan-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-600 group-hover:to-brand-500 dark:group-hover:from-cyan-400 dark:group-hover:to-brand-400 transition-all">{doc.count}</div>
-                {activeTab === 'past' && doc.noShowCount > 0 && (
-                  <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-red-100 bg-red-500 dark:bg-red-600 px-2 pl-1 py-0.5 rounded shadow-[0_0_8px_rgba(239,68,68,0.5)] w-fit uppercase tracking-wider backdrop-blur-sm bg-opacity-90">
-                    <UserX className="h-3 w-3" />
-                    <span>No Show: {doc.noShowCount}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Current Appointments Section */}
