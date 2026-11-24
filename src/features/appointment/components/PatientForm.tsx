@@ -209,6 +209,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   // True while City was filled by picking a block and has not been typed over by hand.
   const cityFromBlockRef = useRef(false);
+  // Shown when an existing patient's saved City differs from the block just picked; one click updates City.
+  const [cityHint, setCityHint] = useState<{ current: string; suggest: string; block: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // ABHA verified in this sitting. It only counts while the form still carries the same number,
   // so clearing or switching the patient unlocks the fields without extra bookkeeping.
@@ -461,6 +463,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   // Handle patient selection from search results
   const handlePatientSelect = (patient: PatientSearchItem) => {
+    cityFromBlockRef.current = false;
+    setCityHint(null);
     setFormData({
       patientId: patient.patientId,
       name: patient.fullName,
@@ -866,6 +870,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      cityFromBlockRef.current = false;
+                      setCityHint(null);
                       setFormData(createInitialFormState());
                       setSearchResults([]);
                       setShowSearchResults(false);
@@ -1421,13 +1427,21 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           id="block"
                           kind="block"
                           value={formData.block}
-                          onChange={(v) => setFormData(prev => ({ ...prev, block: v }))}
-                          onPickBlock={(p) => setFormData(prev => {
+                          onChange={(v) => {
+                            // Hint belongs to the picked block: drop it once the block text is edited or cleared.
+                            setCityHint(h => (h && h.block === v ? h : null));
+                            setFormData(prev => ({ ...prev, block: v }));
+                          }}
+                          onPickBlock={(p) => {
                             // Auto mode: City follows the block while it is empty or was filled by a block pick.
-                            const follow = !prev.city || cityFromBlockRef.current;
+                            const follow = !formData.city || cityFromBlockRef.current;
                             if (follow && p.city) cityFromBlockRef.current = true;
-                            return { ...prev, block: p.block, city: follow && p.city ? p.city : prev.city };
-                          })}
+                            // Existing patient with a different saved City: keep it, but offer a one-click update.
+                            const differs = !!formData.patientId && !follow && !!p.city
+                              && p.city.trim().toLowerCase() !== (formData.city || '').trim().toLowerCase();
+                            setCityHint(differs ? { current: formData.city, suggest: p.city, block: p.block } : null);
+                            setFormData(prev => ({ ...prev, block: p.block, city: follow && p.city ? p.city : prev.city }));
+                          }}
                           placeholder="Type 2 letters, e.g. Bha"
                           className="h-10 text-sm md:text-base mt-1.5"
                         />
@@ -1452,7 +1466,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           id="city"
                           kind="city"
                           value={formData.city}
-                          onChange={(v) => { cityFromBlockRef.current = false; setFormData(prev => ({ ...prev, city: v })); }}
+                          onChange={(v) => { cityFromBlockRef.current = false; setCityHint(null); setFormData(prev => ({ ...prev, city: v })); }}
                           placeholder={t('patientForm.address.cityPlaceholder')}
                           className={`h-10 text-sm md:text-base mt-1.5 ${errors.city ? "border-red-500" : ""} ${formData.patientId ? "bg-brand-50" : ""}`}
                         />
@@ -1487,6 +1501,23 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         )}
                       </div>
                     </div>
+
+                    {cityHint && (
+                      <p className="-mt-1 text-xs text-muted-foreground">
+                        City is still "{cityHint.current}".{' '}
+                        <button
+                          type="button"
+                          className="font-semibold text-brand-700 underline underline-offset-2"
+                          onClick={() => {
+                            cityFromBlockRef.current = false;
+                            setFormData(prev => ({ ...prev, city: cityHint.suggest }));
+                            setCityHint(null);
+                          }}
+                        >
+                          Use "{cityHint.suggest}"
+                        </button>
+                      </p>
+                    )}
 
                     <div>
                       <Label htmlFor="country" className="text-sm md:text-base font-medium">Country</Label>
