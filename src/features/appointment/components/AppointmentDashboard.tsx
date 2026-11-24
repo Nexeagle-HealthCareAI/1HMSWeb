@@ -50,6 +50,7 @@ import { JourneyBadge } from './JourneyBadge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DoctorFilter } from './DoctorFilter';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
@@ -1505,24 +1506,16 @@ export const AppointmentDashboard = () => {
                 {/* Doctor Filter Dropdown */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60 whitespace-nowrap">{t('appointmentDashboard.doctorLabel')}</label>
-                  <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                    <SelectTrigger className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium">
-                      <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-brand-100/50 dark:border-zinc-800 backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 shadow-xl">
-                      <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">{t('appointmentDashboard.allDoctors')}</SelectItem>
-                      {doctorOptions.map((doctor) => (
-                        <SelectItem key={doctor.value} value={doctor.value} className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">
-                          <span className="inline-flex items-center gap-1.5">
-                            {availabilityByDoctorId.has(doctor.value) && (
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
-                            )}
-                            {doctor.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DoctorFilter
+                    value={selectedDoctor}
+                    onChange={setSelectedDoctor}
+                    options={doctorOptions}
+                    availability={availabilityByDoctorId}
+                    allLabel={t('appointmentDashboard.allDoctors')}
+                    searchPlaceholder={t('appointmentDashboard.searchDoctor', { defaultValue: 'Search doctor' })}
+                    emptyLabel={t('appointmentDashboard.noDoctorFound', { defaultValue: 'No doctor found' })}
+                    className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium"
+                  />
                 </div>
 
                 {/* Manage Availability - opens the availability roster/scheduler inline, pre-selecting the filtered doctor if one is chosen */}
@@ -1629,24 +1622,16 @@ export const AppointmentDashboard = () => {
                   {/* Doctor Filter Dropdown */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60">{t('appointmentDashboard.doctorLabel')}</label>
-                    <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                      <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl">
-                        <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
-                      </SelectTrigger>
-                      <SelectContent className="z-[9999]" position="popper">
-                        <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
-                        {doctorOptions.map((doctor) => (
-                          <SelectItem key={doctor.value} value={doctor.value}>
-                            <span className="inline-flex items-center gap-1.5">
-                              {availabilityByDoctorId.has(doctor.value) && (
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
-                              )}
-                              {doctor.label}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <DoctorFilter
+                      value={selectedDoctor}
+                      onChange={setSelectedDoctor}
+                      options={doctorOptions}
+                      availability={availabilityByDoctorId}
+                      allLabel={t('appointmentDashboard.allDoctors')}
+                      searchPlaceholder={t('appointmentDashboard.searchDoctor', { defaultValue: 'Search doctor' })}
+                      emptyLabel={t('appointmentDashboard.noDoctorFound', { defaultValue: 'No doctor found' })}
+                      className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl"
+                    />
                   </div>
 
                   {/* Department Filter Dropdown */}
