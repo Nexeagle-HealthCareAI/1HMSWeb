@@ -53,6 +53,7 @@ const section = (title: string, body?: string): string => {
 export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, settings: PrintSettings): string => {
     const inr = (n: number) => `₹ ${(Number.isFinite(n) ? n : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const cond = conditionBadge[data.conditionAtDischarge] ?? conditionBadge.STABLE;
+    const credentials = [data.doctorQualification, data.doctorSpeciality].filter(Boolean).join(' · ');
     const cell = (label: string, value?: string) => `<div><div class="label">${label}</div><div class="pval">${esc(value || '—')}</div></div>`;
     const translated = (key: string) => {
         const raw = data.secondLanguage?.fields[key]?.trim();
@@ -147,7 +148,8 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
                 ${cell('Patient ID', data.patientId)}${cell('Admission no.', data.admissionNo)}${cell('Payer', data.payer)}
             </div>
             <div class="prow" style="border-top:1px solid #e2e8f0;">
-                <div style="flex:1.5;"><div class="label">Consultant</div><div class="pval">${esc(data.consultant || data.signedByDoctorName || '—')}</div></div>
+                <div style="flex:1.5;"><div class="label">Consultant</div><div class="pval">${esc(data.consultant || data.signedByDoctorName || '—')}</div>
+                    ${credentials ? `<div class="pmeta">${esc(credentials)}</div>` : ''}</div>
                 ${cell('Admitted', format(new Date(data.admittedAt), 'dd MMM yyyy, HH:mm'))}${cell('Discharged', format(new Date(data.dischargedAt), 'dd MMM yyyy, HH:mm'))}${cell('Stay', [stayText(data.admittedAt, data.dischargedAt), data.wardBed].filter(Boolean).join(' · '))}
             </div>
         </div>
@@ -189,7 +191,7 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
         <div class="foot" style="page-break-inside:avoid;">
             <div class="sign"><div class="line" style="width:240px;">Patient / attendant — advice explained and understood</div></div>
             <div class="sign">
-                <div class="line" style="width:240px;"><b style="color:#0f172a;">${esc(data.signedByDoctorName ?? data.consultant ?? "Doctor's signature")}</b>${data.signedAt ? `<br/>Signed ${format(new Date(data.signedAt), 'dd MMM yyyy, HH:mm')}` : ''}</div>
+                <div class="line" style="width:240px;"><b style="color:#0f172a;">${esc(data.signedByDoctorName ?? data.consultant ?? "Doctor's signature")}</b>${credentials ? `<br/>${esc(credentials)}` : ''}${data.doctorRegistration ? `<br/>Reg. no. ${esc(data.doctorRegistration)}` : ''}${data.signedAt ? `<br/>Signed ${format(new Date(data.signedAt), 'dd MMM yyyy, HH:mm')}` : ''}</div>
             </div>
         </div>
         <div style="margin-top:14px; display:flex; justify-content:space-between; font-size:7.5pt; color:#94a3b8;">

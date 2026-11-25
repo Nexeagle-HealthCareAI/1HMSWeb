@@ -26,6 +26,7 @@ it('lays out both printouts from the same data: patient box, diagnosis first, me
     admissionNo: 'ADM-2026-0481', patientName: 'Rajesh Kumar Sharma', patientId: 'UHID-100482', ageGender: '54M', mobile: '98XXXXX210',
     admittedAt: '2026-11-21T08:15:00', dischargedAt: '2026-11-25T11:30:00', conditionAtDischarge: 'STABLE', ...text,
     finalDiagnosisIcd10Code: 'I21.1', finalDiagnosisIcd10Name: 'Acute transmural MI of inferior wall', followUpDate: '2026-12-02',
+    doctorQualification: 'MBBS, MD, DM (Cardiology)', doctorSpeciality: 'Cardiology', doctorRegistration: 'MMC 2009/04/1234',
     medications: meds, consultant: 'Dr. Meera Kulkarni', wardBed: 'General Ward · GW-04', payer: 'Star Health (INSURANCE)', hospitalPhone: '011-4000 1234',
     secondLanguage: hi, signedByDoctorName: 'Dr. Meera Kulkarni', signedAt: '2026-11-25T11:05:00',
   }, { hospitalName: 'GLISAN Hospital', address: '12 MG Road, New Delhi', phone: '011-4000 1234', email: 'care@glisan.example', website: '' });
@@ -36,6 +37,9 @@ it('lays out both printouts from the same data: patient box, diagnosis first, me
   expect(html).toContain('(सीने में दर्द या सांस फूलने पर तुरंत आएं।)');
   expect(html).toContain('Hospital: 011-4000 1234');
   expect(html).toContain('4 days');
+  // Degree and speciality print with the doctor's name, and the registration number at the signature.
+  expect(html).toContain('MBBS, MD, DM (Cardiology) · Cardiology');
+  expect(html).toContain('Reg. no. MMC 2009/04/1234');
   // Diagnosis comes before the narrative sections.
   expect(html.indexOf('Final diagnosis')).toBeLessThan(html.indexOf('Chief Complaint'));
   // Text typed by staff is escaped, never injected as markup.
@@ -55,6 +59,7 @@ it('lays out both printouts from the same data: patient box, diagnosis first, me
       assignedDoctorName: 'Dr. Meera Kulkarni', admittedAt: '2026-11-21T08:15:00', dischargedAt: '2026-11-25T11:30:00', conditionAtDischarge: 'Stable',
       signedByDoctorName: 'Dr. Meera Kulkarni', signedAt: '2026-11-25T11:05:00',
       fields: { ...text, finalDiagnosisIcd10: 'I21.1 — Acute transmural MI of inferior wall', followUpDate: '02 Dec 2026' }, customFieldValues: {},
+      doctorQualification: 'MBBS, MD, DM (Cardiology)', doctorSpeciality: 'Cardiology', doctorRegistration: 'MMC 2009/04/1234',
       medications: meds, wardBed: 'General Ward · GW-04', payer: 'Star Health (INSURANCE)', hospitalPhone: '011-4000 1234', secondLanguage: hi,
     },
   });

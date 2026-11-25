@@ -133,6 +133,10 @@ export interface DischargePrintPayload {
     payer?: string;
     /** Hospital phone, printed with the "come back at once" advice. */
     hospitalPhone?: string;
+    /** The treating doctor's degree, speciality and registration number, printed with the name. */
+    doctorQualification?: string;
+    doctorSpeciality?: string;
+    doctorRegistration?: string;
     /** Patient advice in the hospital's second language, drawn under each English advice section. */
     secondLanguage?: { code: string; name: string; fields: Record<string, string | undefined> };
 }
@@ -357,7 +361,8 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
     const payerParts = /^(.*\S)\s*\(([^)]*)\)$/.exec(payload.payer ?? '');
     drawCell(3, boxTop, 'Payer', payerParts ? payerParts[1] : payload.payer, undefined, payerParts?.[2]);
     const row2Top = boxTop - row1H;
-    drawCell(0, row2Top, 'Consultant', payload.assignedDoctorName || payload.signedByDoctorName);
+    const doctorCredentials = [payload.doctorQualification, payload.doctorSpeciality].filter(Boolean).join(' · ');
+    drawCell(0, row2Top, 'Consultant', payload.assignedDoctorName || payload.signedByDoctorName, undefined, doctorCredentials || undefined);
     drawCell(1, row2Top, 'Admitted', formatDate(payload.admittedAt));
     drawCell(2, row2Top, 'Discharged', payload.dischargedAt ? formatDate(payload.dischargedAt) : undefined);
     drawCell(3, row2Top, 'Stay', payload.dischargedAt ? stayText(payload.admittedAt, payload.dischargedAt) : undefined, undefined, payload.wardBed);
@@ -485,7 +490,7 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
     }
 
     // --- Sign-off: the patient or attendant on the left, the doctor on the right ---
-    await ensureRoom(lineHeight * 5.5);
+    await ensureRoom(lineHeight * 7.5);
     cursorY -= lineHeight * 2.6;
     const signW = Math.min(200, contentWidth * 0.42);
     const rightX = pageWidth - rightPad - signW;
@@ -493,6 +498,12 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
     cursorY -= smallSize + 3;
     page.drawText('Patient / attendant - advice explained', { x: leftPad, y: cursorY, size: smallSize - 0.5, font: regularFont, color: muted });
     page.drawText(fit(payload.signedByDoctorName || payload.assignedDoctorName || "Doctor's signature", boldFont, smallSize + 0.5, signW), { x: rightX, y: cursorY, size: smallSize + 0.5, font: boldFont, color: textColor });
+    // Degree and speciality, then the registration number, under the doctor's name.
+    for (const line of [doctorCredentials, payload.doctorRegistration ? `Reg. no. ${payload.doctorRegistration}` : '']) {
+        if (!line) continue;
+        cursorY -= lineHeight * 0.9;
+        page.drawText(fit(line, regularFont, smallSize - 0.5, signW), { x: rightX, y: cursorY, size: smallSize - 0.5, font: regularFont, color: hexToPdfRgb('#475569') });
+    }
     if (payload.signedAt) {
         cursorY -= lineHeight * 0.9;
         page.drawText(`Signed ${formatDate(payload.signedAt)}`, { x: rightX, y: cursorY, size: smallSize - 0.5, font: regularFont, color: muted });

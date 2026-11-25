@@ -15,6 +15,7 @@ import { dischargeSettingsApi } from '../services/dischargeSettingsApi';
 import { DischargePreviewModal } from '@/components/shared/discharge-preview/components/DischargePreviewModal';
 import type { DischargeTemplateBoundOptions } from '@/components/shared/discharge-preview/services/dischargePreviewRenderer';
 import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
+import { useDoctorCredentials } from '../hooks/useDoctorCredentials';
 import { useEffect } from 'react';
 import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
 import { doctorApi } from '@/features/doctor/services/doctorApi';
@@ -37,6 +38,7 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
     // Scoped to the admission's assigned doctor, not whoever is currently logged in — any staff
     // member printing from the dashboard must see the same letterhead the assigned doctor would.
     const { fields: layoutFields, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
+    const doctorCredentials = useDoctorCredentials(layoutDoctorId);
 
     // Read-only here: the print button never writes custom fields, it only prints what was saved.
     const { values: customFieldValues } = useDischargeCustomFields(admission.admissionId, true);
@@ -111,6 +113,9 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 wardBed: admission.bedCode ? `${admission.wardName ? `${admission.wardName} · ` : ''}${admission.bedCode}` : undefined,
                 payer: admission.payerName ? `${admission.payerName} (${admission.payerType})` : admission.payerType,
                 hospitalPhone: buildPrintSettingsFromHospital(hospitalData).phone || undefined,
+                doctorQualification: doctorCredentials.qualification,
+                doctorSpeciality: doctorCredentials.speciality,
+                doctorRegistration: doctorCredentials.registration,
                 followUpInstructions: draft.followUpInstructions || undefined,
                 followUpDate: draft.followUpDate || undefined,
                 dietInstructions: draft.dietInstructions || undefined,
@@ -233,6 +238,9 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                 wardBed: printData.wardBed,
                                 payer: printData.payer,
                                 hospitalPhone: printData.hospitalPhone,
+                                doctorQualification: printData.doctorQualification,
+                                doctorSpeciality: printData.doctorSpeciality,
+                                doctorRegistration: printData.doctorRegistration,
                                 tpaSplit: printData.tpaSplit,
                                 secondLanguage: printData.secondLanguage,
                             },
