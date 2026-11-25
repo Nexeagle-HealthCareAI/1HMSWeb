@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ import {
     UserPlus, Check, X, Siren, CalendarClock, Loader2, CreditCard,
     Phone, MapPin, Stethoscope, RotateCcw, History, ShieldCheck, ArrowRight,
     User, CalendarCheck, Sun, LogOut, AlertTriangle, Wallet, BedDouble,
-    Printer, Download, Search, Link2, FileBadge2,
+    Printer, Download, Search, Link2, FileBadge2, ChevronDown,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LinkExistingAbhaWizard } from '@/features/abdm/components/LinkExistingAbhaWizard';
@@ -195,19 +195,31 @@ const SectionCard: React.FC<{
     icon: React.ReactNode; title: string; subtitle?: string; tone?: keyof typeof CHIP_TONES;
     right?: React.ReactNode; children: React.ReactNode;
     allowOverflow?: boolean;
-}> = ({ icon, title, subtitle, tone = 'indigo', right, children, allowOverflow }) => (
-    <section className={cn('rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow duration-300', !allowOverflow && 'overflow-hidden')}>
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-100/50 dark:border-zinc-800/50 bg-slate-50/30 dark:bg-zinc-900/30">
+    /** Starts closed; the header opens and closes it. For optional groups of fields. */
+    collapsible?: boolean;
+}> = ({ icon, title, subtitle, tone = 'indigo', right, children, allowOverflow, collapsible }) => {
+    const [expanded, setExpanded] = useState(!collapsible);
+    const header = (
+        <>
             <div className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border shadow-inner', CHIP_TONES[tone])}>{icon}</div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">{title}</p>
                 {subtitle && <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">{subtitle}</p>}
             </div>
             {right}
-        </div>
-        <div className="p-4">{children}</div>
-    </section>
-);
+            {collapsible && <ChevronDown className={cn('h-4 w-4 text-slate-400 shrink-0 transition-transform', expanded && 'rotate-180')} />}
+        </>
+    );
+    const headerCls = cn('w-full flex items-center gap-3 px-4 py-3 bg-slate-50/30 dark:bg-zinc-900/30', expanded && 'border-b border-zinc-100/50 dark:border-zinc-800/50');
+    return (
+        <section className={cn('rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm', !allowOverflow && 'overflow-hidden')}>
+            {collapsible
+                ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded(e => !e)} className={cn(headerCls, 'hover:bg-slate-50 dark:hover:bg-zinc-800/40')}>{header}</button>
+                : <div className={headerCls}>{header}</div>}
+            {expanded && <div className="p-4">{children}</div>}
+        </section>
+    );
+};
 
 const OptionalPill = () => (
     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">Optional</span>
@@ -667,20 +679,31 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
     return (
         <>
-        <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-            <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0 overflow-hidden bg-slate-50">
-                {/* Premium gradient header */}
-                <SheetHeader className="px-5 sm:px-6 pt-5 pb-4 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
-                    <div className="flex items-center gap-3">
+        <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+            {/* A centred window (full screen on a phone). A stray click outside does not close it —
+                only Cancel, the close button or Escape do — so a half-filled admission is not lost. */}
+            <DialogContent onInteractOutside={e => e.preventDefault()}
+                className="flex flex-col gap-0 p-0 overflow-hidden bg-slate-50 dark:bg-zinc-950 w-full max-w-none h-[100dvh] rounded-none sm:w-[calc(100%-2rem)] sm:max-w-4xl sm:h-[90vh] sm:max-h-[860px] sm:rounded-3xl">
+                <DialogHeader className="px-5 sm:px-6 pt-4 pb-3 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800 space-y-0 text-left">
+                    <div className="flex items-center gap-3 pr-8">
                         <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900/30 flex items-center justify-center shadow-inner">
                             <UserPlus className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                         </div>
                         <div>
-                            <SheetTitle className="text-base font-extrabold text-slate-900 dark:text-zinc-50">Admit Patient</SheetTitle>
-                            <SheetDescription className="text-xs text-slate-500 dark:text-zinc-400">The patient ID and admission number are created for you.</SheetDescription>
+                            <DialogTitle className="text-base font-extrabold text-slate-900 dark:text-zinc-50">Admit Patient</DialogTitle>
+                            <DialogDescription className="hidden sm:block text-xs text-slate-500 dark:text-zinc-400">The patient ID and admission number are created for you.</DialogDescription>
                         </div>
+                        {/* ABHA — on every step, next to the title */}
+                        {!success && (
+                            <button type="button" onClick={() => setLinkAbhaOpen(true)}
+                                className={cn('ml-auto h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 border transition-colors max-w-[55%]',
+                                    form.abhaId ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400' : 'border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-950/30 dark:border-brand-900 dark:text-brand-300')}>
+                                {form.abhaId ? <Check className="h-3.5 w-3.5 shrink-0" /> : <Link2 className="h-3.5 w-3.5 shrink-0" />}
+                                <span className="truncate">{form.abhaId ? `ABHA ${form.abhaId}` : 'Link ABHA'}</span>
+                            </button>
+                        )}
                     </div>
-                </SheetHeader>
+                </DialogHeader>
 
                 {success ? (
                     /* ── Success ───────────────────────────────────────────── */
@@ -725,38 +748,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                     </div>
                 ) : (
                     <>
-                        {/* ABHA link banner — persistent across all steps, first thing staff see */}
-                        <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-2xl border-2 border-dashed border-brand-300 dark:border-brand-800 bg-gradient-to-r from-brand-50 to-white dark:from-brand-950/20 dark:to-transparent px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="h-8 w-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0 shadow-md shadow-brand-600/20">
-                                    <FileBadge2 className="h-4 w-4 text-white" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-bold text-brand-900 dark:text-brand-300">ABHA (Ayushman Bharat Health Account)</p>
-                                    {form.abhaId ? (
-                                        <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 truncate">{form.abhaId}</p>
-                                    ) : (
-                                        <p className="text-[11px] text-brand-600/80 dark:text-brand-400/70 truncate">Not linked yet</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                {form.abhaId && (
-                                    <Badge variant="outline" className="hidden sm:flex text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-400 gap-1">
-                                        <Check className="h-3 w-3" /> Linked
-                                    </Badge>
-                                )}
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={form.abhaId ? 'outline' : 'default'}
-                                    className={cn('h-8 rounded-full text-xs font-bold', !form.abhaId && 'bg-brand-600 hover:bg-brand-700 text-white')}
-                                    onClick={() => setLinkAbhaOpen(true)}
-                                >
-                                    <Link2 className="h-3.5 w-3.5 mr-1.5" /> {form.abhaId ? 'Change' : 'Link ABHA'}
-                                </Button>
-                            </div>
-                        </div>
                         {/* Restore-draft banner */}
                         {pendingDraft && (
                             <div className="mx-5 sm:mx-6 mt-3 shrink-0 rounded-2xl border border-brand-100 dark:border-brand-900/25 bg-brand-50/50 dark:bg-brand-950/20 px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
@@ -979,6 +970,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             )}
 
                             {/* ── Demographics ───────────────────────────────── */}
+                                    {/* Wide screens: the two things needed to admit sit side by side */}
+                                    <div className="grid lg:grid-cols-2 gap-4 items-start">
                                     <SectionCard icon={<User className="h-4 w-4" />} title="Identity"
                                         subtitle={isEmergencyQuickAdmit ? 'Sex and approximate age are required — name can be backfilled later' : !selectedPatientId ? 'Name is required' : 'Pre-filled — edit if needed'} tone="indigo">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1062,8 +1055,12 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             </Field>
                                         </div>
                                     </SectionCard>
+                                    </div>
 
-                                    <SectionCard icon={<MapPin className="h-4 w-4" />} title="Address" tone="violet" right={<OptionalPill />}>
+                                    {/* Optional extras — closed until needed, so the required fields stay in view */}
+                                    <div className="grid lg:grid-cols-2 gap-4 items-start">
+
+                                    <SectionCard icon={<MapPin className="h-4 w-4" />} title="Address" tone="violet" right={<OptionalPill />} collapsible>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Field label="Flat / house">
                                                 <Input value={form.flatHouse} onChange={e => set('flatHouse', e.target.value)} className={INPUT_CLS} placeholder="Optional" />
@@ -1086,7 +1083,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         </div>
                                     </SectionCard>
 
-                                    <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="Government ID" tone="emerald" right={<OptionalPill />}>
+                                    <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="Government ID" tone="emerald" right={<OptionalPill />} collapsible>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {!selectedPatientId ? (
                                                 <Field label="Aadhaar">
@@ -1103,6 +1100,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         </div>
                                         {/* ABHA is linked from the highlighted banner at the top of this sheet, not here. */}
                                     </SectionCard>
+                                    </div>
 
                                     {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
                                         <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="General consent" subtitle="Optional — can also be captured later" tone="emerald">
@@ -1303,6 +1301,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                         This step is optional — you can admit now and add bed/payment details later from the dashboard.
                                     </p>
 
+                                    <div className="grid lg:grid-cols-2 gap-4 items-start">
                                     {/* ── Bed selection ──────────────────────────────── */}
                                     <SectionCard icon={<BedDouble className="h-4 w-4" />} title="Bed selection" subtitle="Optional — assign now or later from the bed board" tone="sky">
                                         <div className="space-y-3">
@@ -1314,7 +1313,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             {Object.entries(bedsByWard).map(([ward, beds]) => (
                                                 <div key={ward}>
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1.5">{ward} <span className="text-slate-400 font-semibold normal-case tracking-normal">· {beds.length} free</span></p>
-                                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                                                    <div className="grid grid-cols-3 gap-1.5">
                                                         {beds.map(b => {
                                                             const active = form.bedId === b.bedId;
                                                             return (
@@ -1466,6 +1465,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             )}
                                         </AnimatePresence>
                                     </SectionCard>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -1519,8 +1519,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         </div>
                     </>
                 )}
-            </SheetContent>
-        </Sheet>
+            </DialogContent>
+        </Dialog>
         <LinkExistingAbhaWizard
             hospitalId={hospitalId}
             open={linkAbhaOpen}
