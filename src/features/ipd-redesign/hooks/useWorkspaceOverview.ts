@@ -8,10 +8,13 @@ import { glucoseReadingApi, type GlucoseReadingItem } from '../services/glucoseR
 import { dischargeSummaryApi, type DischargeSummaryDraft } from '../services/dischargeSummaryApi';
 import { patientProfileApi } from '@/features/patient/services/patientProfileApi';
 import { istDateKey, istDayStartUtc, toIstDate } from '../utils/istDate';
+import { consentApi } from '../services/consentApi';
 import {
     countDue, countPendingInvestigations, dueNow, fluidForDay, investigationRows, latestReading,
     type DueItem, type InvestigationRow,
 } from '../utils/workspaceOverview';
+
+const GENERAL_CONSENT = 'GENERAL_ADMISSION';
 
 export interface WorkspaceOverviewData {
     loading: boolean;
@@ -25,6 +28,8 @@ export interface WorkspaceOverviewData {
     latestGlucose: GlucoseReadingItem | null;
     dischargeDraft: DischargeSummaryDraft | null;
     allergies: string | null;
+    /** True when the hospital uses a general admission consent form and none is recorded for this stay. */
+    generalConsentMissing: boolean;
     reload: () => void;
 }
 
@@ -46,6 +51,7 @@ export const useWorkspaceOverview = (admissionId: string, patientId: string | nu
     const [glucose, setGlucose] = useState<GlucoseReadingItem[]>([]);
     const [draft, setDraft] = useState<DischargeSummaryDraft | null>(null);
     const [allergies, setAllergies] = useState<string | null>(null);
+    const [generalConsentMissing, setGeneralConsentMissing] = useState(false);
     const [tick, setTick] = useState(0);
 
     const reload = useCallback(() => setTick(t => t + 1), []);
@@ -88,6 +94,21 @@ export const useWorkspaceOverview = (admissionId: string, patientId: string | nu
         return () => { cancelled = true; };
     }, [patientId, hospitalId]);
 
+    // General consent is no longer asked for on the admit screen, so the overview reminds staff
+    // until it is recorded. Only for hospitals that have set up the form; any failure stays quiet.
+    useEffect(() => {
+        if (!admissionId || !hospitalId) return;
+        let cancelled = false;
+        Promise.all([consentApi.getTemplates(GENERAL_CONSENT, hospitalId), consentApi.getRecords(admissionId, hospitalId)])
+            .then(([templates, records]) => {
+                if (cancelled) return;
+                const inUse = templates.some(t => t.isActive);
+                setGeneralConsentMissing(inUse && !records.some(r => r.templateTypeCode === GENERAL_CONSENT));
+            })
+            .catch(() => { if (!cancelled) setGeneralConsentMissing(false); });
+        return () => { cancelled = true; };
+    }, [admissionId, hospitalId, tick]);
+
     return useMemo(() => {
         const due = dueNow(mar);
         const investigations = investigationRows(lab, radiology);
@@ -104,7 +125,8 @@ export const useWorkspaceOverview = (admissionId: string, patientId: string | nu
             latestGlucose: byNewest(glucose, g => g.recordedAt),
             dischargeDraft: draft,
             allergies,
+            generalConsentMissing,
             reload,
         };
-    }, [loading, vitals, mar, lab, radiology, notes, fluid, glucose, draft, allergies, reload]);
+    }, [loading, vitals, mar, lab, radiology, notes, fluid, glucose, draft, allergies, generalConsentMissing, reload]);
 };

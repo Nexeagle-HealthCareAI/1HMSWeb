@@ -16,6 +16,7 @@ interface Props {
     onOpenOrders: () => void;
     onOpenFluids: () => void;
     onOpenDischarge: () => void;
+    onOpenConsent: () => void;
 }
 
 const card = 'rounded-2xl border border-slate-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-sm';
@@ -35,7 +36,7 @@ const Empty: React.FC<{ children: React.ReactNode }> = ({ children }) => <p clas
  * round note, investigation status, today's fluid balance and how close the patient is to
  * discharge. Every card links to the section where the work is actually done.
  */
-export const WorkspaceOverview: React.FC<Props> = ({ data, statusCode, isActive, onRecordVitals, onOpenMar, onOpenNotes, onOpenOrders, onOpenFluids, onOpenDischarge }) => {
+export const WorkspaceOverview: React.FC<Props> = ({ data, statusCode, isActive, onRecordVitals, onOpenMar, onOpenNotes, onOpenOrders, onOpenFluids, onOpenDischarge, onOpenConsent }) => {
     const tiles = vitalTiles(data.latestVitals);
     const readiness = dischargeReadiness(data.dischargeDraft, statusCode);
     const doneCount = readiness.filter(r => r.done).length;
@@ -44,6 +45,14 @@ export const WorkspaceOverview: React.FC<Props> = ({ data, statusCode, isActive,
 
     return (
         <div className="space-y-4">
+            {isActive && data.generalConsentMissing && (
+                <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3">
+                    <p className="flex-1 min-w-[220px] text-sm text-amber-900 dark:text-amber-200">
+                        <b>General consent not recorded.</b> Take the signed admission consent and record who signed.
+                    </p>
+                    <button type="button" onClick={onOpenConsent} className="h-9 px-4 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold">Record consent</button>
+                </div>
+            )}
             <section aria-label="Latest vitals" className={card}>
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                     <h2 className={cardTitle}>Latest vitals</h2>
