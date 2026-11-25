@@ -18,6 +18,8 @@ import {
 import { AiProposalBlock, DischargeStageBar, DischargeWriteBar, FollowUpQuickPicks, MedicationSuggestionList, SectionMeta, SignChecklist } from './discharge/DischargeAssistParts';
 import { DischargeDictationDialog } from './discharge/DischargeDictationDialog';
 import { PatientAdviceTranslation } from './discharge/PatientAdviceTranslation';
+import { DischargeTemplateBar } from './discharge/DischargeTemplates';
+import { useDoctorCredentials } from '../hooks/useDoctorCredentials';
 import { useDischargeCustomFields } from '../hooks/useDischargeCustomFields';
 import { AbdmLinkButton } from '@/features/abdm/components/AbdmLinkButton';
 import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
@@ -103,6 +105,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     // the same field layout and letterhead as the assigned doctor would, not their own (or none).
     const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
     const layoutByKey = useMemo(() => new Map(layoutFields.map(f => [f.key, f])), [layoutFields]);
+    const doctorCredentials = useDoctorCredentials(layoutDoctorId);
     const isVisible = (key: string) => (hasSavedLayout ? layoutByKey.get(key)?.showInPad ?? true : true);
 
     const [previewOpen, setPreviewOpen] = useState(false);
@@ -612,6 +615,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             wardBed: admission.bedCode ? `${admission.wardName ? `${admission.wardName} · ` : ''}${admission.bedCode}` : undefined,
             payer: admission.payerName ? `${admission.payerName} (${admission.payerType})` : admission.payerType,
             hospitalPhone: buildPrintSettingsFromHospital(hospitalData).phone || undefined,
+            doctorQualification: doctorCredentials.qualification,
+            doctorSpeciality: doctorCredentials.speciality,
+            doctorRegistration: doctorCredentials.registration,
             followUpInstructions: form.followUpInstructions,
             followUpDate: form.followUpDate,
             dietInstructions: form.dietInstructions,
@@ -778,6 +784,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 wardBed: data.wardBed,
                 payer: data.payer,
                 hospitalPhone: data.hospitalPhone,
+                doctorQualification: data.doctorQualification,
+                doctorSpeciality: data.doctorSpeciality,
+                doctorRegistration: data.doctorRegistration,
                 tpaSplit: data.tpaSplit,
                 secondLanguage: data.secondLanguage,
             },
@@ -1046,6 +1055,16 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                             onHandwrite={() => setInkDischargeOpen(true)}
                         />
                     )}
+                    <DischargeTemplateBar
+                        form={form}
+                        canApply={!isSigned && isActive}
+                        onApply={(result, templateName) => {
+                            // Template text is the doctor's own wording, so those sections are marked as written by the doctor.
+                            const sources = result.applied.reduce((map, key) => markEdited(map, key === 'medications' ? 'dischargeMedications' : key), parseSources(result.form.sectionSourcesJson));
+                            setForm({ ...result.form, sectionSourcesJson: serializeSources(sources) });
+                            toast({ title: `Template "${templateName}" applied`, description: 'Review and edit, then save the summary.' });
+                        }}
+                    />
                     {isSigned && (
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div className="flex items-center gap-2">
