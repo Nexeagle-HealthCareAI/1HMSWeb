@@ -1291,9 +1291,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Customize discharge summary fields</DialogTitle>
-                        <DialogDescription>Applies to every discharge summary you fill in or print, across all your hospitals.</DialogDescription>
+                        <DialogDescription>Applies to the discharge summaries of {admission.primaryDoctorName || 'this consultant'} at this hospital — the form and the printout.</DialogDescription>
                     </DialogHeader>
-                    <DischargeFieldLayoutEditor />
+                    {/* Edit the same layout this screen and the printout read: the admitting consultant's. */}
+                    <DischargeFieldLayoutEditor overrideDoctorId={layoutDoctorId || undefined} doctorName={admission.primaryDoctorName} />
                 </DialogContent>
             </Dialog>
 
