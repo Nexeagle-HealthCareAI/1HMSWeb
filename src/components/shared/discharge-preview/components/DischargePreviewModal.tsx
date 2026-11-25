@@ -15,8 +15,14 @@ export interface DischargePreviewModalProps {
 }
 
 const PreviewModalBody = ({ options, fileName }: { options: DischargeTemplateBoundOptions | null; fileName: string }) => {
-    const [targetLanguage, setTargetLanguage] = useState<string | undefined>(undefined);
-    const { previewUrl, isLoading, error } = useDischargePreview(options, targetLanguage);
+    // English by default. If this summary already has a saved translation, the preview opens showing
+    // it (in brackets) without calling the translator; tapping a language translates the whole page.
+    const savedLanguage = options?.payload.secondLanguage?.name;
+    const [choice, setChoice] = useState<{ language?: string; translate: boolean }>({ language: savedLanguage, translate: false });
+    const targetLanguage = choice.language;
+    const setTargetLanguage = (language?: string) => setChoice({ language, translate: !!language });
+    const { previewUrl, isLoading, error, notice } = useDischargePreview(options, choice.language, choice.translate);
+    const languages = Array.from(new Set(['Hindi', 'Bengali', ...(savedLanguage ? [savedLanguage] : [])]));
 
     return (
         <DialogContent className="max-w-[95vw] xl:max-w-[1100px] w-full h-[92vh] p-0 flex flex-col overflow-hidden">
@@ -25,7 +31,7 @@ const PreviewModalBody = ({ options, fileName }: { options: DischargeTemplateBou
                     <div className="flex items-center justify-between">
                         <DialogTitle>Discharge Summary Preview</DialogTitle>
                         <div className="flex gap-2 items-center">
-                            <span className="text-sm text-gray-500 mr-2 flex items-center gap-1"><Globe className="w-4 h-4"/> Translate:</span>
+                            <span className="text-sm text-gray-500 mr-2 flex items-center gap-1"><Globe className="w-4 h-4"/> Language:</span>
                             <Button 
                                 size="sm" 
                                 variant={targetLanguage === undefined ? "default" : "outline"} 
@@ -34,24 +40,24 @@ const PreviewModalBody = ({ options, fileName }: { options: DischargeTemplateBou
                             >
                                 English
                             </Button>
-                            <Button 
-                                size="sm" 
-                                variant={targetLanguage === 'Hindi' ? "default" : "outline"} 
-                                onClick={() => setTargetLanguage('Hindi')}
-                                disabled={isLoading}
-                            >
-                                Hindi
-                            </Button>
-                            <Button 
-                                size="sm" 
-                                variant={targetLanguage === 'Bengali' ? "default" : "outline"} 
-                                onClick={() => setTargetLanguage('Bengali')}
-                                disabled={isLoading}
-                            >
-                                Bengali
-                            </Button>
+                            {languages.map(language => (
+                                <Button key={language} size="sm" aria-pressed={targetLanguage === language}
+                                    variant={targetLanguage === language ? "default" : "outline"}
+                                    onClick={() => setTargetLanguage(language)}
+                                    disabled={isLoading}
+                                >
+                                    English + {language}
+                                </Button>
+                            ))}
                         </div>
                     </div>
+                    {(isLoading && choice.translate) || notice ? (
+                        <p role="status" className={`text-xs mt-2 ${notice && !isLoading ? 'text-amber-700 font-semibold' : 'text-gray-500'}`}>
+                            {isLoading ? `Translating to ${targetLanguage}…` : notice}
+                        </p>
+                    ) : targetLanguage ? (
+                        <p className="text-xs text-gray-500 mt-2">English, with {targetLanguage} in brackets. Medicines, codes and dates stay in English.</p>
+                    ) : null}
                 </DialogHeader>
                 <Separator />
             </div>

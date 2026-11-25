@@ -7,7 +7,7 @@ vi.mock('@/services/axiosClient', () => ({
 }));
 
 // Import after the mock so translationApi (used internally) picks up the mocked apiClient.
-import { translateDischargeOptions } from './useDischargePreview';
+import { translateDischargeOptions, withBracketedTranslation } from './useDischargePreview';
 
 const mockedPost = apiClient.post as unknown as ReturnType<typeof vi.fn>;
 
@@ -128,5 +128,50 @@ describe('translateDischargeOptions', () => {
     const result = await translateDischargeOptions(options, 'Hindi');
 
     expect(result.payload.fields.chiefComplaint).toBe('fever');
+  });
+});
+
+describe('withBracketedTranslation', () => {
+  beforeEach(() => mockedPost.mockReset());
+
+  it('keeps the English and attaches the translation as the bracketed second language', async () => {
+    mockedPost.mockResolvedValueOnce({ field_dietInstructions: 'नरम भोजन', field_courseInHospital: 'सुधार हुआ' });
+    const options = baseOptions(basePayload({ fields: { dietInstructions: 'Soft diet', courseInHospital: 'Improved' } }));
+
+    const result = await withBracketedTranslation(options, 'Hindi');
+
+    expect(result!.payload.fields).toEqual({ dietInstructions: 'Soft diet', courseInHospital: 'Improved' });
+    expect(result!.payload.secondLanguage).toEqual({ code: 'hi', name: 'Hindi', fields: { dietInstructions: 'नरम भोजन', courseInHospital: 'सुधार हुआ' } });
+  });
+
+  it('uses the Bengali code for Bengali', async () => {
+    mockedPost.mockResolvedValueOnce({ field_dietInstructions: 'নরম খাবার' });
+    const result = await withBracketedTranslation(baseOptions(basePayload({ fields: { dietInstructions: 'Soft diet' } })), 'Bengali');
+    expect(result!.payload.secondLanguage!.code).toBe('bn');
+  });
+
+  it('returns null when the server hands the English back unchanged, so the screen can say translation failed', async () => {
+    mockedPost.mockResolvedValueOnce({ field_dietInstructions: 'Soft diet' });
+    expect(await withBracketedTranslation(baseOptions(basePayload({ fields: { dietInstructions: 'Soft diet' } })), 'Hindi')).toBeNull();
+  });
+
+  it('wording staff saved for that language wins over the fresh translation', async () => {
+    mockedPost.mockResolvedValueOnce({ field_dietInstructions: 'machine', field_courseInHospital: 'सुधार हुआ' });
+    const options = baseOptions(basePayload({
+      fields: { dietInstructions: 'Soft diet', courseInHospital: 'Improved' },
+      secondLanguage: { code: 'hi', name: 'Hindi', fields: { dietInstructions: 'हल्का खाना' } },
+    }));
+    const result = await withBracketedTranslation(options, 'Hindi');
+    expect(result!.payload.secondLanguage!.fields).toEqual({ dietInstructions: 'हल्का खाना', courseInHospital: 'सुधार हुआ' });
+  });
+
+  it('does not carry saved Hindi wording into a Bengali preview', async () => {
+    mockedPost.mockResolvedValueOnce({ field_dietInstructions: 'নরম খাবার' });
+    const options = baseOptions(basePayload({
+      fields: { dietInstructions: 'Soft diet' },
+      secondLanguage: { code: 'hi', name: 'Hindi', fields: { dietInstructions: 'हल्का खाना' } },
+    }));
+    const result = await withBracketedTranslation(options, 'Bengali');
+    expect(result!.payload.secondLanguage!.fields).toEqual({ dietInstructions: 'নরম খাবার' });
   });
 });
