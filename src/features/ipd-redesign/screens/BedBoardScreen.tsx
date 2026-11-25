@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { BedDouble, ArrowLeft, LogOut, ArrowLeftRight, Loader2, X, Check, Hotel, LayoutGrid, UserPlus, Stethoscope, Plus } from 'lucide-react';
+import { LogOut, ArrowLeftRight, Loader2, X, Check, LayoutGrid, List, RefreshCw } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -16,18 +15,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
-import { useAppStore } from '@/store/appStore';
+import { IpdSectionHeader, type IpdTab } from '../components/IpdSectionHeader';
+import { BED_STATES, BED_STATE_LABEL, bedCounts, bedState, occupancyPercent, type BedState } from '../utils/rosterBoard';
+import { formatIstDayLabel } from '../utils/istDate';
 
-const FREE_TONE: Record<string, string> = {
-    AVAILABLE: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    CLEANING: 'border-amber-200 bg-amber-50 text-amber-700',
-    RESERVED: 'border-sky-200 bg-sky-50 text-sky-700',
-    BLOCKED: 'border-slate-200 bg-slate-100 text-slate-500',
+const STATE_TILE: Record<BedState, string> = {
+    OCCUPIED: 'border-rose-200 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-900/60',
+    AVAILABLE: 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900/60',
+    CLEANING: 'border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/60',
+    RESERVED: 'border-sky-200 bg-sky-50 dark:bg-sky-950/20 dark:border-sky-900/60',
+    BLOCKED: 'border-slate-200 bg-slate-100 dark:bg-zinc-800/60 dark:border-zinc-700',
 };
-const OCCUPIED_TONE = 'border-rose-200 bg-rose-50 text-rose-700';
+const STATE_TEXT: Record<BedState, string> = {
+    OCCUPIED: 'text-rose-700 dark:text-rose-400',
+    AVAILABLE: 'text-emerald-700 dark:text-emerald-400',
+    CLEANING: 'text-amber-700 dark:text-amber-400',
+    RESERVED: 'text-sky-700 dark:text-sky-400',
+    BLOCKED: 'text-slate-500 dark:text-zinc-400',
+};
+const STATE_DOT: Record<BedState, string> = {
+    OCCUPIED: 'bg-rose-500', AVAILABLE: 'bg-emerald-500', CLEANING: 'bg-amber-500', RESERVED: 'bg-sky-500', BLOCKED: 'bg-slate-400',
+};
 
 const BED_POLL_MS = 20000;
 const FLASH_MS = 1800;
+const VIEW_KEY = 'ipd-bedboard-view';
+type BoardView = 'tiles' | 'list';
+const readView = (): BoardView => { try { return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'tiles'; } catch { return 'tiles'; } };
+const saveView = (v: BoardView) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* preference only */ } };
 
 const LiveDot: React.FC<{ className?: string }> = ({ className }) => (
     <span className={cn('relative inline-flex h-2 w-2', className)}>
@@ -36,112 +51,57 @@ const LiveDot: React.FC<{ className?: string }> = ({ className }) => (
     </span>
 );
 
-const bedGridVariants = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.02 } },
-};
-const bedCardVariants = {
-    hidden: { opacity: 0, scale: 0.85, y: 6 },
-    show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' as const } },
-    exit: { opacity: 0, scale: 0.9, transition: { duration: 0.15 } },
-};
-
-const AnimatedBedTile: React.FC<{ bed: BedBoardItem; occupied: boolean; flashing: boolean; onClick: () => void }> = ({ bed, occupied, flashing, onClick }) => {
-    const { isLowBandwidthMode } = useAppStore();
-    const statusCode = bed.statusCode ?? 'AVAILABLE';
-    const isCleaning = statusCode === 'CLEANING';
-    const isReserved = statusCode === 'RESERVED';
-    
-    const tone = occupied ? OCCUPIED_TONE : (FREE_TONE[statusCode] ?? FREE_TONE.AVAILABLE);
-
+/** One bed. Occupied beds open the transfer / release / discharge actions; free beds only inform. */
+const BedTile: React.FC<{ bed: BedBoardItem; flashing: boolean; onClick: () => void }> = ({ bed, flashing, onClick }) => {
+    const state = bedState(bed);
+    const hasPatient = !!bed.admissionId;
     return (
         <motion.button
-            layout
-            variants={bedCardVariants}
-            initial="hidden"
-            animate={flashing ? { opacity: 1, scale: [1, 1.1, 1], y: 0 } : 'show'}
-            exit="exit"
-            transition={flashing ? { duration: 0.5, ease: 'easeOut' } : undefined}
-            whileHover={occupied ? { scale: 1.04 } : undefined}
-            whileTap={occupied ? { scale: 0.96 } : undefined}
+            type="button"
+            animate={flashing ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
             onClick={onClick}
-            disabled={!occupied}
-            className={cn('w-full rounded-2xl border-2 p-3 text-left flex flex-col min-w-0 transition-all relative overflow-hidden', tone,
-                occupied ? 'hover:shadow-md cursor-pointer active:scale-[0.97]' : 'cursor-default opacity-90',
-                flashing && (occupied ? 'ring-4 ring-rose-400' : 'ring-4 ring-emerald-400'),
-                !isLowBandwidthMode ? 'shadow-sm backdrop-blur-md' : ''
-            )}>
-            
-            <div className="relative w-full h-24 mb-3 rounded-[1rem] border-4 border-black/10 bg-black/5 overflow-hidden flex flex-col items-center justify-start pt-2 shrink-0 shadow-inner">
-                <div className="w-12 h-4 bg-white/90 rounded-full shadow-sm z-10" />
-                {occupied && (
-                    <div className="absolute top-3.5 w-8 h-8 bg-rose-200/90 rounded-full z-20 border-2 border-white/80 shadow-sm" />
-                )}
-                <motion.div 
-                    animate={occupied && !isLowBandwidthMode ? { scaleY: [1, 1.05, 1], y: [0, -1, 0] } : {}}
-                    transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                    className={cn(
-                        "absolute bottom-0 w-full rounded-t-2xl z-30 border-t-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] origin-bottom",
-                        occupied ? "bg-rose-400 border-rose-300 h-[65%]" : "bg-emerald-200 border-emerald-100 h-[50%]",
-                        isCleaning && "bg-amber-200 border-amber-100",
-                        isReserved && "bg-sky-200 border-sky-100"
-                    )}>
-                    <div className="w-full h-2.5 bg-white/20 mt-1" />
-                </motion.div>
-                {isCleaning && !isLowBandwidthMode && (
-                    <motion.div 
-                        animate={{ y: ["-100%", "300%"] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-x-0 h-12 z-40 bg-gradient-to-b from-transparent via-white/80 to-transparent" 
-                    />
-                )}
+            disabled={!hasPatient}
+            aria-label={`${bed.bedCode ?? 'Bed'}, ${BED_STATE_LABEL[state]}${hasPatient && bed.patientName ? `, ${bed.patientName}` : ''}`}
+            className={cn('w-full min-h-[76px] rounded-xl border px-2.5 py-2 text-left flex flex-col min-w-0 transition-shadow', STATE_TILE[state],
+                hasPatient ? 'cursor-pointer hover:shadow-md focus-visible:ring-2 focus-visible:ring-brand-500 outline-none' : 'cursor-default',
+                flashing && (hasPatient ? 'ring-2 ring-rose-400' : 'ring-2 ring-emerald-400'))}>
+            <div className="flex items-center justify-between gap-1.5">
+                <span className="font-mono text-xs font-black truncate text-slate-900 dark:text-zinc-50">{bed.bedCode}</span>
+                <span className={cn('text-[9px] font-bold uppercase tracking-wide shrink-0', STATE_TEXT[state])}>{BED_STATE_LABEL[state]}</span>
             </div>
-            
-            <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="font-mono text-[13px] font-black truncate text-slate-900">{bed.bedCode}</span>
-                <span className="text-[9px] font-bold uppercase tracking-wider shrink-0 opacity-80">{occupied ? 'OCCUPIED' : statusCode}</span>
-            </div>
-            
-            {occupied ? (
-                <div className="min-w-0 mt-1">
-                    <p className="text-sm font-bold truncate leading-tight text-slate-900">{bed.patientName || '?'}</p>
-                    <p className="text-[11px] opacity-75 truncate mt-0.5 font-medium">{bed.patientAge ?? ''}{bed.patientSex ?? ''} · {bed.admissionNo}</p>
-                    {bed.admissionToken && <p className="text-[10px] font-bold text-rose-800 mt-1.5 truncate bg-rose-100/50 inline-block px-1.5 py-0.5 rounded-md border border-rose-200/50">Tkn: {bed.admissionToken}</p>}
+            {hasPatient ? (
+                <div className="min-w-0 mt-1.5">
+                    <p className="text-xs font-bold truncate leading-tight text-slate-900 dark:text-zinc-50">{bed.patientName || 'Patient'}</p>
+                    <p className="text-[10px] text-slate-600 dark:text-zinc-400 truncate mt-0.5">
+                        {bed.patientAge ?? ''}{bed.patientSex ?? ''}{bed.admissionToken ? ` · Token ${bed.admissionToken}` : bed.admissionNo ? ` · ${bed.admissionNo}` : ''}
+                    </p>
                 </div>
             ) : (
-                <p className="text-[11px] mt-auto pt-1 opacity-70 font-semibold">₹{bed.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
+                <p className="text-[10px] mt-auto pt-1.5 text-slate-600 dark:text-zinc-400 font-semibold">₹{bed.effectiveDailyRate.toLocaleString('en-IN')}/day</p>
             )}
         </motion.button>
     );
 };
 
-const CensusTile: React.FC<{ label: string; value: number; tone: 'rose' | 'emerald' | 'slate' }> = ({ label, value, tone }) => {
-    const tones: Record<string, string> = {
-        rose: 'border-rose-100 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-455',
-        emerald: 'border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-455',
-        slate: 'border-zinc-200/60 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/40 text-slate-600 dark:text-zinc-400',
-    };
-    return (
-        <div className={cn('rounded-[1.25rem] border p-3.5 sm:p-4.5 flex flex-col justify-between min-h-[82px]', tones[tone])}>
-            <p className="text-xl sm:text-2xl font-black leading-none">{value}</p>
-            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-2.5 leading-tight">{label}</p>
-        </div>
-    );
-};
 type ActionMode = 'menu' | 'transfer' | 'discharge' | null;
 
 interface Props {
     onBack: () => void;
-    onOpenDashboard?: () => void;
-    onOpenReferredAdmissions?: () => void;
-    onOpenConsultantLedger?: () => void;
+    /** Shows the shared IPD tabs when given. */
+    onNavigate?: (tab: IpdTab) => void;
+    onAdmit?: () => void;
+    /** Bumped by the parent after an admission so the board reloads. */
+    refreshSignal?: number;
 }
 
-export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpenReferredAdmissions, onOpenConsultantLedger }) => {
+export const BedBoardScreen: React.FC<Props> = ({ onBack, onNavigate, onAdmit, refreshSignal }) => {
     const { toast } = useToast();
     const [items, setItems] = useState<BedBoardItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [wardFilter, setWardFilter] = useState('ALL');
+    const [stateFilter, setStateFilter] = useState<BedState | 'ALL'>('ALL');
+    const [boardView, setBoardView] = useState<BoardView>(readView);
     const [selected, setSelected] = useState<BedBoardItem | null>(null);
     const [actionMode, setActionMode] = useState<ActionMode>(null);
     const [newBedId, setNewBedId] = useState('');
@@ -175,7 +135,7 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [refreshSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Silent background refresh — paused while an action dialog is open.
     useEffect(() => {
@@ -204,12 +164,17 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
         [items, selected],
     );
 
-    // Census over the currently-visible beds (respects the ward filter) — the mobile at-a-glance count.
-    const census = useMemo(() => {
-        const visible = Object.values(grouped).flat();
-        const occupied = visible.filter(b => !!b.admissionId).length;
-        return { total: visible.length, occupied, available: visible.length - occupied };
-    }, [grouped]);
+    // Counts respect the ward filter but not the state filter, so the legend always shows the
+    // full picture for the ward being looked at.
+    const wardBeds = useMemo(() => Object.values(grouped).flat(), [grouped]);
+    const counts = useMemo(() => bedCounts(wardBeds), [wardBeds]);
+    const visibleGroups = useMemo(
+        () => Object.entries(grouped)
+            .map(([ward, beds]) => ({ ward, all: beds, beds: stateFilter === 'ALL' ? beds : beds.filter(b => bedState(b) === stateFilter) }))
+            .filter(g => g.beds.length > 0),
+        [grouped, stateFilter],
+    );
+    const pickView = (v: BoardView) => { setBoardView(v); saveView(v); };
 
     const openBed = (b: BedBoardItem) => {
         if (!b.admissionId) return; // free beds are informational only — assign from the admissions list
@@ -236,140 +201,116 @@ export const BedBoardScreen: React.FC<Props> = ({ onBack, onOpenDashboard, onOpe
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-10">
-            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
-            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
-            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
-                {/* Decorative flare */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+        <div className="w-full max-w-full px-3 sm:px-4 lg:px-6 pt-2 pb-10 space-y-4 bg-slate-50/50 dark:bg-zinc-950 min-h-screen">
+            <IpdSectionHeader
+                active="bedboard"
+                subtitle={`${formatIstDayLabel(new Date())} · ${counts.OCCUPIED} of ${wardBeds.length} beds occupied (${occupancyPercent(wardBeds)}%)`}
+                onNavigate={onNavigate}
+                onAdmit={onAdmit}
+                actions={
+                    <span className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold text-emerald-200 uppercase tracking-wider bg-emerald-500/20 px-2 h-7 rounded-lg border border-emerald-400/30">
+                        <LiveDot /> Live
+                    </span>
+                }
+            />
 
-                <div className="relative z-10 flex flex-col gap-5">
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
-                                <LayoutGrid className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h1 className="text-xl font-bold tracking-tight">Live Bed Board</h1>
-                                    <span className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-300 uppercase tracking-wider bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                                        <LiveDot /> Live
-                                    </span>
-                                </div>
-                                <p className="text-[11px] text-brand-100 mt-0.5">Manage bed occupancy, transfers & discharges</p>
-                            </div>
-                        </div>
-                        {/* Dashboard back button on the right for desktop */}
-                        <button 
-                            onClick={onBack}
-                            className="hidden sm:flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 active:scale-[0.98] transition-all shadow-sm"
-                        >
-                            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back to Dashboard
-                        </button>
-                    </div>
-
-                    {/* Navigation Tab Capsule */}
-                    <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                        {/* Tab 1: Live Roster */}
-                        <button 
-                            onClick={onOpenDashboard || onBack}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <Hotel className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Live<br/>Roster</span>
-                        </button>
-
-                        {/* Tab 2: Bed Board (Selected) */}
-                        <div className="bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm rounded-xl py-2 flex flex-col items-center justify-center text-center cursor-default">
-                            <LayoutGrid className="h-5 w-5 mb-1" />
-                            <span className="text-[9px] font-bold tracking-wide leading-tight">Bed<br/>Board</span>
-                        </div>
-
-                        {/* Tab 3: Referrals */}
-                        <button 
-                            onClick={onOpenReferredAdmissions || onBack}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <UserPlus className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Referred<br/>Admissions</span>
-                        </button>
-
-                        {/* Tab 4: Ledger */}
-                        <button 
-                            onClick={onOpenConsultantLedger || onBack}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <Stethoscope className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Consultant<br/>Ledger</span>
-                        </button>
-                    </div>
-                </div>
+            {/* Legend with counts — tap a state to show only those beds */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+                <button type="button" onClick={() => setStateFilter('ALL')} aria-pressed={stateFilter === 'ALL'}
+                    className={cn('h-9 px-3 rounded-full text-xs font-bold border shrink-0 transition-colors',
+                        stateFilter === 'ALL' ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white dark:bg-zinc-900 border-slate-200/70 dark:border-zinc-800 text-slate-600 dark:text-zinc-300')}>
+                    All beds · {wardBeds.length}
+                </button>
+                {BED_STATES.map(st => (
+                    <button key={st} type="button" onClick={() => setStateFilter(prev => (prev === st ? 'ALL' : st))} aria-pressed={stateFilter === st}
+                        className={cn('h-9 px-3 rounded-full text-xs font-bold border shrink-0 flex items-center gap-1.5 transition-colors',
+                            stateFilter === st ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-300 dark:border-brand-700 text-brand-700 dark:text-brand-300' : 'bg-white dark:bg-zinc-900 border-slate-200/70 dark:border-zinc-800 text-slate-600 dark:text-zinc-300',
+                            counts[st] === 0 && stateFilter !== st && 'opacity-60')}>
+                        <span className={cn('h-2.5 w-2.5 rounded-full', STATE_DOT[st])} /> {BED_STATE_LABEL[st]} · {counts[st]}
+                    </button>
+                ))}
             </div>
 
-            {/* Census summary + ward filter */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="grid grid-cols-3 gap-2 flex-1">
-                    <CensusTile label="Occupied" value={census.occupied} tone="rose" />
-                    <CensusTile label="Available" value={census.available} tone="emerald" />
-                    <CensusTile label="Total beds" value={census.total} tone="slate" />
-                </div>
+            {/* Toolbar */}
+            <div className="flex items-center gap-2 flex-wrap">
                 <Select value={wardFilter} onValueChange={setWardFilter}>
-                    <SelectTrigger className="h-11 sm:h-10 text-sm font-semibold text-slate-700 dark:text-zinc-350 border border-slate-200 dark:border-zinc-850 rounded-xl px-3 bg-white dark:bg-zinc-900 shadow-sm w-full sm:w-[180px] shrink-0 outline-none hover:border-slate-300 dark:hover:border-zinc-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all [&>span]:line-clamp-1">
+                    <SelectTrigger aria-label="Ward" className="h-10 text-xs font-semibold border-slate-200/70 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 shadow-sm flex-1 sm:flex-none sm:w-[200px] [&>span]:truncate">
                         <SelectValue placeholder="All wards" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
-                        <SelectItem value="ALL" className="font-semibold text-xs py-2.5">All wards</SelectItem>
+                    <SelectContent className="rounded-xl">
+                        <SelectItem value="ALL" className="font-semibold text-xs">All wards</SelectItem>
                         {wards.map(w => (
-                            <SelectItem key={w} value={w} className="font-semibold text-xs py-2.5">{w}</SelectItem>
+                            <SelectItem key={w} value={w} className="font-semibold text-xs">{w}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                {([
-                    { label: 'Occupied', cls: 'bg-rose-400' },
-                    { label: 'Available', cls: 'bg-emerald-400' },
-                    { label: 'Cleaning', cls: 'bg-amber-400' },
-                    { label: 'Reserved', cls: 'bg-sky-400' },
-                    { label: 'Blocked', cls: 'bg-slate-400' },
-                ] as const).map(({ label, cls }) => (
-                    <span key={label} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-                        <span className={cn('h-2.5 w-2.5 rounded-full', cls)} /> {label}
-                    </span>
-                ))}
+                <div role="group" aria-label="View" className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 border border-slate-200/40 dark:border-zinc-800 shrink-0">
+                    {([['tiles', 'Tiles', LayoutGrid], ['list', 'List', List]] as const).map(([key, label, Icon]) => (
+                        <button key={key} type="button" onClick={() => pickView(key)} aria-pressed={boardView === key}
+                            className={cn('h-8 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors',
+                                boardView === key ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400')}>
+                            <Icon className="h-3.5 w-3.5" /> {label}
+                        </button>
+                    ))}
+                </div>
+                <Button variant="outline" onClick={load} disabled={loading} aria-label="Refresh"
+                    className="h-10 rounded-full px-3.5 text-xs font-bold shrink-0 border-slate-200/70 text-slate-600 dark:text-zinc-300 sm:ml-auto">
+                    <RefreshCw className={cn('h-3.5 w-3.5 sm:mr-1.5', loading && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
+                </Button>
             </div>
 
             {loading && items.length === 0 ? (
                 <div className="py-20 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading bed board…</div>
             ) : Object.keys(grouped).length === 0 ? (
                 <div className="py-20 text-center text-sm text-slate-400">No beds found. Add beds under Bed Master first.</div>
+            ) : visibleGroups.length === 0 ? (
+                <div className="py-16 text-center">
+                    <p className="text-sm font-semibold text-slate-600 dark:text-zinc-300">No {stateFilter !== 'ALL' ? BED_STATE_LABEL[stateFilter].toLowerCase() : ''} beds here right now.</p>
+                    <button type="button" onClick={() => setStateFilter('ALL')} className="mt-2 text-xs font-bold text-brand-700 dark:text-brand-300 hover:underline">Show all beds</button>
+                </div>
             ) : (
-                <div className="space-y-4">
-                    {Object.entries(grouped).map(([ward, beds]) => {
-                        const occ = beds.filter(b => !!b.admissionId).length;
+                <div className="space-y-3">
+                    {visibleGroups.map(({ ward, all, beds }) => {
+                        const wardCounts = bedCounts(all);
                         return (
-                            <motion.div key={ward} layout className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-4 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center justify-between gap-2 mb-3">
-                                    <p className="font-bold text-slate-900 dark:text-zinc-100 text-sm sm:text-base truncate">{ward}</p>
-                                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 dark:bg-zinc-950 text-slate-600 dark:text-zinc-400 border border-slate-205 dark:border-zinc-800 shrink-0">{occ}/{beds.length} occupied</Badge>
+                            <section key={ward} className="rounded-2xl border border-slate-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+                                <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b border-slate-100 dark:border-zinc-800">
+                                    <h2 className="font-bold text-slate-900 dark:text-zinc-100 text-sm truncate">{ward}</h2>
+                                    <p className="text-[11px] font-semibold text-slate-500 shrink-0">
+                                        {wardCounts.OCCUPIED} of {all.length} occupied · <span className="text-emerald-700 dark:text-emerald-400">{wardCounts.AVAILABLE} free</span>
+                                    </p>
                                 </div>
-                                <motion.div layout variants={bedGridVariants} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                                    <AnimatePresence initial={false}>
-                                        {beds.map(b => (
-                                            <AnimatedBedTile 
-                                                key={b.bedId} 
-                                                bed={b} 
-                                                occupied={!!b.admissionId} 
-                                                flashing={flashIds.has(b.bedId)} 
-                                                onClick={() => openBed(b)} 
-                                            />
-                                        ))}
-                                    </AnimatePresence>
-                                </motion.div>
-                            </motion.div>
+                                {boardView === 'tiles' ? (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 p-3">
+                                        {beds.map(b => <BedTile key={b.bedId} bed={b} flashing={flashIds.has(b.bedId)} onClick={() => openBed(b)} />)}
+                                    </div>
+                                ) : (
+                                    <ul className="divide-y divide-slate-100 dark:divide-zinc-800">
+                                        {beds.map(b => {
+                                            const st = bedState(b);
+                                            const hasPatient = !!b.admissionId;
+                                            return (
+                                                <li key={b.bedId}>
+                                                    <button type="button" disabled={!hasPatient} onClick={() => openBed(b)}
+                                                        className={cn('w-full flex items-center gap-3 px-3.5 py-2.5 text-left', hasPatient ? 'hover:bg-brand-50/40 dark:hover:bg-zinc-800/40 cursor-pointer' : 'cursor-default',
+                                                            flashIds.has(b.bedId) && 'bg-brand-50 dark:bg-brand-950/30')}>
+                                                        <span className="font-mono text-xs font-black text-slate-900 dark:text-zinc-50 w-20 shrink-0 truncate">{b.bedCode}</span>
+                                                        <span className={cn('flex items-center gap-1.5 text-[11px] font-bold w-24 shrink-0', STATE_TEXT[st])}>
+                                                            <span className={cn('h-2 w-2 rounded-full', STATE_DOT[st])} /> {BED_STATE_LABEL[st]}
+                                                        </span>
+                                                        <span className="flex-1 min-w-0 text-xs truncate">
+                                                            {hasPatient
+                                                                ? <><span className="font-semibold text-slate-900 dark:text-zinc-50">{b.patientName || 'Patient'}</span><span className="text-slate-500"> · {b.patientAge ?? ''}{b.patientSex ?? ''}{b.admissionNo ? ` · ${b.admissionNo}` : ''}</span></>
+                                                                : <span className="text-slate-400">—</span>}
+                                                        </span>
+                                                        <span className="text-[11px] font-semibold text-slate-500 shrink-0 hidden sm:inline">₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</span>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </section>
                         );
                     })}
                 </div>
