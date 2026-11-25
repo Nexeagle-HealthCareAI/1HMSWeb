@@ -1,22 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { Search } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doctorFeeService } from '@/features/hospital/services/doctorFeeService';
 import { publicDirectoryDoctorsApi } from '@/features/hospital/services/publicDirectoryDoctorsApi';
 import { appointmentApi, ApiDoctor, Department } from '../services/appointmentApi';
-import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 
 // F7: the "Department and doctor" part of the Book Appointment pop-up.
-//  - a "Top doctors" chip first: today's most-booked doctors across all departments,
-//  - department chips (the busiest few today) and a searchable list of every department,
+//  - a "Top doctors" chip first, selected by default: the most-booked doctors of the last month
+//    across all departments,
+//  - department chips (the busiest few in the last month) and a searchable list of every department,
 //  - a doctor scroll box sorted A to Z with degree and specialisation under each name; the
-//    most-booked doctor of the chosen department is pinned first with a "Most booked today" badge.
+//    most-booked doctor of the chosen department is pinned first (no badge).
 // No new API: doctors come from the existing department-doctor endpoint (one call per department,
 // cached and shared with useDoctorsByDepartment) and booking counts from the existing
-// appointment-details query for today.
+// appointment-details API for the last month (one call, cached for 10 minutes).
 
 export interface PickedDoctor {
   id: string;
@@ -58,12 +58,20 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
   hospitalId, departments, departmentId, onDepartmentChange, doctorId, onPickDoctor,
 }) => {
   const { t } = useTranslation();
-  const [topView, setTopView] = useState(false);
+  const [topView, setTopView] = useState(true);
   const [listOpen, setListOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const { data: apptData } = useAppointmentDetails('All', today, today, hospitalId, !!hospitalId);
+  // Booking counts for "Top doctors" and the busiest departments: the last month, up to today.
+  const rangeEnd = format(new Date(), 'yyyy-MM-dd');
+  const rangeStart = format(subMonths(new Date(), 1), 'yyyy-MM-dd');
+  const { data: apptData, isSuccess: countsLoaded, isError: countsFailed } = useQuery({
+    queryKey: ['doctorBookingCounts', hospitalId, rangeStart, rangeEnd],
+    queryFn: () => appointmentApi.getAppointmentDetails({ status: 'All', startDate: rangeStart, endDate: rangeEnd, hospitalId }),
+    enabled: !!hospitalId,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
 
   const doctorQueries = useQueries({
     queries: departments.map((d) => ({
@@ -102,7 +110,7 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
     return map;
   }, [tileData]);
 
-  // Booked today per doctor (cancelled bookings do not count).
+  // Booked in the last month per doctor (cancelled bookings do not count).
   const bookedByDoctor = useMemo(() => {
     const map = new Map<string, number>();
     (apptData?.items ?? []).forEach((a: any) => {
@@ -136,7 +144,7 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
 
   const deptBookings = (id: string) => (byDepartment.get(id) ?? []).reduce((n, d) => n + d.booked, 0);
 
-  // Busiest departments today (A to Z when nobody is booked yet); the chosen one always shows.
+  // Busiest departments in the last month (A to Z when nobody is booked yet); the chosen one always shows.
   const chipDepartments = useMemo(() => {
     const sorted = [...departments].sort((a, b) => deptBookings(b.departmentId) - deptBookings(a.departmentId) || a.departmentName.localeCompare(b.departmentName));
     const chips = sorted.slice(0, MAX_DEPT_CHIPS);
@@ -163,8 +171,6 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
     const top = sorted.reduce<TileDoctor | null>((best, d) => (d.booked > (best?.booked ?? 0) ? d : best), null);
     return top ? [top, ...sorted.filter((d) => d !== top)] : sorted;
   }, [topView, topDoctors, deptDoctors]);
-
-  const pinnedId = !topView && listDoctors[0]?.booked > 0 ? listDoctors[0].doctorId : '';
 
   // The highlighted doctor always matches the top of the list: when the department (or Top doctors)
   // changes, and once on first load unless the user already picked someone, select the list's first
@@ -200,6 +206,19 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
     setQuery('');
     onDepartmentChange(id);
   };
+
+  // Nobody was booked in the last month (or the counts could not be loaded): open on the first
+  // department, A to Z, so the doctor list is real and matches the pop-up's selected doctor.
+  // Runs once; the receptionist can still click "Top doctors" afterwards.
+  const fallbackDone = useRef(false);
+  const doctorsLoading = doctorQueries.some((q) => q.isLoading);
+  useEffect(() => {
+    if (fallbackDone.current || !topView || doctorsLoading || !(countsLoaded || countsFailed)) return;
+    fallbackDone.current = true;
+    if (topDoctors.length > 0 || departments.length === 0) return;
+    const first = [...departments].sort((a, b) => a.departmentName.localeCompare(b.departmentName))[0];
+    chooseDepartment(first.departmentId);
+  }, [topView, doctorsLoading, countsLoaded, countsFailed, topDoctors.length, departments]);
 
   const chipBase = 'min-h-[40px] px-3 rounded-full border text-sm font-semibold transition-colors';
   const chipOn = 'bg-brand-600 border-brand-600 text-white';
@@ -297,11 +316,11 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
         ) : listDoctors.length === 0 ? (
           <div className="p-3 rounded-xl border border-dashed border-gray-300 text-center text-xs text-muted-foreground">
             {topView
-              ? t('bookingPopup.noTopDoctors', { defaultValue: 'No bookings yet today. Pick a department.' })
+              ? t('bookingPopup.noTopDoctors', { defaultValue: 'No bookings in the last month. Pick a department.' })
               : t('bookingPopup.noDoctors', { defaultValue: 'No doctors available in this department.' })}
           </div>
         ) : (
-          listDoctors.map((d) => {
+          listDoctors.map((d, index) => {
             const selected = d.doctorId === doctorId;
             const degree = d.qualifications?.length > 0 ? d.qualifications.join(', ') : '';
             const spec = d.specializations?.length > 0 ? d.specializations.join(', ') : t('appointmentBooking.generalSpecialization', { defaultValue: 'General' });
@@ -315,18 +334,23 @@ export const BookingDoctorTile: React.FC<BookingDoctorTileProps> = ({
                   ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 ring-1 ring-brand-600'
                   : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 hover:bg-brand-50/30'}`}
               >
-                <Avatar className="h-11 w-11 shrink-0" aria-hidden="true">
-                  {photoByDoctor.get(d.doctorId) && <AvatarImage src={photoByDoctor.get(d.doctorId)} alt="" />}
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600 text-sm font-bold">{initialsOf(d.doctorName)}</AvatarFallback>
-                </Avatar>
+                <span className="relative shrink-0">
+                  <Avatar className="h-11 w-11" aria-hidden="true">
+                    {photoByDoctor.get(d.doctorId) && <AvatarImage src={photoByDoctor.get(d.doctorId)} alt="" />}
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600 text-sm font-bold">{initialsOf(d.doctorName)}</AvatarFallback>
+                  </Avatar>
+                  {topView && (
+                    <span
+                      className={`absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-amber-400 text-[11px] font-bold ${index === 0 ? 'bg-amber-400 text-amber-950' : 'bg-amber-50 text-amber-900'}`}
+                      aria-label={t('bookingPopup.rank', { defaultValue: 'Rank {{n}}', n: index + 1 })}
+                    >
+                      {index + 1}
+                    </span>
+                  )}
+                </span>
                 <span className="flex flex-col min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5">
                     <span className="text-sm font-bold text-foreground dark:text-white">{d.doctorName}</span>
-                    {(d.doctorId === pinnedId || (topView && d.booked > 0 && d === topDoctors[0])) && (
-                      <span className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-800 text-[11px] font-bold">
-                        {t('bookingPopup.mostBooked', { defaultValue: 'Most booked today' })}
-                      </span>
-                    )}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {degree ? `${degree} · ${spec}` : spec}
