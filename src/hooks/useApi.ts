@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOpti
 import { authApi } from '@/services';
 import { doctorApi } from '@/features/doctor/services/doctorApi';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
+import { refreshMyHospitals } from '@/store/authStore';
 import { departmentApi } from '@/features/hospital/services/departmentApi';
 import { specializationApi } from '@/features/hospital/services/specializationApi';
 import { medicalSpecialityApi } from '@/features/doctor/services/medicalSpecialityApi';
@@ -99,6 +100,11 @@ export const useHospitalApi = {
         // Always refetch after error or success to ensure server sync
         onSettled: () => {
           queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
+        },
+        // The header and the hospital switcher read the session's hospital list, not this query:
+        // refresh it so a new name shows at once.
+        onSuccess: () => {
+          void refreshMyHospitals();
         },
       }
     );

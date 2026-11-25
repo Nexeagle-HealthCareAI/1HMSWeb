@@ -5,6 +5,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store';
+import { refreshMyHospitals } from '@/store/authStore';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,12 @@ export const HospitalSwitcher: React.FC = () => {
         .catch(() => { /* non-blocking */ });
     }
   }, [hospitals, activeId]);
+
+  // The list is kept with the sign-in, so a hospital renamed since then (here or on another device)
+  // would keep its old name until the next sign-in. Check it again once each time the app loads.
+  useEffect(() => {
+    if (activeId) void refreshMyHospitals();
+  }, [activeId]);
 
   const active = (hospitals ?? []).find(h => h.hospitalId === activeId) ?? (hospitals ?? [])[0];
   if (!active) return null; // not resolved yet / onboarding
