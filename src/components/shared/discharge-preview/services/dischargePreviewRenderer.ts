@@ -43,6 +43,48 @@ const wrapText = (text: string, font: PDFFont, fontSize: number, maxWidth: numbe
     return lines.length ? lines : [''];
 };
 
+// pdf-lib's built-in fonts only cover WinAnsi (Latin-1 plus a few symbols). Anything else — Hindi
+// and other Indian scripts, "₹" — would make drawText throw, so such lines are drawn by the browser
+// (which shapes Devanagari correctly) onto a canvas and placed on the page as an image.
+const NON_WIN_ANSI = /[^\t\n\r\u0020-\u00FF\u2013\u2014\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u20AC\u2122]/;
+export const needsUnicodeRendering = (text: string) => NON_WIN_ANSI.test(text);
+const stripNonWinAnsi = (text: string) => text.replace(new RegExp(NON_WIN_ANSI.source, 'g'), '');
+
+const UNICODE_FONT_STACK = "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Noto Sans', 'Segoe UI', sans-serif";
+
+/** Wraps and draws text on canvases, one PNG per line. Returns null where canvas isn't available. */
+const renderUnicodeLines = (text: string, widthPt: number, sizePt: number, colorHex: string): { png: string; widthPt: number; heightPt: number }[] | null => {
+    if (typeof document === 'undefined') return null;
+    const scale = 3;
+    const probe = document.createElement('canvas');
+    const ctx = probe.getContext('2d');
+    if (!ctx) return null;
+    const font = `${sizePt * scale}px ${UNICODE_FONT_STACK}`;
+    ctx.font = font;
+    const maxW = widthPt * scale;
+    const lines: string[] = [];
+    let current = '';
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+        const next = current ? `${current} ${word}` : word;
+        if (ctx.measureText(next).width <= maxW || !current) current = next;
+        else { lines.push(current); current = word; }
+    }
+    if (current) lines.push(current);
+    const lineH = Math.ceil(sizePt * 1.55 * scale);
+    return lines.map(line => {
+        const c = document.createElement('canvas');
+        const cx = c.getContext('2d')!;
+        cx.font = font;
+        c.width = Math.max(1, Math.ceil(Math.min(maxW, cx.measureText(line).width) + 2 * scale));
+        c.height = lineH;
+        cx.font = font;
+        cx.fillStyle = colorHex;
+        cx.textBaseline = 'alphabetic';
+        cx.fillText(line, 0, Math.round(lineH * 0.74));
+        return { png: c.toDataURL('image/png'), widthPt: c.width / scale, heightPt: lineH / scale };
+    });
+};
+
 export interface DischargePrintFieldConfig {
     key: string;
     label: string;
@@ -83,6 +125,8 @@ export interface DischargePrintPayload {
         unclassifiedTotal: number;
         nonPayableLines: DischargeNonPayableLine[];
     };
+    /** Patient advice in the hospital's second language, drawn under each English advice section. */
+    secondLanguage?: { code: string; name: string; fields: Record<string, string | undefined> };
 }
 
 export interface DischargeTemplateBoundOptions {
@@ -144,12 +188,37 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         if (cursorY - required < footerPad) await acquirePage();
     };
 
+    const drawUnicodeParagraph = async (text: string, size: number, colorHex: string) => {
+        const images = renderUnicodeLines(text, contentWidth, size, colorHex);
+        if (!images) {
+            // No canvas (e.g. tests): fall back to the Latin characters only rather than failing.
+            const latin = stripNonWinAnsi(text).trim();
+            if (latin) for (const line of wrapText(latin, regularFont, size, contentWidth)) {
+                await ensureRoom(lineHeight);
+                page.drawText(line, { x: leftPad, y: cursorY, size, font: regularFont, color: textColor });
+                cursorY -= lineHeight;
+            }
+            return;
+        }
+        for (const img of images) {
+            await ensureRoom(img.heightPt);
+            const png = await outputDoc.embedPng(img.png);
+            page.drawImage(png, { x: leftPad, y: cursorY - img.heightPt * 0.26, width: img.widthPt, height: img.heightPt });
+            cursorY -= Math.max(lineHeight, img.heightPt);
+        }
+    };
+
+    // Keeps the doctor's line breaks (lists of results or medicines), wrapping each line to the width.
     const drawParagraph = async (text: string, font: PDFFont = regularFont, size = sizeBase, color = textColor) => {
-        const lines = wrapText(text, font, size, contentWidth);
-        for (const line of lines) {
-            await ensureRoom(lineHeight);
-            page.drawText(line, { x: leftPad, y: cursorY, size, font, color });
-            cursorY -= lineHeight;
+        for (const para of String(text ?? '').split(/\r?\n/)) {
+            if (!para.trim()) { cursorY -= lineHeight * 0.4; continue; }
+            if (needsUnicodeRendering(para)) { await drawUnicodeParagraph(para, size, typography.color ?? '#111827'); continue; }
+            const lines = wrapText(para, font, size, contentWidth);
+            for (const line of lines) {
+                await ensureRoom(lineHeight);
+                page.drawText(line, { x: leftPad, y: cursorY, size, font, color });
+                cursorY -= lineHeight;
+            }
         }
     };
 
@@ -284,6 +353,12 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         if (f.key === 'conditionAtDischarge') { await drawConditionBadge(payload.conditionAtDischarge); continue; }
         if (f.key === 'nonPayableAnnexure') { if (payload.tpaSplit) await drawTpaTable(payload.tpaSplit); continue; }
         await drawSection(f.label, valueByKey[f.key]);
+        const translated = payload.secondLanguage?.fields[f.key]?.trim();
+        if (translated && valueByKey[f.key]) {
+            cursorY += 4;
+            await drawUnicodeParagraph(translated, sizeBase, '#334155');
+            cursorY -= 6;
+        }
     }
 
     // --- Signature block removed from preview per user request ---

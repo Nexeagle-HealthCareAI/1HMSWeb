@@ -3,7 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
-import { dischargeSettingsApi, type DischargeSettings } from '../services/dischargeSettingsApi';
+import { dischargeSettingsApi, type DischargeSettings, isHospitalLetterhead } from '../services/dischargeSettingsApi';
 import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview/utils/defaultLetterhead';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { doctorApi } from '@/features/doctor/services/doctorApi';
@@ -272,7 +272,7 @@ export const useDischargeDesigner = (overrideDoctorId?: string, overrideHospital
             if (useSystemDefault) {
                 const [hospital, doctorProfile] = await Promise.all([
                     hospitalId ? hospitalApi.getHospitalById(hospitalId).catch(() => null) : Promise.resolve(null),
-                    doctorId ? doctorApi.getDoctorProfile(doctorId).catch(() => null) : Promise.resolve(null),
+                    doctorId && !isHospitalLetterhead(doctorId) ? doctorApi.getDoctorProfile(doctorId).catch(() => null) : Promise.resolve(null),
                 ]);
                 const defaultFile = await generateDefaultLetterheadTemplate({
                     layout: { margins, headerHeight: 0, footerHeight: 0, overflowStrategy: 'reuse-template' },

@@ -10,6 +10,15 @@ const conditionBadge: Record<string, { label: string; bg: string; fg: string; bd
     EXPIRED: { label: 'Expired', bg: '#f1f5f9', fg: '#475569', bd: '#e2e8f0' },
 };
 
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** A patient-advice section: the English, then (when the hospital prints a second language) the translation under it. */
+const adviceSection = (title: string, body: string | undefined, second?: { code: string; text?: string }): string => {
+    if (!body) return '';
+    const tr = second?.text?.trim();
+    return section(title, esc(body) + (tr ? `<div lang="${second!.code}" style="margin-top:4px; color:#334155; font-family:'Noto Sans Devanagari','Nirmala UI','Mangal',sans-serif;">${esc(tr)}</div>` : ''));
+};
+
 const section = (title: string, body?: string): string => {
     if (!body) return '';
     return `
@@ -22,6 +31,7 @@ const section = (title: string, body?: string): string => {
 export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, settings: PrintSettings): string => {
     const inr = (n: number) => `₹ ${(Number.isFinite(n) ? n : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const cond = conditionBadge[data.conditionAtDischarge] ?? conditionBadge.STABLE;
+    const sl = (key: string) => (data.secondLanguage ? { code: data.secondLanguage.code, text: data.secondLanguage.fields[key] } : undefined);
 
     const tpaSection = data.tpaSplit ? `
     <div style="margin-top:22px; position:relative; z-index:1;">
@@ -123,11 +133,13 @@ export const buildDischargeSummaryA4 = (data: DischargeSummaryPrintData, setting
         ${section('History of Present Illness', data.historyOfPresentIllness)}
         ${section('Course in Hospital', data.courseInHospital)}
         ${section('Procedures Performed', data.proceduresPerformed)}
+        ${data.keyInvestigations ? section('Key Investigations', esc(data.keyInvestigations)) : ''}
         ${section('Discharge Medications', data.dischargeMedications)}
-        ${section('Follow-up Instructions', data.followUpInstructions)}
+        ${adviceSection('Follow-up Instructions', data.followUpInstructions, sl('followUpInstructions'))}
         ${data.followUpDate ? section('Follow-up Date', format(new Date(data.followUpDate), 'dd MMM yyyy')) : ''}
-        ${section('Diet Instructions', data.dietInstructions)}
-        ${section('Activity Restrictions', data.activityRestrictions)}
+        ${adviceSection('Diet Instructions', data.dietInstructions, sl('dietInstructions'))}
+        ${adviceSection('Activity Restrictions', data.activityRestrictions, sl('activityRestrictions'))}
+        ${adviceSection('Come Back at Once If', data.warningSigns, sl('warningSigns'))}
         ${section('Additional Notes', data.additionalNotes)}
 
         ${tpaSection}

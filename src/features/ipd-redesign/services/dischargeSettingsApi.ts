@@ -43,30 +43,67 @@ interface GetDischargeSettingsResponse {
     success: boolean;
     message?: string;
     data: DischargeSettings | null;
+    /** The hospital's letterhead, sent to a doctor so printing can fall back to it. */
+    hospitalDefault?: DischargeSettings | null;
 }
+
+/**
+ * Pass this as the doctorId to edit the hospital's own letterhead (Admin → Configuration). Every
+ * doctor without a letterhead of their own prints discharge summaries on it. Routed to the
+ * admin-only /discharge-settings/hospital endpoints.
+ */
+export const HOSPITAL_LETTERHEAD_ID = 'hospital';
+export const isHospitalLetterhead = (doctorId?: string | null) => doctorId === HOSPITAL_LETTERHEAD_ID;
+
+/** Which letterhead a doctor's discharge summary prints on: their own (an upload, or a deliberate
+ * "system default" choice), else the hospital's, else null (the system default is generated). */
+export const pickEffectiveLetterhead = (own: DischargeSettings | null | undefined, hospital: DischargeSettings | null | undefined): DischargeSettings | null => {
+    if (own && (own.uri || own.useSystemDefaultLetterhead)) return own;
+    if (hospital?.uri) return hospital;
+    return own ?? null;
+};
 
 export const dischargeSettingsApi = {
     async getDischargeSettings(doctorId: string, hospitalId: string): Promise<DischargeSettings | null> {
         if (!doctorId || !hospitalId) return null;
         try {
-            const response = await ipdApiClient.get<GetDischargeSettingsResponse>('/discharge-settings', { params: { doctorId, hospitalId } });
+            const response = isHospitalLetterhead(doctorId)
+                ? await ipdApiClient.get<GetDischargeSettingsResponse>('/discharge-settings/hospital', { params: { hospitalId } })
+                : await ipdApiClient.get<GetDischargeSettingsResponse>('/discharge-settings', { params: { doctorId, hospitalId } });
             return response.data ?? null;
         } catch {
             return null;
         }
     },
 
+    /** The settings a discharge summary actually prints with — see pickEffectiveLetterhead. */
+    async getEffectiveDischargeSettings(doctorId: string, hospitalId: string): Promise<DischargeSettings | null> {
+        if (!doctorId || !hospitalId) return null;
+        try {
+            const response = await ipdApiClient.get<GetDischargeSettingsResponse>('/discharge-settings', { params: { doctorId, hospitalId } });
+            return pickEffectiveLetterhead(response.data, response.hospitalDefault);
+        } catch {
+            return null;
+        }
+    },
+
     async updateDischargeSettings(input: UpdateDischargeSettingsInput): Promise<void> {
+        if (isHospitalLetterhead(input.doctorId)) {
+            const { doctorId: _ignored, ...rest } = input;
+            await ipdApiClient.put('/discharge-settings/hospital', rest);
+            return;
+        }
         await ipdApiClient.put('/discharge-settings', input);
     },
 
     async uploadTemplate(input: UploadDischargeTemplateInput): Promise<UploadDischargeTemplateResponse> {
         const formData = new FormData();
         formData.append('File', input.file);
-        formData.append('DoctorId', input.doctorId);
+        const hospital = isHospitalLetterhead(input.doctorId);
+        if (!hospital) formData.append('DoctorId', input.doctorId);
         formData.append('HospitalId', input.hospitalId);
         const response = await ipdApiClient.post<UploadDischargeTemplateResponse>(
-            '/discharge-settings/upload-template',
+            hospital ? '/discharge-settings/hospital/upload-template' : '/discharge-settings/upload-template',
             formData,
             { headers: { 'Content-Type': 'multipart/form-data' } },
         );
