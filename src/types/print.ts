@@ -118,6 +118,23 @@ export interface DischargeSummaryTpaLine {
     netAmount: number;
 }
 
+/** One row of the take-home medicines table. */
+export interface DischargePrintMedication {
+    name: string;
+    dose?: string;
+    route?: string;
+    frequency?: string;
+    duration?: string;
+    instructions?: string;
+}
+
+export interface DischargeSecondLanguage {
+    code: string;   // e.g. "hi"
+    name: string;   // e.g. "Hindi"
+    /** Translated advice keyed by section: followUpInstructions, dietInstructions, activityRestrictions, warningSigns. */
+    fields: Record<string, string | undefined>;
+}
+
 export interface DischargeSummaryPrintData {
     admissionNo: string;
     patientName: string;
@@ -143,6 +160,22 @@ export interface DischargeSummaryPrintData {
     dietInstructions?: string;
     activityRestrictions?: string;
     additionalNotes?: string;
+    keyInvestigations?: string;
+    warningSigns?: string;
+    /** Take-home medicines as rows — printed as a table. `dischargeMedications` (text) is the fallback. */
+    medications?: DischargePrintMedication[];
+    /** Treating consultant, ward / bed at discharge and payer — shown in the patient box. */
+    consultant?: string;
+    wardBed?: string;
+    payer?: string;
+    /** Hospital phone, printed with the "come back at once" advice. */
+    hospitalPhone?: string;
+    /** The treating doctor's degree, speciality and registration number, printed with the name. */
+    doctorQualification?: string;
+    doctorSpeciality?: string;
+    doctorRegistration?: string;
+    /** Patient advice in the hospital's second language, printed under the English. */
+    secondLanguage?: DischargeSecondLanguage;
     signedByDoctorName?: string;
     signedAt?: string;
     // Present only for TPA/SCHEME admissions.

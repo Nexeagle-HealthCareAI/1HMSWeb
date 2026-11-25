@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GripVertical, Save, Printer, Eye, EyeOff, Loader2, LogOut, RotateCcw, Plus, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import {
     DEFAULT_DISCHARGE_FIELDS,
@@ -12,7 +13,10 @@ import {
 } from '../services/dischargeFieldLayoutApi';
 
 interface Props {
+    /** Whose layout to edit — the consultant whose discharge summary is open. Defaults to the signed-in doctor. */
     overrideDoctorId?: string;
+    /** That doctor's name, for the heading. */
+    doctorName?: string | null;
 }
 
 // Field types a doctor can create (built-ins use 'builtin').
@@ -114,8 +118,9 @@ const FieldRow: React.FC<RowProps> = ({ field, update, onRemove }) => {
  * each shows in the workspace form and/or on the printed discharge summary, drag to reorder, and add
  * custom fields. Global per doctor. Mirrors PrescriptionFieldLayoutEditor.tsx.
  */
-export const DischargeFieldLayoutEditor: React.FC<Props> = ({ overrideDoctorId }) => {
-    const { fields, isLoading, saveLayout, isSaving } = useDischargeFieldLayout(overrideDoctorId);
+export const DischargeFieldLayoutEditor: React.FC<Props> = ({ overrideDoctorId, doctorName }) => {
+    const { toast } = useToast();
+    const { fields, isLoading, saveLayout, isSaving, doctorId } = useDischargeFieldLayout(overrideDoctorId);
     const [items, setItems] = useState<DischargeFieldConfigItem[]>([]);
 
     // "Add custom field" form state
@@ -163,8 +168,25 @@ export const DischargeFieldLayoutEditor: React.FC<Props> = ({ overrideDoctorId }
     const save = async () => {
         // Re-number order to match the current visual (dragged) order before persisting.
         const ordered = items.map((f, i) => ({ ...f, order: i }));
-        await saveLayout(ordered);
+        try {
+            const res = await saveLayout(ordered);
+            if (res && res.success === false) throw new Error(res.message || 'The server did not save the layout.');
+            toast({ title: 'Field layout saved', description: 'The form and the printout now follow it.' });
+        } catch (err) {
+            toast({ title: 'Could not save the field layout', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        }
     };
+
+    // The layout belongs to a doctor. With no doctor to save it under, say so instead of offering a
+    // Save button that cannot work.
+    if (!doctorId) {
+        return (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-semibold">No consultant is set for this admission.</p>
+                <p className="mt-1">The field layout is saved per consultant. Set the admitting consultant on the admission, then open this again.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col">
@@ -176,7 +198,7 @@ export const DischargeFieldLayoutEditor: React.FC<Props> = ({ overrideDoctorId }
                         <div>
                             <h3 className="text-base sm:text-lg font-semibold text-brand-900 dark:text-brand-200">Discharge Summary Fields</h3>
                             <p className="text-xs sm:text-sm text-brand-700 dark:text-brand-300 hidden sm:block">
-                                Drag to reorder, rename, and choose where each field shows. Saved for you across all your hospitals.
+                                Drag to reorder, rename, and choose where each field shows. Saved for {doctorName || 'this doctor'} at this hospital.
                             </p>
                         </div>
                     </div>

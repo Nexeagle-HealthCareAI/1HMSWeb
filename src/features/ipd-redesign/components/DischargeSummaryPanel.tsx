@@ -10,7 +10,16 @@ import { Loader2, Check, Download, Printer, LogOut, Clock3, AlertTriangle, Setti
 import { QRCodeSVG } from 'qrcode.react';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
-import { dischargeSummaryApi, type ConditionAtDischarge, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
+import { dischargeSummaryApi, type AiDictationResult, type AiSectionKey, type ConditionAtDischarge, type HospitalDischargePreferences, type MedicationSuggestion, type RewriteStyle, type SaveDischargeSummaryFields } from '../services/dischargeSummaryApi';
+import {
+    FOLLOW_UP_QUICK, PATIENT_ADVICE_SECTIONS, applyMedicationSuggestion, applyProposal, buildSignChecks, emptyAiSections, followUpDateFromDays,
+    isAiSection, markEdited, parseSources, parseTranslations, sectionStatus, serializeSources, serializeTranslations, staleTranslations, textOf, usefulProposals,
+    type PatientAdviceKey, type Proposals, hasTranslation, translationLanguage } from '../utils/dischargeSections';
+import { AiProposalBlock, DischargeStageBar, DischargeWriteBar, FollowUpQuickPicks, MedicationSuggestionList, SectionMeta, SignChecklist } from './discharge/DischargeAssistParts';
+import { DischargeDictationDialog } from './discharge/DischargeDictationDialog';
+import { PatientAdviceTranslation } from './discharge/PatientAdviceTranslation';
+import { DischargeTemplateBar } from './discharge/DischargeTemplates';
+import { useDoctorCredentials } from '../hooks/useDoctorCredentials';
 import { useDischargeCustomFields } from '../hooks/useDischargeCustomFields';
 import { AbdmLinkButton } from '@/features/abdm/components/AbdmLinkButton';
 import { irdaiDischargeApi, type TpaSplit, type IrdaiClocks, type CoverageUtilization } from '../services/irdaiDischargeApi';
@@ -19,7 +28,6 @@ import { buildPrintSettingsFromHospital } from '@/features/billing/utils/opdDocu
 import { downloadHtmlAsPdf, openPrintHtml, htmlToPdfBlob } from '@/utils/printUtils';
 import { buildDischargeSummaryA4 } from '@/printTemplates/dischargeSummaryA4';
 import { API_BASE_URL } from '@/app/api';
-import { DischargeNarrativeAssist } from './DischargeNarrativeAssist';
 import { LookupAutosuggestField } from './LookupAutosuggestField';
 import { Icd10CodePicker } from './Icd10CodePicker';
 import { DischargeMedicationsEditor } from './DischargeMedicationsEditor';
@@ -36,7 +44,6 @@ import { generateDefaultLetterheadTemplate } from '@/components/shared/prescript
 import { formatIstDateTime } from '../utils/istDate';
 import type { ActiveAdmissionItem } from '../services/admissionApi';
 import { InkDischargePad } from './InkDischargePad';
-import { PenTool } from 'lucide-react';
 import { eprescriptionApi } from '@/features/patient/services/eprescriptionApi';
 import { FieldTranslationTool } from '@/features/patient/components/FieldTranslationTool';
 import { doctorApi } from '@/features/doctor/services/doctorApi';
@@ -98,6 +105,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     // the same field layout and letterhead as the assigned doctor would, not their own (or none).
     const { fields: layoutFields, hasSavedLayout, doctorId: layoutDoctorId } = useDischargeFieldLayout(admission.primaryDoctorId || undefined);
     const layoutByKey = useMemo(() => new Map(layoutFields.map(f => [f.key, f])), [layoutFields]);
+    const doctorCredentials = useDoctorCredentials(layoutDoctorId);
     const isVisible = (key: string) => (hasSavedLayout ? layoutByKey.get(key)?.showInPad ?? true : true);
 
     const [previewOpen, setPreviewOpen] = useState(false);
@@ -108,11 +116,33 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
     useEffect(() => {
         if (layoutDoctorId && hospitalId) {
-            dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId)
+            // The doctor's own letterhead, else the hospital's (see pickEffectiveLetterhead).
+            dischargeSettingsApi.getEffectiveDischargeSettings(layoutDoctorId, hospitalId)
                 .then(res => setInkDischargeTemplateUrl(res?.uri || null))
                 .catch(() => {});
         }
     }, [layoutDoctorId, hospitalId]);
+
+    // ── AI help + hospital preferences ───────────────────────────────────────────────────
+    const [prefs, setPrefs] = useState<HospitalDischargePreferences | null>(null);
+    useEffect(() => {
+        if (!hospitalId) return;
+        dischargeSummaryApi.getHospitalPreferences(hospitalId).then(setPrefs).catch(() => setPrefs(null));
+    }, [hospitalId]);
+    const aiReady = !!prefs?.aiAvailable && prefs.aiAssistEnabled;
+    const aiNote = !prefs ? null : !prefs.aiAvailable ? 'AI help is not set up on this server yet.' : !prefs.aiAssistEnabled ? 'AI help is switched off for this hospital (Admin → Configuration → Discharge letterhead).' : null;
+    const hospitalLanguage = prefs?.patientLanguage || null;
+
+    const [proposals, setProposals] = useState<Proposals>({});
+    const [proposalOrigin, setProposalOrigin] = useState<Partial<Record<AiSectionKey, string>>>({});
+    const [drafting, setDrafting] = useState(false);
+    const [sourceSummary, setSourceSummary] = useState<string | null>(null);
+    const [rewriting, setRewriting] = useState<string | null>(null);
+    const [dictateOpen, setDictateOpen] = useState(false);
+    const [medSuggestions, setMedSuggestions] = useState<MedicationSuggestion[]>([]);
+    const [translating, setTranslating] = useState(false);
+    // English text each translation was made from (this session), to flag translations gone stale.
+    const [translatedFrom, setTranslatedFrom] = useState<Record<string, string>>({});
 
     // Custom field values persist on the server (discharge-summary/custom-fields). A signed summary
     // is frozen: the server rejects writes, so the hook is read-only once signed.
@@ -136,6 +166,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 setForm({
                     admittingDiagnosis: draft.admittingDiagnosis ?? undefined,
                     finalDiagnosis: draft.finalDiagnosis ?? undefined,
+                    // These two were not restored on load, so the next auto-save wiped the ICD-10 code.
+                    finalDiagnosisIcd10Code: draft.finalDiagnosisIcd10Code ?? undefined,
+                    finalDiagnosisIcd10Name: draft.finalDiagnosisIcd10Name ?? undefined,
                     chiefComplaint: draft.chiefComplaint ?? undefined,
                     historyOfPresentIllness: draft.historyOfPresentIllness ?? undefined,
                     courseInHospital: draft.courseInHospital ?? undefined,
@@ -148,6 +181,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     dietInstructions: draft.dietInstructions ?? undefined,
                     activityRestrictions: draft.activityRestrictions ?? undefined,
                     additionalNotes: draft.additionalNotes ?? undefined,
+                    keyInvestigations: draft.keyInvestigations ?? undefined,
+                    warningSigns: draft.warningSigns ?? undefined,
+                    patientAdviceTranslationsJson: draft.patientAdviceTranslationsJson ?? undefined,
+                    sectionSourcesJson: draft.sectionSourcesJson ?? undefined,
                 });
             })
             .catch(() => toast({ title: 'Could not load the discharge summary', variant: 'destructive' }))
@@ -174,6 +211,171 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     }, [admission.admissionId, isCash]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setField = (patch: Partial<SaveDischargeSummaryFields>) => setForm(f => ({ ...f, ...patch }));
+
+    const sources = useMemo(() => parseSources(form.sectionSourcesJson), [form.sectionSourcesJson]);
+    const translations = useMemo(() => parseTranslations(form.patientAdviceTranslationsJson), [form.patientAdviceTranslationsJson]);
+    // The printout is English by default. A translation (printed in brackets) is added per discharge
+    // with one tap; this is the language it is offered in.
+    const secondLanguage = translationLanguage(hospitalLanguage, translations, prefs?.languageOptions ?? []);
+    const secondLanguageName = prefs?.languageOptions.find(l => l.code === secondLanguage)?.name ?? 'Hindi';
+    const translationOn = hasTranslation(translations, secondLanguage);
+
+    /** A doctor typing in a section: save the text and mark the section as written by the doctor. */
+    const editField = (key: keyof SaveDischargeSummaryFields, value: string) =>
+        setForm(f => ({ ...f, [key]: value, sectionSourcesJson: serializeSources(markEdited(parseSources(f.sectionSourcesJson), key)) }));
+
+    const addProposals = (incoming: Proposals, origin: string) => {
+        const useful = usefulProposals(form, incoming);
+        const keys = Object.keys(useful) as AiSectionKey[];
+        if (keys.length === 0) return 0;
+        setProposals(p => ({ ...p, ...useful }));
+        setProposalOrigin(o => ({ ...o, ...Object.fromEntries(keys.map(k => [k, origin])) }));
+        return keys.length;
+    };
+
+    const clearProposal = (key: AiSectionKey) => {
+        setProposals(p => { const n = { ...p }; delete n[key]; return n; });
+        setProposalOrigin(o => { const n = { ...o }; delete n[key]; return n; });
+    };
+
+    const acceptProposal = (key: AiSectionKey, mode: 'replace' | 'append') => {
+        const text = proposals[key];
+        if (!text) return;
+        setForm(f => {
+            const next = applyProposal(f, key, text, mode);
+            // Appending to the doctor's own text keeps it the doctor's; otherwise the section is AI-written.
+            const src = parseSources(f.sectionSourcesJson);
+            const keepDoctor = mode === 'append' && src[key] === 'DOCTOR' && textOf(f, key).trim();
+            return { ...next, sectionSourcesJson: serializeSources({ ...src, [key]: keepDoctor ? 'DOCTOR' : 'AI' }) };
+        });
+        clearProposal(key);
+    };
+
+    const emptySections = emptyAiSections(form, isVisible);
+
+    const draftWithAi = async () => {
+        if (emptySections.length === 0) return;
+        setDrafting(true);
+        try {
+            const r = await dischargeSummaryApi.aiDraft(admission.admissionId, emptySections);
+            setSourceSummary(r.sourceSummary ?? null);
+            const n = addProposals(r.sections, 'from this stay\'s records');
+            toast(n > 0
+                ? { title: `AI suggested ${n} section${n === 1 ? '' : 's'}`, description: 'Check each one and tap Accept — nothing is in the summary yet.' }
+                : { title: 'Nothing to suggest', description: r.message || 'There are no records yet for the empty sections.' });
+        } catch (err) {
+            toast({ title: 'Could not draft with AI', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setDrafting(false);
+        }
+    };
+
+    const handleDictation = (r: AiDictationResult) => {
+        const n = addProposals(r.sections, 'from your dictation');
+        if (r.medicationChanges.length) setMedSuggestions(m => [...m, ...r.medicationChanges]);
+        if (r.followUpAfterDays && !form.followUpDate) setField({ followUpDate: followUpDateFromDays(r.followUpAfterDays) });
+        toast({ title: 'Dictation sorted', description: `${n} section suggestion${n === 1 ? '' : 's'}${r.medicationChanges.length ? ` and ${r.medicationChanges.length} medicine change${r.medicationChanges.length === 1 ? '' : 's'}` : ''} to review.` });
+    };
+
+    const rewrite = async (key: AiSectionKey, style: RewriteStyle) => {
+        const text = textOf(form, key).trim();
+        if (!text) return;
+        setRewriting(key);
+        try {
+            const out = await dischargeSummaryApi.aiRewrite(admission.admissionId, key, style, text);
+            const label = style === 'SHORTER' ? 'shorter' : style === 'DETAIL' ? 'clearer' : 'plain words';
+            if (!addProposals({ [key]: out }, label)) toast({ title: 'AI had nothing to change.' });
+        } catch (err) {
+            toast({ title: 'Could not rewrite', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setRewriting(null);
+        }
+    };
+
+    const applyMedSuggestion = (index: number) => {
+        const s = medSuggestions[index];
+        if (!s) return;
+        setForm(f => ({
+            ...f,
+            medications: applyMedicationSuggestion(f.medications ?? [], s),
+            sectionSourcesJson: serializeSources(markEdited(parseSources(f.sectionSourcesJson), 'dischargeMedications')),
+        }));
+        setMedSuggestions(m => m.filter((_, i) => i !== index));
+    };
+
+    const staleAdvice: PatientAdviceKey[] = staleTranslations(form, translations, secondLanguage, translatedFrom);
+
+    const removeTranslation = () => {
+        setForm(f => {
+            const t = parseTranslations(f.patientAdviceTranslationsJson);
+            delete t[secondLanguage];
+            return { ...f, patientAdviceTranslationsJson: serializeTranslations(t) };
+        });
+        setTranslatedFrom({});
+    };
+
+    const translateAdvice = async () => {
+        if (!secondLanguage) return;
+        const keys = (staleAdvice.length ? staleAdvice : PATIENT_ADVICE_SECTIONS.filter(k => textOf(form, k).trim())) as PatientAdviceKey[];
+        if (keys.length === 0) return;
+        const english = Object.fromEntries(keys.map(k => [k, textOf(form, k).trim()]));
+        setTranslating(true);
+        try {
+            const out = await dischargeSummaryApi.aiTranslateAdvice(admission.admissionId, secondLanguage, english);
+            setForm(f => {
+                const t = parseTranslations(f.patientAdviceTranslationsJson);
+                t[secondLanguage] = { ...(t[secondLanguage] ?? {}), ...out };
+                return { ...f, patientAdviceTranslationsJson: serializeTranslations(t) };
+            });
+            setTranslatedFrom(prev => ({ ...prev, ...Object.fromEntries(Object.keys(out).map(k => [k, english[k]])) }));
+        } catch (err) {
+            toast({ title: 'Could not translate', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setTranslating(false);
+        }
+    };
+
+    const editTranslation = (key: PatientAdviceKey, value: string) => {
+        if (!secondLanguage) return;
+        setForm(f => {
+            const t = parseTranslations(f.patientAdviceTranslationsJson);
+            t[secondLanguage] = { ...(t[secondLanguage] ?? {}), [key]: value };
+            return { ...f, patientAdviceTranslationsJson: serializeTranslations(t) };
+        });
+        setTranslatedFrom(prev => ({ ...prev, [key]: textOf(form, key).trim() }));
+    };
+
+    const pendingKeys = Object.keys(proposals);
+    const signChecks = buildSignChecks({
+        form, sources, pending: pendingKeys, visible: isVisible,
+        secondLanguage, translations, translatedFrom,
+    });
+
+    /** Status chip, AI tools and any pending suggestion, shown under an AI-capable section. */
+    const renderAssist = (key: string) => {
+        if (!isAiSection(key)) return null;
+        const proposal = proposals[key];
+        return (
+            <>
+                <SectionMeta
+                    status={sectionStatus(form, key, sources)}
+                    canRewrite={aiReady && !isSigned}
+                    busy={rewriting === key}
+                    onRewrite={style => rewrite(key, style)}
+                />
+                {proposal && !isSigned && (
+                    <AiProposalBlock
+                        text={proposal}
+                        origin={proposalOrigin[key] ?? 'AI'}
+                        hasCurrent={!!textOf(form, key).trim()}
+                        onReplace={() => acceptProposal(key, 'replace')}
+                        onAppend={() => acceptProposal(key, 'append')}
+                        onDiscard={() => clearProposal(key)}
+                    />
+                )}
+            </>
+        );
+    };
 
     // Mirrors EPrescriptionPad.tsx's saveMedicineToDrPreference — a freehand-typed medicine (not
     // picked from Medicine Master) should still show up under "Personal" the next time anyone
@@ -406,11 +608,26 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             proceduresPerformed: form.proceduresPerformed,
             conditionAtDischarge: form.conditionAtDischarge || 'STABLE',
             dischargeMedications: formatMedicationsForPrint(form.medications),
+            medications: (form.medications ?? []).filter(m => m.medicineName?.trim()).map(m => ({
+                name: m.medicineName!.trim(), dose: m.dosage, route: m.route, frequency: m.frequency, duration: m.durations, instructions: m.instructions,
+            })),
+            consultant: admission.primaryDoctorName || undefined,
+            wardBed: admission.bedCode ? `${admission.wardName ? `${admission.wardName} · ` : ''}${admission.bedCode}` : undefined,
+            payer: admission.payerName ? `${admission.payerName} (${admission.payerType})` : admission.payerType,
+            hospitalPhone: buildPrintSettingsFromHospital(hospitalData).phone || undefined,
+            doctorQualification: doctorCredentials.qualification,
+            doctorSpeciality: doctorCredentials.speciality,
+            doctorRegistration: doctorCredentials.registration,
             followUpInstructions: form.followUpInstructions,
             followUpDate: form.followUpDate,
             dietInstructions: form.dietInstructions,
             activityRestrictions: form.activityRestrictions,
             additionalNotes: form.additionalNotes,
+            keyInvestigations: form.keyInvestigations,
+            warningSigns: form.warningSigns,
+            secondLanguage: translationOn
+                ? { code: secondLanguage, name: secondLanguageName, fields: { ...translations[secondLanguage] } }
+                : undefined,
             signedByDoctorName: signedByDoctorName ?? undefined,
             signedAt: signedAt ?? undefined,
             tpaSplit: tpaSplit && !isCash ? {
@@ -452,7 +669,8 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     // properly branded, just via a different (HTML, not pdf-lib) renderer.
     const buildLetterheadPreviewOptions = async ({ allowBlank }: { allowBlank: boolean }): Promise<DischargeTemplateBoundOptions | null> => {
         if (!hospitalId) return null;
-        const settings = layoutDoctorId ? await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId) : null;
+        // The doctor's own letterhead, else the hospital's letterhead, else the generated default.
+        const settings = layoutDoctorId ? await dischargeSettingsApi.getEffectiveDischargeSettings(layoutDoctorId, hospitalId) : null;
         const margins = {
             top: settings?.headerHeight ?? 20,
             bottom: settings?.footerHeight ?? 20,
@@ -558,9 +776,19 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     dietInstructions: data.dietInstructions,
                     activityRestrictions: data.activityRestrictions,
                     additionalNotes: data.additionalNotes,
+                    keyInvestigations: data.keyInvestigations,
+                    warningSigns: data.warningSigns,
                 },
                 customFieldValues,
+                medications: data.medications,
+                wardBed: data.wardBed,
+                payer: data.payer,
+                hospitalPhone: data.hospitalPhone,
+                doctorQualification: data.doctorQualification,
+                doctorSpeciality: data.doctorSpeciality,
+                doctorRegistration: data.doctorRegistration,
                 tpaSplit: data.tpaSplit,
+                secondLanguage: data.secondLanguage,
             },
             printFields: layoutFields.map(f => ({ key: f.key, label: f.label, showInPrint: f.showInPrint })),
         };
@@ -658,9 +886,9 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     const renderBuiltinField = (key: string, label: string): React.ReactNode => {
         switch (key) {
             case 'admittingDiagnosis':
-                return <LookupAutosuggestField label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => setField({ admittingDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
+                return <LookupAutosuggestField label={label} value={form.admittingDiagnosis} readOnly={isSigned} onChange={v => editField('admittingDiagnosis', v)} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosis':
-                return <LookupAutosuggestField label={label} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => setField({ finalDiagnosis: v })} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
+                return <LookupAutosuggestField label={label} value={form.finalDiagnosis} readOnly={isSigned} onChange={v => editField('finalDiagnosis', v)} lookupType="DIAGNOSIS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'finalDiagnosisIcd10':
                 return (
                     <Icd10CodePicker
@@ -675,7 +903,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     />
                 );
             case 'chiefComplaint':
-                return <LookupAutosuggestField label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => setField({ chiefComplaint: v })} lookupType="CHIEF_COMPLAINT" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
+                return <LookupAutosuggestField label={label} value={form.chiefComplaint} readOnly={isSigned} onChange={v => editField('chiefComplaint', v)} lookupType="CHIEF_COMPLAINT" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} />;
             case 'conditionAtDischarge':
                 return (
                     <div>
@@ -692,42 +920,52 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     </div>
                 );
             case 'historyOfPresentIllness':
-                return <TextField label={label} value={form.historyOfPresentIllness} readOnly={isSigned} onChange={v => setField({ historyOfPresentIllness: v })} />;
+                return <TextField label={label} value={form.historyOfPresentIllness} readOnly={isSigned} onChange={v => editField('historyOfPresentIllness', v)} />;
             case 'courseInHospital':
                 return (
                     <div>
-                        <TextField label={label} value={form.courseInHospital} readOnly={isSigned} onChange={v => setField({ courseInHospital: v })} rows={6} />
-                        {!isSigned && <DischargeNarrativeAssist admissionId={admission.admissionId} onApply={v => setField({ courseInHospital: v })} />}
+                        <TextField label={label} value={form.courseInHospital} readOnly={isSigned} onChange={v => editField('courseInHospital', v)} rows={6} />
                     </div>
                 );
             case 'proceduresPerformed':
-                return <LookupAutosuggestField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => setField({ proceduresPerformed: v })} lookupType="PROCEDURE" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline />;
+                return <LookupAutosuggestField label={label} value={form.proceduresPerformed} readOnly={isSigned} onChange={v => editField('proceduresPerformed', v)} lookupType="PROCEDURE" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline />;
             case 'dischargeMedications':
                 return (
-                    <DischargeMedicationsEditor
-                        value={form.medications ?? []}
-                        onChange={meds => setField({ medications: meds })}
-                        hospitalId={hospitalId}
-                        doctorId={medicationSearchDoctorId}
-                        disabled={isSigned}
-                    />
+                    <div>
+                        <DischargeMedicationsEditor
+                            value={form.medications ?? []}
+                            onChange={meds => setForm(f => ({ ...f, medications: meds, sectionSourcesJson: serializeSources(markEdited(parseSources(f.sectionSourcesJson), 'dischargeMedications')) }))}
+                            hospitalId={hospitalId}
+                            doctorId={medicationSearchDoctorId}
+                            disabled={isSigned}
+                        />
+                        <p className="mt-1.5 text-[11px] text-slate-500">Filled from the active medicine orders — AI never adds or changes a medicine on its own.</p>
+                        {!isSigned && (
+                            <MedicationSuggestionList items={medSuggestions} onApply={applyMedSuggestion} onDismiss={i => setMedSuggestions(m => m.filter((_, j) => j !== i))} />
+                        )}
+                    </div>
                 );
             case 'followUpInstructions':
-                return <LookupAutosuggestField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => setField({ followUpInstructions: v })} lookupType="FOLLOW_UP_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.followUpInstructions} readOnly={isSigned} onChange={v => editField('followUpInstructions', v)} lookupType="FOLLOW_UP_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'followUpDate':
                 return (
                     <div>
                         <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
                         <Input type="date" value={form.followUpDate ? form.followUpDate.substring(0, 10) : ''} onChange={e => setField({ followUpDate: e.target.value || undefined })}
                             className="h-12 mt-1.5 text-base bg-slate-50" disabled={isSigned} />
+                        {!isSigned && <FollowUpQuickPicks options={FOLLOW_UP_QUICK} disabled={isSigned} onPick={days => setField({ followUpDate: followUpDateFromDays(days) })} />}
                     </div>
                 );
             case 'dietInstructions':
-                return <LookupAutosuggestField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => setField({ dietInstructions: v })} lookupType="DIET_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.dietInstructions} readOnly={isSigned} onChange={v => editField('dietInstructions', v)} lookupType="DIET_INSTRUCTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
             case 'activityRestrictions':
-                return <LookupAutosuggestField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => setField({ activityRestrictions: v })} lookupType="ACTIVITY_RESTRICTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
+                return <LookupAutosuggestField label={label} value={form.activityRestrictions} readOnly={isSigned} onChange={v => editField('activityRestrictions', v)} lookupType="ACTIVITY_RESTRICTIONS" hospitalId={hospitalId} doctorId={medicationSearchDoctorId} multiline rows={2} />;
+            case 'keyInvestigations':
+                return <TextField label={label} value={form.keyInvestigations} readOnly={isSigned} onChange={v => editField('keyInvestigations', v)} rows={4} />;
+            case 'warningSigns':
+                return <TextField label={label} value={form.warningSigns} readOnly={isSigned} onChange={v => editField('warningSigns', v)} rows={2} />;
             case 'additionalNotes':
-                return <TextField label={label} value={form.additionalNotes} readOnly={isSigned} onChange={v => setField({ additionalNotes: v })} rows={2} />;
+                return <TextField label={label} value={form.additionalNotes} readOnly={isSigned} onChange={v => editField('additionalNotes', v)} rows={2} />;
             default:
                 return null;
         }
@@ -782,7 +1020,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         // controls (selects, date pickers) pair up two-per-row (grid-flow-row-dense on the
         // container pulls a later compact field up to fill the gap even when it isn't adjacent in
         // the doctor's saved field order) so the form isn't one long column of tiny fields.
-        const fullWidth = ['admittingDiagnosis', 'finalDiagnosis', 'chiefComplaint', 'courseInHospital', 'historyOfPresentIllness', 'dischargeMedications', 'proceduresPerformed', 'followUpInstructions', 'dietInstructions', 'activityRestrictions', 'additionalNotes'];
+        const fullWidth = ['admittingDiagnosis', 'finalDiagnosis', 'chiefComplaint', 'courseInHospital', 'historyOfPresentIllness', 'dischargeMedications', 'proceduresPerformed', 'keyInvestigations', 'followUpInstructions', 'dietInstructions', 'activityRestrictions', 'warningSigns', 'additionalNotes'];
         return fullWidth.includes(key) ? 'col-span-1 md:col-span-2' : 'col-span-1';
     };
 
@@ -795,28 +1033,251 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     }
 
     return (
-        <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Discharge Summary</h2>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={() => setCustomizeOpen(true)}>
-                        <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Customize
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={openLetterheadPreview}>
-                        <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
-                    </Button>
-                    <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white shadow-md border-0" onClick={() => setInkDischargeOpen(true)}>
-                        <PenTool className="h-3.5 w-3.5 mr-1.5" /> InkDischarge
-                    </Button>
-                    {isSigned && (
-                        <>
-                            <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
-                            <Button variant="outline" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none" onClick={openShare}><Share2 className="h-3.5 w-3.5 mr-1.5" /> Share</Button>
-                            <Button size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
-                        </>
+        <div className="space-y-4">
+            <DischargeStageBar stages={[
+                { title: 'Summary', sub: 'Write, check and sign', state: isSigned ? 'done' : 'now', chip: isSigned ? 'Signed' : pendingKeys.length ? `${pendingKeys.length} to review` : 'In progress' },
+                { title: 'Clearance', sub: isCash ? 'Settle the final bill in Billing' : 'Bill, scheme or insurer approval', state: isDischarged ? 'done' : isSigned ? 'now' : 'later', chip: isDischarged ? 'Done' : isCash ? 'Check bill' : `${(clocks?.milestones ?? []).filter(m => m.at).length} of ${(clocks?.milestones ?? []).length || 0} steps` },
+                { title: 'Hand over', sub: 'Print, WhatsApp, release the bed', state: isDischarged ? 'done' : 'later', chip: isDischarged ? 'Discharged' : 'Waiting' },
+            ]} />
+
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
+                <div className="space-y-4 min-w-0">
+                    {!isSigned && isActive && (
+                        <DischargeWriteBar
+                            aiReady={aiReady}
+                            aiNote={aiNote}
+                            drafting={drafting}
+                            emptyCount={emptySections.length}
+                            sourceSummary={sourceSummary}
+                            disabled={false}
+                            onDraft={draftWithAi}
+                            onDictate={() => setDictateOpen(true)}
+                            onHandwrite={() => setInkDischargeOpen(true)}
+                        />
                     )}
+                    <DischargeTemplateBar
+                        form={form}
+                        canApply={!isSigned && isActive}
+                        onApply={(result, templateName) => {
+                            // Template text is the doctor's own wording, so those sections are marked as written by the doctor.
+                            const sources = result.applied.reduce((map, key) => markEdited(map, key === 'medications' ? 'dischargeMedications' : key), parseSources(result.form.sectionSourcesJson));
+                            setForm({ ...result.form, sectionSourcesJson: serializeSources(sources) });
+                            toast({ title: `Template "${templateName}" applied`, description: 'Review and edit, then save the summary.' });
+                        }}
+                    />
+                    {isSigned && (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                                <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
+                            </div>
+                            <div className="flex items-center gap-1 self-start sm:self-auto">
+                                {/* A signed discharge summary is what makes the admission worth linking to ABHA. */}
+                                <AbdmLinkButton hospitalId={hospitalId} sourceType="IPD" sourceId={admission.admissionId} variant="full" />
+                                {isActive && (
+                                    <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
+                                        {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 sm:p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:grid-flow-row-dense">
+                            {layoutFields.filter(f => f.builtIn && f.key !== 'nonPayableAnnexure' && isVisible(f.key)).map(f => (
+                                <div key={f.key} id={`discharge-field-${f.key}`} style={{ order: f.order }} className={getBuiltInSpan(f.key)}>
+                                    {/* Own wrapper so a field's h-full doesn't stretch over the assist row below it. */}
+                                    <div>{renderBuiltinField(f.key, f.label)}</div>
+                                    {renderAssist(f.key)}
+                                </div>
+                            ))}
+                            {layoutFields.filter(f => !f.builtIn && isVisible(f.key)).map(f => (
+                                <div key={f.key} style={{ order: f.order }} className={getCustomSpan(f)}>
+                                    {renderCustomField(f)}
+                                </div>
+                            ))}
+                        </div>
+
+                    </div>
+
+                    {(!isSigned || translationOn) && (
+                        <PatientAdviceTranslation
+                            active={translationOn}
+                            onRemove={removeTranslation}
+                            languageCode={secondLanguage}
+                            languageName={secondLanguageName}
+                            form={form}
+                            translations={translations}
+                            stale={staleAdvice}
+                            readOnly={isSigned}
+                            aiReady={aiReady}
+                            busy={translating}
+                            onTranslate={translateAdvice}
+                            onEdit={editTranslation}
+                        />
+                    )}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <ConsentPanel admissionId={admission.admissionId} isActive={isActive} prefilterTypeCode="DISCHARGE" />
+                    </div>
+
                 </div>
+
+                <aside className="space-y-4 xl:sticky xl:top-4">
+                    <section aria-label="Printout" className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                        <h3 className="text-sm font-bold text-slate-900">Printout</h3>
+                        <p className="text-xs text-slate-500">
+                            {inkDischargeTemplateUrl ? 'Prints on the letterhead.' : 'No letterhead uploaded — prints on the standard layout.'}
+                            {translationOn ? ` Patient advice in English with ${secondLanguageName} in brackets.` : ' In English.'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" size="sm" className="h-10" onClick={openLetterheadPreview}><Eye className="h-3.5 w-3.5 mr-1.5" /> Preview</Button>
+                            <Button variant="outline" size="sm" className="h-10" onClick={() => setCustomizeOpen(true)}><Settings2 className="h-3.5 w-3.5 mr-1.5" /> Fields</Button>
+                            {isSigned && (
+                                <>
+                                    <Button variant="outline" size="sm" className="h-10" onClick={print}><Printer className="h-3.5 w-3.5 mr-1.5" /> Print</Button>
+                                    <Button variant="outline" size="sm" className="h-10" onClick={openShare}><Share2 className="h-3.5 w-3.5 mr-1.5" /> Share</Button>
+                                    <Button size="sm" className="h-10 col-span-2 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={download}><Download className="h-3.5 w-3.5 mr-1.5" /> Download bundle</Button>
+                                </>
+                            )}
+                        </div>
+                    </section>
+
+                    {!isSigned && isActive && (
+                        <section aria-label="Sign" className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                            <SignChecklist checks={signChecks} />
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                                <span className="text-xs">
+                                    {!saving && autoSaveStatus === 'saving' && <span className="text-slate-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>}
+                                    {!saving && autoSaveStatus === 'saved' && <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> Saved</span>}
+                                    {!saving && autoSaveStatus === 'error' && <span className="text-red-500" title="Could not save. It will retry automatically on your next edit.">Save failed</span>}
+                                </span>
+                                <Button variant="outline" size="sm" className="h-9" disabled={saving} onClick={save}>
+                                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Save draft
+                                </Button>
+                            </div>
+                            <Button className="w-full h-11 bg-brand-600 hover:bg-brand-700 font-bold" onClick={() => setSignOpen(true)}>
+                                <Check className="h-4 w-4 mr-2" /> Sign summary
+                            </Button>
+                            <p className="text-[11px] text-slate-500 text-center">Signing locks it. "Edit again" stays available, with a reason.</p>
+                        </section>
+                    )}
+
+                    {!isCash && coverageUtilization?.isApproachingLimit && (
+                        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-800">
+                                        Approaching sanctioned limit — ₹{coverageUtilization.runningTotal.toLocaleString('en-IN')} of ₹{coverageUtilization.effectiveSanctionedAmount.toLocaleString('en-IN')} billed
+                                        {coverageUtilization.utilizationPercent != null ? ` (${coverageUtilization.utilizationPercent}%)` : ''}.
+                                    </p>
+                                    {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt ? (
+                                        <p className="text-[11px] text-amber-700 mt-0.5">
+                                            Enhancement to ₹{coverageUtilization.enhancedSanctionedAmount?.toLocaleString('en-IN')} requested {formatIstDateTime(coverageUtilization.enhancementRequestedAt)} — awaiting approval.
+                                        </p>
+                                    ) : (
+                                        <p className="text-[11px] text-amber-700 mt-0.5">Consider requesting a sanction enhancement from the insurer/TPA.</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="shrink-0 flex gap-2">
+                                {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt && (
+                                    <Button size="sm" variant="outline" className="h-9 sm:h-8 text-[11px] border-amber-300" onClick={() => openEnhancementDialog('approve')}>
+                                        Mark approved
+                                    </Button>
+                                )}
+                                <Button size="sm" className="h-9 sm:h-8 text-[11px] bg-amber-600 hover:bg-amber-700" onClick={() => openEnhancementDialog('request')}>
+                                    Request enhancement
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!isCash && (
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">IRDAI Discharge Clocks</h3>
+                                {clocks?.message && clocks.milestones.length === 0 ? (
+                                    <p className="text-sm text-slate-400">{clocks.message}</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {(clocks?.milestones ?? []).map(m => (
+                                            <div key={m.key} className="flex items-center justify-between gap-2 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                                                    <span className="text-slate-700">{m.label}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {(() => {
+                                                        if (m.at) {
+                                                            return <span className="text-[11px] text-slate-500">{formatIstDateTime(m.at)}{m.durationFromPreviousMinutes != null ? ` (+${m.durationFromPreviousMinutes}m)` : ''}</span>;
+                                                        }
+                                                        const stampableKey = m.key === 'CLAIM_SUBMITTED' || m.key === 'INSURER_APPROVAL' ? m.key : null;
+                                                        if (stampableKey && isActive) {
+                                                            return (
+                                                                <Button size="sm" variant="outline" className="h-8 sm:h-7 text-[11px]" disabled={stampingKey === stampableKey} onClick={() => stampMilestone(stampableKey)}>
+                                                                    {stampingKey === stampableKey ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                                                                    Mark {stampableKey === 'CLAIM_SUBMITTED' ? 'submitted' : 'approved'}
+                                                                </Button>
+                                                            );
+                                                        }
+                                                        return <span className="text-[11px] text-slate-300">—</span>;
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">TPA Payable / Non-Payable Split</h3>
+                                {tpaSplit ? (
+                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2">
+                                            <p className="text-[9px] font-bold uppercase text-emerald-600">Payable</p>
+                                            <p className="text-sm font-black text-emerald-800">₹{tpaSplit.payableTotal.toLocaleString('en-IN')}</p>
+                                        </div>
+                                        <div className="rounded-lg bg-rose-50 border border-rose-200 p-2">
+                                            <p className="text-[9px] font-bold uppercase text-rose-600">Non-Payable</p>
+                                            <p className="text-sm font-black text-rose-800">₹{tpaSplit.nonPayableTotal.toLocaleString('en-IN')}</p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-2">
+                                            <p className="text-[9px] font-bold uppercase text-slate-500">Unclassified</p>
+                                            <p className="text-sm font-black text-slate-700">₹{tpaSplit.unclassifiedTotal.toLocaleString('en-IN')}</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-400">No charges to split yet.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {isActive && !isDischarged && (
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col gap-3">
+                            <h3 className="text-sm font-bold text-slate-900">Hand over</h3>
+                            <p className="text-xs text-slate-600">Signing and discharging are separate: sign whenever ready, discharge when the patient physically leaves. This releases the bed.</p>
+                            <div className="flex flex-col-reverse gap-2">
+                                <Button variant="outline" className="h-11 sm:h-10 text-slate-500 hover:text-rose-600" onClick={() => {
+                                    setLamaReason(''); setLamaTemplateId(''); setLamaSignedByName(''); setLamaSignerRelation('Self'); setLamaSignatureDataUrl(null);
+                                    setLamaOpen(true);
+                                    consentApi.getTemplates('LAMA').then(t => setLamaTemplateId(t[0]?.consentTemplateId ?? '')).catch(() => setLamaTemplateId(''));
+                                }}>
+                                    Left without treatment
+                                </Button>
+                                <Button className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700 font-semibold" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
+                                    <LogOut className="h-4 w-4 mr-2" /> Discharge now
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                </aside>
             </div>
+
+            <DischargeDictationDialog open={dictateOpen} onOpenChange={setDictateOpen} admissionId={admission.admissionId} onResult={handleDictation} />
 
             <Dialog open={shareOpen} onOpenChange={setShareOpen}>
                 <DialogContent className="max-w-sm">
@@ -849,9 +1310,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Customize discharge summary fields</DialogTitle>
-                        <DialogDescription>Applies to every discharge summary you fill in or print, across all your hospitals.</DialogDescription>
+                        <DialogDescription>Applies to the discharge summaries of {admission.primaryDoctorName || 'this consultant'} at this hospital — the form and the printout.</DialogDescription>
                     </DialogHeader>
-                    <DischargeFieldLayoutEditor />
+                    {/* Edit the same layout this screen and the printout read: the admitting consultant's. */}
+                    <DischargeFieldLayoutEditor overrideDoctorId={layoutDoctorId || undefined} doctorName={admission.primaryDoctorName} />
                 </DialogContent>
             </Dialog>
 
@@ -874,175 +1336,6 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 patientAge={admission.patientAge != null ? String(admission.patientAge) : undefined}
                 onSaved={() => toast({ title: 'Discharge note saved', description: 'Filed as a PDF in the admission documents.' })}
             />
-
-            {isSigned && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span className="text-sm font-semibold text-emerald-800">Signed by {signedByDoctorName ?? '—'} on {signedAt ? formatIstDateTime(signedAt) : '—'}</span>
-                    </div>
-                    <div className="flex items-center gap-1 self-start sm:self-auto">
-                        {/* A signed discharge summary is what makes the admission worth linking to ABHA. */}
-                        <AbdmLinkButton hospitalId={hospitalId} sourceType="IPD" sourceId={admission.admissionId} variant="full" />
-                        {isActive && (
-                            <Button variant="outline" size="sm" onClick={revokeSign} disabled={unsigning} className="h-9 sm:h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
-                                {unsigning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />} Edit Again
-                            </Button>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            <div className="rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:grid-flow-row-dense">
-                    {layoutFields.filter(f => f.builtIn && f.key !== 'nonPayableAnnexure' && isVisible(f.key)).map(f => (
-                        <div key={f.key} style={{ order: f.order }} className={getBuiltInSpan(f.key)}>
-                            {renderBuiltinField(f.key, f.label)}
-                        </div>
-                    ))}
-                    {layoutFields.filter(f => !f.builtIn && isVisible(f.key)).map(f => (
-                        <div key={f.key} style={{ order: f.order }} className={getCustomSpan(f)}>
-                            {renderCustomField(f)}
-                        </div>
-                    ))}
-                </div>
-
-                {!isSigned && isActive && (
-                    <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 pt-2 border-t border-slate-100">
-                        {!saving && autoSaveStatus === 'saving' && (
-                            <span className="text-xs text-slate-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>
-                        )}
-                        {!saving && autoSaveStatus === 'saved' && (
-                            <span className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> Saved</span>
-                        )}
-                        {!saving && autoSaveStatus === 'error' && (
-                            <span className="text-xs text-red-500" title="Could not save. It will retry automatically on your next edit.">Save failed</span>
-                        )}
-                        <div className="flex flex-col-reverse sm:flex-row gap-2">
-                            <Button variant="outline" className="h-11 sm:h-10" disabled={saving} onClick={save}>
-                                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Save draft
-                            </Button>
-                            <Button className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700" onClick={() => setSignOpen(true)}>
-                                <Check className="h-4 w-4 mr-2" /> Sign & finalize
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {!isCash && coverageUtilization?.isApproachingLimit && (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                        <div>
-                            <p className="text-sm font-semibold text-amber-800">
-                                Approaching sanctioned limit — ₹{coverageUtilization.runningTotal.toLocaleString('en-IN')} of ₹{coverageUtilization.effectiveSanctionedAmount.toLocaleString('en-IN')} billed
-                                {coverageUtilization.utilizationPercent != null ? ` (${coverageUtilization.utilizationPercent}%)` : ''}.
-                            </p>
-                            {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt ? (
-                                <p className="text-[11px] text-amber-700 mt-0.5">
-                                    Enhancement to ₹{coverageUtilization.enhancedSanctionedAmount?.toLocaleString('en-IN')} requested {formatIstDateTime(coverageUtilization.enhancementRequestedAt)} — awaiting approval.
-                                </p>
-                            ) : (
-                                <p className="text-[11px] text-amber-700 mt-0.5">Consider requesting a sanction enhancement from the insurer/TPA.</p>
-                            )}
-                        </div>
-                    </div>
-                    <div className="shrink-0 flex gap-2">
-                        {coverageUtilization.enhancementRequestedAt && !coverageUtilization.enhancementApprovedAt && (
-                            <Button size="sm" variant="outline" className="h-9 sm:h-8 text-[11px] border-amber-300" onClick={() => openEnhancementDialog('approve')}>
-                                Mark approved
-                            </Button>
-                        )}
-                        <Button size="sm" className="h-9 sm:h-8 text-[11px] bg-amber-600 hover:bg-amber-700" onClick={() => openEnhancementDialog('request')}>
-                            Request enhancement
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {!isCash && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">IRDAI Discharge Clocks</h3>
-                        {clocks?.message && clocks.milestones.length === 0 ? (
-                            <p className="text-sm text-slate-400">{clocks.message}</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {(clocks?.milestones ?? []).map(m => (
-                                    <div key={m.key} className="flex items-center justify-between gap-2 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Clock3 className="h-3.5 w-3.5 text-slate-400" />
-                                            <span className="text-slate-700">{m.label}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {(() => {
-                                                if (m.at) {
-                                                    return <span className="text-[11px] text-slate-500">{formatIstDateTime(m.at)}{m.durationFromPreviousMinutes != null ? ` (+${m.durationFromPreviousMinutes}m)` : ''}</span>;
-                                                }
-                                                const stampableKey = m.key === 'CLAIM_SUBMITTED' || m.key === 'INSURER_APPROVAL' ? m.key : null;
-                                                if (stampableKey && isActive) {
-                                                    return (
-                                                        <Button size="sm" variant="outline" className="h-8 sm:h-7 text-[11px]" disabled={stampingKey === stampableKey} onClick={() => stampMilestone(stampableKey)}>
-                                                            {stampingKey === stampableKey ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
-                                                            Mark {stampableKey === 'CLAIM_SUBMITTED' ? 'submitted' : 'approved'}
-                                                        </Button>
-                                                    );
-                                                }
-                                                return <span className="text-[11px] text-slate-300">—</span>;
-                                            })()}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-3">TPA Payable / Non-Payable Split</h3>
-                        {tpaSplit ? (
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2">
-                                    <p className="text-[9px] font-bold uppercase text-emerald-600">Payable</p>
-                                    <p className="text-sm font-black text-emerald-800">₹{tpaSplit.payableTotal.toLocaleString('en-IN')}</p>
-                                </div>
-                                <div className="rounded-lg bg-rose-50 border border-rose-200 p-2">
-                                    <p className="text-[9px] font-bold uppercase text-rose-600">Non-Payable</p>
-                                    <p className="text-sm font-black text-rose-800">₹{tpaSplit.nonPayableTotal.toLocaleString('en-IN')}</p>
-                                </div>
-                                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2">
-                                    <p className="text-[9px] font-bold uppercase text-slate-500">Unclassified</p>
-                                    <p className="text-sm font-black text-slate-700">₹{tpaSplit.unclassifiedTotal.toLocaleString('en-IN')}</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-400">No charges to split yet.</p>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <ConsentPanel admissionId={admission.admissionId} isActive={isActive} prefilterTypeCode="DISCHARGE" />
-            </div>
-
-            {isActive && !isDischarged && (
-                <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <p className="text-sm text-slate-600">Discharge is a separate action from signing the summary — sign whenever ready, discharge when the patient physically leaves.</p>
-                    <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 shrink-0">
-                        <Button variant="outline" className="h-11 sm:h-10 text-slate-500 hover:text-rose-600" onClick={() => {
-                            setLamaReason(''); setLamaTemplateId(''); setLamaSignedByName(''); setLamaSignerRelation('Self'); setLamaSignatureDataUrl(null);
-                            setLamaOpen(true);
-                            consentApi.getTemplates('LAMA').then(t => setLamaTemplateId(t[0]?.consentTemplateId ?? '')).catch(() => setLamaTemplateId(''));
-                        }}>
-                            Left without treatment
-                        </Button>
-                        <Button className="h-11 sm:h-10 bg-amber-600 hover:bg-amber-700 font-semibold" onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }}>
-                            <LogOut className="h-4 w-4 mr-2" /> Discharge now
-                        </Button>
-                    </div>
-                </div>
-            )}
 
             <Dialog open={signOpen} onOpenChange={setSignOpen}>
                 <DialogContent className="max-w-sm">

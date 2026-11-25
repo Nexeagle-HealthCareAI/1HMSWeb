@@ -8,20 +8,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@/hooks/use-toast';
 import {
     ArrowLeft, UserPlus, Loader2, RefreshCw, BedDouble, XCircle, CalendarClock, Search,
-    MessageSquare, Send, ChevronLeft, ChevronRight, Hotel, LayoutGrid, Stethoscope, Plus,
-} from 'lucide-react';
+    MessageSquare, Send, ChevronLeft, ChevronRight, } from 'lucide-react';
 import { admissionReferralApi, AdmissionReferralItem, AdmissionReferralCommentItem, CaseType, ReferralStatus } from '../services/admissionReferralApi';
 import { useAppStore } from '@/store/appStore';
 import { STATUS_TONE, STATUS_LABEL, ALL_STATUSES, CASE_TONE, CASE_LABEL, ALL_CASE_TYPES } from '../utils/referralStatus';
 import { formatIstDateTime } from '../utils/istDate';
 import { cn } from '@/lib/utils';
+import { IpdSectionHeader, type IpdTab } from '../components/IpdSectionHeader';
 
 interface Props {
     onBack: () => void;
     onAdmitReferral: (referral: AdmissionReferralItem) => void;
-    onOpenDashboard?: () => void;
-    onOpenBedBoard?: () => void;
-    onOpenConsultantLedger?: () => void;
+    /** Shows the shared IPD tabs when given. */
+    onNavigate?: (tab: IpdTab) => void;
+    onAdmit?: () => void;
 }
 
 const PAGE_SIZE = 5;
@@ -43,7 +43,7 @@ const formatDate = (iso?: string | null) => {
  * client-side filter over one 5-item page can't reflect the true filtered set). Search stays
  * client-side over the current page only, since the backend has no text-search param.
  */
-export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferral, onOpenDashboard, onOpenBedBoard, onOpenConsultantLedger }) => {
+export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferral, onNavigate, onAdmit }) => {
     const { toast } = useToast();
     const { isLowBandwidthMode } = useAppStore();
     const [referrals, setReferrals] = useState<AdmissionReferralItem[]>([]);
@@ -190,81 +190,29 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
-            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
-            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
-                {/* Decorative flare */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col gap-5">
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
-                                <UserPlus className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold tracking-tight">Referred Admissions</h1>
-                                <p className="text-[11px] text-brand-100 mt-0.5">Manage doctor-advised incoming patient referrals</p>
-                            </div>
-                        </div>
-                        {/* Refresh & Back buttons on the right */}
-                        <div className="flex items-center gap-2">
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-10 w-10 rounded-xl hover:bg-white/10 text-white active:scale-[0.98] transition-all shrink-0"
-                                onClick={() => load(true)}
-                                disabled={refreshing || loading}
-                            >
-                                <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-                            </Button>
-                            <button 
-                                onClick={onBack}
-                                className="hidden sm:flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 active:scale-[0.98] transition-all shadow-sm shrink-0"
-                            >
-                                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back to Dashboard
+        <div className="w-full max-w-full px-3 sm:px-4 lg:px-6 pt-2 pb-10 space-y-4 sm:space-y-5">
+            <IpdSectionHeader
+                active="referred"
+                subtitle="Doctor-advised admissions waiting to come in"
+                onNavigate={onNavigate}
+                onAdmit={onAdmit}
+                badges={{ referred: statusCounts.PENDING ?? 0 }}
+                actions={
+                    <>
+                        <Button variant="ghost" size="icon" aria-label="Refresh"
+                            className="h-10 w-10 rounded-xl hover:bg-white/10 text-white shrink-0"
+                            onClick={() => load(true)} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+                        </Button>
+                        {!onNavigate && (
+                            <button type="button" onClick={onBack}
+                                className="hidden sm:flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 shrink-0">
+                                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back
                             </button>
-                        </div>
-                    </div>
-
-                    {/* Navigation Tab Capsule */}
-                    <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                        {/* Tab 1: Live Roster */}
-                        <button 
-                            onClick={onOpenDashboard || onBack}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <Hotel className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Live<br/>Roster</span>
-                        </button>
-
-                        {/* Tab 2: Bed Board */}
-                        <button 
-                            onClick={onOpenBedBoard || onBack}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <LayoutGrid className="h-5 w-5 mb-1 opacity-80" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Bed<br/>Board</span>
-                        </button>
-
-                        {/* Tab 3: Referrals (Selected) */}
-                        <div className="bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm rounded-xl py-2 flex flex-col items-center justify-center text-center cursor-default">
-                            <UserPlus className="h-5 w-5 mb-1" />
-                            <span className="text-[9px] font-bold tracking-wide leading-tight">Referred<br/>Admissions</span>
-                        </div>
-
-                        {/* Tab 4: Ledger */}
-                        <button 
-                            onClick={onOpenConsultantLedger || onBack}
-                            className="text-brand-100 dark:text-zinc-300 hover:text-white py-2 flex flex-col items-center justify-center text-center transition-all active:scale-[0.97]"
-                        >
-                            <Stethoscope className="h-5 w-5 mb-1" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Consultant<br/>Ledger</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                        )}
+                    </>
+                }
+            />
 
             {/* KPI tiles — informational, read-only summary of every status (including zero counts) */}
             {/* KPI tiles — horizontal scroll on mobile */}

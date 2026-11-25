@@ -39,11 +39,14 @@ export const DEFAULT_DISCHARGE_FIELDS: DischargeFieldConfigItem[] = [
     { key: 'historyOfPresentIllness', label: 'History of Present Illness', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 5 },
     { key: 'courseInHospital', label: 'Course in Hospital', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 6 },
     { key: 'proceduresPerformed', label: 'Procedures Performed', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 7 },
+    // Added Nov 2026 — non-integer orders slot them in after their neighbours in a saved layout too.
+    { key: 'keyInvestigations', label: 'Key Investigations', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 7.5 },
     { key: 'dischargeMedications', label: 'Discharge Medications', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 8 },
     { key: 'followUpInstructions', label: 'Follow-up Instructions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 9 },
     { key: 'followUpDate', label: 'Follow-up Date', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 10 },
     { key: 'dietInstructions', label: 'Diet Instructions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 11 },
     { key: 'activityRestrictions', label: 'Activity Restrictions', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 12 },
+    { key: 'warningSigns', label: 'Come Back at Once If', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 12.5 },
     { key: 'additionalNotes', label: 'Additional Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 13 },
     { key: 'nonPayableAnnexure', label: 'Non-Payable Items Annexure', type: 'builtin', builtIn: true, showInPad: false, showInPrint: true, order: 14 },
 ];
@@ -66,7 +69,9 @@ export function mergeFieldsWithDefaults(saved: DischargeFieldConfigItem[] | unde
     const knownKeys = new Set(DEFAULT_DISCHARGE_FIELDS.map(d => d.key));
     savedList.filter(f => !knownKeys.has(f.key) && f.key.startsWith('cf_')).forEach(f => merged.push({ ...f, builtIn: false }));
 
-    return merged.sort((a, b) => a.order - b.order);
+    // Renumber 0..n so every order is a whole number (CSS `order`, which lays out the form, ignores
+    // fractions — the 7.5/12.5 used to slot in newer built-ins would otherwise jump to the top).
+    return merged.sort((a, b) => a.order - b.order).map((f, i) => ({ ...f, order: i }));
 }
 
 // Scoped per (doctorId, hospitalId) — a doctor's customization at one hospital no longer bleeds
