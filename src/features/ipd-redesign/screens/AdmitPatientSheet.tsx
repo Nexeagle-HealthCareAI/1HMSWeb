@@ -97,9 +97,9 @@ const SEX_OPTIONS: { value: 'M' | 'F' | 'O'; label: string }[] = [
 ];
 
 const AGE_UNITS: { value: 'Y' | 'M' | 'D'; label: string }[] = [
-    { value: 'Y', label: 'Yrs' },
-    { value: 'M', label: 'Month' },
-    { value: 'D', label: 'Day' },
+    { value: 'Y', label: 'Years' },
+    { value: 'M', label: 'Months' },
+    { value: 'D', label: 'Days' },
 ];
 
 const synthesizeUnknownName = (sex: string, ageYears: string, ageUnit: 'Y' | 'M' | 'D'): string => {
@@ -234,7 +234,7 @@ const Field: React.FC<{ label: string; required?: boolean; className?: string; c
     </div>
 );
 
-// Wide screens get the whole admission on one page (no steps); narrower ones keep the three steps.
+// Wide screens have room for the live admission summary beside the steps.
 const WIDE_QUERY = '(min-width: 1200px)';
 const useWideScreen = (): boolean => {
     const [wide, setWide] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(WIDE_QUERY).matches);
@@ -258,16 +258,6 @@ const daysUntil = (dateKey: string): number | null => {
     const days = Math.round((target.getTime() - today.getTime()) / 86400000);
     return days > 0 ? days : null;
 };
-
-const PageSectionTitle: React.FC<{ n: number; title: string; hint: string; done: boolean }> = ({ n, title, hint, done }) => (
-    <div className="flex items-center gap-2.5 pt-1">
-        <span className={cn('h-6 w-6 rounded-full flex items-center justify-center text-xs font-extrabold text-white shrink-0', done ? 'bg-emerald-600' : 'bg-brand-600')}>
-            {done ? <Check className="h-3.5 w-3.5" /> : n}
-        </span>
-        <h2 className="text-base font-extrabold text-slate-900 dark:text-zinc-50">{title}</h2>
-        <span className="text-xs text-slate-500 dark:text-zinc-400">{hint}</span>
-    </div>
-);
 
 const SummaryRow: React.FC<{ label: string; value?: string | null; strong?: boolean }> = ({ label, value, strong }) => (
     <div className="flex gap-3 py-1.5 border-b border-slate-100 dark:border-zinc-800 text-xs">
@@ -742,23 +732,15 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const laterItems = form.payerType !== 'CASH'
         ? [!form.preAuthNo.trim() && 'Pre-auth number', !form.sanctionedAmount && 'Sanctioned amount'].filter(Boolean) as string[]
         : [];
-    const admitLabel = isPreRegistrationChoice ? 'Pre-register patient' : pickedBed ? `Admit to ${pickedBed.bedCode}` : 'Admit patient';
-    const goToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const pageSections = [
-        { id: 'admit-sec-patient', label: 'Patient', done: canSubmit },
-        { id: 'admit-sec-admission', label: 'Admission', done: !!form.primaryDoctorId || !!form.diagnosis.trim() },
-        { id: 'admit-sec-bed', label: 'Bed & payment', done: !!form.bedId },
-    ];
-
     return (
         <>
         <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
             {/* A centred window (full screen on a phone). A stray click outside does not close it —
                 only Cancel, the close button or Escape do — so a half-filled admission is not lost. */}
             <DialogContent onInteractOutside={e => e.preventDefault()}
-                onKeyDown={e => { if (wide && !success && (e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); submit(); } }}
+                onKeyDown={e => { if (!success && (e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); submit(); } }}
                 className={cn('flex flex-col gap-0 p-0 overflow-hidden bg-slate-50 dark:bg-zinc-950 w-full max-w-none h-[100dvh] rounded-none',
-                    wide ? 'w-screen' : 'sm:w-[calc(100%-2rem)] sm:max-w-4xl sm:h-[90vh] sm:max-h-[860px] sm:rounded-3xl')}>
+                    wide ? 'sm:w-[min(1060px,calc(100%-4rem))] sm:h-[min(82vh,760px)] sm:rounded-3xl' : 'sm:w-[calc(100%-2rem)] sm:max-w-3xl sm:h-[86vh] sm:max-h-[760px] sm:rounded-3xl')}>
                 <DialogHeader className="px-5 sm:px-6 pt-4 pb-3 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800 space-y-0 text-left">
                     <div className="flex items-center gap-3 pr-8">
                         <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900/30 flex items-center justify-center shadow-inner">
@@ -836,7 +818,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             </div>
                         )}
                         {/* Step indicator */}
-                        <div className={cn('px-5 sm:px-6 pt-4 pb-2 shrink-0 border-b border-zinc-100/50 dark:border-zinc-800/50', wide && 'hidden')}>
+                        <div className={cn('px-5 sm:px-6 pt-4 pb-2 shrink-0 border-b border-zinc-100/50 dark:border-zinc-800/50')}>
                             <div className="flex items-center gap-2">
                                 {WIZARD_STEPS.map((s, i) => {
                                     const stepIndex = WIZARD_STEPS.findIndex(x => x.key === step);
@@ -862,29 +844,11 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             </div>
                         </div>
 
-                        <div className={wide ? 'flex-1 min-h-0 w-full max-w-[1480px] mx-auto grid grid-cols-[180px_minmax(0,1fr)_350px] gap-5 px-6 pt-4' : 'contents'}>
-                        {wide && (
-                            <nav aria-label="Sections" className="self-start space-y-1">
-                                <p className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">On this page</p>
-                                {pageSections.map(sec => (
-                                    <button key={sec.id} type="button" onClick={() => goToSection(sec.id)}
-                                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-900 text-left">
-                                        <span className={cn('h-[18px] w-[18px] rounded-full flex items-center justify-center shrink-0', sec.done ? 'bg-emerald-100 text-emerald-700' : 'border-[1.5px] border-slate-300')}>
-                                            {sec.done && <Check className="h-3 w-3" />}
-                                        </span>
-                                        {sec.label}
-                                    </button>
-                                ))}
-                                <div className="!mt-4 p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
-                                    <b className="text-slate-900 dark:text-zinc-100">Only the patient is required.</b><br />Everything else can be added now, or later from the patient's page.
-                                </div>
-                                <p className="px-2.5 pt-2 text-[11px] text-slate-500">Ctrl + Enter admits.</p>
-                            </nav>
-                        )}
-                        <div ref={scrollAreaRef} className={cn('flex-1 overflow-y-auto space-y-4', wide ? 'min-h-0 pr-1 pb-8' : 'px-5 sm:px-6 py-4')}>
+                        <div className={wide ? 'flex-1 min-h-0 grid grid-cols-[minmax(0,1fr)_290px] gap-4 px-5 pt-3 pb-3' : 'contents'}>
+                        <div ref={scrollAreaRef} className={cn('flex-1 overflow-y-auto space-y-4', wide ? 'min-h-0 pr-1' : 'px-5 sm:px-6 py-4')}>
                             {/* Admission type — chosen on the first step; later steps show who is being admitted
                                 and how, with a way back to change it. */}
-                            {wide ? null : step === 'personal' ? typeStrip : (
+                            {step === 'personal' ? typeStrip : (
                                 <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2">
                                     <div className="h-8 w-8 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 text-[11px] font-bold flex items-center justify-center shrink-0">{initials(form.fullName || namePreview)}</div>
                                     <div className="min-w-0 flex-1">
@@ -899,9 +863,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             )}
 
                             {/* ══ Step 2: Personal Information ═══════════════════ */}
-                            {(wide || step === 'personal') && (
+                            {step === 'personal' && (
                                 <div id="admit-sec-patient" className="space-y-4 scroll-mt-2">
-                                    {wide && <PageSectionTitle n={1} title="Patient" hint="Search first — most patients are already registered" done={canSubmit} />}
 
                             {/* ── Search existing patient — same generic name/UHID/mobile search as
                                  the Appointment board, so a known patient never needs re-typing ── */}
@@ -1074,16 +1037,17 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                     </SelectContent>
                                                 </Select>
                                             </Field>
-                                            <Field label="Age" required={isEmergencyQuickAdmit}>
-                                                <div className="flex items-center h-10 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand-500/25 focus-within:border-brand-400 transition">
+                                            {/* Its own row: the number and the three units need the full width to be read and tapped. */}
+                                            <Field label="Age" required={isEmergencyQuickAdmit} className="sm:col-span-2">
+                                                <div className="flex items-center h-11 sm:h-10 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand-500/25 focus-within:border-brand-400 transition">
                                                     <Input type="number" min={0} max={form.ageUnit === 'Y' ? 130 : form.ageUnit === 'M' ? 11 : 30}
                                                         value={form.ageYears} onChange={e => set('ageYears', e.target.value)}
-                                                        className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-lg font-mono bg-transparent"
+                                                        className="flex-1 min-w-[4.5rem] h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-lg font-mono text-base font-semibold bg-transparent px-3"
                                                         placeholder={form.ageUnit === 'Y' ? 'e.g. 42' : 'approximate'} />
                                                     <div className="flex bg-slate-105 dark:bg-zinc-950 p-0.5 h-full shrink-0 border-l border-slate-200 dark:border-zinc-800 rounded-r-lg">
                                                         {AGE_UNITS.map(u => (
                                                             <button key={u.value} type="button" onClick={() => set('ageUnit', u.value)}
-                                                                className={cn('px-3 text-[10px] font-extrabold rounded-md transition-all duration-200',
+                                                                className={cn('px-3 text-xs font-extrabold rounded-md transition-all duration-200',
                                                                     form.ageUnit === u.value ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200')}>
                                                                 {u.label}
                                                             </button>
@@ -1178,10 +1142,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             )}
 
                             {/* ══ Step 3: Clinical & Referral ═════════════════════ */}
-                            {(wide || step === 'clinical') && (
+                            {step === 'clinical' && (
                                 <div id="admit-sec-admission" className="space-y-4 scroll-mt-2">
-                                    {wide && <PageSectionTitle n={2} title="Admission" hint="Why and under whom — optional" done={pageSections[1].done} />}
-                                    {wide && <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm p-4">{typeStrip}</div>}
 
                                     <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Clinical & referral details" subtitle="Consultant, diagnosis & referral" tone="amber" allowOverflow>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1352,11 +1314,10 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             )}
 
                             {/* ══ Step 4: Advance & Bed (optional) ════════════════ */}
-                            {(wide || step === 'advanceBed') && (
+                            {step === 'advanceBed' && (
                                 <div id="admit-sec-bed" className="space-y-4 scroll-mt-2">
-                                    {wide && <PageSectionTitle n={3} title="Bed & payment" hint="Pick the room type, then a free bed — optional" done={!!form.bedId} />}
 
-                                    <p className={cn('text-[11px] text-slate-500 bg-slate-100 rounded-lg px-3 py-2', wide && 'hidden')}>
+                                    <p className="text-[11px] text-slate-500 bg-slate-100 rounded-lg px-3 py-2">
                                         This step is optional — you can admit now and add bed/payment details later from the dashboard.
                                     </p>
 
@@ -1558,7 +1519,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             )}
                         </div>
                         {wide && (
-                            <aside aria-label="Admission summary" className="self-start rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg shadow-slate-900/5 overflow-hidden">
+                            <aside aria-label="Admission summary" className="self-start max-h-full overflow-y-auto rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg shadow-slate-900/5 overflow-hidden">
                                 <div className="bg-gradient-to-r from-brand-600 to-violet-600 text-white px-4 py-3">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-brand-100">Admission summary</p>
                                     <p className="text-base font-extrabold mt-0.5 truncate">{form.fullName.trim() || namePreview || 'No patient yet'}</p>
@@ -1597,19 +1558,13 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                 {laterItems.length > 0 && (
                                     <p className="mx-4 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"><b>Can be added later</b><br />{laterItems.join(' · ')}</p>
                                 )}
-                                <div className="p-4">
-                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="w-full h-12 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-extrabold shadow-md shadow-brand-600/15">
-                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} {admitLabel}
-                                    </Button>
-                                    {!canSubmit && <p className="mt-2 text-[11px] text-slate-500 text-center">{isEmergencyQuickAdmit ? 'Sex and approximate age are needed to admit.' : 'Name and mobile are needed to admit.'}</p>}
-                                    <button type="button" onClick={closeAll} className="mt-2.5 w-full h-9 rounded-xl text-xs font-bold text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800">Cancel</button>
-                                </div>
+                                <div className="h-3" />
                             </aside>
                         )}
                         </div>
 
-                        {/* Footer — steps only; the one-page layout has its buttons in the summary */}
-                        <div className={cn(wide && 'hidden', "shrink-0 px-4 sm:px-6 pt-3 pb-4 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800")}>
+                        {/* Footer */}
+                        <div className="shrink-0 px-4 sm:px-6 pt-3 pb-4 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800">
                             {/* Helper hint — its own row so it never fights the action buttons for width */}
                             {((step === 'personal' && !canSubmit) || !!selectedPatientId) && (
                                 <div className="mb-2.5">
