@@ -356,7 +356,8 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         const translated = payload.secondLanguage?.fields[f.key]?.trim();
         if (translated && valueByKey[f.key]) {
             cursorY += 4;
-            await drawUnicodeParagraph(translated, sizeBase, '#334155');
+            // The translation prints in brackets after the English.
+            await drawUnicodeParagraph(/^[([].*[)\]]$/s.test(translated) ? translated : `(${translated})`, sizeBase, '#334155');
             cursorY -= 6;
         }
     }

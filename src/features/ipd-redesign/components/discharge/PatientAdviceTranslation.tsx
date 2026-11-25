@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Languages, Loader2 } from 'lucide-react';
+import { Languages, Loader2, X } from 'lucide-react';
 import type { SaveDischargeSummaryFields } from '../../services/dischargeSummaryApi';
 import { PATIENT_ADVICE_SECTIONS, sectionLabel, textOf, type PatientAdviceKey, type Translations } from '../../utils/dischargeSections';
 
 interface Props {
+    /** True once this summary has a translation. Until then only the one-tap offer is shown. */
+    active: boolean;
     languageCode: string;
     languageName: string;
     form: SaveDischargeSummaryFields;
@@ -17,24 +19,52 @@ interface Props {
     busy: boolean;
     onTranslate: () => void;
     onEdit: (key: PatientAdviceKey, value: string) => void;
+    onRemove: () => void;
 }
 
 /**
- * The patient advice in the hospital's second language (e.g. Hindi), printed under the English.
- * English stays the source: AI translates it, a nurse or doctor can correct the wording here, and
- * a section is flagged when its English changed after translating.
+ * The discharge summary prints in English by default. This adds, with one tap, a translation of
+ * the patient advice (e.g. Hindi), printed in brackets after the English. English stays the
+ * source: AI translates it, staff can correct the wording here, a section is flagged when its
+ * English changed after translating, and the translation can be removed again.
  */
-export const PatientAdviceTranslation: React.FC<Props> = ({ languageCode, languageName, form, translations, stale, readOnly, aiReady, busy, onTranslate, onEdit }) => {
+export const PatientAdviceTranslation: React.FC<Props> = ({ active, languageCode, languageName, form, translations, stale, readOnly, aiReady, busy, onTranslate, onEdit, onRemove }) => {
+    // Without AI the translation is typed by hand; this opens the boxes for that.
+    const [typing, setTyping] = useState(false);
     const keys = PATIENT_ADVICE_SECTIONS.filter(k => textOf(form, k).trim());
+    const open = active || typing;
+
+    if (!open) {
+        return (
+            <section aria-label="Translation" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <Languages className="h-4 w-4 text-slate-400 shrink-0" />
+                <p className="text-sm text-slate-700 flex-1 min-w-[200px]">
+                    <span className="font-semibold text-slate-900">Printed in English.</span> Add a {languageName} translation of the advice if the patient needs it — it prints in brackets.
+                </p>
+                <Button type="button" size="sm" variant="outline" className="h-9 rounded-full border-brand-200 text-brand-700 hover:bg-brand-50 font-bold"
+                    disabled={busy || keys.length === 0} title={keys.length === 0 ? 'Write the advice in English first' : undefined}
+                    onClick={aiReady ? onTranslate : () => setTyping(true)}>
+                    {busy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Languages className="h-3.5 w-3.5 mr-1.5" />}
+                    {aiReady ? `Add ${languageName} translation` : `Type ${languageName} translation`}
+                </Button>
+            </section>
+        );
+    }
+
     return (
         <section aria-label={`Advice in ${languageName}`} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
                 <Languages className="h-4 w-4 text-brand-600" />
-                <h3 className="text-sm font-bold text-slate-900 flex-1">Advice in {languageName} <span className="font-normal text-slate-500">— printed under the English</span></h3>
+                <h3 className="text-sm font-bold text-slate-900 flex-1">{languageName} translation <span className="font-normal text-slate-500">— printed in brackets after the English</span></h3>
                 {!readOnly && aiReady && (
                     <Button type="button" size="sm" className="h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white" disabled={busy || keys.length === 0} onClick={onTranslate}>
                         {busy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Languages className="h-3.5 w-3.5 mr-1.5" />}
                         {stale.length ? `Translate ${stale.length} section${stale.length === 1 ? '' : 's'}` : 'Translate again'}
+                    </Button>
+                )}
+                {!readOnly && (
+                    <Button type="button" size="sm" variant="ghost" className="h-9 rounded-full text-slate-600" onClick={() => { setTyping(false); onRemove(); }}>
+                        <X className="h-3.5 w-3.5 mr-1" /> Remove — English only
                     </Button>
                 )}
             </div>

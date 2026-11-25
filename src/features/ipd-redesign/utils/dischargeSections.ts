@@ -152,6 +152,25 @@ export const parseTranslations = (json?: string | null): Translations => {
 
 export const serializeTranslations = (t: Translations): string => JSON.stringify(t);
 
+/** True when at least one advice section has a translation in that language. */
+export const hasTranslation = (t: Translations, lang: string): boolean =>
+    Object.values(t[lang] ?? {}).some(v => !!v && !!v.trim());
+
+/**
+ * The language a translation is offered in. The printout is English by default; a translation is
+ * something staff add per discharge. A summary that already has one keeps its language; otherwise
+ * it is the hospital's choice, or the first language available.
+ */
+export const translationLanguage = (hospitalChoice: string | null | undefined, t: Translations, options: { code: string }[]): string =>
+    Object.keys(t).find(code => hasTranslation(t, code)) ?? (hospitalChoice || options[0]?.code || 'hi');
+
+/** A translation as printed: in brackets after the English. Brackets already typed are not doubled. */
+export const bracketed = (text: string): string => {
+    const v = text.trim();
+    if (!v) return '';
+    return /^[([].*[)\]]$/s.test(v) ? v : `(${v})`;
+};
+
 /** Advice sections whose translation is missing, or older than the English (the English changed after translating). */
 export const staleTranslations = (form: SaveDischargeSummaryFields, t: Translations, lang: string, translatedFrom: Record<string, string>): PatientAdviceKey[] =>
     PATIENT_ADVICE_SECTIONS.filter(k => {
@@ -213,7 +232,9 @@ export const buildSignChecks = (opts: {
         });
     }
 
-    if (secondLanguage) {
+    // English only is the default and needs no check. Once a translation has been added, it should
+    // cover every advice section and match the current English.
+    if (secondLanguage && hasTranslation(translations, secondLanguage)) {
         const stale = staleTranslations(form, translations, secondLanguage, translatedFrom);
         if (stale.length) checks.push({ level: 'warn', text: `The translated advice is missing or out of date for ${stale.length} section(s).`, section: 'patientAdvice' });
     }

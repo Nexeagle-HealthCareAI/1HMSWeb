@@ -12,10 +12,11 @@ const conditionBadge: Record<string, { label: string; bg: string; fg: string; bd
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** A patient-advice section: the English, then (when the hospital prints a second language) the translation under it. */
+/** A patient-advice section: the English, then — only when a translation was added — the translation in brackets. */
 const adviceSection = (title: string, body: string | undefined, second?: { code: string; text?: string }): string => {
     if (!body) return '';
-    const tr = second?.text?.trim();
+    const raw = second?.text?.trim();
+    const tr = raw ? (/^[([].*[)\]]$/s.test(raw) ? raw : `(${raw})`) : '';
     return section(title, esc(body) + (tr ? `<div lang="${second!.code}" style="margin-top:4px; color:#334155; font-family:'Noto Sans Devanagari','Nirmala UI','Mangal',sans-serif;">${esc(tr)}</div>` : ''));
 };
 

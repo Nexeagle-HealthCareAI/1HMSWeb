@@ -18,7 +18,7 @@ import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import { useEffect } from 'react';
 import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
 import { doctorApi } from '@/features/doctor/services/doctorApi';
-import { parseTranslations } from '../utils/dischargeSections';
+import { parseTranslations, hasTranslation, translationLanguage } from '../utils/dischargeSections';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -71,9 +71,11 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
 
             // Patient advice in the hospital's second language, if it prints one.
             const prefs = await dischargeSummaryApi.getHospitalPreferences(hospitalId).catch(() => null);
-            const lang = prefs?.patientLanguage || null;
-            const translated = lang ? parseTranslations(draft.patientAdviceTranslationsJson)[lang] : undefined;
-            const secondLanguage = lang && translated
+            // English by default; a translation prints (in brackets) only when one was added to this summary.
+            const allTranslations = parseTranslations(draft.patientAdviceTranslationsJson);
+            const lang = translationLanguage(prefs?.patientLanguage, allTranslations, prefs?.languageOptions ?? []);
+            const translated = hasTranslation(allTranslations, lang) ? allTranslations[lang] : undefined;
+            const secondLanguage = translated
                 ? { code: lang, name: prefs?.languageOptions.find(l => l.code === lang)?.name ?? lang, fields: { ...translated } }
                 : undefined;
 
