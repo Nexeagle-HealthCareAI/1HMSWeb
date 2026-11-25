@@ -42,14 +42,25 @@ import { ipdBillingService, type PaymentMode } from '@/features/billing/services
 import { otPlanApi, type OTPlanItem } from '@/features/hospital/services/otPlanApi';
 import { PackageTypePicker } from '@/features/hospital/components/masters/PackageTypePicker';
 import { ReferrerPicker } from '../components/ReferrerPicker';
+import { Icd10CodePicker } from '../components/Icd10CodePicker';
 
-type WizardStep = 'admissionType' | 'personal' | 'clinical' | 'advanceBed';
+// Three steps. The admission type is no longer a step of its own — it sits above the steps and
+// can be changed at any point. Only the Patient step has required fields.
+type WizardStep = 'personal' | 'clinical' | 'advanceBed';
 const WIZARD_STEPS: { key: WizardStep; label: string; required: boolean }[] = [
-    { key: 'admissionType', label: 'Admission Type', required: true },
-    { key: 'personal', label: 'Personal Information', required: true },
-    { key: 'clinical', label: 'Clinical & Referral', required: false },
-    { key: 'advanceBed', label: 'Advance & Bed', required: false },
+    { key: 'personal', label: 'Patient', required: true },
+    { key: 'clinical', label: 'Admission', required: false },
+    { key: 'advanceBed', label: 'Bed & payment', required: false },
 ];
+const isWizardStep = (v: unknown): v is WizardStep => WIZARD_STEPS.some(s => s.key === v);
+
+// Quick picks for the expected discharge date, in days from today.
+const STAY_QUICK_PICKS = [1, 2, 3, 5, 7];
+const dateKeyInDays = (days: number): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 // "Planned" shown first — the easier, friendlier name for an elective admission; value stays
 // ELECTIVE (the backend also accepts the literal string "PLANNED" as a synonym).
@@ -223,9 +234,12 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const hospitalId = useAuthStore.getState().getHospitalId() ?? '';
     const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
 
-    const [step, setStep] = useState<WizardStep>('admissionType');
+    const [step, setStep] = useState<WizardStep>('personal');
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const [linkAbhaOpen, setLinkAbhaOpen] = useState(false);
+    // Each step starts at its top — otherwise the next step opens wherever the last one was scrolled to.
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    useEffect(() => { scrollAreaRef.current?.scrollTo({ top: 0 }); }, [step]);
     const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
     // Phone fields: digits only, max 10 — same convention as PatientForm's mobile input.
     const setPhone = (k: 'mobile' | 'alternateMobile' | 'emergencyContactPhone' | 'referringFacilityContact', v: string) =>
@@ -326,7 +340,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             const draft = JSON.parse(raw) as { form: FormState; step: WizardStep; selectedPatientId: string | null; savedAt: number };
             draftRestoredRef.current = true;
             setForm(draft.form);
-            setStep(draft.step);
+            // A draft saved before the type step was folded into the header may carry the old step name.
+            setStep(isWizardStep(draft.step) ? draft.step : 'personal');
             if (draft.selectedPatientId) selectPatient(draft.selectedPatientId);
         } catch { /* ignore */ } finally {
             setPendingDraft(null);
@@ -462,7 +477,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     };
 
     const reset = () => {
-        setStep('admissionType'); setForm(EMPTY_FORM); setSelectedPatientId(null);
+        setStep('personal'); setForm(EMPTY_FORM); setSelectedPatientId(null);
         setPatientDetail(null); setHistory([]); setSuccess(null);
         setPatientSearchTerm(''); setPatientSearchResults([]); setShowPatientSearchResults(false);
         clientRequestIdRef.current = generateUuid();
@@ -772,7 +787,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                                 <span className="flex items-center gap-1.5 text-[11px] font-bold">
                                                     <span className={cn('h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-inner',
                                                         isCurrent ? 'bg-brand-600 text-white shadow-brand-500/25 ring-4 ring-brand-100 dark:ring-brand-900/30' : isVisited ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 border border-emerald-100 dark:border-emerald-900/10' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 border border-transparent')}>{isVisited ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : i + 1}</span>
-                                                    <span className="hidden sm:inline">{s.label}</span>
+                                                    <span className={cn(isCurrent ? 'inline' : 'hidden sm:inline')}>{s.label}{!s.required && <span className="hidden sm:inline font-medium opacity-70"> · optional</span>}</span>
                                                 </span>
                                             </button>
                                         </React.Fragment>
@@ -781,40 +796,46 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
-                            {/* ══ Step 1: Admission Type ══════════════════════════ */}
-                            {step === 'admissionType' && (
-                                <SectionCard icon={<Stethoscope className="h-4 w-4" />} title="Admission type" subtitle="Choose the route this patient is coming through" tone="amber">
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        {ADMISSION_TYPES.map(t => {
-                                            const Icon = t.icon;
-                                            const active = form.admissionType === t.value;
-                                            return (
-                                                <motion.button key={t.value} type="button" onClick={() => set('admissionType', t.value)}
-                                                    whileTap={{ scale: 0.96 }}
-                                                    className={cn('rounded-xl border-2 py-2.5 px-1 text-xs font-bold transition-all flex flex-col items-center justify-center gap-1',
-                                                        active ? cn(t.tone, 'ring-2') : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300')}>
-                                                    <Icon className="h-4 w-4" />{t.label}
-                                                </motion.button>
-                                            );
-                                        })}
+                        <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
+                            {/* Admission type — chosen on the first step; later steps show who is being admitted
+                                and how, with a way back to change it. */}
+                            {step === 'personal' ? (
+                            <div>
+                                <div role="group" aria-label="Admission type" className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                    {ADMISSION_TYPES.map(t => {
+                                        const Icon = t.icon;
+                                        const active = form.admissionType === t.value;
+                                        return (
+                                            <button key={t.value} type="button" aria-pressed={active} onClick={() => set('admissionType', t.value)}
+                                                className={cn('h-10 rounded-xl border px-2 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 min-w-0',
+                                                    active ? cn(t.tone, 'ring-2') : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:border-slate-300')}>
+                                                <Icon className="h-3.5 w-3.5 shrink-0" /><span className="leading-tight text-left">{t.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <p className="mt-2 text-[11px] text-slate-500 dark:text-zinc-400 leading-snug">
+                                    {ADMISSION_TYPES.find(t => t.value === form.admissionType)?.description}
+                                </p>
+                                {form.admissionType === 'ELECTIVE' && (
+                                    <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-zinc-300 mt-2 p-2.5 rounded-xl border border-brand-200 dark:border-brand-900 bg-brand-50/50 dark:bg-brand-950/20 cursor-pointer">
+                                        <input type="checkbox" checked={form.isPreRegistration} onChange={e => set('isPreRegistration', e.target.checked)} className="mt-0.5" />
+                                        <span><span className="font-semibold text-slate-800 dark:text-zinc-100">Patient not yet arrived — pre-register.</span> Confirm arrival later from the roster.</span>
+                                    </label>
+                                )}
+                            </div>
+                            ) : (
+                                <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2">
+                                    <div className="h-8 w-8 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 text-[11px] font-bold flex items-center justify-center shrink-0">{initials(form.fullName || namePreview)}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-bold text-slate-900 dark:text-zinc-50 truncate">{form.fullName || namePreview || 'Patient'}</p>
+                                        <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
+                                            {[form.ageYears ? `${form.ageYears}${form.ageUnit === 'Y' ? '' : form.ageUnit.toLowerCase()} ${form.sex}` : form.sex, selectedPatientId ? `Existing patient ${selectedPatientId}` : 'New patient',
+                                                `${TYPE_LABEL[form.admissionType] ?? form.admissionType}${form.admissionType === 'ELECTIVE' && form.isPreRegistration ? ' · pre-registration' : ''}`].filter(Boolean).join(' · ')}
+                                        </p>
                                     </div>
-
-                                    <AnimatePresence mode="wait">
-                                        <motion.p key={form.admissionType}
-                                            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.15 }}
-                                            className="mt-3 text-[11px] text-slate-600 bg-slate-100 border border-slate-200 rounded-lg p-2.5">
-                                            {ADMISSION_TYPES.find(t => t.value === form.admissionType)?.description}
-                                        </motion.p>
-                                    </AnimatePresence>
-
-                                    {form.admissionType === 'ELECTIVE' && (
-                                        <label className="flex items-start gap-2 text-xs text-slate-600 mt-3 p-2.5 rounded-lg border border-brand-200 bg-brand-50/50 cursor-pointer">
-                                            <input type="checkbox" checked={form.isPreRegistration} onChange={e => set('isPreRegistration', e.target.checked)} className="mt-0.5" />
-                                            <span><span className="font-semibold text-slate-800">Patient not yet arrived — pre-register.</span> Bed/pre-auth can still be arranged now; confirm arrival later from the dashboard.</span>
-                                        </label>
-                                    )}
-                                </SectionCard>
+                                    <button type="button" onClick={() => setStep('personal')} className="text-xs font-bold text-brand-700 dark:text-brand-300 hover:underline shrink-0">Change</button>
+                                </div>
                             )}
 
                             {/* ══ Step 2: Personal Information ═══════════════════ */}
@@ -1175,12 +1196,42 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                             </Field>
                                             <Field label="Provisional diagnosis">
                                                 <Input value={form.diagnosis} onChange={e => set('diagnosis', e.target.value)} className={INPUT_CLS} placeholder="e.g. Pneumonia" />
+                                                {/* Optional helper: look up an ICD-10 term and drop it into the text above.
+                                                    The lookup is per consultant, so it appears once one is chosen. */}
+                                                {form.primaryDoctorId ? (
+                                                    <div className="mt-2">
+                                                        <Icd10CodePicker
+                                                            label="Find an ICD-10 term (optional)"
+                                                            readOnly={false}
+                                                            onSelect={(code, name) => set('diagnosis', `${name} (${code})`)}
+                                                            onClear={() => set('diagnosis', '')}
+                                                            hospitalId={hospitalId}
+                                                            doctorId={form.primaryDoctorId}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500">Choose the consultant to look up an ICD-10 term, or just type the diagnosis.</p>
+                                                )}
                                             </Field>
                                             <Field label="Expected discharge">
                                                 <div className="relative">
                                                     <Input type="date" value={form.expectedDischargeAt} onChange={e => set('expectedDischargeAt', e.target.value)} className={INPUT_CLS} />
                                                     <CalendarClock className="h-3.5 w-3.5 text-slate-300 absolute right-2.5 top-3 pointer-events-none" />
                                                 </div>
+                                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                                    {STAY_QUICK_PICKS.map(days => {
+                                                        const key = dateKeyInDays(days);
+                                                        const active = form.expectedDischargeAt === key;
+                                                        return (
+                                                            <button key={days} type="button" aria-pressed={active} onClick={() => set('expectedDischargeAt', active ? '' : key)}
+                                                                className={cn('h-7 px-2.5 rounded-full text-[11px] font-bold border transition-colors',
+                                                                    active ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:border-slate-300')}>
+                                                                {days === 1 ? 'Tomorrow' : `${days} days`}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <p className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500">Shows on the roster and counts towards "Due out today".</p>
                                             </Field>
                                             <Field label="Reason for admission" className="sm:col-span-2">
                                                 <Textarea value={form.admissionReason} onChange={e => set('admissionReason', e.target.value)} rows={2} className="text-sm rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-visible:ring-brand-500/20 focus-visible:ring-2 focus-visible:border-brand-500 transition-all p-3" placeholder="Chief complaint / notes" />
@@ -1254,24 +1305,30 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
 
                                     {/* ── Bed selection ──────────────────────────────── */}
                                     <SectionCard icon={<BedDouble className="h-4 w-4" />} title="Bed selection" subtitle="Optional — assign now or later from the bed board" tone="sky">
-                                        <div className="relative">
-                                            <BedDouble className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
-                                            <Select value={form.bedId || 'none'} onValueChange={val => set('bedId', val === 'none' ? '' : val)}>
-                                                <SelectTrigger className="h-12 w-full text-sm font-semibold border border-slate-205 dark:border-zinc-800 rounded-xl pl-10 pr-4 bg-white dark:bg-zinc-900 outline-none text-left focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
-                                                    <SelectValue placeholder="— Assign later —" />
-                                                </SelectTrigger>
-                                                <SelectContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl max-h-[250px] overflow-y-auto">
-                                                    <SelectItem value="none" className="rounded-lg cursor-pointer font-semibold text-xs py-2">— Assign later —</SelectItem>
-                                                    {Object.entries(bedsByWard).map(([ward, beds]) => [
-                                                        <div key={`group-${ward}`} className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-555 bg-slate-50/50 dark:bg-zinc-950/20">{ward}</div>,
-                                                        ...beds.map(b => (
-                                                            <SelectItem key={b.bedId} value={b.bedId} className="rounded-lg cursor-pointer font-semibold text-xs py-2 pl-6">
-                                                                {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day
-                                                            </SelectItem>
-                                                        ))
-                                                    ])}
-                                                </SelectContent>
-                                            </Select>
+                                        <div className="space-y-3">
+                                            <button type="button" aria-pressed={!form.bedId} onClick={() => set('bedId', '')}
+                                                className={cn('w-full h-10 rounded-xl border text-xs font-bold transition-colors',
+                                                    !form.bedId ? 'border-brand-400 bg-brand-50 text-brand-700 ring-2 ring-brand-200 dark:bg-brand-950/30 dark:text-brand-300' : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:border-slate-300')}>
+                                                Assign later
+                                            </button>
+                                            {Object.entries(bedsByWard).map(([ward, beds]) => (
+                                                <div key={ward}>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1.5">{ward} <span className="text-slate-400 font-semibold normal-case tracking-normal">· {beds.length} free</span></p>
+                                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                                                        {beds.map(b => {
+                                                            const active = form.bedId === b.bedId;
+                                                            return (
+                                                                <button key={b.bedId} type="button" aria-pressed={active} onClick={() => set('bedId', active ? '' : b.bedId)}
+                                                                    className={cn('rounded-xl border px-2 py-2 text-left transition-colors min-w-0',
+                                                                        active ? 'border-brand-500 bg-brand-600 text-white shadow-sm' : 'border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/20 text-slate-900 dark:text-zinc-50 hover:border-emerald-400')}>
+                                                                    <span className="block font-mono text-xs font-black truncate">{b.bedCode}</span>
+                                                                    <span className={cn('block text-[10px] font-semibold mt-0.5 truncate', active ? 'text-brand-100' : 'text-slate-600 dark:text-zinc-400')}>₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
 
                                         <AnimatePresence mode="wait">
@@ -1416,7 +1473,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         {/* Footer */}
                         <div className="shrink-0 px-4 sm:px-6 pt-3 pb-4 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800">
                             {/* Helper hint — its own row so it never fights the action buttons for width */}
-                            {((step === 'personal' && !canSubmit) || (!!selectedPatientId && step !== 'admissionType')) && (
+                            {((step === 'personal' && !canSubmit) || !!selectedPatientId) && (
                                 <div className="mb-2.5">
                                     {step === 'personal' && !canSubmit && (
                                         <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">
@@ -1426,44 +1483,39 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     {!!selectedPatientId && <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate">Re-admitting <span className="font-mono">{selectedPatientId}</span></p>}
                                 </div>
                             )}
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <Button variant="outline" className="h-11 sm:h-10 px-4 rounded-xl border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all" onClick={step === 'admissionType' ? closeAll : () => setStep(WIZARD_STEPS[WIZARD_STEPS.findIndex(s => s.key === step) - 1].key)}>
-                                    {step === 'admissionType' ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
-                                </Button>
-                                {/* Desktop: push actions to the right; mobile: buttons flex-fill instead. */}
-                                <div className="hidden sm:block sm:flex-1" />
-                                {step === 'admissionType' && (
-                                    <Button onClick={() => setStep('personal')} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
-                                        Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                                    </Button>
-                                )}
-                                {step === 'personal' && (
-                                    <>
-                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-xl border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0 active:scale-[0.98] transition-all">
-                                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
+                            {(() => {
+                                const stepIndex = WIZARD_STEPS.findIndex(s => s.key === step);
+                                const next = WIZARD_STEPS[stepIndex + 1];
+                                const isPreReg = form.admissionType === 'ELECTIVE' && form.isPreRegistration;
+                                const primaryCls = 'h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white min-w-0';
+                                return (
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <Button variant="outline" className="h-11 sm:h-10 px-4 rounded-xl border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all shrink-0"
+                                            onClick={stepIndex === 0 ? closeAll : () => setStep(WIZARD_STEPS[stepIndex - 1].key)}>
+                                            {stepIndex === 0 ? <><X className="h-4 w-4 mr-1" /> Cancel</> : 'Back'}
                                         </Button>
-                                        <Button onClick={() => setStep('clinical')} disabled={!canSubmit} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
-                                            Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                                        </Button>
-                                    </>
-                                )}
-                                {step === 'clinical' && (
-                                    <>
-                                        <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit} className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-xl border-zinc-250 dark:border-zinc-700 text-zinc-650 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900/50 min-w-0 active:scale-[0.98] transition-all">
-                                            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">Skip &amp; admit</span>
-                                        </Button>
-                                        <Button onClick={() => setStep('advanceBed')} className="h-11 sm:h-10 flex-1 sm:flex-none px-5 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
-                                            Next <ArrowRight className="h-4 w-4 ml-1.5" />
-                                        </Button>
-                                    </>
-                                )}
-                                {step === 'advanceBed' && (
-                                    <Button onClick={submit} disabled={!canSubmit || submitting} className="h-11 sm:h-10 flex-1 sm:flex-none px-6 bg-brand-600 hover:bg-brand-700 font-bold rounded-xl shadow-md shadow-brand-600/10 active:scale-[0.98] transition-all text-white">
-                                        {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
-                                        {form.admissionType === 'ELECTIVE' && form.isPreRegistration ? 'Pre-register patient' : 'Admit patient'}
-                                    </Button>
-                                )}
-                            </div>
+                                        {/* Desktop: push actions to the right; mobile: buttons flex-fill instead. */}
+                                        <div className="hidden sm:block sm:flex-1" />
+                                        {next ? (
+                                            <>
+                                                {/* Everything after the Patient step is optional, so admitting is offered from every step. */}
+                                                <Button variant="outline" disabled={!canSubmit || submitting} onClick={submit}
+                                                    className="h-11 sm:h-10 flex-1 sm:flex-none px-4 rounded-xl border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 font-bold hover:bg-brand-50 dark:hover:bg-brand-950/30 min-w-0 active:scale-[0.98] transition-all">
+                                                    {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} <span className="truncate">{isPreReg ? 'Pre-register now' : 'Admit now'}</span>
+                                                </Button>
+                                                <Button onClick={() => setStep(next.key)} disabled={!canSubmit} className={primaryCls}>
+                                                    <span className="truncate">Next<span className="hidden sm:inline">: {next.label}</span></span> <ArrowRight className="h-4 w-4 ml-1.5 shrink-0" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button onClick={submit} disabled={!canSubmit || submitting} className={primaryCls}>
+                                                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                                                {isPreReg ? 'Pre-register patient' : 'Admit patient'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </>
                 )}
