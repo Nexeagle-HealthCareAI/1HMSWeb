@@ -18,6 +18,7 @@ import { useDischargeFieldLayout } from '../hooks/useDischargeFieldLayout';
 import { useEffect } from 'react';
 import { generateDefaultLetterheadTemplate } from '@/components/shared/prescription-preview';
 import { doctorApi } from '@/features/doctor/services/doctorApi';
+import { parseTranslations } from '../utils/dischargeSections';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -68,6 +69,14 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 console.warn('Could not fetch IRDAI info for print:', err);
             }
 
+            // Patient advice in the hospital's second language, if it prints one.
+            const prefs = await dischargeSummaryApi.getHospitalPreferences(hospitalId).catch(() => null);
+            const lang = prefs?.patientLanguage || null;
+            const translated = lang ? parseTranslations(draft.patientAdviceTranslationsJson)[lang] : undefined;
+            const secondLanguage = lang && translated
+                ? { code: lang, name: prefs?.languageOptions.find(l => l.code === lang)?.name ?? lang, fields: { ...translated } }
+                : undefined;
+
             // 3. Build data
             const printData = {
                 admissionNo: admission.admissionNo,
@@ -94,6 +103,9 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 dietInstructions: draft.dietInstructions || undefined,
                 activityRestrictions: draft.activityRestrictions || undefined,
                 additionalNotes: draft.additionalNotes || undefined,
+                keyInvestigations: draft.keyInvestigations || undefined,
+                warningSigns: draft.warningSigns || undefined,
+                secondLanguage,
                 signedByDoctorName: draft.signedByDoctorName ?? undefined,
                 signedAt: draft.signedAt ?? undefined,
                 tpaSplit: tpaSplitData && !isCash ? {
@@ -107,7 +119,8 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
             // Check for a custom or system-default letterhead
             let options: DischargeTemplateBoundOptions | null = null;
             if (layoutDoctorId && hospitalId) {
-                const settings = await dischargeSettingsApi.getDischargeSettings(layoutDoctorId, hospitalId);
+                // The doctor's own letterhead, else the hospital's.
+                const settings = await dischargeSettingsApi.getEffectiveDischargeSettings(layoutDoctorId, hospitalId);
                 let templateFile: File | null = null;
                 if (settings?.useSystemDefaultLetterhead) {
                     const doctorProfile = await doctorApi.getDoctorProfile(layoutDoctorId).catch(() => null);
@@ -199,9 +212,12 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                     dietInstructions: printData.dietInstructions,
                                     activityRestrictions: printData.activityRestrictions,
                                     additionalNotes: printData.additionalNotes,
+                                    keyInvestigations: printData.keyInvestigations,
+                                    warningSigns: printData.warningSigns,
                                 },
                                 customFieldValues,
                                 tpaSplit: printData.tpaSplit,
+                                secondLanguage: printData.secondLanguage,
                             },
                             printFields: layoutFields.map(f => ({ key: f.key, label: f.label, showInPrint: f.showInPrint })),
                         };

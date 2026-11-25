@@ -13,6 +13,8 @@ import { useDepartmentApi, useDoctorApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 import { Loader2, ClipboardList, FileText, Ruler, Eye, Sparkles } from 'lucide-react';
 import { useDischargeDesigner, type MarginConfig, type TypographySettings } from '../hooks/useDischargeDesigner';
+import { HOSPITAL_LETTERHEAD_ID } from '../services/dischargeSettingsApi';
+import { HospitalDischargePreferencesCard } from './discharge/HospitalDischargePreferencesCard';
 
 const clampMargin = (value: number) => (Number.isNaN(value) ? 10 : Math.min(Math.max(value, 0), 1000));
 
@@ -30,6 +32,8 @@ export const DischargeLetterheadConfig: React.FC = () => {
     const { hospitalId } = useAuthStore();
     const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
     const [selectedDoctorId, setSelectedDoctorId] = useState('');
+    // The hospital letterhead is what every doctor without their own prints on.
+    const [scope, setScope] = useState<'hospital' | 'doctor'>('hospital');
 
     const { data: departmentsData, isLoading: isLoadingDepartments } = useDepartmentApi.getDepartmentsByHospitalId(hospitalId || '');
     const { data: doctorsData, isLoading: isLoadingDoctors } = useDoctorApi.getDoctorsByDepartment(selectedDepartmentId, hospitalId || '');
@@ -40,7 +44,8 @@ export const DischargeLetterheadConfig: React.FC = () => {
         [doctors, selectedDoctorId]
     );
 
-    const designer = useDischargeDesigner(selectedDoctorId, hospitalId || undefined, selectedDoctorName);
+    const designerDoctorId = scope === 'hospital' ? HOSPITAL_LETTERHEAD_ID : selectedDoctorId;
+    const designer = useDischargeDesigner(designerDoctorId, hospitalId || undefined, scope === 'hospital' ? undefined : selectedDoctorName);
 
     const [successOpen, setSuccessOpen] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
@@ -77,9 +82,25 @@ export const DischargeLetterheadConfig: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            {hospitalId && <HospitalDischargePreferencesCard hospitalId={hospitalId} />}
+
             <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-r from-brand-50/50 to-brand-50/50 dark:from-brand-900/10 dark:to-brand-900/10">
-                <CardContent className="p-4">
+                <CardContent className="p-4 space-y-4">
+                    <div>
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Letterhead for</Label>
+                        <RadioGroup value={scope} onValueChange={v => setScope(v as 'hospital' | 'doctor')} className="mt-2 flex flex-col sm:flex-row gap-3">
+                            <label className="flex items-start gap-2 rounded-xl border bg-white dark:bg-gray-950 p-3 cursor-pointer flex-1">
+                                <RadioGroupItem value="hospital" className="mt-0.5" />
+                                <span><span className="block text-sm font-semibold">The whole hospital</span><span className="block text-xs text-muted-foreground">Used by every doctor who hasn't uploaded their own.</span></span>
+                            </label>
+                            <label className="flex items-start gap-2 rounded-xl border bg-white dark:bg-gray-950 p-3 cursor-pointer flex-1">
+                                <RadioGroupItem value="doctor" className="mt-0.5" />
+                                <span><span className="block text-sm font-semibold">One doctor</span><span className="block text-xs text-muted-foreground">Their own letterhead, used instead of the hospital's.</span></span>
+                            </label>
+                        </RadioGroup>
+                    </div>
                     <div className="flex flex-col md:flex-row items-end gap-4">
+                        {scope === 'doctor' && (<>
                         <div className="flex-1 w-full space-y-1.5">
                             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Department</Label>
                             <Select value={selectedDepartmentId} onValueChange={(v) => { setSelectedDepartmentId(v); setSelectedDoctorId(''); }}>
@@ -106,15 +127,17 @@ export const DischargeLetterheadConfig: React.FC = () => {
                                 </SelectContent>
                             </Select>
                         </div>
+                        </>)}
+                        {scope === 'hospital' && <div className="flex-1 text-sm text-muted-foreground">Upload the hospital's letterhead PDF below, then set the margins.</div>}
                         <Button variant="outline" size="sm" className="h-10 px-4 gap-2 whitespace-nowrap"
-                            onClick={() => designer.generatePreview().then((url) => { if (url) window.open(url, '_blank', 'noopener'); })} disabled={!selectedDoctorId}>
+                            onClick={() => designer.generatePreview().then((url) => { if (url) window.open(url, '_blank', 'noopener'); })} disabled={!designerDoctorId}>
                             <Eye className="h-4 w-4" /> Live Preview
                         </Button>
                     </div>
                 </CardContent>
             </Card>
 
-            {selectedDoctorId ? (
+            {designerDoctorId ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Layout controls */}
                     <div className="space-y-6">

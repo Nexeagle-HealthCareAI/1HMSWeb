@@ -118,6 +118,13 @@ export interface DischargeSummaryTpaLine {
     netAmount: number;
 }
 
+export interface DischargeSecondLanguage {
+    code: string;   // e.g. "hi"
+    name: string;   // e.g. "Hindi"
+    /** Translated advice keyed by section: followUpInstructions, dietInstructions, activityRestrictions, warningSigns. */
+    fields: Record<string, string | undefined>;
+}
+
 export interface DischargeSummaryPrintData {
     admissionNo: string;
     patientName: string;
@@ -143,6 +150,10 @@ export interface DischargeSummaryPrintData {
     dietInstructions?: string;
     activityRestrictions?: string;
     additionalNotes?: string;
+    keyInvestigations?: string;
+    warningSigns?: string;
+    /** Patient advice in the hospital's second language, printed under the English. */
+    secondLanguage?: DischargeSecondLanguage;
     signedByDoctorName?: string;
     signedAt?: string;
     // Present only for TPA/SCHEME admissions.
