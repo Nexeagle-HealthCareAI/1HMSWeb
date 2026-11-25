@@ -1,5 +1,5 @@
 import React from 'react';
-import { Hotel, LayoutGrid, UserPlus, Gauge, Package, Plus } from 'lucide-react';
+import { Hotel, LayoutGrid, UserPlus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 
@@ -9,9 +9,9 @@ const TABS: { key: IpdTab; label: string; short: string; icon: React.ElementType
     { key: 'roster', label: 'Live roster', short: 'Roster', icon: Hotel },
     { key: 'bedboard', label: 'Bed board', short: 'Beds', icon: LayoutGrid },
     { key: 'referred', label: 'Referred admissions', short: 'Referred', icon: UserPlus },
-    { key: 'kpis', label: 'KPIs', short: 'KPIs', icon: Gauge },
-    { key: 'cssd', label: 'CSSD', short: 'CSSD', icon: Package },
 ];
+// KPIs and CSSD are not shown as tabs for now. Their screens and routes ('kpis' / 'cssd' in IpdTab)
+// are kept, so bringing a tab back is one line here.
 
 interface Props {
     active: IpdTab;
