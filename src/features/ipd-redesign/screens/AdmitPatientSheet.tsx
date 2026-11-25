@@ -31,7 +31,6 @@ import {
     type DuplicateMatch, type DuplicateConfidence,
 } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
-import { consentApi, type ConsentTemplateItem } from '../services/consentApi';
 import { isAboveEntitlement } from '../utils/roomEntitlement';
 import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
@@ -351,9 +350,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [doctors, setDoctors] = useState<HospitalDoctorItem[]>([]);
     // OT Plan picker (optional) — pre-fills entitledRoomCategory and shows an ICU hint.
     const [otPlans, setOtPlans] = useState<OTPlanItem[]>([]);
-    // Active GENERAL_ADMISSION consent template, if the hospital has configured one — the consent
-    // checkbox only renders when this is non-null (never blocks admission on missing config).
-    const [generalConsentTemplate, setGeneralConsentTemplate] = useState<ConsentTemplateItem | null>(null);
 
     // Offline-resync idempotency key: one per admit attempt, reused across retries of the same
     // submission so a retried network call can't create a duplicate admission.
@@ -427,9 +423,6 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
             .then(items => setAvailableBeds(items.filter(b => b.isActive && !b.admissionId && (b.statusCode ?? 'AVAILABLE') === 'AVAILABLE')))
             .catch(() => setAvailableBeds([]));
         admissionApi.getHospitalDoctors().then(setDoctors).catch(() => setDoctors([]));
-        consentApi.getTemplates('GENERAL_ADMISSION')
-            .then(templates => setGeneralConsentTemplate(templates.find(t => t.isActive) ?? null))
-            .catch(() => setGeneralConsentTemplate(null));
         otPlanApi.list().then(res => setOtPlans(res?.plans ?? [])).catch(() => setOtPlans([]));
     }, [open]);
 
@@ -639,19 +632,8 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                 setSuccess({ admissionNo: res.admissionNo, patientId: res.patientId, isNewPatient: res.isNewPatient, admissionId: res.admissionId, statusCode: res.statusCode, admittedAt: res.admittedAt });
                 toast({ title: isPreRegistration ? 'Patient pre-registered' : 'Patient admitted', description: `${res.admissionNo} · Patient ID ${res.patientId}` });
                 clearDraft();
-                // Best-effort general consent capture — never blocks or undoes an admission that
-                // already succeeded. Skipped entirely for a pre-registration (patient not yet
-                // physically present); captured instead at confirm-arrival time.
-                if (!isPreRegistration && form.consentObtained && generalConsentTemplate && res.admissionId) {
-                    try {
-                        await consentApi.sign(res.admissionId, generalConsentTemplate.consentTemplateId, {
-                            signedByName: form.consentSignedByName.trim() || form.fullName.trim() || 'Patient',
-                            signerRelation: form.consentSignerRelation.trim() || 'Self',
-                        });
-                    } catch {
-                        // Non-fatal — admission stands either way.
-                    }
-                }
+                // General consent is not captured here any more — it is recorded from the patient workspace,
+                // which reminds staff until it is done. (A draft saved earlier with the old tick is ignored.)
                 // Best-effort advance collection — the "Deposit expected" figure becomes a real
                 // BillingPayment(ADVANCE) right away when staff opt in, instead of only ever being
                 // a printed-slip reference number. Needs a billing encounter (skipped for
@@ -1191,24 +1173,7 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                                     </SectionCard>
                                     </div>
 
-                                    {generalConsentTemplate && !(form.admissionType === 'ELECTIVE' && form.isPreRegistration) && (
-                                        <SectionCard icon={<ShieldCheck className="h-4 w-4" />} title="General consent" subtitle="Optional — can also be captured later" tone="emerald">
-                                            <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
-                                                <input type="checkbox" checked={form.consentObtained} onChange={e => set('consentObtained', e.target.checked)} className="mt-0.5" />
-                                                <span>General admission &amp; treatment consent obtained from the patient/attendant.</span>
-                                            </label>
-                                            {form.consentObtained && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                                    <Field label="Signed by">
-                                                        <Input value={form.consentSignedByName} onChange={e => set('consentSignedByName', e.target.value)} className={INPUT_CLS} placeholder={form.fullName || 'Patient name'} />
-                                                    </Field>
-                                                    <Field label="Relation to patient">
-                                                        <Input value={form.consentSignerRelation} onChange={e => set('consentSignerRelation', e.target.value)} className={INPUT_CLS} placeholder="Self" />
-                                                    </Field>
-                                                </div>
-                                            )}
-                                        </SectionCard>
-                                    )}
+                                    {/* General consent is recorded from the patient workspace (it shows a reminder there until done), not here. */}
                                 </div>
                             )}
 

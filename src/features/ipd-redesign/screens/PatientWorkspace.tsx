@@ -590,6 +590,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                             onOpenOrders={() => { setActiveSection('cpoe'); setActiveCpoeTab('lab'); }}
                             onOpenFluids={() => { setActiveSection('nursing'); setActiveNursingTab('intakeOutput'); }}
                             onOpenDischarge={() => setActiveSection('discharge')}
+                            onOpenConsent={() => setActiveSection('consent')}
                         />
                         <h2 className="pt-1 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">Stay — bed, doctor and referrer</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
