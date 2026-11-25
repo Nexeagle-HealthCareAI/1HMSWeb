@@ -14,8 +14,7 @@ import { dischargeSummaryApi, type AiDictationResult, type AiSectionKey, type Co
 import {
     FOLLOW_UP_QUICK, PATIENT_ADVICE_SECTIONS, applyMedicationSuggestion, applyProposal, buildSignChecks, emptyAiSections, followUpDateFromDays,
     isAiSection, markEdited, parseSources, parseTranslations, sectionStatus, serializeSources, serializeTranslations, staleTranslations, textOf, usefulProposals,
-    type PatientAdviceKey, type Proposals,
-} from '../utils/dischargeSections';
+    type PatientAdviceKey, type Proposals, hasTranslation, translationLanguage } from '../utils/dischargeSections';
 import { AiProposalBlock, DischargeStageBar, DischargeWriteBar, FollowUpQuickPicks, MedicationSuggestionList, SectionMeta, SignChecklist } from './discharge/DischargeAssistParts';
 import { DischargeDictationDialog } from './discharge/DischargeDictationDialog';
 import { PatientAdviceTranslation } from './discharge/PatientAdviceTranslation';
@@ -129,8 +128,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
     }, [hospitalId]);
     const aiReady = !!prefs?.aiAvailable && prefs.aiAssistEnabled;
     const aiNote = !prefs ? null : !prefs.aiAvailable ? 'AI help is not set up on this server yet.' : !prefs.aiAssistEnabled ? 'AI help is switched off for this hospital (Admin → Configuration → Discharge letterhead).' : null;
-    const secondLanguage = prefs?.patientLanguage || null;
-    const secondLanguageName = prefs?.languageOptions.find(l => l.code === secondLanguage)?.name ?? 'Hindi';
+    const hospitalLanguage = prefs?.patientLanguage || null;
 
     const [proposals, setProposals] = useState<Proposals>({});
     const [proposalOrigin, setProposalOrigin] = useState<Partial<Record<AiSectionKey, string>>>({});
@@ -213,6 +211,11 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
     const sources = useMemo(() => parseSources(form.sectionSourcesJson), [form.sectionSourcesJson]);
     const translations = useMemo(() => parseTranslations(form.patientAdviceTranslationsJson), [form.patientAdviceTranslationsJson]);
+    // The printout is English by default. A translation (printed in brackets) is added per discharge
+    // with one tap; this is the language it is offered in.
+    const secondLanguage = translationLanguage(hospitalLanguage, translations, prefs?.languageOptions ?? []);
+    const secondLanguageName = prefs?.languageOptions.find(l => l.code === secondLanguage)?.name ?? 'Hindi';
+    const translationOn = hasTranslation(translations, secondLanguage);
 
     /** A doctor typing in a section: save the text and mark the section as written by the doctor. */
     const editField = (key: keyof SaveDischargeSummaryFields, value: string) =>
@@ -297,7 +300,16 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
         setMedSuggestions(m => m.filter((_, i) => i !== index));
     };
 
-    const staleAdvice: PatientAdviceKey[] = secondLanguage ? staleTranslations(form, translations, secondLanguage, translatedFrom) : [];
+    const staleAdvice: PatientAdviceKey[] = staleTranslations(form, translations, secondLanguage, translatedFrom);
+
+    const removeTranslation = () => {
+        setForm(f => {
+            const t = parseTranslations(f.patientAdviceTranslationsJson);
+            delete t[secondLanguage];
+            return { ...f, patientAdviceTranslationsJson: serializeTranslations(t) };
+        });
+        setTranslatedFrom({});
+    };
 
     const translateAdvice = async () => {
         if (!secondLanguage) return;
@@ -593,6 +605,13 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             proceduresPerformed: form.proceduresPerformed,
             conditionAtDischarge: form.conditionAtDischarge || 'STABLE',
             dischargeMedications: formatMedicationsForPrint(form.medications),
+            medications: (form.medications ?? []).filter(m => m.medicineName?.trim()).map(m => ({
+                name: m.medicineName!.trim(), dose: m.dosage, route: m.route, frequency: m.frequency, duration: m.durations, instructions: m.instructions,
+            })),
+            consultant: admission.primaryDoctorName || undefined,
+            wardBed: admission.bedCode ? `${admission.wardName ? `${admission.wardName} · ` : ''}${admission.bedCode}` : undefined,
+            payer: admission.payerName ? `${admission.payerName} (${admission.payerType})` : admission.payerType,
+            hospitalPhone: buildPrintSettingsFromHospital(hospitalData).phone || undefined,
             followUpInstructions: form.followUpInstructions,
             followUpDate: form.followUpDate,
             dietInstructions: form.dietInstructions,
@@ -600,7 +619,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
             additionalNotes: form.additionalNotes,
             keyInvestigations: form.keyInvestigations,
             warningSigns: form.warningSigns,
-            secondLanguage: secondLanguage && translations[secondLanguage]
+            secondLanguage: translationOn
                 ? { code: secondLanguage, name: secondLanguageName, fields: { ...translations[secondLanguage] } }
                 : undefined,
             signedByDoctorName: signedByDoctorName ?? undefined,
@@ -755,6 +774,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                     warningSigns: data.warningSigns,
                 },
                 customFieldValues,
+                medications: data.medications,
+                wardBed: data.wardBed,
+                payer: data.payer,
+                hospitalPhone: data.hospitalPhone,
                 tpaSplit: data.tpaSplit,
                 secondLanguage: data.secondLanguage,
             },
@@ -1059,8 +1082,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
 
                     </div>
 
-                    {secondLanguage && (
+                    {(!isSigned || translationOn) && (
                         <PatientAdviceTranslation
+                            active={translationOn}
+                            onRemove={removeTranslation}
                             languageCode={secondLanguage}
                             languageName={secondLanguageName}
                             form={form}
@@ -1084,7 +1109,7 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                         <h3 className="text-sm font-bold text-slate-900">Printout</h3>
                         <p className="text-xs text-slate-500">
                             {inkDischargeTemplateUrl ? 'Prints on the letterhead.' : 'No letterhead uploaded — prints on the standard layout.'}
-                            {secondLanguage ? ` Patient advice also in ${secondLanguageName}.` : ''}
+                            {translationOn ? ` Patient advice in English with ${secondLanguageName} in brackets.` : ' In English.'}
                         </p>
                         <div className="grid grid-cols-2 gap-2">
                             <Button variant="outline" size="sm" className="h-10" onClick={openLetterheadPreview}><Eye className="h-3.5 w-3.5 mr-1.5" /> Preview</Button>
@@ -1266,9 +1291,10 @@ export const DischargeSummaryPanel: React.FC<Props> = ({ admission, isActive, on
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Customize discharge summary fields</DialogTitle>
-                        <DialogDescription>Applies to every discharge summary you fill in or print, across all your hospitals.</DialogDescription>
+                        <DialogDescription>Applies to the discharge summaries of {admission.primaryDoctorName || 'this consultant'} at this hospital — the form and the printout.</DialogDescription>
                     </DialogHeader>
-                    <DischargeFieldLayoutEditor />
+                    {/* Edit the same layout this screen and the printout read: the admitting consultant's. */}
+                    <DischargeFieldLayoutEditor overrideDoctorId={layoutDoctorId || undefined} doctorName={admission.primaryDoctorName} />
                 </DialogContent>
             </Dialog>
 

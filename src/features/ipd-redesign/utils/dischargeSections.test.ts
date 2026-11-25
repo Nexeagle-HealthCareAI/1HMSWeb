@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     applyMedicationSuggestion, applyProposal, buildSignChecks, emptyAiSections, followUpDateFromDays, markEdited,
     parseSources, parseTranslations, sectionStatus, staleTranslations, usefulProposals, describeSuggestion,
+    bracketed, hasTranslation, translationLanguage,
 } from './dischargeSections';
 
 describe('section sources', () => {
@@ -117,5 +118,39 @@ describe('before you sign', () => {
         const text = checks.map(c => c.text).join(' | ');
         expect(text).not.toContain('Key investigations');
         expect(text).not.toContain('follow-up date');
+    });
+});
+
+describe('translation is optional — English by default', () => {
+    const form = { finalDiagnosis: 'Pneumonia', courseInHospital: 'Improved', medications: [{ medicineName: 'A' }], followUpInstructions: 'Review in 7 days', dietInstructions: 'Soft diet' };
+    const base = { form, sources: {}, pending: [], visible: () => true };
+    const mentionsTranslation = (checks: { text: string }[]) => checks.some(c => /translat/i.test(c.text));
+
+    it('does not ask for a translation when none was added', () => {
+        expect(mentionsTranslation(buildSignChecks({ ...base, secondLanguage: 'hi', translations: {} }))).toBe(false);
+        expect(mentionsTranslation(buildSignChecks({ ...base, secondLanguage: 'hi', translations: { hi: { followUpInstructions: '  ' } } }))).toBe(false);
+    });
+    it('points out a half-done translation once one was added', () => {
+        expect(mentionsTranslation(buildSignChecks({ ...base, secondLanguage: 'hi', translations: { hi: { followUpInstructions: '7 दिन बाद दिखाएं' } } }))).toBe(true);
+    });
+    it('is quiet when every advice section is translated', () => {
+        expect(mentionsTranslation(buildSignChecks({ ...base, secondLanguage: 'hi', translations: { hi: { followUpInstructions: '7 दिन बाद दिखाएं', dietInstructions: 'नरम भोजन' } } }))).toBe(false);
+    });
+    it('knows whether a summary has a translation', () => {
+        expect(hasTranslation({}, 'hi')).toBe(false);
+        expect(hasTranslation({ hi: { dietInstructions: ' ' } }, 'hi')).toBe(false);
+        expect(hasTranslation({ hi: { dietInstructions: 'नरम भोजन' } }, 'hi')).toBe(true);
+    });
+    it('offers the hospital language, or the first available, and keeps the language already used', () => {
+        expect(translationLanguage(null, {}, [{ code: 'hi' }])).toBe('hi');
+        expect(translationLanguage('mr', {}, [{ code: 'hi' }, { code: 'mr' }])).toBe('mr');
+        expect(translationLanguage('mr', { hi: { dietInstructions: 'नरम भोजन' } }, [{ code: 'hi' }, { code: 'mr' }])).toBe('hi');
+        expect(translationLanguage(undefined, {}, [])).toBe('hi');
+    });
+    it('prints the translation in brackets, once', () => {
+        expect(bracketed('नरम भोजन')).toBe('(नरम भोजन)');
+        expect(bracketed(' (नरम भोजन) ')).toBe('(नरम भोजन)');
+        expect(bracketed('  ')).toBe('');
+        expect(bracketed('line one\nline two')).toBe('(line one\nline two)');
     });
 });

@@ -48,15 +48,13 @@ export const HospitalDischargePreferencesCard: React.FC<{ hospitalId: string }> 
             <CardContent className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1">
-                        <Label className="flex items-center gap-2 text-sm font-semibold"><Languages className="h-4 w-4 text-brand-600" /> Language of the patient advice</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">English is always printed. You can add a second language under it — AI translates it and staff can correct the wording.</p>
+                        <Label className="flex items-center gap-2 text-sm font-semibold"><Languages className="h-4 w-4 text-brand-600" /> Translation language for patient advice</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">The printout is in English. On any discharge, staff can tap to add a translation of the advice, printed in brackets after the English. Choose the language that tap offers.</p>
                     </div>
                     <div role="radiogroup" aria-label="Patient advice language" className="flex gap-1 p-1 rounded-full bg-slate-100 border border-slate-200 self-start">
-                        <button type="button" role="radio" aria-checked={language === ''} onClick={() => setLanguage('')}
-                            className={`h-9 px-4 rounded-full text-xs font-bold ${language === '' ? 'bg-brand-600 text-white' : 'text-slate-600'}`}>English only</button>
                         {prefs.languageOptions.map(l => (
-                            <button key={l.code} type="button" role="radio" aria-checked={language === l.code} onClick={() => setLanguage(l.code)}
-                                className={`h-9 px-4 rounded-full text-xs font-bold ${language === l.code ? 'bg-brand-600 text-white' : 'text-slate-600'}`}>English + {l.name}</button>
+                            <button key={l.code} type="button" role="radio" aria-checked={(language || prefs.languageOptions[0]?.code) === l.code} onClick={() => setLanguage(l.code)}
+                                className={`h-9 px-4 rounded-full text-xs font-bold ${(language || prefs.languageOptions[0]?.code) === l.code ? 'bg-brand-600 text-white' : 'text-slate-600'}`}>{l.name}</button>
                         ))}
                     </div>
                 </div>

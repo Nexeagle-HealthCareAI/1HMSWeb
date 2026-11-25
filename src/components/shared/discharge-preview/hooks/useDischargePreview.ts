@@ -25,8 +25,14 @@ const TRANSLATABLE_DISCHARGE_FIELD_KEYS = [
     'followUpInstructions',
     'dietInstructions',
     'activityRestrictions',
+    'warningSigns',
+    'keyInvestigations',
     'additionalNotes',
 ] as const;
+
+const LANGUAGE_CODES: Record<string, string> = { Hindi: 'hi', Bengali: 'bn' };
+
+export const TRANSLATION_UNAVAILABLE = 'Could not translate just now — showing English only. Please try again.';
 
 /**
  * Translates one discharge preview's payload. Deliberately does NOT translate
@@ -90,7 +96,43 @@ export async function translateDischargeOptions(
 
 /** Mirrors usePrescriptionPreview.ts — builds the pdf-lib letterhead-bound discharge PDF and
  * exposes it as a blob: URL for an iframe/embed. */
-export const useDischargePreview = (options: DischargeTemplateBoundOptions | null, targetLanguage?: string) => {
+/**
+ * Builds the options for a preview in English plus `targetLanguage` in brackets. English is never
+ * replaced: each translated section is attached as the bracketed second-language line, and wording
+ * staff already saved for that language wins over a fresh machine translation.
+ *
+ * Returns null when nothing came back translated (the server hands back the English on failure),
+ * so the caller can say so instead of showing an unchanged page with no explanation.
+ */
+export async function withBracketedTranslation(
+    options: DischargeTemplateBoundOptions,
+    targetLanguage: string,
+): Promise<DischargeTemplateBoundOptions | null> {
+    const translated = await translateDischargeOptions(options, targetLanguage);
+    const fields: Record<string, string | undefined> = {};
+    for (const key of TRANSLATABLE_DISCHARGE_FIELD_KEYS) {
+        const english = options.payload.fields[key]?.trim();
+        const other = translated.payload.fields[key]?.trim();
+        if (english && other && other !== english) fields[key] = other;
+    }
+    const saved = options.payload.secondLanguage;
+    if (saved && saved.name === targetLanguage) {
+        for (const [key, value] of Object.entries(saved.fields)) if (value?.trim()) fields[key] = value;
+    }
+    if (Object.keys(fields).length === 0) return null;
+    return {
+        ...options,
+        payload: { ...options.payload, secondLanguage: { code: LANGUAGE_CODES[targetLanguage] ?? targetLanguage.toLowerCase().slice(0, 2), name: targetLanguage, fields } },
+    };
+}
+
+/**
+ * `targetLanguage` undefined = English only. With a language, the preview is English with that
+ * language in brackets. `translate` false shows only what was already saved on the summary for
+ * that language (no network call) — used when the preview first opens.
+ */
+export const useDischargePreview = (options: DischargeTemplateBoundOptions | null, targetLanguage?: string, translate = true) => {
+    const [notice, setNotice] = useState<string | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -111,17 +153,27 @@ export const useDischargePreview = (options: DischargeTemplateBoundOptions | nul
         setError(null);
         try {
             let processedOptions = options;
+            let nextNotice: string | null = null;
 
-            if (targetLanguage) {
-                // Translation failure must never block the preview -- mirrors
-                // prescriptionPreviewService.buildPreviewFromRequest's identical try/catch,
-                // falling through to the original (untranslated) options on any error.
+            if (!targetLanguage) {
+                // English only: leave out any saved translation.
+                processedOptions = { ...options, payload: { ...options.payload, secondLanguage: undefined } };
+            } else if (translate) {
+                // Translation failure must never block the preview — fall back to English and say so.
                 try {
-                    processedOptions = await translateDischargeOptions(options, targetLanguage);
+                    const bracketed = await withBracketedTranslation(options, targetLanguage);
+                    if (bracketed) processedOptions = bracketed;
+                    else {
+                        nextNotice = TRANSLATION_UNAVAILABLE;
+                        processedOptions = { ...options, payload: { ...options.payload, secondLanguage: undefined } };
+                    }
                 } catch (e) {
                     console.error('Discharge translation failed', e);
+                    nextNotice = TRANSLATION_UNAVAILABLE;
+                    processedOptions = { ...options, payload: { ...options.payload, secondLanguage: undefined } };
                 }
             }
+            setNotice(nextNotice);
 
             const bytes = await buildDischargeTemplateBoundPreview(processedOptions);
             const blob = new Blob([bytes], { type: 'application/pdf' });
@@ -136,7 +188,7 @@ export const useDischargePreview = (options: DischargeTemplateBoundOptions | nul
         } finally {
             setIsLoading(false);
         }
-    }, [options, targetLanguage, revokeUrl]);
+    }, [options, targetLanguage, translate, revokeUrl]);
 
     useEffect(() => {
         if (!options) {
@@ -145,7 +197,7 @@ export const useDischargePreview = (options: DischargeTemplateBoundOptions | nul
         }
         generatePreview();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [options, targetLanguage]);
+    }, [options, targetLanguage, translate]);
 
-    return { previewUrl, isLoading, error, regeneratePreview: generatePreview };
+    return { previewUrl, isLoading, error, notice, regeneratePreview: generatePreview };
 };

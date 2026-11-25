@@ -42,7 +42,7 @@ describe('printout', () => {
         }, { hospitalName: 'GLISAN Hospital', address: 'Purnia' } as any);
         expect(html).toContain('Key Investigations');
         expect(html).toContain('&lt;high&gt;');
-        expect(html).toContain('Come Back at Once If');
+        expect(html).toContain('Come back at once if');
         expect(html).toContain('lang="hi"');
         expect(html).toContain('कम नमक');
         expect(html.indexOf('Low salt')).toBeLessThan(html.indexOf('कम नमक'));
