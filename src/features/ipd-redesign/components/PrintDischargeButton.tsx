@@ -80,6 +80,9 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 : undefined;
 
             // 3. Build data
+            const medicationRows = (draft.medications ?? []).filter(m => m.medicineName?.trim()).map(m => ({
+                name: m.medicineName!.trim(), dose: m.dosage, route: m.route, frequency: m.frequency, duration: m.durations, instructions: m.instructions,
+            }));
             const printData = {
                 admissionNo: admission.admissionNo,
                 patientName: admission.patientName || admission.patientId || '',
@@ -99,7 +102,15 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                 courseInHospital: draft.courseInHospital || undefined,
                 proceduresPerformed: draft.proceduresPerformed || undefined,
                 conditionAtDischarge: draft.conditionAtDischarge || 'STABLE',
-                dischargeMedications: draft.dischargeMedications || undefined,
+                // The medicine rows are what staff enter; the legacy text is only a fallback for old summaries.
+                dischargeMedications: medicationRows.length
+                    ? medicationRows.map(m => [m.name, m.dose, m.route, m.frequency, m.duration, m.instructions].filter(Boolean).join(' — ')).join('\n')
+                    : draft.dischargeMedications || undefined,
+                medications: medicationRows,
+                consultant: admission.primaryDoctorName || undefined,
+                wardBed: admission.bedCode ? `${admission.wardName ? `${admission.wardName} · ` : ''}${admission.bedCode}` : undefined,
+                payer: admission.payerName ? `${admission.payerName} (${admission.payerType})` : admission.payerType,
+                hospitalPhone: buildPrintSettingsFromHospital(hospitalData).phone || undefined,
                 followUpInstructions: draft.followUpInstructions || undefined,
                 followUpDate: draft.followUpDate || undefined,
                 dietInstructions: draft.dietInstructions || undefined,
@@ -218,6 +229,10 @@ export const PrintDischargeButton: React.FC<Props> = ({ admission }) => {
                                     warningSigns: printData.warningSigns,
                                 },
                                 customFieldValues,
+                                medications: printData.medications,
+                                wardBed: printData.wardBed,
+                                payer: printData.payer,
+                                hospitalPhone: printData.hospitalPhone,
                                 tpaSplit: printData.tpaSplit,
                                 secondLanguage: printData.secondLanguage,
                             },

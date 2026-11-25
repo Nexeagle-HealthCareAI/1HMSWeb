@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb, RGB, PDFPage } from 'pdf-lib';
+import { stayText } from '@/printTemplates/dischargeSummaryA4';
 import type { MarginConfig, TypographySettings } from '@/features/ipd-redesign/hooks/useDischargeDesigner';
 
 // Simplified sibling of prescription-preview/services/previewRenderer.ts's buildTemplateBoundPreview
@@ -125,6 +126,13 @@ export interface DischargePrintPayload {
         unclassifiedTotal: number;
         nonPayableLines: DischargeNonPayableLine[];
     };
+    /** Take-home medicines as rows — drawn as a table. `fields.dischargeMedications` (text) is the fallback. */
+    medications?: { name: string; dose?: string; route?: string; frequency?: string; duration?: string; instructions?: string }[];
+    /** Ward / bed at discharge and payer — shown in the patient box. */
+    wardBed?: string;
+    payer?: string;
+    /** Hospital phone, printed with the "come back at once" advice. */
+    hospitalPhone?: string;
     /** Patient advice in the hospital's second language, drawn under each English advice section. */
     secondLanguage?: { code: string; name: string; fields: Record<string, string | undefined> };
 }
@@ -163,7 +171,10 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
     const leftPad = mmToPt(margins.left);
     const rightPad = mmToPt(margins.right);
     const headerPad = mmToPt(margins.top);
-    const footerPad = mmToPt(margins.bottom);
+    // The letterhead's own footer keeps its reserved height; one extra line above it carries the
+    // patient's identity and the page number on every page.
+    const letterheadFooter = mmToPt(margins.bottom);
+    const footerPad = letterheadFooter + sizeBase + 6;
     const contentWidth = pageWidth - leftPad - rightPad;
 
     let currentPageIndex = -1;
@@ -193,7 +204,7 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         if (!images) {
             // No canvas (e.g. tests): fall back to the Latin characters only rather than failing.
             const latin = stripNonWinAnsi(text).trim();
-            if (latin) for (const line of wrapText(latin, regularFont, size, contentWidth)) {
+            if (/[A-Za-z0-9]/.test(latin)) for (const line of wrapText(latin, regularFont, size, contentWidth)) {
                 await ensureRoom(lineHeight);
                 page.drawText(line, { x: leftPad, y: cursorY, size, font: regularFont, color: textColor });
                 cursorY -= lineHeight;
@@ -222,26 +233,30 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         }
     };
 
+    // Single-line text must stay inside what the built-in fonts can draw.
+    const safe = (t: unknown) => stripNonWinAnsi(String(t ?? ''));
+    const muted = hexToPdfRgb('#64748b');
+    const ruleColor = hexToPdfRgb('#e2e8f0');
+    const labelSize = Math.max(6, sizeBase - 3.5);
+    const smallSize = Math.max(7, sizeBase - 1.5);
+
     const drawSectionHeading = async (label: string) => {
-        await ensureRoom(lineHeight * 1.6);
-        cursorY -= 6;
-        page.drawLine({ start: { x: leftPad, y: cursorY + 2 }, end: { x: leftPad, y: cursorY - sizeHeading + 2 }, thickness: 2.5, color: accentColor });
-        page.drawText(label, { x: leftPad + 8, y: cursorY - sizeHeading + 4, size: sizeHeading, font: boldFont, color: accentColor });
-        cursorY -= lineHeight * 1.4;
+        await ensureRoom(lineHeight * 2.6);
+        cursorY -= 2;
+        const text = safe(label).toUpperCase();
+        const size = Math.max(7, sizeBase - 1);
+        const y = cursorY - sizeBase + 3;
+        page.drawText(text, { x: leftPad, y, size, font: boldFont, color: accentColor });
+        const textW = boldFont.widthOfTextAtSize(text, size);
+        page.drawLine({ start: { x: leftPad + textW + 8, y: y + size * 0.35 }, end: { x: pageWidth - rightPad, y: y + size * 0.35 }, thickness: 0.6, color: ruleColor });
+        cursorY -= lineHeight * 1.35;
     };
 
     const drawSection = async (label: string, value: string | undefined) => {
         if (!value) return;
         await drawSectionHeading(label);
         await drawParagraph(value);
-        cursorY -= 6;
-    };
-
-    const drawConditionBadge = async (condition: string) => {
-        await ensureRoom(lineHeight * 2);
-        const label = `Condition at Discharge: ${condition || '—'}`;
-        page.drawText(label, { x: leftPad, y: cursorY, size: sizeBase, font: boldFont, color: accentColor });
-        cursorY -= lineHeight * 1.8;
+        cursorY -= 2;
     };
 
     const drawTpaTable = async (tpa: NonNullable<DischargePrintPayload['tpaSplit']>) => {
@@ -262,107 +277,237 @@ export const buildDischargeTemplateBoundPreview = async ({ templateFile, margins
         cursorY -= lineHeight;
     };
 
-    // --- Structural header (not a toggleable field, matches the HTML template's own header treatment) ---
     const formatDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const valueByKey: Record<string, string | undefined> = { ...payload.fields, ...payload.customFieldValues };
+    const shown = (key: string) => printFields.some(f => f.key === key && f.showInPrint);
+    const valueIfShown = (key: string) => (shown(key) ? valueByKey[key]?.trim() || undefined : undefined);
 
-    // "Scan to view full report" QR (only present once signed — see DischargeSummaryPanel) — sits
-    // inline in its own column at the left of the SAME header row as the patient details (name,
-    // patient ID, age/sex, ...), not stacked above them. The patient-details column starts to the
-    // right of the QR; the existing admission-no/admitted/doctor/discharged column further right is
-    // unaffected.
-    const headerStartY = cursorY;
-    let contentLeftX = leftPad;
+    // A run of lines measured before it is drawn, so a box can be sized and kept on one page.
+    type Item = { h: number; draw: (x: number, y: number) => Promise<void> | void };
+    const textItems = (text: string | undefined, width: number, font: PDFFont, size: number, color = textColor, colorHex = typography.color ?? '#111827'): Item[] => {
+        const items: Item[] = [];
+        for (const para of String(text ?? '').split(/\r?\n/)) {
+            if (!para.trim()) continue;
+            const images = needsUnicodeRendering(para) ? renderUnicodeLines(para, width, size, colorHex) : null;
+            if (images) {
+                for (const img of images) items.push({
+                    h: Math.max(size * 1.45, img.heightPt),
+                    draw: async (x, y) => { const png = await outputDoc.embedPng(img.png); page.drawImage(png, { x, y: y - img.heightPt * 0.26, width: img.widthPt, height: img.heightPt }); },
+                });
+                continue;
+            }
+            // Without a canvas only the Latin characters can be drawn; skip a line that has none left.
+            const latin = safe(para);
+            if (!/[A-Za-z0-9]/.test(latin)) continue;
+            for (const line of wrapText(latin, font, size, width)) items.push({ h: size * 1.45, draw: (x, y) => { page.drawText(line, { x, y, size, font, color }); } });
+        }
+        return items;
+    };
+    const drawItems = async (items: Item[], x: number, startY: number): Promise<number> => {
+        let y = startY;
+        for (const item of items) { y -= item.h; await item.draw(x, y); }
+        return y;
+    };
+    const bracketed = (t: string) => (/^[([].*[)\]]$/s.test(t) ? t : `(${t})`);
+    const translatedFor = (key: string) => payload.secondLanguage?.fields[key]?.trim();
+
+    // --- Title, with the condition at discharge beside it ---
+    page.drawText('DISCHARGE SUMMARY', { x: leftPad, y: cursorY - 2, size: sizeBase + 4, font: boldFont, color: textColor });
+    if (shown('conditionAtDischarge') && payload.conditionAtDischarge) {
+        const condition = safe(`Condition at discharge: ${payload.conditionAtDischarge}`);
+        const w = boldFont.widthOfTextAtSize(condition, sizeBase);
+        page.drawText(condition, { x: pageWidth - rightPad - w, y: cursorY - 2, size: sizeBase, font: boldFont, color: accentColor });
+    }
+    cursorY -= lineHeight * 1.5;
+
+    // --- Patient and stay box. The "scan for full report" QR (signed summaries only) sits to its right. ---
     const qrSize = 56;
+    let qrImage: Awaited<ReturnType<typeof outputDoc.embedPng>> | null = null;
     if (payload.qrImageBytes) {
-        try {
-            const qrImage = await outputDoc.embedPng(payload.qrImageBytes);
-            page.drawImage(qrImage, { x: leftPad, y: headerStartY - qrSize + 4, width: qrSize, height: qrSize });
-            const caption = 'Scan for full report';
-            const captionSize = sizeBase - 4;
-            const captionW = regularFont.widthOfTextAtSize(caption, captionSize);
-            page.drawText(caption, { x: leftPad + qrSize / 2 - captionW / 2, y: headerStartY - qrSize - 6, size: captionSize, font: regularFont, color: hexToPdfRgb('#94a3b8') });
-            contentLeftX = leftPad + qrSize + 14;
-        } catch {
-            // Non-fatal — header text still renders at the normal left margin.
+        try { qrImage = await outputDoc.embedPng(payload.qrImageBytes); } catch { qrImage = null; /* non-fatal */ }
+    }
+    const boxW = contentWidth - (qrImage ? qrSize + 12 : 0);
+    const boxTop = cursorY + sizeBase;
+    const row1H = lineHeight * 3.05;
+    const row2H = row1H;
+    const boxPad = 8;
+    page.drawRectangle({ x: leftPad, y: boxTop - row1H, width: boxW, height: row1H, color: hexToPdfRgb('#f8fafc') });
+    page.drawRectangle({ x: leftPad, y: boxTop - row1H - row2H, width: boxW, height: row1H + row2H, borderColor: hexToPdfRgb('#cbd5e1'), borderWidth: 0.8 });
+    page.drawLine({ start: { x: leftPad, y: boxTop - row1H }, end: { x: leftPad + boxW, y: boxTop - row1H }, thickness: 0.6, color: ruleColor });
+
+    const colW = [1.5, 1, 1, 1].map(f => (f / 4.5) * (boxW - boxPad * 2));
+    const colX = colW.map((_, i) => leftPad + boxPad + colW.slice(0, i).reduce((a, b) => a + b, 0));
+    const fit = (text: string, font: PDFFont, size: number, width: number) => {
+        let t = safe(text);
+        if (font.widthOfTextAtSize(t, size) <= width) return t;
+        while (t.length > 1 && font.widthOfTextAtSize(`${t}…`, size) > width) t = t.slice(0, -1);
+        return `${t}…`;
+    };
+    const drawCell = (col: number, top: number, label: string, value: string | undefined, valueSize = smallSize + 0.5, sub?: string) => {
+        const w = colW[col] - 8;
+        page.drawText(label.toUpperCase(), { x: colX[col], y: top - boxPad - labelSize + 2, size: labelSize, font: boldFont, color: muted });
+        page.drawText(fit(value || '—', boldFont, valueSize, w), { x: colX[col], y: top - boxPad - labelSize - valueSize - 2, size: valueSize, font: boldFont, color: textColor });
+        if (sub) page.drawText(fit(sub, regularFont, smallSize - 0.5, w), { x: colX[col], y: top - boxPad - labelSize - valueSize - smallSize - 4, size: smallSize - 0.5, font: regularFont, color: hexToPdfRgb('#475569') });
+    };
+    const demographics = [payload.patientAge != null ? `${payload.patientAge} years` : '', payload.patientSex ?? '', payload.mobile ?? ''].filter(Boolean).join(' · ');
+    drawCell(0, boxTop, 'Patient', payload.patientName || 'Unknown patient', sizeBase + 1, demographics);
+    drawCell(1, boxTop, 'Patient ID', payload.patientId);
+    drawCell(2, boxTop, 'Admission no.', payload.admissionNo);
+    // "Star Health (INSURANCE)" → name on the value line, type under it, so neither is cut short.
+    const payerParts = /^(.*\S)\s*\(([^)]*)\)$/.exec(payload.payer ?? '');
+    drawCell(3, boxTop, 'Payer', payerParts ? payerParts[1] : payload.payer, undefined, payerParts?.[2]);
+    const row2Top = boxTop - row1H;
+    drawCell(0, row2Top, 'Consultant', payload.assignedDoctorName || payload.signedByDoctorName);
+    drawCell(1, row2Top, 'Admitted', formatDate(payload.admittedAt));
+    drawCell(2, row2Top, 'Discharged', payload.dischargedAt ? formatDate(payload.dischargedAt) : undefined);
+    drawCell(3, row2Top, 'Stay', payload.dischargedAt ? stayText(payload.admittedAt, payload.dischargedAt) : undefined, undefined, payload.wardBed);
+
+    if (qrImage) {
+        const qrX = pageWidth - rightPad - qrSize;
+        page.drawImage(qrImage, { x: qrX, y: boxTop - qrSize, width: qrSize, height: qrSize });
+        const caption = 'Scan for full report';
+        const captionSize = Math.max(5.5, sizeBase - 4);
+        page.drawText(caption, { x: qrX + qrSize / 2 - regularFont.widthOfTextAtSize(caption, captionSize) / 2, y: boxTop - qrSize - captionSize - 2, size: captionSize, font: regularFont, color: hexToPdfRgb('#94a3b8') });
+    }
+    cursorY = boxTop - row1H - row2H - lineHeight;
+
+    const underBox = [payload.patientAddress, payload.referredBy ? `Referred by: ${payload.referredBy}` : ''].filter(Boolean).join('  ·  ');
+    if (underBox) {
+        for (const line of wrapText(safe(underBox), regularFont, smallSize, contentWidth)) {
+            page.drawText(line, { x: leftPad, y: cursorY, size: smallSize, font: regularFont, color: hexToPdfRgb('#475569') });
+            cursorY -= lineHeight;
         }
     }
+    cursorY -= 4;
 
-    page.drawText(payload.patientName || 'Unknown Patient', { x: contentLeftX, y: cursorY, size: sizeBase + 2, font: boldFont, color: textColor });
-
-    const rightColX = pageWidth - rightPad - 190;
-
-    page.drawText('Admission No:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
-    page.drawText(payload.admissionNo || '—', { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
-
-    cursorY -= lineHeight * 1.2;
-
-    page.drawText(`Patient ID: ${payload.patientId}`, { x: contentLeftX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
-
-    page.drawText('Admitted:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
-    page.drawText(formatDate(payload.admittedAt), { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
-
-    cursorY -= lineHeight * 1.2;
-
-    const demoParts = [];
-    if (payload.patientAge != null) demoParts.push(`Age: ${payload.patientAge} years`);
-    if (payload.patientSex) demoParts.push(`Sex: ${payload.patientSex}`);
-    if (demoParts.length > 0) {
-        page.drawText(demoParts.join('   '), { x: contentLeftX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
+    // --- Diagnosis: the one thing every later reader looks for first ---
+    const finalDx = valueIfShown('finalDiagnosis');
+    const admittingDx = valueIfShown('admittingDiagnosis');
+    const icd = valueIfShown('finalDiagnosisIcd10');
+    const mainDx = finalDx || admittingDx;
+    if (mainDx || icd) {
+        const indent = 10;
+        const items: Item[] = [
+            ...textItems(mainDx, contentWidth - indent, boldFont, sizeBase + 2),
+            ...textItems([icd ? `ICD-10 ${icd}` : '', finalDx && admittingDx ? `Admitted with: ${admittingDx.replace(/\s*\r?\n\s*/g, '; ')}` : ''].filter(Boolean).join('  ·  '), contentWidth - indent, regularFont, smallSize, hexToPdfRgb('#475569'), '#475569'),
+        ];
+        const height = labelSize + 4 + items.reduce((a, i) => a + i.h, 0);
+        await ensureRoom(height + 8);
+        const top = cursorY + sizeBase * 0.8;
+        page.drawLine({ start: { x: leftPad + 1, y: top }, end: { x: leftPad + 1, y: top - height - 2 }, thickness: 2.5, color: accentColor });
+        page.drawText(finalDx ? 'FINAL DIAGNOSIS' : admittingDx ? 'ADMITTING DIAGNOSIS' : 'DIAGNOSIS', { x: leftPad + indent, y: top - labelSize, size: labelSize, font: boldFont, color: muted });
+        const endY = await drawItems(items, leftPad + indent, top - labelSize - 2);
+        cursorY = endY - lineHeight;
     }
 
-    if (payload.assignedDoctorName) {
-        page.drawText('Doctor:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
-        page.drawText(payload.assignedDoctorName, { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
-    }
+    // A bordered box for the advice a patient must not miss. Sized first so it never splits.
+    const drawBox = async (opts: { title: string; big?: string; text?: string; translated?: string; extra?: string; borderHex: string; fillHex: string }) => {
+        const pad = 8;
+        const innerW = contentWidth - pad * 2;
+        const strong = hexToPdfRgb(opts.borderHex);
+        const items: Item[] = [
+            ...textItems(opts.big, innerW, boldFont, sizeBase + 2),
+            ...textItems(opts.text, innerW, regularFont, sizeBase),
+            ...(opts.translated ? textItems(bracketed(opts.translated), innerW, regularFont, sizeBase, hexToPdfRgb('#334155'), '#334155') : []),
+            ...textItems(opts.extra, innerW, boldFont, sizeBase, strong, opts.borderHex),
+        ];
+        const height = pad * 2 + labelSize + 3 + items.reduce((a, i) => a + i.h, 0);
+        await ensureRoom(height + 6);
+        const top = cursorY + sizeBase * 0.8;
+        page.drawRectangle({ x: leftPad, y: top - height, width: contentWidth, height, color: hexToPdfRgb(opts.fillHex), borderColor: strong, borderWidth: 1 });
+        page.drawText(safe(opts.title).toUpperCase(), { x: leftPad + pad, y: top - pad - labelSize + 1, size: labelSize, font: boldFont, color: strong });
+        await drawItems(items, leftPad + pad, top - pad - labelSize - 1);
+        cursorY = top - height - lineHeight - 2;
+    };
 
-    if (demoParts.length > 0 || payload.assignedDoctorName) cursorY -= lineHeight * 1.2;
+    // Take-home medicines as a table: one row per medicine, every cell wrapped (never cut short).
+    const drawMedicineTable = async (label: string, rows: NonNullable<DischargePrintPayload['medications']>) => {
+        await drawSectionHeading(label);
+        const size = smallSize;
+        const rowLine = size * 1.4;
+        const fractions = [0.05, 0.33, 0.14, 0.16, 0.12, 0.20];
+        const widths = fractions.map(f => f * contentWidth);
+        const xs = widths.map((_, i) => leftPad + widths.slice(0, i).reduce((a, b) => a + b, 0));
+        const headerH = rowLine + 4;
+        const drawHeader = () => {
+            const top = cursorY + size;
+            page.drawRectangle({ x: leftPad, y: top - headerH, width: contentWidth, height: headerH, color: hexToPdfRgb('#f1f5f9') });
+            ['#', 'MEDICINE', 'DOSE', 'WHEN', 'FOR', 'HOW'].forEach((h, i) => page.drawText(h, { x: xs[i] + 4, y: top - headerH + 4, size: labelSize, font: boldFont, color: muted }));
+            cursorY = top - headerH - size - 3;
+        };
+        await ensureRoom(headerH + rowLine * 2);
+        drawHeader();
+        for (let r = 0; r < rows.length; r++) {
+            const m = rows[r];
+            const cells = [String(r + 1), m.name, m.dose, m.frequency, m.duration, [m.route, m.instructions].filter(v => v?.trim()).join(' · ')]
+                .map((v, i) => wrapText(safe(v?.trim() || '—'), i === 1 ? boldFont : regularFont, size, widths[i] - 8));
+            const rowH = Math.max(...cells.map(c => c.length)) * rowLine + 5;
+            if (cursorY - rowH < footerPad) { await acquirePage(); drawHeader(); }
+            cells.forEach((lines, i) => lines.forEach((line, n) => page.drawText(line, { x: xs[i] + 4, y: cursorY - n * rowLine, size, font: i === 1 ? boldFont : regularFont, color: textColor })));
+            const bottom = cursorY - rowH + size;
+            page.drawLine({ start: { x: leftPad, y: bottom }, end: { x: pageWidth - rightPad, y: bottom }, thickness: 0.5, color: ruleColor });
+            cursorY -= rowH;
+        }
+        cursorY -= 8;
+    };
 
-    if (payload.mobile) {
-        page.drawText(`Ph: ${payload.mobile}`, { x: contentLeftX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
-    }
-
-    if (payload.dischargedAt) {
-        page.drawText('Discharged:', { x: rightColX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#64748b') });
-        page.drawText(formatDate(payload.dischargedAt), { x: rightColX + 75, y: cursorY, size: sizeBase - 1, font: boldFont, color: textColor });
-    }
-
-    if (payload.mobile || payload.dischargedAt) cursorY -= lineHeight * 1.2;
-
-    if (payload.patientAddress) {
-        page.drawText(payload.patientAddress, { x: contentLeftX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
-        cursorY -= lineHeight * 1.2;
-    }
-
-    if (payload.referredBy) {
-        page.drawText(`Referred by: ${payload.referredBy}`, { x: contentLeftX, y: cursorY, size: sizeBase - 1, font: regularFont, color: hexToPdfRgb('#475569') });
-        cursorY -= lineHeight * 1.2;
-    }
-
-    // Whichever is taller — the text column or the QR block — decides where the header ends, so
-    // the divider/body content never overlaps either.
-    if (payload.qrImageBytes) cursorY = Math.min(cursorY, headerStartY - qrSize - 18);
-
-    cursorY -= lineHeight * 0.3;
-    page.drawLine({ start: { x: leftPad, y: cursorY + 4 }, end: { x: pageWidth - rightPad, y: cursorY + 4 }, thickness: 1, color: hexToPdfRgb('#e2e8f0') });
-    cursorY -= 8;
-
-    // --- Body: the doctor's merged field layout drives order/labels/visibility entirely ---
-    const valueByKey: Record<string, string | undefined> = { ...payload.fields, ...payload.customFieldValues };
+    // --- Body: the doctor's field layout still drives order, labels and visibility. A few
+    //     fields have their own shape: diagnosis (above), medicines (table), next visit and
+    //     warning signs (boxes). ---
+    const inDiagnosisBlock = new Set(['conditionAtDischarge', 'finalDiagnosis', 'finalDiagnosisIcd10', 'admittingDiagnosis']);
+    const medicineRows = (payload.medications ?? []).filter(m => m.name?.trim());
+    let nextVisitDrawn = false;
     for (const f of printFields) {
-        if (!f.showInPrint) continue;
-        if (f.key === 'conditionAtDischarge') { await drawConditionBadge(payload.conditionAtDischarge); continue; }
+        if (!f.showInPrint || inDiagnosisBlock.has(f.key)) continue;
         if (f.key === 'nonPayableAnnexure') { if (payload.tpaSplit) await drawTpaTable(payload.tpaSplit); continue; }
+        if (f.key === 'dischargeMedications' && medicineRows.length > 0) { await drawMedicineTable(f.label, medicineRows); continue; }
+        if (f.key === 'followUpInstructions' || f.key === 'followUpDate') {
+            if (nextVisitDrawn) continue;
+            nextVisitDrawn = true;
+            const date = valueIfShown('followUpDate');
+            const text = valueIfShown('followUpInstructions');
+            if (date || text) await drawBox({ title: 'Next visit', big: date, text, translated: text ? translatedFor('followUpInstructions') : undefined, borderHex: '#4f46e5', fillHex: '#eef2ff' });
+            continue;
+        }
+        if (f.key === 'warningSigns') {
+            const text = valueByKey[f.key]?.trim();
+            if (text) await drawBox({ title: f.label, text, translated: translatedFor('warningSigns'), extra: payload.hospitalPhone ? `Hospital: ${payload.hospitalPhone}` : undefined, borderHex: '#dc2626', fillHex: '#fef2f2' });
+            continue;
+        }
         await drawSection(f.label, valueByKey[f.key]);
-        const translated = payload.secondLanguage?.fields[f.key]?.trim();
+        const translated = translatedFor(f.key);
         if (translated && valueByKey[f.key]) {
             cursorY += 4;
             // The translation prints in brackets after the English.
-            await drawUnicodeParagraph(/^[([].*[)\]]$/s.test(translated) ? translated : `(${translated})`, sizeBase, '#334155');
+            await drawUnicodeParagraph(bracketed(translated), sizeBase, '#334155');
             cursorY -= 6;
         }
     }
 
-    // --- Signature block removed from preview per user request ---
+    // --- Sign-off: the patient or attendant on the left, the doctor on the right ---
+    await ensureRoom(lineHeight * 5.5);
+    cursorY -= lineHeight * 2.6;
+    const signW = Math.min(200, contentWidth * 0.42);
+    const rightX = pageWidth - rightPad - signW;
+    for (const x of [leftPad, rightX]) page.drawLine({ start: { x, y: cursorY }, end: { x: x + signW, y: cursorY }, thickness: 0.7, color: hexToPdfRgb('#94a3b8') });
+    cursorY -= smallSize + 3;
+    page.drawText('Patient / attendant - advice explained', { x: leftPad, y: cursorY, size: smallSize - 0.5, font: regularFont, color: muted });
+    page.drawText(fit(payload.signedByDoctorName || payload.assignedDoctorName || "Doctor's signature", boldFont, smallSize + 0.5, signW), { x: rightX, y: cursorY, size: smallSize + 0.5, font: boldFont, color: textColor });
+    if (payload.signedAt) {
+        cursorY -= lineHeight * 0.9;
+        page.drawText(`Signed ${formatDate(payload.signedAt)}`, { x: rightX, y: cursorY, size: smallSize - 0.5, font: regularFont, color: muted });
+    }
+
+    // --- Every page carries who it belongs to and its page number ---
+    const pages = outputDoc.getPages();
+    const identity = fit([payload.patientName, payload.patientId, payload.admissionNo].filter(Boolean).join(' · '), regularFont, labelSize + 0.5, contentWidth - 70);
+    pages.forEach((p, i) => {
+        const y = letterheadFooter + 3;
+        p.drawLine({ start: { x: leftPad, y: y + labelSize + 4 }, end: { x: pageWidth - rightPad, y: y + labelSize + 4 }, thickness: 0.5, color: ruleColor });
+        p.drawText(identity, { x: leftPad, y, size: labelSize + 0.5, font: regularFont, color: hexToPdfRgb('#94a3b8') });
+        const pageText = `Page ${i + 1} of ${pages.length}`;
+        p.drawText(pageText, { x: pageWidth - rightPad - regularFont.widthOfTextAtSize(pageText, labelSize + 0.5), y, size: labelSize + 0.5, font: regularFont, color: hexToPdfRgb('#94a3b8') });
+    });
 
     return outputDoc.save();
 };
