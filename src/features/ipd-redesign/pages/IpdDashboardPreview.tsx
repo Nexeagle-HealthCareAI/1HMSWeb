@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { IpdDashboard } from '../screens/IpdDashboard';
 import { BedBoardScreen } from '../screens/BedBoardScreen';
 import { IpdKpiDashboardScreen } from '../screens/IpdKpiDashboardScreen';
-import { ConsultantLedgerScreen } from '../screens/ConsultantLedgerScreen';
 import { ReferredAdmissionBoard } from '../screens/ReferredAdmissionBoard';
-import { PatientWorkspace } from '../screens/PatientWorkspace';
+import { PatientWorkspace, type Section } from '../screens/PatientWorkspace';
+import type { IpdTab } from '../components/IpdSectionHeader';
 import { admissionApi, type ActiveAdmissionItem, type HospitalDoctorItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
 import { ipdKpiApi, type IpdKpiDashboard } from '../services/ipdKpiApi';
@@ -20,35 +20,30 @@ const iso = (daysAgo: number, h = 10, m = 30) => {
     return d.toISOString();
 };
 
-const MOCK_ADMISSIONS: ActiveAdmissionItem[] = [
-    {
-        admissionId: '1', admissionNo: 'ADM-2026-0481', admissionType: 'EMERGENCY', statusCode: 'ADMITTED',
-        payerType: 'CASH', admittedAt: iso(0, 8, 15), patientId: 'UHID-100482', patientName: 'Rajesh Kumar Sharma',
-        patientAge: 54, patientSex: 'M', bedCode: 'ICU-04', wardName: 'ICU', payerName: null,
-        primaryDoctorId: 'd1', primaryDoctorName: 'Dr. Meera Kulkarni'
-    },
-    {
-        admissionId: '2', admissionNo: 'ADM-2026-0480', admissionType: 'ELECTIVE', statusCode: 'ADMITTED',
-        payerType: 'INSURANCE', admittedAt: iso(0, 9, 45), patientId: 'UHID-100199', patientName: 'Anita Deshpande',
-        patientAge: 41, patientSex: 'F', bedCode: 'GW-12', wardName: 'General Ward', payerName: 'Star Health',
-        primaryDoctorId: 'd2', primaryDoctorName: 'Dr. Arjun Rao'
-    },
-    {
-        admissionId: '3', admissionNo: 'ADM-2026-0479', admissionType: 'ELECTIVE', statusCode: 'PRE_ADMIT',
-        payerType: 'TPA', admittedAt: iso(0, 7, 0), patientId: 'UHID-100777', patientName: 'Mohammed Faiz',
-        patientAge: 33, patientSex: 'M', bedCode: null, wardName: null, payerName: 'MediAssist',
-    },
-    {
-        admissionId: '4', admissionNo: 'ADM-2026-0477', admissionType: 'EMERGENCY', statusCode: 'ADMITTED',
-        payerType: 'CASH', admittedAt: iso(1, 22, 10), patientId: 'UHID-100051', patientName: 'Sunita Rani',
-        patientAge: 67, patientSex: 'F', bedCode: null, wardName: null, payerName: null,
-    },
-    {
-        admissionId: '5', admissionNo: 'ADM-2026-0475', admissionType: 'DAYCARE', statusCode: 'ADMITTED',
-        payerType: 'CGHS', admittedAt: iso(1, 11, 30), patientId: 'UHID-100634', patientName: 'Vikram Singh Rathore',
-        patientAge: 48, patientSex: 'M', bedCode: 'PVT-03', wardName: 'Private', payerName: 'CGHS Delhi',
-    },
-];
+const DOCTORS_M = ['Dr. Meera Kulkarni', 'Dr. Arjun Rao', 'Dr. Sana Iqbal', 'Dr. Vivek Menon'];
+const NAMES = ['Rajesh Kumar Sharma', 'Anita Deshpande', 'Mohammed Faiz', 'Sunita Rani', 'Vikram Singh Rathore', 'Lakshmi Narayanan', 'Harpreet Kaur', 'Joseph D\'Souza', 'Farida Begum', 'Nikhil Joshi', 'Padma Iyer', 'Gurmeet Singh', 'Rekha Yadav', 'Thomas Mathew', 'Shabnam Khan', 'Deepak Verma', 'Kavita Nair', 'Imran Sheikh', 'Bhavna Patel', 'Suresh Reddy', 'Meenakshi Pillai', 'Arvind Chauhan', 'Zainab Ali', 'Rohit Bansal', 'Uma Shankar', 'Naveen Gowda', 'Pooja Saxena', 'Kiran Bedi'];
+const DX = ['Inferior wall STEMI', 'Right total knee replacement', 'Acute appendicitis', 'Community-acquired pneumonia', 'Laparoscopic cholecystectomy', 'Dengue fever with warning signs', 'Type 2 diabetes — DKA', 'Fracture neck of femur', 'COPD exacerbation', 'LSCS — term pregnancy'];
+const WARDS: [string, string][] = [['ICU', 'ICU'], ['General Ward', 'GW'], ['Private', 'PVT'], ['Maternity', 'MAT']];
+const PAYERS: [string, string | null][] = [['CASH', null], ['INSURANCE', 'Star Health'], ['TPA', 'MediAssist'], ['CASH', null], ['CGHS', 'CGHS Delhi']];
+const TYPES = ['EMERGENCY', 'ELECTIVE', 'ELECTIVE', 'DAYCARE'];
+
+const MOCK_ADMISSIONS: ActiveAdmissionItem[] = NAMES.map((name, i) => {
+    const [wardName, prefix] = WARDS[i % WARDS.length];
+    const [payerType, payerName] = PAYERS[i % PAYERS.length];
+    const daysIn = i % 7;
+    const statusCode = i === 2 ? 'PRE_ADMIT' : i % 9 === 5 ? 'DISCHARGE_INITIATED' : i % 11 === 7 ? 'DISCHARGE_BILLED' : 'ADMITTED';
+    const noBed = i === 2 || i === 3;
+    const expectedOffset = i % 5 === 0 ? null : (i % 5) - 2;   // -1 (overdue), 0 (today), 1, 2
+    return {
+        admissionId: String(i + 1), admissionNo: `ADM-2026-0${481 - i}`, admissionType: TYPES[i % TYPES.length], statusCode,
+        payerType, payerName, admittedAt: iso(daysIn, 8 + (i % 10), 15), patientId: `UHID-${100482 - i * 37}`, patientName: name,
+        patientAge: 24 + ((i * 7) % 55), patientSex: i % 2 === 0 ? 'M' : 'F',
+        bedCode: noBed ? null : `${prefix}-${String(1 + Math.floor(i / WARDS.length)).padStart(2, '0')}`, wardName: noBed ? null : wardName,
+        primaryDoctorId: `d${i % 4}`, primaryDoctorName: DOCTORS_M[i % DOCTORS_M.length], diagnosis: DX[i % DX.length],
+        admissionToken: `T-${i + 1}`,
+        expectedDischargeAt: expectedOffset == null ? null : iso(-expectedOffset, 11, 0),
+    };
+});
 
 // Stub Admissions API
 admissionApi.getActiveAdmissions = async (statusFilter): Promise<ActiveAdmissionItem[]> => {
@@ -137,9 +132,8 @@ type ViewState =
     | { name: 'dashboard' }
     | { name: 'bedboard' }
     | { name: 'kpidashboard' }
-    | { name: 'consultantledger' }
     | { name: 'referredadmissions' }
-    | { name: 'workspace'; admission: ActiveAdmissionItem };
+    | { name: 'workspace'; admission: ActiveAdmissionItem; section?: Section };
 
 const IpdDashboardPreview: React.FC = () => {
     const [view, setView] = useState<ViewState>({ name: 'dashboard' });
@@ -151,54 +145,31 @@ const IpdDashboardPreview: React.FC = () => {
     }, []);
 
     const backToDashboard = () => setView({ name: 'dashboard' });
+    const admit = () => alert('Admit Patient (preview)');
+    const navigate = (tab: IpdTab) => {
+        if (tab === 'cssd') { alert('CSSD Board (preview)'); return; }
+        const name = tab === 'roster' ? 'dashboard' : tab === 'bedboard' ? 'bedboard' : tab === 'referred' ? 'referredadmissions' : 'kpidashboard';
+        setView({ name } as ViewState);
+    };
 
     if (view.name === 'bedboard') {
-        return (
-            <BedBoardScreen 
-                onBack={backToDashboard} 
-                onOpenDashboard={backToDashboard}
-                onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
-                onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
-            />
-        );
+        return <BedBoardScreen onBack={backToDashboard} onNavigate={navigate} onAdmit={admit} />;
     }
     if (view.name === 'kpidashboard') {
         return <IpdKpiDashboardScreen onBack={backToDashboard} />;
     }
-    if (view.name === 'consultantledger') {
-        return (
-            <ConsultantLedgerScreen 
-                onBack={backToDashboard} 
-                onOpenDashboard={backToDashboard}
-                onOpenBedBoard={() => setView({ name: 'bedboard' })}
-                onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
-            />
-        );
-    }
     if (view.name === 'referredadmissions') {
-        return (
-            <ReferredAdmissionBoard 
-                onBack={backToDashboard} 
-                onAdmitReferral={() => {}} 
-                onOpenDashboard={backToDashboard}
-                onOpenBedBoard={() => setView({ name: 'bedboard' })}
-                onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
-            />
-        );
+        return <ReferredAdmissionBoard onBack={backToDashboard} onAdmitReferral={() => {}} onNavigate={navigate} onAdmit={admit} />;
     }
     if (view.name === 'workspace') {
-        return <PatientWorkspace admission={view.admission} onBack={backToDashboard} />;
+        return <PatientWorkspace admission={view.admission} initialSection={view.section} onBack={backToDashboard} onChanged={() => {}} />;
     }
 
     return (
         <IpdDashboard
-            onAdmit={() => alert('Admit Patient (preview)')}
-            onOpenBedBoard={() => setView({ name: 'bedboard' })}
-            onOpenCssdBoard={() => alert('CSSD Board (preview)')}
-            onOpenKpiDashboard={() => setView({ name: 'kpidashboard' })}
-            onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
-            onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
-            onOpenWorkspace={(a) => setView({ name: 'workspace', admission: a })}
+            onAdmit={admit}
+            onNavigate={navigate}
+            onOpenWorkspace={(a, section) => setView({ name: 'workspace', admission: a, section })}
             refreshSignal={0}
         />
     );

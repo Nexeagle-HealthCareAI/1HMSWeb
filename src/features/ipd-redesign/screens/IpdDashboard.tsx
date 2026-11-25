@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, ClipboardList, Wallet, Loader2, Search, RefreshCw, LayoutGrid, Package, Gauge, Stethoscope, CalendarCheck, Check, Pencil, X, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
+import { Plus, Loader2, Search, RefreshCw, CalendarCheck, Check, Pencil, X, ChevronLeft, ChevronRight, MoreHorizontal, SlidersHorizontal, ArrowRight, BedDouble, Rows3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -14,87 +14,60 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/store/authStore';
-import { useAppStore } from '@/store/appStore';
 import { useSubscriptionReadOnly } from '@/features/subscription/hooks/useSubscriptionReadOnly';
 import { PrintDischargeButton } from '../components/PrintDischargeButton';
 import { PrintAdmissionButton } from '../components/PrintAdmissionButton';
 import { PrintTokenButton } from '../components/PrintTokenButton';
 import { EditAdmissionSheet } from '../components/EditAdmissionSheet';
+import { IpdSectionHeader, type IpdTab } from '../components/IpdSectionHeader';
 import { admissionApi, type ActiveAdmissionItem, type AdmissionStatusFilter } from '../services/admissionApi';
+import { admissionReferralApi } from '../services/admissionReferralApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
+import { formatIstDayLabel, formatIstTime, toIstDate } from '../utils/istDate';
+import { DISCHARGE_STAGE_LABELS, dischargeStage } from '../utils/workspaceOverview';
+import {
+    expectedDischarge, filterOptions, filterRoster, groupByWard, payerLabel, rosterTiles, rowAction, statusLabel, stayDay, titleCase,
+    type QuickFilter, type RosterTile,
+} from '../utils/rosterBoard';
+import type { Section } from './PatientWorkspace';
 
 type DateFilterMode = 'TODAY' | 'ALL' | 'RANGE';
 
-// Backend timestamps come back naive (no timezone suffix) since the DB stores UTC without an
-// offset — treat those as UTC before converting to IST, otherwise the browser's Date parser
-// reads them as local time and the displayed time is wrong outside IST-local browsers.
-const toIstDate = (iso: string): Date => {
-    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
-    return new Date(hasTz ? iso : `${iso}Z`);
-};
+const PAGE_SIZES = [25, 50, 100] as const;
+const GROUP_KEY = 'ipd-roster-group-by-ward';
 
-// "24Dec.2026" — day + abbreviated month + period + year, no spaces.
-const formatIstDate = (iso?: string | null): string => {
+const shortDate = (iso?: string | null): string => {
     if (!iso) return '';
     const d = toIstDate(iso);
-    if (isNaN(d.getTime())) return '';
-    const day = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit' });
-    const month = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short' });
-    const year = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric' });
-    return `${day}${month}.${year}`;
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' });
 };
 
-const formatIstDateTime = (iso?: string | null): string => {
-    if (!iso) return '';
-    const datePart = formatIstDate(iso);
-    const d = toIstDate(iso);
-    const time = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${datePart}, ${time}`;
-};
-
-// YYYY-MM-DD in IST — matches the value of a native <input type="date"> for direct comparison.
-const istDateKey = (iso: string): string => toIstDate(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-const todayIstKey = (): string => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-
-const STATUS_TONE: Record<string, string> = {
-    ADMITTED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    PRE_ADMIT: 'bg-sky-50 text-sky-700 border-sky-200',
-    DISCHARGE_INITIATED: 'bg-amber-50 text-amber-700 border-amber-200',
-    DISCHARGE_BILLED: 'bg-amber-50 text-amber-700 border-amber-200',
-    DISCHARGED: 'bg-slate-100 text-slate-600 border-slate-200',
-};
-const statusTone = (status: string) => STATUS_TONE[status] ?? 'bg-rose-50 text-rose-700 border-rose-200';
+const readGroupPref = (): boolean => { try { return localStorage.getItem(GROUP_KEY) === '1'; } catch { return false; } };
+const saveGroupPref = (on: boolean) => { try { localStorage.setItem(GROUP_KEY, on ? '1' : '0'); } catch { /* preference only */ } };
 
 interface Props {
     onAdmit: () => void;
-    onOpenBedBoard: () => void;
-    onOpenCssdBoard: () => void;
-    onOpenKpiDashboard: () => void;
-    onOpenConsultantLedger: () => void;
-    onOpenReferredAdmissions: () => void;
-    onOpenWorkspace: (admission: ActiveAdmissionItem) => void;
+    onNavigate: (tab: IpdTab) => void;
+    onOpenWorkspace: (admission: ActiveAdmissionItem, section?: Section) => void;
     refreshSignal: number;
 }
 
 /**
- * IPD dashboard — the admitted-patient list only (the live bed board, CSSD board, and KPI
- * dashboard are their own screens; per-patient management — bed, medications, discharge,
- * surgery — is the Patient Workspace screen, opened by clicking a row). Backed by GET /admission/active.
- * Inventory Management lives in the app's main side nav (/inventory), not here.
+ * IPD roster — everyone admitted, one row each, with the stage they are at and the next step.
+ * The tiles on top count the current census and double as one-tap filters. Per-patient work
+ * (bed, orders, medicines, discharge) is the Patient Workspace, opened by clicking a row.
+ * Backed by GET /admission/active.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenCssdBoard, onOpenKpiDashboard, onOpenConsultantLedger, onOpenReferredAdmissions, onOpenWorkspace, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onNavigate, onOpenWorkspace, refreshSignal }) => {
     const { toast } = useToast();
     const { isReadOnly: isSubscriptionReadOnly, blockAction } = useSubscriptionReadOnly();
-    const isMobile = useIsMobile();
     // Reactive (not a one-off getHospitalId() grab) so that if this screen mounts before the
     // persisted auth store finishes hydrating hospitalId, load() below re-runs automatically the
     // moment it becomes available instead of throwing synchronously and crashing the dashboard.
     const { hospitalId } = useAuthStore();
-    const { isLowBandwidthMode } = useAppStore();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
-    // KPIs always reflect the current active census, independent of the list's status filter.
+    // Tiles always reflect the current active census, independent of the list's status filter.
     const [activeAdmissions, setActiveAdmissions] = useState<ActiveAdmissionItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -102,8 +75,15 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     const [dateFilter, setDateFilter] = useState<DateFilterMode>('ALL');
     const [rangeFrom, setRangeFrom] = useState('');
     const [rangeTo, setRangeTo] = useState('');
+    const [quick, setQuick] = useState<QuickFilter>('ALL');
+    const [wardFilter, setWardFilter] = useState('ALL');
+    const [doctorFilter, setDoctorFilter] = useState('ALL');
+    const [payerFilter, setPayerFilter] = useState('ALL');
+    const [groupByWardOn, setGroupByWardOn] = useState(readGroupPref);
+    const [filtersOpen, setFiltersOpen] = useState(false);   // phone only — the dropdowns sit behind "Filters"
     const [currentPage, setCurrentPage] = useState(1);
-    const PAGE_SIZE = 5;
+    const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[0]);
+    const [pendingReferrals, setPendingReferrals] = useState(0);
 
     // Confirm-arrival: a PRE_ADMIT (elective pre-registration) admission has physically arrived.
     const [confirmArrivalTarget, setConfirmArrivalTarget] = useState<ActiveAdmissionItem | null>(null);
@@ -157,7 +137,7 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
         if (!confirmArrivalTarget) return;
         setConfirmingArrival(true);
         try {
-            const res = await admissionApi.confirmArrival(confirmArrivalTarget.admissionId, arrivalBedId || undefined);
+            const res = await admissionApi.confirmArrival(confirmArrivalTarget.admissionId, arrivalBedId && arrivalBedId !== 'assign-later' ? arrivalBedId : undefined);
             if (res.success) {
                 toast({ title: 'Arrival confirmed.' });
                 setConfirmArrivalTarget(null);
@@ -187,340 +167,325 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
         }
     };
 
-    const kpis = useMemo(() => ({
-        admittedCount: activeAdmissions.length,
-        unassigned: activeAdmissions.filter(a => !a.bedCode).length,
-        nonCash: activeAdmissions.filter(a => a.payerType !== 'CASH').length,
-    }), [activeAdmissions]);
+    // Pending referrals for the tab badge — a count only, and never worth an error toast.
+    useEffect(() => {
+        if (!hospitalId) return;
+        admissionReferralApi.list({ statusCode: 'PENDING', page: 1, pageSize: 1 })
+            .then(res => setPendingReferrals(res?.totalCount ?? 0))
+            .catch(() => setPendingReferrals(0));
+    }, [hospitalId, refreshSignal]);
 
-    const filteredAdmissions = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return admissions.filter(a => {
-            if (dateFilter === 'TODAY' && istDateKey(a.admittedAt) !== todayIstKey()) return false;
-            if (dateFilter === 'RANGE') {
-                const key = istDateKey(a.admittedAt);
-                if (rangeFrom && key < rangeFrom) return false;
-                if (rangeTo && key > rangeTo) return false;
-            }
-            if (!q) return true;
-            return (a.patientName ?? '').toLowerCase().includes(q)
-                || (a.patientId ?? '').toLowerCase().includes(q)
-                || a.admissionNo.toLowerCase().includes(q)
-                || (a.bedCode ?? '').toLowerCase().includes(q);
-        });
-    }, [admissions, search, dateFilter, rangeFrom, rangeTo]);
+    const tiles = useMemo(() => rosterTiles(activeAdmissions), [activeAdmissions]);
+    const options = useMemo(() => filterOptions(admissions), [admissions]);
+
+    const filteredAdmissions = useMemo(() => filterRoster(admissions, {
+        search, quick, ward: wardFilter, doctor: doctorFilter, payer: payerFilter, dateMode: dateFilter, rangeFrom, rangeTo,
+    }), [admissions, search, quick, wardFilter, doctorFilter, payerFilter, dateFilter, rangeFrom, rangeTo]);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, dateFilter, rangeFrom, rangeTo, statusFilter]);
+    }, [search, dateFilter, rangeFrom, rangeTo, statusFilter, quick, wardFilter, doctorFilter, payerFilter, pageSize]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredAdmissions.length / PAGE_SIZE));
-    const paginatedAdmissions = filteredAdmissions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    // A filter whose value no longer exists in the loaded list (e.g. after switching to
+    // Discharged) would silently hide every row — drop it back to "all".
+    useEffect(() => {
+        if (wardFilter !== 'ALL' && !options.wards.includes(wardFilter)) setWardFilter('ALL');
+        if (doctorFilter !== 'ALL' && !options.doctors.includes(doctorFilter)) setDoctorFilter('ALL');
+        if (payerFilter !== 'ALL' && !options.payers.includes(payerFilter)) setPayerFilter('ALL');
+    }, [options]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const totalPages = Math.max(1, Math.ceil(filteredAdmissions.length / pageSize));
+    const paginatedAdmissions = filteredAdmissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const groups = useMemo(
+        () => (groupByWardOn ? groupByWard(paginatedAdmissions) : [{ ward: '', rows: paginatedAdmissions }]),
+        [groupByWardOn, paginatedAdmissions],
+    );
+
+    // The tiles count the active census, so picking one also switches the list to Active.
+    const pickTile = (key: QuickFilter) => {
+        setQuick(prev => (prev === key ? 'ALL' : key));
+        if (statusFilter !== 'ACTIVE') setStatusFilter('ACTIVE');
+    };
+    const toggleGroup = () => setGroupByWardOn(on => { saveGroupPref(!on); return !on; });
+
+    const extraFilterCount = [wardFilter, doctorFilter, payerFilter].filter(v => v !== 'ALL').length;
+    const anyFilter = extraFilterCount > 0 || quick !== 'ALL' || !!search.trim() || dateFilter !== 'ALL';
+    const clearFilters = () => { setSearch(''); setQuick('ALL'); setWardFilter('ALL'); setDoctorFilter('ALL'); setPayerFilter('ALL'); setDateFilter('ALL'); };
+
+    const admit = () => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); };
+
+    const runRowAction = (a: ActiveAdmissionItem) => {
+        const action = rowAction(a);
+        if (action.kind === 'CONFIRM_ARRIVAL') openConfirmArrival(a);
+        else if (action.kind === 'CONTINUE_DISCHARGE') onOpenWorkspace(a, 'discharge');
+        else onOpenWorkspace(a);
+    };
+
+    const rowMenu = (a: ActiveAdmissionItem) => (
+        <RowMenu
+            admission={a}
+            onOpen={() => onOpenWorkspace(a)}
+            onEdit={a.statusCode === 'ADMITTED' ? () => setEditingAdmissionTarget(a) : undefined}
+            onCancel={a.statusCode === 'ADMITTED' || a.statusCode === 'PRE_ADMIT' ? () => setCancelAdmissionTarget(a) : undefined}
+        />
+    );
+
+    const actionButton = (a: ActiveAdmissionItem, wide = false) => {
+        const action = rowAction(a);
+        if (action.kind === 'PRINT_DISCHARGE') {
+            return <span onClick={e => e.stopPropagation()}><PrintDischargeButton admission={a} /></span>;
+        }
+        const primary = action.kind === 'CONFIRM_ARRIVAL' || action.kind === 'CONTINUE_DISCHARGE' || action.kind === 'ASSIGN_BED';
+        return (
+            <Button size="sm" variant={primary ? 'default' : 'outline'}
+                className={cn('h-8 rounded-full px-3.5 text-xs font-bold whitespace-nowrap', wide && 'h-10 flex-1',
+                    primary ? 'bg-brand-600 hover:bg-brand-700 text-white' : 'border-slate-200 text-slate-700 dark:border-zinc-700 dark:text-zinc-200')}
+                onClick={e => { e.stopPropagation(); runRowAction(a); }}>
+                {action.kind === 'CONFIRM_ARRIVAL' && <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />}
+                {action.kind === 'ASSIGN_BED' && <BedDouble className="h-3.5 w-3.5 mr-1.5" />}
+                {action.label}
+                {(action.kind === 'OPEN' || action.kind === 'VIEW') && <ArrowRight className="h-3.5 w-3.5 ml-1.5" />}
+            </Button>
+        );
+    };
+
+    const selectClass = 'h-10 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-900 border-slate-200/70 dark:border-zinc-800 shadow-sm w-full lg:w-[168px] [&>span]:truncate';
+    const filterSelect = (label: string, value: string, onChange: (v: string) => void, items: { value: string; label: string }[]) => (
+        <Select value={value} onValueChange={onChange}>
+            <SelectTrigger aria-label={label} className={cn(selectClass, value !== 'ALL' && 'border-brand-300 text-brand-700 dark:text-brand-300')}>
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl max-h-[300px]">
+                <SelectItem value="ALL" className="text-xs font-semibold">{label}</SelectItem>
+                {items.map(i => <SelectItem key={i.value} value={i.value} className="text-xs font-semibold">{i.label}</SelectItem>)}
+            </SelectContent>
+        </Select>
+    );
+
+    const inHospital = tiles[0]?.value ?? 0;
 
     return (
-        <div className="w-full max-w-full px-3 sm:px-4 lg:px-6 pt-2 pb-28 sm:pb-6 space-y-4 sm:space-y-6 bg-slate-50/50 dark:bg-zinc-950 min-h-screen">
-            {/* Header Card (Unified Theme & Layout matching Appointment Dashboard) */}
-            <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 p-5 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
-                {/* Decorative flare */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+        <div className="w-full max-w-full px-3 sm:px-4 lg:px-6 pt-2 pb-28 sm:pb-6 space-y-4 bg-slate-50/50 dark:bg-zinc-950 min-h-screen">
+            <IpdSectionHeader
+                active="roster"
+                subtitle={`${formatIstDayLabel(new Date())} · ${inHospital} in hospital`}
+                onNavigate={onNavigate}
+                onAdmit={onAdmit}
+                badges={{ referred: pendingReferrals }}
+            />
 
-                <div className="relative z-10 flex flex-col gap-5">
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0">
-                                <Hotel className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold tracking-tight">Inpatient Department</h1>
-                                <p className="text-[11px] text-brand-100 mt-0.5 animate-pulse">Manage live roster, beds &amp; referrals</p>
-                            </div>
-                        </div>
-                        {/* Admit button on the right for desktop */}
-                        <button 
-                            onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} 
-                            className="hidden sm:flex items-center justify-center h-10 px-4 rounded-xl text-xs font-bold bg-white text-brand-700 hover:bg-brand-50 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md shadow-black/5"
-                        >
-                            <Plus className="h-3.5 w-3.5 mr-1.5" /> Admit Patient
-                        </button>
-                    </div>
-
-                    {/* Navigation Tab Capsule */}
-                    <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-black/15 dark:bg-black/30 backdrop-blur-sm">
-                        {/* Tab 1: Live Roster (Selected) */}
-                        <div className="bg-white dark:bg-zinc-900 text-brand-600 dark:text-brand-400 shadow-sm rounded-xl py-2 flex flex-col items-center justify-center text-center cursor-default">
-                            <Hotel className="h-5 w-5 mb-1" />
-                            <span className="text-[9px] font-bold tracking-wide leading-tight">Live<br/>Roster</span>
-                        </div>
-
-                        {/* Tab 2: Bed Board */}
-                        <button 
-                            onClick={onOpenBedBoard}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <LayoutGrid className="h-5 w-5 mb-1 opacity-80 group-hover:opacity-100" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Bed<br/>Board</span>
-                        </button>
-
-                        {/* Tab 3: Referrals */}
-                        <button 
-                            onClick={onOpenReferredAdmissions}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <UserPlus className="h-5 w-5 mb-1 opacity-80 group-hover:opacity-100" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Referred<br/>Admissions</span>
-                        </button>
-
-                        {/* Tab 4: Ledger */}
-                        <button 
-                            onClick={onOpenConsultantLedger}
-                            className="text-brand-50 hover:bg-white/10 py-2 flex flex-col items-center justify-center text-center rounded-xl transition-all active:scale-[0.97]"
-                        >
-                            <Stethoscope className="h-5 w-5 mb-1 opacity-80 group-hover:opacity-100" />
-                            <span className="text-[9px] font-medium tracking-wide leading-tight">Consultant<br/>Ledger</span>
-                        </button>
-                    </div>
-                </div>
+            {/* Tiles — always the active census; tapping one filters the list below */}
+            <div className="flex lg:grid lg:grid-cols-8 gap-2 overflow-x-auto hide-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 pb-0.5">
+                {tiles.map(t => <RosterTileButton key={t.key} tile={t} selected={quick === t.key && (t.key !== 'ALL' || statusFilter === 'ACTIVE')} onClick={() => pickTile(t.key)} />)}
             </div>
 
-            <div className="px-4 sm:px-8 xl:px-12 space-y-6">
-
-            {/* KPI tiles — always the active census, regardless of the list's status filter below */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <KpiTile label="Admitted" value={kpis.admittedCount} icon={<Hotel className="h-4 w-4" />} tone="sky" />
-                <KpiTile label="Unassigned" value={kpis.unassigned} icon={<ClipboardList className="h-4 w-4" />} tone="amber" />
-                <KpiTile label="Non-cash" value={kpis.nonCash} icon={<Wallet className="h-4 w-4" />} tone="rose" />
-            </div>
-
-            {/* Admissions list */}
             <section className="space-y-3">
-                <div className="space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admissions</h2>
-                        <Button variant="outline" onClick={load} disabled={loading} className="h-9 rounded-xl px-3 shadow-sm shrink-0 border-slate-200/60 hover:bg-slate-50 transition-all text-slate-600 font-semibold">
-                            <RefreshCw className={cn('h-4 w-4 sm:mr-2', loading && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
+                {/* Toolbar */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:flex-wrap">
+                    <div className="flex items-center gap-2 w-full lg:flex-1 lg:min-w-[240px]">
+                        <div className="relative flex-1 min-w-0">
+                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input value={search} onChange={e => setSearch(e.target.value)} aria-label="Search admissions"
+                                placeholder="Search name, UHID, admission no., bed, doctor…"
+                                className="h-11 sm:h-10 rounded-xl text-sm pl-9 w-full bg-white dark:bg-zinc-900 shadow-sm border-slate-200/70 dark:border-zinc-800" />
+                        </div>
+                        <Button variant="outline" onClick={() => setFiltersOpen(o => !o)} aria-expanded={filtersOpen}
+                            className={cn('lg:hidden h-11 sm:h-10 rounded-xl px-3.5 text-xs font-bold shrink-0 border-slate-200/70', extraFilterCount > 0 && 'border-brand-300 text-brand-700')}>
+                            <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" /> Filters{extraFilterCount > 0 ? ` · ${extraFilterCount}` : ''}
                         </Button>
                     </div>
 
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 lg:gap-2 lg:flex-wrap">
-                        {/* Search — full width on mobile, flexes on desktop */}
-                        <div className="relative w-full lg:flex-1 lg:min-w-[220px]">
-                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={isMobile ? 'Search name, UHID, bed…' : 'Search name, UHID, admission #, bed…'} className="h-11 sm:h-10 rounded-xl text-sm pl-9 w-full bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20 transition-all hover:border-slate-300" />
-                        </div>
-
-                        {/* Segmented filters — wrap onto their own rows on small screens */}
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 shrink-0 border border-slate-200/40 dark:border-zinc-800">
-                                {(['ACTIVE', 'DISCHARGED', 'ALL'] as AdmissionStatusFilter[]).map(s => (
-                                    <button key={s} type="button" onClick={() => setStatusFilter(s)}
-                                        className={cn('h-8 px-4 rounded-full text-xs font-extrabold transition-all duration-200 shrink-0',
-                                            statusFilter === s ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50')}>
-                                        {s === 'ACTIVE' ? 'Active' : s === 'DISCHARGED' ? 'Discharged' : 'All'}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 shrink-0 border border-slate-200/40 dark:border-zinc-800">
-                                {(['TODAY', 'ALL', 'RANGE'] as DateFilterMode[]).map(m => (
-                                    <button key={m} type="button" onClick={() => setDateFilter(m)}
-                                        className={cn('h-8 px-4 rounded-full text-xs font-extrabold transition-all duration-200 shrink-0',
-                                            dateFilter === m ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50')}>
-                                        {m === 'TODAY' ? 'Today' : m === 'ALL' ? 'All' : 'Range'}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {dateFilter === 'RANGE' && (
-                            <div className="flex items-center gap-1.5 lg:shrink-0">
-                                <Input type="date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-11 sm:h-10 rounded-xl text-xs flex-1 lg:flex-none lg:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
-                                <span className="text-slate-400 text-xs font-semibold shrink-0">to</span>
-                                <Input type="date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-11 sm:h-10 rounded-xl text-xs flex-1 lg:flex-none lg:w-36 bg-white shadow-sm border-slate-200/60 focus:ring-brand-500/20" />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="md:rounded-2xl md:border md:border-slate-200/60 md:bg-white md:shadow-sm md:overflow-hidden">
-                    {/* Mobile Card Layout */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
-                        {paginatedAdmissions.map(a => (
-                            <div key={a.admissionId} className={cn("border border-slate-200/60 dark:border-zinc-800/85 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 cursor-pointer transition-all active:scale-[0.98]",
-                                !isLowBandwidthMode ? "bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-lg shadow-brand-500/5 hover:shadow-xl hover:shadow-brand-500/10" : "bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md"
-                            )} onClick={() => onOpenWorkspace(a)}>
-                                <div className="flex justify-between items-start gap-3">
-                                    <div>
-                                        <p className="font-bold text-slate-900 dark:text-zinc-50 text-base leading-tight">{a.patientName || '—'}</p>
-                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 font-medium">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
-                                    </div>
-                                    <Badge variant="outline" className={cn('text-[10px] font-bold px-2.5 py-0.5 shrink-0 rounded-full',
-                                        a.statusCode === 'ADMITTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900' :
-                                            a.statusCode === 'DISCHARGED' ? 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700' :
-                                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
-                                    )}>
-                                        {a.statusCode}
-                                    </Badge>
-                                </div>
-                                {a.statusCode === 'ADMITTED' && (
-                                    <div className="flex flex-wrap justify-end gap-2 mt-1">
-                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
-                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300 border-0 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors" onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
-                                            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                                        </Button>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border-0 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
-                                            <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
-                                        </Button>
-                                    </div>
-                                )}
-                                {a.statusCode === 'PRE_ADMIT' && (
-                                    <div className="flex flex-wrap justify-end gap-2 mt-1">
-                                        <span onClick={e => e.stopPropagation()}><PrintTokenButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
-                                        <span onClick={e => e.stopPropagation()}><PrintAdmissionButton admission={a} className="h-9 text-xs px-3.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 hover:bg-slate-200 dark:hover:bg-zinc-700/80 transition-colors" /></span>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-brand-600 text-white border-0 hover:bg-brand-700 transition-colors shadow-sm" onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
-                                            <CalendarCheck className="h-3.5 w-3.5 mr-1.5" /> Confirm arrival
-                                        </Button>
-                                        <Button size="sm" variant="outline" className="h-9 text-xs px-3.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-450 border-0 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors" onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
-                                            <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
-                                        </Button>
-                                    </div>
-                                )}
-                                {a.statusCode === 'DISCHARGED' && (
-                                    <div className="flex justify-end mt-1" onClick={e => e.stopPropagation()}>
-                                        <PrintDischargeButton admission={a} />
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs bg-slate-50 dark:bg-zinc-950 rounded-xl p-3 border border-slate-100 dark:border-zinc-850">
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Admission #</span>
-                                        <span className="font-mono text-brand-700 dark:text-brand-400 font-bold">{a.admissionNo}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Bed</span>
-                                        <span className={cn('font-semibold truncate', a.bedCode ? 'text-slate-800 dark:text-zinc-200' : 'text-amber-600 dark:text-amber-400')}>{a.bedCode ? `${a.wardName ? a.wardName + ' · ' : ''}${a.bedCode}` : 'Unassigned'}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Payer</span>
-                                        <span className="text-slate-800 dark:text-zinc-200 font-semibold truncate">{a.payerType} {a.payerName && <span className="text-slate-500 dark:text-zinc-450 font-medium">({a.payerName})</span>}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Admitted</span>
-                                        <span className="text-slate-800 dark:text-zinc-200 font-semibold truncate">{formatIstDateTime(a.admittedAt).split(',')[0]}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {filteredAdmissions.length === 0 && (
-                            <div className="p-8 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200 border-dashed">
-                                No admissions found matching filters.
-                            </div>
-                        )}
+                    <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+                        <Segmented<AdmissionStatusFilter> value={statusFilter} onChange={s => { setStatusFilter(s); if (s !== 'ACTIVE') setQuick('ALL'); }}
+                            options={[{ value: 'ACTIVE', label: 'Active' }, { value: 'DISCHARGED', label: 'Discharged' }, { value: 'ALL', label: 'All' }]} label="Status" />
+                        <Segmented<DateFilterMode> value={dateFilter} onChange={setDateFilter}
+                            options={[{ value: 'TODAY', label: 'Today' }, { value: 'ALL', label: 'All dates' }, { value: 'RANGE', label: 'Range' }]} label="Admitted on" />
+                        <Button variant="outline" onClick={load} disabled={loading} aria-label="Refresh"
+                            className="h-10 rounded-full px-3.5 text-xs font-bold shrink-0 border-slate-200/70 text-slate-600 dark:text-zinc-300">
+                            <RefreshCw className={cn('h-3.5 w-3.5 sm:mr-1.5', loading && 'animate-spin')} /> <span className="hidden sm:inline">Refresh</span>
+                        </Button>
                     </div>
 
-                    {/* Desktop Table Layout */}
-                    <table className="w-full text-sm hidden md:table">
-                        <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                            <tr>
-                                <th className="text-left px-3 py-2.5 font-bold">Patient</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Admission #</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Type / Payer</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Bed</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Admitted</th>
-                                <th className="text-left px-3 py-2.5 font-bold">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginatedAdmissions.map(a => (
-                                <tr key={a.admissionId} className="border-t border-slate-100 hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => onOpenWorkspace(a)}>
-                                    <td className="px-3 py-2">
-                                        <p className="font-semibold text-slate-900">{a.patientName || '—'}</p>
-                                        <p className="text-[11px] text-slate-500">{a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}</p>
-                                    </td>
-                                    <td className="px-3 py-2 font-mono text-xs text-brand-700 font-bold">{a.admissionNo}</td>
-                                    <td className="px-3 py-2 text-xs text-slate-700">{a.admissionType ?? '—'} · {a.payerType}</td>
-                                    <td className="px-3 py-2 text-xs text-slate-700">
-                                        {a.bedCode ? <>{a.wardName ? `${a.wardName} · ` : ''}{a.bedCode}</> : <span className="text-amber-600 font-semibold">Unassigned</span>}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs text-slate-600 whitespace-nowrap">{formatIstDateTime(a.admittedAt)}</td>
-                                    <td className="px-3 py-2">
-                                        <div className="flex items-center gap-1.5">
-                                            <Badge variant="outline" className={cn('text-[10px] font-bold', statusTone(a.statusCode))}>{a.statusCode}</Badge>
-                                            {a.statusCode === 'PRE_ADMIT' && (
-                                                <>
-                                                    <PrintTokenButton admission={a} className="h-6 px-2 text-[10px]" />
-                                                    <PrintAdmissionButton admission={a} className="h-6 px-2 text-[10px]" />
-                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
-                                                        onClick={e => { e.stopPropagation(); openConfirmArrival(a); }}>
-                                                        <CalendarCheck className="h-3 w-3 mr-1" /> Confirm arrival
-                                                    </Button>
-                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
-                                                        onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
-                                                        <X className="h-3 w-3 mr-1" /> Cancel
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {a.statusCode === 'ADMITTED' && (
-                                                <>
-                                                    <PrintTokenButton admission={a} className="h-6 px-2 text-[10px]" />
-                                                    <PrintAdmissionButton admission={a} className="h-6 px-2 text-[10px]" />
-                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]"
-                                                        onClick={e => { e.stopPropagation(); setEditingAdmissionTarget(a); }}>
-                                                        <Pencil className="h-3 w-3 mr-1" /> Edit details
-                                                    </Button>
-                                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
-                                                        onClick={e => { e.stopPropagation(); setCancelAdmissionTarget(a); }}>
-                                                        <X className="h-3 w-3 mr-1" /> Cancel
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {a.statusCode === 'DISCHARGED' && (
-                                                <PrintDischargeButton admission={a} />
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {!loading && filteredAdmissions.length === 0 && (
-                                <tr><td colSpan={6} className="px-3 py-10 text-center text-sm text-slate-400">No admissions match your filters.</td></tr>
-                            )}
-                            {loading && admissions.length === 0 && (
-                                <tr><td colSpan={6} className="px-3 py-10 text-center text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                    
-                    {/* Pagination Controls */}
-                    {filteredAdmissions.length > 0 && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-white">
-                            <span className="text-xs font-semibold text-slate-500">
-                                Showing <span className="text-slate-800">{(currentPage - 1) * PAGE_SIZE + 1}</span> to <span className="text-slate-800">{Math.min(currentPage * PAGE_SIZE, filteredAdmissions.length)}</span> of <span className="text-slate-800">{filteredAdmissions.length}</span>
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 rounded-lg text-slate-600 disabled:opacity-50"
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <span className="text-xs font-bold text-slate-700 px-2 bg-slate-50 h-8 flex items-center rounded-lg border border-slate-200">
-                                    {currentPage} / {totalPages}
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 rounded-lg text-slate-600 disabled:opacity-50"
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
+                    {dateFilter === 'RANGE' && (
+                        <div className="flex items-center gap-1.5 lg:shrink-0">
+                            <Input type="date" aria-label="From date" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} className="h-10 rounded-xl text-xs flex-1 lg:flex-none lg:w-36 bg-white dark:bg-zinc-900 shadow-sm border-slate-200/70" />
+                            <span className="text-slate-400 text-xs font-semibold shrink-0">to</span>
+                            <Input type="date" aria-label="To date" value={rangeTo} onChange={e => setRangeTo(e.target.value)} className="h-10 rounded-xl text-xs flex-1 lg:flex-none lg:w-36 bg-white dark:bg-zinc-900 shadow-sm border-slate-200/70" />
                         </div>
                     )}
                 </div>
+
+                <div className={cn('grid-cols-2 gap-2 lg:flex lg:items-center lg:flex-wrap', filtersOpen ? 'grid' : 'hidden lg:flex')}>
+                    {filterSelect('All wards', wardFilter, setWardFilter, options.wards.map(w => ({ value: w, label: w })))}
+                    {filterSelect('All consultants', doctorFilter, setDoctorFilter, options.doctors.map(d => ({ value: d, label: d })))}
+                    {filterSelect('All payers', payerFilter, setPayerFilter, options.payers.map(p => ({ value: p, label: payerLabel(p) })))}
+                    <button type="button" onClick={toggleGroup} aria-pressed={groupByWardOn}
+                        className={cn('h-10 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-colors',
+                            groupByWardOn ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-950/40 dark:border-brand-800 dark:text-brand-300' : 'bg-white dark:bg-zinc-900 border-slate-200/70 dark:border-zinc-800 text-slate-600 dark:text-zinc-300')}>
+                        <Rows3 className="h-3.5 w-3.5" /> Group by ward
+                    </button>
+                    {anyFilter && (
+                        <button type="button" onClick={clearFilters} className="h-10 px-2 text-xs font-bold text-brand-700 dark:text-brand-300 hover:underline col-span-2 lg:col-span-1 text-left">
+                            Clear filters
+                        </button>
+                    )}
+                    <span className="hidden lg:block ml-auto text-xs font-semibold text-slate-500">
+                        {filteredAdmissions.length} {filteredAdmissions.length === 1 ? 'admission' : 'admissions'}
+                    </span>
+                </div>
+
+                {/* Phone and small tablet: cards */}
+                <div className="md:hidden space-y-3">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Admissions · {filteredAdmissions.length}</p>
+                    {groups.map(g => (
+                        <React.Fragment key={g.ward || 'all'}>
+                            {g.ward && <p className="text-xs font-bold text-slate-700 dark:text-zinc-200 pt-1">{g.ward} <span className="text-slate-400 font-semibold">· {g.rows.length}</span></p>}
+                            {g.rows.map(a => {
+                                const exp = expectedDischarge(a);
+                                return (
+                                    <div key={a.admissionId} role="button" tabIndex={0}
+                                        onClick={() => onOpenWorkspace(a)}
+                                        onKeyDown={e => { if (e.key === 'Enter') onOpenWorkspace(a); }}
+                                        className="rounded-2xl border border-slate-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-3.5 flex flex-col gap-3 cursor-pointer active:scale-[0.99] transition-transform">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-slate-900 dark:text-zinc-50 text-[15px] leading-tight truncate">{a.patientName || '—'}</p>
+                                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 truncate">
+                                                    {a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''}{a.primaryDoctorName ? ` · ${a.primaryDoctorName}` : ''}
+                                                </p>
+                                            </div>
+                                            <BedChip admission={a} />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-xs">
+                                            <Fact label="Stay" value={a.statusCode === 'PRE_ADMIT' ? 'Not arrived' : `Day ${stayDay(a)}`} />
+                                            <Fact label="Payer" value={payerLabel(a.payerType)} />
+                                            <Fact label="Expected out" value={exp.dateKey ? shortDate(a.expectedDischargeAt) : 'Not set'} tone={exp.tone === 'overdue' ? 'rose' : exp.tone === 'today' ? 'brand' : undefined} />
+                                        </div>
+                                        <StageBar statusCode={a.statusCode} />
+                                        <div className="flex items-center gap-2">
+                                            {actionButton(a, true)}
+                                            {rowMenu(a)}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </React.Fragment>
+                    ))}
+                    {!loading && filteredAdmissions.length === 0 && <EmptyState anyFilter={anyFilter} onClear={clearFilters} onAdmit={admit} />}
+                    {loading && admissions.length === 0 && <p className="py-10 text-center text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…</p>}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden md:block rounded-2xl border border-slate-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-50 dark:bg-zinc-950 text-[10px] uppercase tracking-wider text-slate-500">
+                                <tr>
+                                    <th className="text-left px-3 py-2.5 font-bold">Bed</th>
+                                    <th className="text-left px-3 py-2.5 font-bold">Patient</th>
+                                    <th className="text-left px-3 py-2.5 font-bold hidden lg:table-cell">Consultant</th>
+                                    <th className="text-left px-3 py-2.5 font-bold hidden xl:table-cell">Diagnosis</th>
+                                    <th className="text-left px-3 py-2.5 font-bold">Stay</th>
+                                    <th className="text-left px-3 py-2.5 font-bold hidden lg:table-cell">Type / Payer</th>
+                                    <th className="text-left px-3 py-2.5 font-bold">Stage</th>
+                                    <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">Expected out</th>
+                                    <th className="text-right px-3 py-2.5 font-bold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {groups.map(g => (
+                                    <React.Fragment key={g.ward || 'all'}>
+                                        {g.ward && (
+                                            <tr className="bg-slate-50/70 dark:bg-zinc-950/60 border-t border-slate-100 dark:border-zinc-800">
+                                                <td colSpan={9} className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-zinc-200">
+                                                    {g.ward} <span className="text-slate-400 font-semibold">· {g.rows.length} {g.rows.length === 1 ? 'patient' : 'patients'}</span>
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {g.rows.map(a => {
+                                            const exp = expectedDischarge(a);
+                                            return (
+                                                <tr key={a.admissionId} tabIndex={0}
+                                                    className="border-t border-slate-100 dark:border-zinc-800 hover:bg-brand-50/40 dark:hover:bg-zinc-800/40 focus-visible:bg-brand-50/60 outline-none transition-colors cursor-pointer"
+                                                    onClick={() => onOpenWorkspace(a)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') onOpenWorkspace(a); }}>
+                                                    <td className="px-3 py-2.5 align-top"><BedChip admission={a} stacked={!groupByWardOn} /></td>
+                                                    <td className="px-3 py-2.5 align-top max-w-[240px]">
+                                                        <p className="font-semibold text-slate-900 dark:text-zinc-50 truncate">{a.patientName || '—'}</p>
+                                                        <p className="text-[11px] text-slate-500 truncate">
+                                                            {a.patientId}{a.patientAge != null ? ` · ${a.patientAge}${a.patientSex ?? ''}` : ''} · <span className="font-mono">{a.admissionNo}</span>
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-3 py-2.5 align-top text-xs text-slate-700 dark:text-zinc-300 hidden lg:table-cell max-w-[160px] truncate">{a.primaryDoctorName || <span className="text-slate-400">Not set</span>}</td>
+                                                    <td className="px-3 py-2.5 align-top text-xs text-slate-700 dark:text-zinc-300 hidden xl:table-cell max-w-[220px]">
+                                                        <span className="line-clamp-2" title={a.diagnosis || a.admissionReason || undefined}>{a.diagnosis || a.admissionReason || <span className="text-slate-400">Not recorded</span>}</span>
+                                                    </td>
+                                                    <td className="px-3 py-2.5 align-top whitespace-nowrap">
+                                                        <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">{a.statusCode === 'PRE_ADMIT' ? 'Not arrived' : a.statusCode === 'DISCHARGED' ? shortDate(a.admittedAt) : `Day ${stayDay(a)}`}</p>
+                                                        <p className="text-[11px] text-slate-500">{a.statusCode === 'DISCHARGED' ? 'admitted' : `${shortDate(a.admittedAt)}, ${formatIstTime(a.admittedAt)}`}</p>
+                                                    </td>
+                                                    <td className="px-3 py-2.5 align-top hidden lg:table-cell">
+                                                        <p className="text-xs text-slate-700 dark:text-zinc-300">{a.admissionType ? titleCase(a.admissionType) : '—'}</p>
+                                                        <p className="text-[11px] text-slate-500 truncate max-w-[150px]">{payerLabel(a.payerType)}{a.payerName ? ` · ${a.payerName}` : ''}</p>
+                                                    </td>
+                                                    <td className="px-3 py-2.5 align-top w-[150px]"><StageBar statusCode={a.statusCode} /></td>
+                                                    <td className="px-3 py-2.5 align-top whitespace-nowrap">
+                                                        {exp.dateKey ? (
+                                                            <>
+                                                                <p className="text-xs font-semibold text-slate-800 dark:text-zinc-100">{shortDate(a.expectedDischargeAt)}</p>
+                                                                {exp.note && <p className={cn('text-[11px] font-semibold', exp.tone === 'overdue' ? 'text-rose-600' : exp.tone === 'today' ? 'text-brand-700 dark:text-brand-300' : 'text-slate-500')}>{exp.note}</p>}
+                                                            </>
+                                                        ) : <span className="text-xs text-slate-400">Not set</span>}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 align-top">
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            {actionButton(a)}
+                                                            {rowMenu(a)}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </React.Fragment>
+                                ))}
+                                {!loading && filteredAdmissions.length === 0 && (
+                                    <tr><td colSpan={9}><EmptyState anyFilter={anyFilter} onClear={clearFilters} onAdmit={admit} /></td></tr>
+                                )}
+                                {loading && admissions.length === 0 && (
+                                    <tr><td colSpan={9} className="px-3 py-10 text-center text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {filteredAdmissions.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                        <span className="text-xs font-semibold text-slate-500">
+                            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredAdmissions.length)} of {filteredAdmissions.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="hidden sm:inline text-xs font-semibold text-slate-500">Rows per page</span>
+                            <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+                                <SelectTrigger aria-label="Rows per page" className="h-8 w-[70px] rounded-lg text-xs font-bold bg-white dark:bg-zinc-900 border-slate-200"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    {PAGE_SIZES.map(n => <SelectItem key={n} value={String(n)} className="text-xs font-semibold">{n}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Button variant="outline" size="sm" aria-label="Previous page" className="h-8 w-8 p-0 rounded-lg text-slate-600"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 px-2 bg-white dark:bg-zinc-900 h-8 flex items-center rounded-lg border border-slate-200 dark:border-zinc-800">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <Button variant="outline" size="sm" aria-label="Next page" className="h-8 w-8 p-0 rounded-lg text-slate-600"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </section>
 
             <Dialog open={!!confirmArrivalTarget} onOpenChange={o => { if (!o) setConfirmArrivalTarget(null); }}>
@@ -585,11 +550,10 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
                 admission={editingAdmissionTarget}
                 onUpdated={() => { setEditingAdmissionTarget(null); load(); }}
             />
-            </div>
 
-            {/* Mobile-only Extended FAB */}
-            <div className="sm:hidden fixed bottom-20 right-4 z-40 pointer-events-auto">
-                <button onClick={() => { if (isSubscriptionReadOnly) { blockAction('Admitting patients'); return; } onAdmit(); }} className="h-14 px-5 flex items-center justify-center rounded-full text-sm font-black bg-brand-600 text-white shadow-xl shadow-brand-600/40 active:scale-95 hover:scale-[1.02] transition-all gap-1.5 border border-brand-500/20">
+            {/* Phone: Admit Patient stays within thumb reach */}
+            <div className="sm:hidden fixed bottom-20 right-4 z-40">
+                <button type="button" onClick={admit} className="h-14 px-5 flex items-center justify-center rounded-full text-sm font-black bg-brand-600 text-white shadow-xl shadow-brand-600/40 active:scale-95 transition-all gap-1.5 border border-brand-500/20">
                     <Plus className="h-5 w-5 stroke-[2.5]" />
                     <span>Admit Patient</span>
                 </button>
@@ -598,41 +562,124 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenC
     );
 };
 
-const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.ReactNode; tone: string; sub?: string }> = ({ label, value, icon, tone, sub }) => {
-    const { isLowBandwidthMode } = useAppStore();
-    const tones: Record<string, string> = {
-        indigo: 'bg-brand-50/70 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 border-brand-100/50 dark:border-brand-800/30',
-        emerald: 'bg-emerald-50/70 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-800/30',
-        sky: 'bg-sky-50/70 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400 border-sky-100/50 dark:border-sky-800/30',
-        rose: 'bg-rose-50/70 dark:bg-rose-900/20 text-rose-700 dark:text-rose-450 border-rose-100/50 dark:border-rose-800/30',
-        amber: 'bg-amber-50/70 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100/50 dark:border-amber-800/30',
-    };
-    
-    // Fallback simple colors for low bandwidth
-    const fallbackTones: Record<string, string> = {
-        indigo: 'bg-brand-50 border-brand-100 text-brand-700',
-        emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-        sky: 'bg-sky-50 border-sky-100 text-sky-700',
-        rose: 'bg-rose-50 border-rose-100 text-rose-700',
-        amber: 'bg-amber-50 border-amber-100 text-amber-700',
-    };
+const TILE_TONE: Record<RosterTile['tone'], string> = {
+    brand: 'text-brand-700 dark:text-brand-300',
+    emerald: 'text-emerald-700 dark:text-emerald-400',
+    sky: 'text-sky-700 dark:text-sky-400',
+    amber: 'text-amber-700 dark:text-amber-400',
+    rose: 'text-rose-700 dark:text-rose-400',
+    slate: 'text-slate-700 dark:text-zinc-200',
+};
 
+const RosterTileButton: React.FC<{ tile: RosterTile; selected: boolean; onClick: () => void }> = ({ tile, selected, onClick }) => (
+    <button type="button" onClick={onClick} aria-pressed={selected}
+        className={cn('min-w-[112px] lg:min-w-0 shrink-0 lg:shrink rounded-2xl border px-3 py-2.5 text-left transition-all active:scale-[0.98]',
+            selected
+                ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-300 dark:border-brand-700 ring-2 ring-brand-500/20'
+                : 'bg-white dark:bg-zinc-900 border-slate-200/70 dark:border-zinc-800 hover:border-slate-300 shadow-sm')}>
+        <p className={cn('text-2xl font-black leading-none tabular-nums', tile.value === 0 ? 'text-slate-300 dark:text-zinc-600' : TILE_TONE[tile.tone])}>{tile.value}</p>
+        <p className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mt-1.5 leading-tight">{tile.label}</p>
+    </button>
+);
+
+function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
     return (
-        <div className={cn(
-            'rounded-[1.5rem] border p-3.5 sm:p-5 transition-all overflow-hidden relative group flex flex-col justify-between min-h-[92px]',
-            !isLowBandwidthMode ? 'backdrop-blur-md shadow-sm hover:shadow-md hover:-translate-y-0.5' : 'shadow-sm',
-            !isLowBandwidthMode ? tones[tone] : fallbackTones[tone]
-        )}>
-            {!isLowBandwidthMode && (
-                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                    {icon}
-                </div>
-            )}
-            <div className="flex flex-col gap-0.5">
-                <p className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white leading-none">{value}</p>
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mt-1.5 leading-tight">{label}</p>
-            </div>
-            {sub && <p className="text-[9px] font-semibold mt-1 opacity-75">{sub}</p>}
+        <div role="group" aria-label={label} className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 shrink-0 border border-slate-200/40 dark:border-zinc-800">
+            {options.map(o => (
+                <button key={o.value} type="button" onClick={() => onChange(o.value)} aria-pressed={value === o.value}
+                    className={cn('h-8 px-3.5 rounded-full text-xs font-bold transition-colors shrink-0',
+                        value === o.value ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50')}>
+                    {o.label}
+                </button>
+            ))}
         </div>
+    );
+}
+
+const BedChip: React.FC<{ admission: ActiveAdmissionItem; stacked?: boolean }> = ({ admission: a, stacked }) => {
+    if (!a.bedCode) {
+        return <span className="inline-flex shrink-0 items-center h-6 px-2 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900 whitespace-nowrap">No bed</span>;
+    }
+    return (
+        <div className="shrink-0">
+            <span className="inline-flex items-center h-6 px-2 rounded-md text-[11px] font-bold font-mono bg-slate-100 text-slate-800 dark:bg-zinc-800 dark:text-zinc-100 whitespace-nowrap">{a.bedCode}</span>
+            {stacked && a.wardName && <p className="text-[11px] text-slate-500 mt-0.5 whitespace-nowrap">{a.wardName}</p>}
+        </div>
+    );
+};
+
+const Fact: React.FC<{ label: string; value: string; tone?: 'rose' | 'brand' }> = ({ label, value, tone }) => (
+    <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
+        <p className={cn('font-semibold truncate mt-0.5', tone === 'rose' ? 'text-rose-600' : tone === 'brand' ? 'text-brand-700 dark:text-brand-300' : 'text-slate-800 dark:text-zinc-200')}>{value}</p>
+    </div>
+);
+
+/** Four steps from admitted to discharged; anything outside that path (pre-admit, cancelled) is a plain label. */
+const StageBar: React.FC<{ statusCode: string }> = ({ statusCode }) => {
+    const onPath = ['ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED', 'DISCHARGED', 'LAMA'].includes(statusCode);
+    if (!onPath) {
+        return (
+            <span className={cn('inline-flex items-center h-6 px-2 rounded-full text-[11px] font-bold border whitespace-nowrap',
+                statusCode === 'PRE_ADMIT' ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/30 dark:text-sky-400 dark:border-sky-900' : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900')}>
+                {statusLabel(statusCode)}
+            </span>
+        );
+    }
+    const stage = dischargeStage(statusCode);
+    const done = stage === 3;
+    return (
+        <div>
+            <div className="flex gap-1" aria-hidden="true">
+                {DISCHARGE_STAGE_LABELS.map((l, i) => (
+                    <span key={l} className={cn('h-1.5 flex-1 rounded-full', i <= stage ? (done ? 'bg-slate-400' : stage === 0 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-slate-200 dark:bg-zinc-700')} />
+                ))}
+            </div>
+            <p className={cn('text-[11px] font-semibold mt-1 whitespace-nowrap', done ? 'text-slate-500' : stage === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400')}>
+                {statusCode === 'LAMA' ? statusLabel(statusCode) : DISCHARGE_STAGE_LABELS[stage]}
+            </p>
+        </div>
+    );
+};
+
+const EmptyState: React.FC<{ anyFilter: boolean; onClear: () => void; onAdmit: () => void }> = ({ anyFilter, onClear, onAdmit }) => (
+    <div className="px-4 py-12 text-center">
+        <p className="text-sm font-semibold text-slate-600 dark:text-zinc-300">{anyFilter ? 'No admissions match these filters.' : 'No admissions yet.'}</p>
+        {anyFilter
+            ? <button type="button" onClick={onClear} className="mt-2 text-xs font-bold text-brand-700 dark:text-brand-300 hover:underline">Clear filters</button>
+            : <button type="button" onClick={onAdmit} className="mt-2 text-xs font-bold text-brand-700 dark:text-brand-300 hover:underline">Admit a patient</button>}
+    </div>
+);
+
+/** Everything a row can do besides its one main action. Closes itself after any choice. */
+const RowMenu: React.FC<{ admission: ActiveAdmissionItem; onOpen: () => void; onEdit?: () => void; onCancel?: () => void }> = ({ admission, onOpen, onEdit, onCancel }) => {
+    const [open, setOpen] = useState(false);
+    const item = 'w-full h-9 px-2.5 rounded-lg flex items-center justify-start gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 border-0 shadow-none bg-transparent';
+    const run = (fn: () => void) => () => { setOpen(false); fn(); };
+    const canPrint = admission.statusCode === 'ADMITTED' || admission.statusCode === 'PRE_ADMIT';
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" aria-label={`More actions for ${admission.patientName || admission.admissionNo}`}
+                    className="h-8 w-8 p-0 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 shrink-0" onClick={e => e.stopPropagation()}>
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-52 p-1.5 rounded-xl" onClick={e => e.stopPropagation()}>
+                <button type="button" className={item} onClick={run(onOpen)}><ArrowRight className="h-3.5 w-3.5" /> Open workspace</button>
+                {canPrint && (
+                    <div onClickCapture={() => setOpen(false)}>
+                        <PrintTokenButton admission={admission} variant="ghost" className={item} />
+                        <PrintAdmissionButton admission={admission} variant="ghost" className={item} />
+                    </div>
+                )}
+                {onEdit && <button type="button" className={item} onClick={run(onEdit)}><Pencil className="h-3.5 w-3.5" /> Edit details</button>}
+                {onCancel && (
+                    <button type="button" className={cn(item, 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30')} onClick={run(onCancel)}>
+                        <X className="h-3.5 w-3.5" /> Cancel admission
+                    </button>
+                )}
+            </PopoverContent>
+        </Popover>
     );
 };

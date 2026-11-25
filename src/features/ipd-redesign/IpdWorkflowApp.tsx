@@ -4,9 +4,9 @@ import { AdmitPatientSheet } from './screens/AdmitPatientSheet';
 import { BedBoardScreen } from './screens/BedBoardScreen';
 import { CssdBoardScreen } from './screens/CssdBoardScreen';
 import { IpdKpiDashboardScreen } from './screens/IpdKpiDashboardScreen';
-import { ConsultantLedgerScreen } from './screens/ConsultantLedgerScreen';
 import { ReferredAdmissionBoard } from './screens/ReferredAdmissionBoard';
-import { PatientWorkspace } from './screens/PatientWorkspace';
+import { PatientWorkspace, type Section } from './screens/PatientWorkspace';
+import type { IpdTab } from './components/IpdSectionHeader';
 import type { ActiveAdmissionItem } from './services/admissionApi';
 import type { AdmissionReferralItem } from './services/admissionReferralApi';
 
@@ -15,9 +15,16 @@ type View =
     | { name: 'bedboard' }
     | { name: 'cssdboard' }
     | { name: 'kpidashboard' }
-    | { name: 'consultantledger' }
     | { name: 'referredadmissions' }
-    | { name: 'workspace'; admission: ActiveAdmissionItem };
+    | { name: 'workspace'; admission: ActiveAdmissionItem; section?: Section };
+
+const TAB_VIEW: Record<IpdTab, View> = {
+    roster: { name: 'dashboard' },
+    bedboard: { name: 'bedboard' },
+    referred: { name: 'referredadmissions' },
+    kpis: { name: 'kpidashboard' },
+    cssd: { name: 'cssdboard' },
+};
 
 /**
  * IPD workspace — real screens backed entirely by the API: the dashboard (admissions list with
@@ -26,7 +33,7 @@ type View =
  * row). The old mock DischargeFlow (and the earlier Reception/Doctor/Nurse persona screens) are
  * no longer routed from here — they were a backend-agnostic prototype that predates the real
  * admission/bed-board wiring. Left as unrouted files rather than deleted, same treatment as the
- * persona screens before them.
+ * persona screens before them. The Consultant Ledger screen is likewise no longer routed from here.
  */
 export const IpdWorkflowApp: React.FC = () => {
     const [view, setView] = useState<View>({ name: 'dashboard' });
@@ -35,18 +42,15 @@ export const IpdWorkflowApp: React.FC = () => {
     // Set when "Admit" is clicked from a Referred Admissions row — threaded into AdmitPatientSheet
     // so it opens pre-filled with that referral's patient/doctor/plan.
     const [admitReferralContext, setAdmitReferralContext] = useState<AdmissionReferralItem | null>(null);
+    const navigate = (tab: IpdTab) => setView(TAB_VIEW[tab]);
 
     return (
         <div className="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-zinc-950">
             {view.name === 'dashboard' && (
                 <IpdDashboard
                     onAdmit={() => setAdmitOpen(true)}
-                    onOpenBedBoard={() => setView({ name: 'bedboard' })}
-                    onOpenCssdBoard={() => setView({ name: 'cssdboard' })}
-                    onOpenKpiDashboard={() => setView({ name: 'kpidashboard' })}
-                    onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
-                    onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
-                    onOpenWorkspace={(admission) => setView({ name: 'workspace', admission })}
+                    onNavigate={navigate}
+                    onOpenWorkspace={(admission, section) => setView({ name: 'workspace', admission, section })}
                     refreshSignal={refreshTick}
                 />
             )}
@@ -55,18 +59,17 @@ export const IpdWorkflowApp: React.FC = () => {
                 <ReferredAdmissionBoard
                     onBack={() => setView({ name: 'dashboard' })}
                     onAdmitReferral={(referral) => { setAdmitReferralContext(referral); setAdmitOpen(true); }}
-                    onOpenDashboard={() => setView({ name: 'dashboard' })}
-                    onOpenBedBoard={() => setView({ name: 'bedboard' })}
-                    onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
+                    onNavigate={navigate}
+                    onAdmit={() => setAdmitOpen(true)}
                 />
             )}
 
             {view.name === 'bedboard' && (
-                <BedBoardScreen 
-                    onBack={() => setView({ name: 'dashboard' })} 
-                    onOpenDashboard={() => setView({ name: 'dashboard' })}
-                    onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
-                    onOpenConsultantLedger={() => setView({ name: 'consultantledger' })}
+                <BedBoardScreen
+                    onBack={() => setView({ name: 'dashboard' })}
+                    onNavigate={navigate}
+                    onAdmit={() => setAdmitOpen(true)}
+                    refreshSignal={refreshTick}
                 />
             )}
 
@@ -78,18 +81,10 @@ export const IpdWorkflowApp: React.FC = () => {
                 <IpdKpiDashboardScreen onBack={() => setView({ name: 'dashboard' })} />
             )}
 
-            {view.name === 'consultantledger' && (
-                <ConsultantLedgerScreen 
-                    onBack={() => setView({ name: 'dashboard' })} 
-                    onOpenDashboard={() => setView({ name: 'dashboard' })}
-                    onOpenBedBoard={() => setView({ name: 'bedboard' })}
-                    onOpenReferredAdmissions={() => setView({ name: 'referredadmissions' })}
-                />
-            )}
-
             {view.name === 'workspace' && (
                 <PatientWorkspace
                     admission={view.admission}
+                    initialSection={view.section}
                     onBack={() => setView({ name: 'dashboard' })}
                     onChanged={() => setRefreshTick(t => t + 1)}
                 />
