@@ -50,6 +50,7 @@ import { JourneyBadge } from './JourneyBadge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DoctorFilter } from './DoctorFilter';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
@@ -71,7 +72,7 @@ import {
   PaginationNext,
   PaginationPrevious
 } from '@/components/ui/pagination';
-import { AppointmentBooking } from './AppointmentBooking';
+import { BookingPopup } from './BookingPopup';
 import { TokenPrintModal } from './TokenPrintModal';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
@@ -137,7 +138,7 @@ export const AppointmentDashboard = () => {
   const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
 
   // Sorting state
-  type SortColumn = 'patientId' | 'patientName' | 'doctorName' | 'tokenNo' | 'appointmentDate' | 'status' | 'printToken' | 'labReports' | 'case' | 'actions' | 'printPrescription' | 'isCompleted';
+  type SortColumn = 'patientId' | 'patientName' | 'doctorName' | 'tokenNo' | 'appointmentDate' | 'status' | 'printToken' | 'bookingType' | 'labReports' | 'case' | 'actions' | 'printPrescription' | 'isCompleted';
   const [sortColumn, setSortColumn] = useState<SortColumn>('tokenNo');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showVitalsForm, setShowVitalsForm] = useState(false);
@@ -989,6 +990,10 @@ export const AppointmentDashboard = () => {
           valA = a.finalStatusCode?.toLowerCase() || '';
           valB = b.finalStatusCode?.toLowerCase() || '';
           break;
+        case 'bookingType':
+          valA = a.bookingSource === 'NEXEAGLE_PUBLIC' ? 1 : 0;
+          valB = b.bookingSource === 'NEXEAGLE_PUBLIC' ? 1 : 0;
+          break;
         case 'printToken':
         case 'labReports':
         case 'case':
@@ -1070,6 +1075,11 @@ export const AppointmentDashboard = () => {
   }, [activeTab]);
 
   // KPI Calculations
+  // Footer line on each KPI card: the selected doctor's name, or 'All doctors'.
+  const kpiScopeLabel = selectedDoctor === 'all'
+    ? t('appointmentDashboard.allDoctors', { defaultValue: 'All doctors' })
+    : (doctorOptions.find(d => d.value === selectedDoctor)?.label || t('appointmentDashboard.selectedDoctor', { defaultValue: 'Selected doctor' }));
+
   const kpiStats = useMemo(() => {
     if (!appointments) return {
       total: 0,
@@ -1077,33 +1087,15 @@ export const AppointmentDashboard = () => {
       completed: 0,
       preAppointment: 0,
       totalOnlineToday: 0,
-      doctorStats: [] as { name: string; count: number; noShowCount: number }[]
+      walkIn: 0,
+      totalOnlineAll: 0
     };
 
-    // Use all currently loaded appointments for stats (logic matches active tab/date range)
-    const currentViewAppointments = appointments;
-
-    const doctorMap = new Map<string, { total: number; noShow: number }>();
-
-    currentViewAppointments.forEach(apt => {
-      const docName = apt.doctorName || 'Unknown Doctor';
-      const currentStats = doctorMap.get(docName) || { total: 0, noShow: 0 };
-
-      currentStats.total += 1;
-
-      // Calculate No Show (VITALS_REQUIRED is considered No Show for Past appointments)
-      if (apt.finalStatusCode === 'VITALS_REQUIRED') {
-        currentStats.noShow += 1;
-      }
-
-      doctorMap.set(docName, currentStats);
-    });
-
-    const doctorStats = Array.from(doctorMap.entries()).map(([name, stats]) => ({
-      name,
-      count: stats.total,
-      noShowCount: stats.noShow
-    }));
+    // Use all currently loaded appointments for stats (logic matches active tab/date range).
+    // When a doctor is picked in the Doctor filter, the KPI tiles show that doctor's numbers only.
+    const currentViewAppointments = selectedDoctor === 'all'
+      ? appointments
+      : appointments.filter(apt => getDoctorFilterValue(apt.doctorId, apt.doctorName) === selectedDoctor);
 
     return {
       total: currentViewAppointments.length,
@@ -1114,9 +1106,11 @@ export const AppointmentDashboard = () => {
       // creation and never touched again, so unlike finalStatusCode this doesn't drop once
       // front desk confirms a pending online booking.
       totalOnlineToday: currentViewAppointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length,
-      doctorStats
+      walkIn: currentViewAppointments.filter(apt => apt.bookingSource !== 'NEXEAGLE_PUBLIC').length,
+      // Hospital-wide online count for the live chip (it should not change with the doctor filter).
+      totalOnlineAll: appointments.filter(apt => apt.bookingSource === 'NEXEAGLE_PUBLIC').length
     };
-  }, [appointments]);
+  }, [appointments, selectedDoctor]);
 
   // Initial load when component mounts
   useEffect(() => {
@@ -1275,8 +1269,8 @@ export const AppointmentDashboard = () => {
     <>
       <OnlineBookingAlerts alerts={onlinePulse.alerts} onDismiss={onlinePulse.dismissAlert} onView={handleViewOnlineBooking} />
 
-      {/* Dashboard View - Hidden on desktop when booking is active */}
-      <div className={`flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4 ${showBooking ? 'md:hidden' : ''}`}>
+      {/* Dashboard View - stays visible behind the Book Appointment pop-up */}
+      <div className="flex flex-col min-h-full bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 gap-4 relative pb-24 md:pb-4">
       {!isLowBandwidthMode && (
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-100/40 via-slate-50 to-slate-50 dark:from-brand-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
       )}
@@ -1362,9 +1356,15 @@ export const AppointmentDashboard = () => {
               </button>
             </>
           )}
+          {selectedDoctor !== 'all' && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 dark:border-brand-800/50 bg-brand-50 dark:bg-brand-900/30 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
+              Showing: {doctorOptions.find(d => d.value === selectedDoctor)?.label || 'Selected doctor'}
+              <button type="button" onClick={() => setSelectedDoctor('all')} className="ml-0.5 text-brand-500 hover:text-brand-700" aria-label="Show all doctors" title="Show all doctors">✕</button>
+            </span>
+          )}
           <LiveOnlineChip
             className="ml-auto"
-            count={kpiStats.totalOnlineToday}
+            count={kpiStats.totalOnlineAll}
             pulseToken={onlinePulse.pulseToken}
             hasFresh={hasFreshOnlineBooking}
             soundOn={onlinePulse.soundOn}
@@ -1384,32 +1384,11 @@ export const AppointmentDashboard = () => {
               <div className="p-2.5 bg-brand-100 dark:bg-brand-500/20 rounded-xl shadow-inner ring-1 ring-brand-500/30 group-hover:scale-110 group-hover:bg-brand-500 group-hover:text-white transition-all duration-300 text-brand-600 dark:text-brand-400">
                 <Calendar className="h-5 w-5" />
               </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-900/70 dark:text-brand-300/80">Total</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-900/70 dark:text-brand-300/80">{activeTab === 'future' ? 'Booked' : 'Total'}</span>
             </div>
             <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
+            <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
           </div>
-
-          {/* Online Appointment (booked publicly via Nexeagle, awaiting front-desk confirmation) */}
-          {kpiStats.preAppointment > 0 && (
-            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-                <CalendarClock className="h-20 w-20 text-amber-500 -rotate-12" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
-              <div className="flex items-center gap-4 mb-3 relative z-10">
-                <div className="p-2.5 bg-amber-100 dark:bg-amber-500/20 rounded-xl shadow-inner ring-1 ring-amber-500/30 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300 text-amber-600 dark:text-amber-400">
-                  <CalendarClock className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-900/70 dark:text-amber-300/80">{t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' })}</span>
-              </div>
-              <div className="relative z-10 ml-1">
-                <AnimatedCount
-                  value={kpiStats.preAppointment}
-                  className="text-4xl font-mono font-black text-amber-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-amber-600 group-hover:to-orange-500 dark:group-hover:from-amber-400 dark:group-hover:to-orange-400 transition-all"
-                />
-              </div>
-            </div>
-          )}
 
           {/* Online Bookings: total booked via public/online channels, regardless of current status --
               unlike the card above, this does not drop once front desk confirms a pending online
@@ -1427,7 +1406,7 @@ export const AppointmentDashboard = () => {
                 <div className="p-2.5 bg-sky-100 dark:bg-sky-500/20 rounded-xl shadow-inner ring-1 ring-sky-500/30 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white transition-all duration-300 text-sky-600 dark:text-sky-400">
                   <Globe className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-sky-900/70 dark:text-sky-300/80">{t('appointmentDashboard.statusFilters.totalOnlineToday', { defaultValue: 'Online Bookings Today' })}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-sky-900/70 dark:text-sky-300/80">Online</span>
                 <span className="ml-auto flex items-center gap-1.5">
                   <NewPill visible={hasFreshOnlineBooking} label={t('appointmentDashboard.onlineLive.new', { defaultValue: 'NEW' })} />
                   <span className="relative flex h-2 w-2" title="Live">
@@ -1438,9 +1417,11 @@ export const AppointmentDashboard = () => {
               </div>
               <div className="relative z-10 ml-1">
                 <AnimatedCount
+                  key={`online-${selectedDoctor}-${activeTab}`}
                   value={kpiStats.totalOnlineToday}
                   className="text-4xl font-mono font-black text-sky-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sky-600 group-hover:to-cyan-500 dark:group-hover:from-sky-400 dark:group-hover:to-cyan-400 transition-all"
                 />
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
             </div>
           </div>
@@ -1458,10 +1439,11 @@ export const AppointmentDashboard = () => {
                     {activeTab === 'past' ? <UserX className="h-5 w-5" /> : <Heart className="h-5 w-5" />}
                   </div>
                   <span className={`text-xs font-bold uppercase tracking-widest ${activeTab === 'past' ? 'text-gray-700/80 dark:text-gray-400' : 'text-rose-900/70 dark:text-rose-300/80'}`}>
-                    {activeTab === 'past' ? 'No Show' : 'Vitals Req'}
+                    {activeTab === 'past' ? 'No Show' : 'Vitals Due'}
                   </span>
                 </div>
                 <div className={`text-4xl font-mono font-black ${activeTab === 'past' ? 'text-gray-800 dark:text-white group-hover:from-gray-600 group-hover:to-slate-500 dark:group-hover:from-gray-400 dark:group-hover:to-slate-400' : 'text-rose-900 dark:text-white group-hover:from-rose-600 group-hover:to-pink-500 dark:group-hover:from-rose-400 dark:group-hover:to-pink-400'} relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-all`}>{kpiStats.vitalsRequired}</div>
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
 
               {/* Completed */}
@@ -1474,37 +1456,31 @@ export const AppointmentDashboard = () => {
                   <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl shadow-inner ring-1 ring-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 text-emerald-600 dark:text-emerald-400">
                     <UserCheck className="h-5 w-5" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Completed</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Done</span>
                 </div>
                 <div className="text-4xl font-mono font-black text-emerald-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-emerald-600 group-hover:to-teal-500 dark:group-hover:from-emerald-400 dark:group-hover:to-teal-400 transition-all">{kpiStats.completed}</div>
+                <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
               </div>
             </>
           )}
 
-          {/* Doctor Stats - Dynamically rendered */}
-          {kpiStats.doctorStats.map((doc, idx) => (
-            <div key={idx} className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-1 transition-all duration-300 group">
+          {/* Future tab: Walk-in = booked minus online (green, not red: a future walk-in is not an alert) */}
+          {activeTab === 'future' && (
+            <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-1 transition-all duration-300 group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-                <User className="h-20 w-20 text-cyan-500 -rotate-12" />
+                <User className="h-20 w-20 text-emerald-500 -rotate-12" />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
               <div className="flex items-center gap-4 mb-3 relative z-10">
-                <div className="p-2.5 bg-cyan-100 dark:bg-cyan-500/20 rounded-xl shadow-inner ring-1 ring-cyan-500/30 group-hover:scale-110 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300 text-cyan-600 dark:text-cyan-400">
+                <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl shadow-inner ring-1 ring-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 text-emerald-600 dark:text-emerald-400">
                   <User className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-cyan-900/70 dark:text-cyan-300/80 truncate max-w-[100px]" title={doc.name}>{doc.name}</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/70 dark:text-emerald-300/80">Walk-in</span>
               </div>
-              <div className="relative z-10 ml-1">
-                <div className="text-4xl font-mono font-black text-cyan-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-600 group-hover:to-brand-500 dark:group-hover:from-cyan-400 dark:group-hover:to-brand-400 transition-all">{doc.count}</div>
-                {activeTab === 'past' && doc.noShowCount > 0 && (
-                  <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-red-100 bg-red-500 dark:bg-red-600 px-2 pl-1 py-0.5 rounded shadow-[0_0_8px_rgba(239,68,68,0.5)] w-fit uppercase tracking-wider backdrop-blur-sm bg-opacity-90">
-                    <UserX className="h-3 w-3" />
-                    <span>No Show: {doc.noShowCount}</span>
-                  </div>
-                )}
-              </div>
+              <div className="text-4xl font-mono font-black text-emerald-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1">{kpiStats.walkIn}</div>
+              <div className="relative z-10 ml-1 mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={kpiScopeLabel}>{kpiScopeLabel}</div>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Current Appointments Section */}
@@ -1530,24 +1506,16 @@ export const AppointmentDashboard = () => {
                 {/* Doctor Filter Dropdown */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60 whitespace-nowrap">{t('appointmentDashboard.doctorLabel')}</label>
-                  <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                    <SelectTrigger className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium">
-                      <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-brand-100/50 dark:border-zinc-800 backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 shadow-xl">
-                      <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">{t('appointmentDashboard.allDoctors')}</SelectItem>
-                      {doctorOptions.map((doctor) => (
-                        <SelectItem key={doctor.value} value={doctor.value} className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">
-                          <span className="inline-flex items-center gap-1.5">
-                            {availabilityByDoctorId.has(doctor.value) && (
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
-                            )}
-                            {doctor.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DoctorFilter
+                    value={selectedDoctor}
+                    onChange={setSelectedDoctor}
+                    options={doctorOptions}
+                    availability={availabilityByDoctorId}
+                    allLabel={t('appointmentDashboard.allDoctors')}
+                    searchPlaceholder={t('appointmentDashboard.searchDoctor', { defaultValue: 'Search doctor' })}
+                    emptyLabel={t('appointmentDashboard.noDoctorFound', { defaultValue: 'No doctor found' })}
+                    className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium"
+                  />
                 </div>
 
                 {/* Manage Availability - opens the availability roster/scheduler inline, pre-selecting the filtered doctor if one is chosen */}
@@ -1654,24 +1622,16 @@ export const AppointmentDashboard = () => {
                   {/* Doctor Filter Dropdown */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60">{t('appointmentDashboard.doctorLabel')}</label>
-                    <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                      <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl">
-                        <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
-                      </SelectTrigger>
-                      <SelectContent className="z-[9999]" position="popper">
-                        <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
-                        {doctorOptions.map((doctor) => (
-                          <SelectItem key={doctor.value} value={doctor.value}>
-                            <span className="inline-flex items-center gap-1.5">
-                              {availabilityByDoctorId.has(doctor.value) && (
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${availabilityByDoctorId.get(doctor.value) ? 'bg-[#188038]' : 'bg-[#d93025]'}`} />
-                              )}
-                              {doctor.label}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <DoctorFilter
+                      value={selectedDoctor}
+                      onChange={setSelectedDoctor}
+                      options={doctorOptions}
+                      availability={availabilityByDoctorId}
+                      allLabel={t('appointmentDashboard.allDoctors')}
+                      searchPlaceholder={t('appointmentDashboard.searchDoctor', { defaultValue: 'Search doctor' })}
+                      emptyLabel={t('appointmentDashboard.noDoctorFound', { defaultValue: 'No doctor found' })}
+                      className="w-full h-11 bg-slate-50 dark:bg-zinc-900/50 border-brand-100/50 rounded-xl"
+                    />
                   </div>
 
                   {/* Department Filter Dropdown */}
@@ -1745,6 +1705,7 @@ export const AppointmentDashboard = () => {
                     { key: 'PRE_APPOINTMENT', label: t('appointmentDashboard.statusFilters.preAppointment', { defaultValue: 'Online Appointment' }), color: 'bg-amber-100 text-amber-700 border-amber-200/50 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 hover:bg-amber-200' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
+                      if (selectedDoctor !== 'all' && getDoctorFilterValue(a.doctorId, a.doctorName) !== selectedDoctor) return false;
                       const appointmentStartDate = new Date(a.startAt);
                       const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
                       const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
@@ -1859,7 +1820,8 @@ export const AppointmentDashboard = () => {
                         {renderSortableHeader(t('appointmentDashboard.table.doctorName'), 'doctorName')}
                         {renderSortableHeader(t('appointmentDashboard.table.tokenNo'), 'tokenNo')}
                         {activeTab === 'current' && renderSortableHeader(t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' }), 'printToken')}
-                        {renderSortableHeader(
+                        {renderSortableHeader(t('appointmentDashboard.table.bookingType', { defaultValue: 'Booking Type' }), 'bookingType')}
+                        {activeTab !== 'current' && renderSortableHeader(
                           activeTab === 'past'
                             ? t('appointmentDashboard.table.lastAppointmentDate')
                             : activeTab === 'future'
@@ -1882,7 +1844,7 @@ export const AppointmentDashboard = () => {
                     <TableBody>
                       {filteredAppointments.length === 0 ? (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={activeTab === 'future' ? 8 : 9} className="text-center py-12">
+                          <TableCell colSpan={activeTab === 'past' ? 11 : 10} className="text-center py-12">
                             <div className="flex flex-col items-center gap-3">
                               <div className="w-12 h-12 bg-brand-50 dark:bg-brand-900/30 rounded-full flex items-center justify-center shadow-inner">
                                 <CalendarDays className="h-6 w-6 text-brand-400 dark:text-brand-500" />
@@ -1979,7 +1941,21 @@ export const AppointmentDashboard = () => {
                               </TableCell>
                             )}
 
-                            {/* Appointment Time / Last Appointment Date / Appointment Date */}
+                            {/* Booking Type — Walk-in (front desk) vs Online (public self-booking). bookingSource is stamped once at creation. */}
+                            <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                              {appointment.bookingSource === 'NEXEAGLE_PUBLIC' ? (
+                                <Badge className="bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-[10px] px-2 py-0.5 font-bold shadow-sm">
+                                  ● {t('appointmentDashboard.bookingType.online', { defaultValue: 'Online' })}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] px-2 py-0.5 font-bold shadow-sm">
+                                  {t('appointmentDashboard.bookingType.walkIn', { defaultValue: 'Walk-in' })}
+                                </Badge>
+                              )}
+                            </TableCell>
+
+                            {/* Appointment Time / Last Appointment Date / Appointment Date — hidden on Current (replaced by Booking Type) */}
+                            {activeTab !== 'current' && (
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               {activeTab === 'past' ? (
                                 <div className="flex flex-col gap-0.5">
@@ -2010,6 +1986,7 @@ export const AppointmentDashboard = () => {
                                 </div>
                               )}
                             </TableCell>
+                            )}
 
                             {/* Current Status */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
@@ -2931,39 +2908,10 @@ export const AppointmentDashboard = () => {
       </motion.div>
     </div >
 
-      {/* Booking Flow Overlay (Mobile Slide-up, Desktop Inline) */}
-      <AnimatePresence>
-        {showBooking && (
-          <motion.div
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[100] bg-gray-50 dark:bg-gray-950 flex flex-col md:relative md:z-auto md:bg-transparent md:animate-none md:!transform-none md:!opacity-100"
-          >
-            {/* Header: Native Top App Bar on Mobile, Standard Header on Desktop */}
-            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm relative z-10 shrink-0">
-              <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-3 md:py-3">
-                <button
-                  onClick={() => setShowBooking(false)}
-                  className="group flex items-center justify-center h-10 w-10 md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-1.5 rounded-full md:rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm font-semibold md:border md:border-gray-200 dark:md:border-gray-700"
-                >
-                  <ArrowLeft className="h-6 w-6 md:h-4 md:w-4 transition-transform group-hover:-translate-x-1" />
-                  <span className="hidden md:inline">{t('common.back')}</span>
-                </button>
-                <div className="hidden md:block h-5 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl md:text-base font-bold md:font-black text-gray-900 dark:text-white tracking-tight">{t('appointmentDashboard.bookNewAppointment')}</h1>
-                </div>
-              </div>
-            </div>
-            {/* Form Content */}
-            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
-              <AppointmentBooking refreshToken={bookingRefreshToken} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Book Appointment pop-up (F6): centered pop-up over the board, closes itself after booking */}
+      {showBooking && hospitalId && (
+        <BookingPopup hospitalId={hospitalId} onClose={() => setShowBooking(false)} />
+      )}
     </>
   );
 };

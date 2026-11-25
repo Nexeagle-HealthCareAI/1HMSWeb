@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { abdmApi } from '../services/abdmApi';
+import { onlyDigits } from '../utils/aadhaar';
 
 type Step = 'enter' | 'otp' | 'done';
 
@@ -52,7 +53,7 @@ export const ReactivateAbhaDialog: React.FC<Props> = ({ hospitalId, open, onOpen
       toast({ title: 'OTP sent', description: res.message || 'Enter the OTP to continue.' });
       setStep('otp');
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -68,7 +69,7 @@ export const ReactivateAbhaDialog: React.FC<Props> = ({ hospitalId, open, onOpen
       setStep('done');
       onReactivated();
     } catch (e: any) {
-      fail(e?.response?.data?.Message || e?.message);
+      fail((e?.response?.data?.Message ?? e?.response?.data?.message) || e?.message);
     } finally {
       setBusy(false);
     }
@@ -97,7 +98,7 @@ export const ReactivateAbhaDialog: React.FC<Props> = ({ hospitalId, open, onOpen
           <div className="space-y-3">
             <div className="space-y-2">
               <Label>Enter the 6-digit OTP</Label>
-              <Input value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
+              <Input value={otp} onChange={e => setOtp(onlyDigits(e.target.value, 6))} maxLength={6} inputMode="numeric" placeholder="6-digit OTP" />
             </div>
             <Button onClick={verifyOtp} disabled={busy} className="w-full">
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Verify & reactivate
