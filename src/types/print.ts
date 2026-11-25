@@ -170,6 +170,10 @@ export interface DischargeSummaryPrintData {
     payer?: string;
     /** Hospital phone, printed with the "come back at once" advice. */
     hospitalPhone?: string;
+    /** The treating doctor's degree, speciality and registration number, printed with the name. */
+    doctorQualification?: string;
+    doctorSpeciality?: string;
+    doctorRegistration?: string;
     /** Patient advice in the hospital's second language, printed under the English. */
     secondLanguage?: DischargeSecondLanguage;
     signedByDoctorName?: string;
