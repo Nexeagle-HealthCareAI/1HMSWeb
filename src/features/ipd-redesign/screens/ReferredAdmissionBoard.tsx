@@ -11,7 +11,7 @@ import {
     MessageSquare, Send, ChevronLeft, ChevronRight, } from 'lucide-react';
 import { admissionReferralApi, AdmissionReferralItem, AdmissionReferralCommentItem, CaseType, ReferralStatus } from '../services/admissionReferralApi';
 import { useAppStore } from '@/store/appStore';
-import { STATUS_TONE, STATUS_LABEL, ALL_STATUSES, CASE_TONE, CASE_LABEL, ALL_CASE_TYPES } from '../utils/referralStatus';
+import { STATUS_TONE, STATUS_LABEL, ALL_STATUSES, CASE_TONE, CASE_LABEL, ALL_CASE_TYPES, probableDateNote } from '../utils/referralStatus';
 import { formatIstDateTime } from '../utils/istDate';
 import { cn } from '@/lib/utils';
 import { IpdSectionHeader, type IpdTab } from '../components/IpdSectionHeader';
@@ -24,7 +24,8 @@ interface Props {
     onAdmit?: () => void;
 }
 
-const PAGE_SIZE = 5;
+// One screen should show the whole day's list; five a page meant paging through a short queue.
+const PAGE_SIZE = 25;
 
 const formatDate = (iso?: string | null) => {
     if (!iso) return '—';
@@ -214,103 +215,37 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                 }
             />
 
-            {/* KPI tiles — informational, read-only summary of every status (including zero counts) */}
-            {/* KPI tiles — horizontal scroll on mobile */}
-            <div className="flex sm:grid sm:grid-cols-5 overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-3 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0">
-                <div className={cn('rounded-[1.5rem] border border-zinc-200/60 dark:border-zinc-800/80 p-3.5 sm:p-4.5 min-w-[120px] sm:min-w-0 snap-start shrink-0 flex flex-col justify-between min-h-[92px]',
-                    !isLowBandwidthMode ? 'bg-white/95 dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow' : 'bg-white')}>
-                    <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-50 leading-none">{totalReferrals}</p>
-                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-550 dark:text-zinc-400 mt-2 leading-tight">All Referred</p>
-                </div>
-                {ALL_STATUSES.map(s => (
-                    <div key={s} className={cn('rounded-[1.5rem] border p-3.5 sm:p-4.5 min-w-[120px] sm:min-w-0 snap-start shrink-0 flex flex-col justify-between min-h-[92px]', STATUS_TONE[s],
-                        !isLowBandwidthMode ? 'bg-opacity-80 backdrop-blur-xl shadow-sm' : '')}>
-                        <p className="text-2xl sm:text-3xl font-black leading-none">{statusCounts[s] ?? 0}</p>
-                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-70 mt-2 leading-tight">{STATUS_LABEL[s]}</p>
-                    </div>
-                ))}
+            {/* Tiles — the count for each status; tapping one filters the list */}
+            <div className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto hide-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+                {([['ALL', 'All referred', totalReferrals] as const, ...ALL_STATUSES.map(st => [st, STATUS_LABEL[st], statusCounts[st] ?? 0] as const)]).map(([key, label, count]) => {
+                    const selected = statusFilter === key;
+                    return (
+                        <button key={key} type="button" aria-pressed={selected} onClick={() => changeStatusFilter(key)}
+                            className={cn('min-w-[112px] sm:min-w-0 shrink-0 rounded-2xl border px-3 py-2.5 text-left transition-all active:scale-[0.98]',
+                                selected ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-300 dark:border-brand-700 ring-2 ring-brand-500/20' : 'bg-white dark:bg-zinc-900 border-slate-200/70 dark:border-zinc-800 hover:border-slate-300 shadow-sm')}>
+                            <p className={cn('text-2xl font-black leading-none tabular-nums', count === 0 ? 'text-slate-300 dark:text-zinc-600' : key === 'PENDING' ? 'text-sky-700 dark:text-sky-400' : key === 'CONVERTED' ? 'text-emerald-700 dark:text-emerald-400' : key === 'FOLLOW_UP' ? 'text-amber-700 dark:text-amber-400' : 'text-slate-800 dark:text-zinc-100')}>{count}</p>
+                            <p className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mt-1.5 leading-tight">{label}</p>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Filters */}
-            <div className="space-y-3">
-                <div className="relative w-full sm:max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input placeholder="Search current page…" className="pl-9 h-11 sm:h-9 bg-white/80 backdrop-blur-sm rounded-xl border-slate-200/60" value={search} onChange={e => setSearch(e.target.value)} />
+            {/* Toolbar — search and the case type; status is the tiles above */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="relative w-full sm:flex-1 sm:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input placeholder="Search patient, ID, procedure or doctor…" aria-label="Search referred admissions" className="pl-9 h-11 sm:h-10 bg-white dark:bg-zinc-900 rounded-xl border-slate-200/70 shadow-sm" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
-                <div className="flex items-center gap-2 w-full shrink-0">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-450 dark:text-zinc-500 bg-white dark:bg-zinc-950 px-2.5 py-2 rounded-xl border border-slate-200/50 dark:border-zinc-850/50 shadow-sm shrink-0 min-w-[62px] text-center">
-                        Status
-                    </span>
-                    <div className="bg-slate-100/70 dark:bg-zinc-900/60 p-1 rounded-2xl flex items-center gap-1.5 flex-1 overflow-x-auto hide-scrollbar border border-slate-200/40 dark:border-zinc-800/40">
-                        <button
-                            type="button"
-                            onClick={() => changeStatusFilter('ALL')}
-                            className={cn(
-                                'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border border-transparent',
-                                statusFilter === 'ALL'
-                                    ? 'bg-brand-600 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
-                                    : 'bg-transparent text-slate-650 dark:text-zinc-450 hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
-                            )}
-                        >
-                            All
+                <div role="group" aria-label="Case type" className="flex items-center gap-1 p-1 rounded-full bg-slate-100/80 dark:bg-zinc-900/80 border border-slate-200/40 dark:border-zinc-800 overflow-x-auto hide-scrollbar">
+                    {(['ALL', ...ALL_CASE_TYPES] as const).map(c => (
+                        <button key={c} type="button" aria-pressed={caseTypeFilter === c} onClick={() => changeCaseTypeFilter(c)}
+                            className={cn('h-8 px-3.5 rounded-full text-xs font-bold transition-colors shrink-0',
+                                caseTypeFilter === c ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50')}>
+                            {c === 'ALL' ? 'All cases' : CASE_LABEL[c]}
                         </button>
-                        {ALL_STATUSES.map(s => (
-                            <button
-                                key={s}
-                                type="button"
-                                onClick={() => changeStatusFilter(s)}
-                                className={cn(
-                                    'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border',
-                                    statusFilter === s
-                                        ? s === 'PENDING' ? 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900 shadow-sm' :
-                                          s === 'CONVERTED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900 shadow-sm' :
-                                          s === 'FOLLOW_UP' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 shadow-sm' :
-                                          'bg-slate-200 text-slate-700 border-slate-350 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 shadow-sm'
-                                        : 'bg-transparent text-slate-500 dark:text-zinc-400 border-transparent hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
-                                )}
-                            >
-                                {STATUS_LABEL[s]}
-                            </button>
-                        ))}
-                    </div>
+                    ))}
                 </div>
-
-                <div className="flex items-center gap-2 w-full shrink-0">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-450 dark:text-zinc-500 bg-white dark:bg-zinc-950 px-2.5 py-2 rounded-xl border border-slate-200/50 dark:border-zinc-850/50 shadow-sm shrink-0 min-w-[62px] text-center">
-                        Case
-                    </span>
-                    <div className="bg-slate-100/70 dark:bg-zinc-900/60 p-1 rounded-2xl flex items-center gap-1.5 flex-1 overflow-x-auto hide-scrollbar border border-slate-200/40 dark:border-zinc-800/40">
-                        <button
-                            type="button"
-                            onClick={() => changeCaseTypeFilter('ALL')}
-                            className={cn(
-                                'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border border-transparent',
-                                caseTypeFilter === 'ALL'
-                                    ? 'bg-brand-600 text-white shadow-[0_2px_10px_rgba(99,102,241,0.2)]'
-                                    : 'bg-transparent text-slate-650 dark:text-zinc-450 hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
-                            )}
-                        >
-                            All
-                        </button>
-                        {ALL_CASE_TYPES.map(c => (
-                            <button
-                                key={c}
-                                type="button"
-                                onClick={() => changeCaseTypeFilter(c)}
-                                className={cn(
-                                    'h-8 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.96] shrink-0 border',
-                                    caseTypeFilter === c
-                                        ? c === 'EMERGENCY' ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900 shadow-sm' :
-                                          c === 'URGENT' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 shadow-sm' :
-                                          'bg-slate-200 text-slate-700 border-slate-350 dark:bg-slate-850 dark:text-slate-300 dark:border-slate-750 shadow-sm'
-                                        : 'bg-transparent text-slate-500 dark:text-zinc-400 border-transparent hover:bg-white/60 dark:hover:bg-zinc-850/50 hover:text-slate-800 dark:hover:text-zinc-200'
-                                )}
-                            >
-                                {CASE_LABEL[c]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <span className="hidden sm:block ml-auto text-xs font-semibold text-slate-500">{totalCount} {totalCount === 1 ? 'referral' : 'referrals'}</span>
             </div>
 
             {/* Card list */}
@@ -333,7 +268,7 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                         const commentsExpanded = openComments.has(r.referralId);
                         const comments = commentsByReferral[r.referralId] ?? [];
                         return (
-                            <div key={r.referralId} className={cn('rounded-[1.5rem] border p-4 sm:p-5 transition-all',
+                            <div key={r.referralId} className={cn('rounded-2xl border p-3.5 sm:p-4 transition-all',
                                 !isLowBandwidthMode ? 'bg-white dark:bg-zinc-900 border-zinc-200/60 dark:border-zinc-800/80 shadow-sm hover:shadow-md' : 'bg-white border-slate-205')}>
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                     <div className="min-w-0 flex-1">
@@ -355,7 +290,13 @@ export const ReferredAdmissionBoard: React.FC<Props> = ({ onBack, onAdmitReferra
                                             </div>
                                             <div>
                                                 <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Probable Date</dt>
-                                                <dd className="text-slate-700">{formatDate(r.probableAdmissionDate)}</dd>
+                                                <dd className="text-slate-700">
+                                                    {formatDate(r.probableAdmissionDate)}
+                                                    {(() => {
+                                                        const note = r.statusCode === 'PENDING' || r.statusCode === 'FOLLOW_UP' ? probableDateNote(r.probableAdmissionDate) : null;
+                                                        return note ? <span className={cn('block text-[11px] font-bold', note.tone === 'overdue' ? 'text-rose-600' : note.tone === 'today' ? 'text-brand-700 dark:text-brand-300' : 'text-slate-500')}>{note.text}</span> : null;
+                                                    })()}
+                                                </dd>
                                             </div>
                                         </dl>
 

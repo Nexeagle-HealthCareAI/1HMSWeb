@@ -124,6 +124,7 @@ export const DischargeDictationDialog: React.FC<Props> = ({ open, onOpenChange, 
                                 <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-xl p-3 whitespace-pre-wrap max-h-40 overflow-y-auto">{result.transcript}</p>
                             </div>
                         )}
+                        <DictationChecks result={result} />
                         {nothing ? (
                             <p className="text-sm text-slate-600">Nothing in the dictation matched a discharge section. Try again, mentioning the course, results or advice.</p>
                         ) : (
@@ -140,6 +141,7 @@ export const DischargeDictationDialog: React.FC<Props> = ({ open, onOpenChange, 
                                         <li key={`m${i}`} className="p-3">
                                             <p className="text-sm font-semibold text-slate-800">Discharge medicines</p>
                                             <p className="text-xs text-slate-500">{describeSuggestion(m)} — you'll confirm it on the medicine list</p>
+                                            <MedicineNameCheck suggestion={m} />
                                         </li>
                                     ))}
                                     {result.followUpAfterDays ? (
@@ -160,4 +162,45 @@ export const DischargeDictationDialog: React.FC<Props> = ({ open, onOpenChange, 
             </DialogContent>
         </Dialog>
     );
+};
+
+/**
+ * What to look at before accepting a dictation: medicine names that were corrected, names not
+ * found on this patient's record, every dose figure, and anything the transcriber found unclear.
+ * Shown only when there is something to check.
+ */
+const DictationChecks: React.FC<{ result: AiDictationResult }> = ({ result }) => {
+    const unverified = result.medicationChanges.filter(m => m.action === 'ADD' && m.nameCheck === 'UNVERIFIED').map(m => m.medicineName);
+    const { corrections, dosesToCheck, unclearPhrases } = result;
+    if (corrections.length + unverified.length + dosesToCheck.length + unclearPhrases.length === 0) return null;
+    const row = 'flex gap-2 text-sm text-slate-800';
+    const label = 'w-28 shrink-0 text-[11px] font-bold uppercase tracking-wide text-amber-800 pt-0.5';
+    return (
+        <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-2">
+            <p className="text-sm font-bold text-amber-900">Check before accepting</p>
+            {corrections.length > 0 && (
+                <div className={row}><span className={label}>Corrected</span>
+                    <span>{corrections.map((c, i) => <span key={i} className="mr-3 whitespace-nowrap"><s className="text-slate-500">{c.heard}</s> → <b>{c.corrected}</b></span>)}</span></div>
+            )}
+            {unverified.length > 0 && (
+                <div className={row}><span className={label}>Not on record</span>
+                    <span><b>{unverified.join(', ')}</b> — not among this patient's medicines. Check the spelling.</span></div>
+            )}
+            {dosesToCheck.length > 0 && (
+                <div className={row}><span className={label}>Doses heard</span>
+                    <span className="flex flex-wrap gap-1.5">{dosesToCheck.map(d => <span key={d} className="px-2 py-0.5 rounded-md bg-white border border-amber-200 font-mono text-xs font-bold">{d}</span>)}</span></div>
+            )}
+            {unclearPhrases.length > 0 && (
+                <div className={row}><span className={label}>Hard to hear</span>
+                    <span>{unclearPhrases.map((p, i) => <span key={i} className="block">"{p}"</span>)}</span></div>
+            )}
+        </div>
+    );
+};
+
+const MedicineNameCheck: React.FC<{ suggestion: AiDictationResult['medicationChanges'][number] }> = ({ suggestion: m }) => {
+    if (m.action !== 'ADD' || !m.nameCheck || m.nameCheck === 'KNOWN') return null;
+    return m.nameCheck === 'CORRECTED'
+        ? <p className="text-[11px] font-semibold text-amber-700 mt-0.5">Heard "{m.heardAs}" — corrected to a medicine on this patient's record.</p>
+        : <p className="text-[11px] font-semibold text-rose-700 mt-0.5">Not on this patient's record — check the spelling before applying.</p>;
 };
