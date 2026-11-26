@@ -95,6 +95,10 @@ export interface MedicationSuggestion {
     newDose?: string | null;
     note?: string | null;
     matchesMedicine?: string | null;
+    /** KNOWN = on record for this stay; CORRECTED = heard slightly wrong and fixed; UNVERIFIED = not found, check the spelling. */
+    nameCheck?: 'KNOWN' | 'CORRECTED' | 'UNVERIFIED' | null;
+    /** What was actually heard, when the name was corrected. */
+    heardAs?: string | null;
 }
 
 export interface AiDictationResult {
@@ -103,6 +107,12 @@ export interface AiDictationResult {
     sections: Partial<Record<AiSectionKey, string>>;
     medicationChanges: MedicationSuggestion[];
     followUpAfterDays?: number | null;
+    /** Medicine names in the transcript that were heard slightly wrong and corrected. */
+    corrections: { heard: string; corrected: string }[];
+    /** Phrases the transcriber itself was unsure of. */
+    unclearPhrases: string[];
+    /** Every dose figure heard, to check the numbers at a glance. */
+    dosesToCheck: string[];
 }
 
 export interface HospitalDischargePreferences {
@@ -239,7 +249,8 @@ export const dischargeSummaryApi = {
                 headers: { 'Content-Type': undefined }, timeout: 120000,
             } as any);
             requireSuccess(r, 'Could not process the dictation.');
-            return { message: r.message, transcript: r.transcript, sections: r.sections ?? {}, medicationChanges: r.medicationChanges ?? [], followUpAfterDays: r.followUpAfterDays };
+            return { message: r.message, transcript: r.transcript, sections: r.sections ?? {}, medicationChanges: r.medicationChanges ?? [], followUpAfterDays: r.followUpAfterDays,
+                corrections: r.corrections ?? [], unclearPhrases: r.unclearPhrases ?? [], dosesToCheck: r.dosesToCheck ?? [] };
         } catch (err) {
             throw new Error(err instanceof Error && !axios.isAxiosError(err) ? err.message : messageFrom(err, 'Could not process the dictation.'));
         }

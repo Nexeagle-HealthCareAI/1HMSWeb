@@ -58,3 +58,20 @@ export const admissionReferralStatusText = (referral: Pick<AdmissionReferralItem
             return 'Advised for Admission: Pending';
     }
 };
+
+
+/**
+ * How the probable admission date sits against today, for a referral still waiting to come in.
+ * A date that has passed is the one the desk needs to chase.
+ */
+export const probableDateNote = (iso?: string | null, now: Date = new Date()): { text: string; tone: 'overdue' | 'today' | 'soon' | 'later' } | null => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    const dayKey = (x: Date) => x.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const diff = Math.round((Date.parse(`${dayKey(d)}T00:00:00Z`) - Date.parse(`${dayKey(now)}T00:00:00Z`)) / 86400000);
+    if (diff < 0) return { text: `${-diff} day${diff === -1 ? '' : 's'} overdue`, tone: 'overdue' };
+    if (diff === 0) return { text: 'Today', tone: 'today' };
+    if (diff === 1) return { text: 'Tomorrow', tone: 'soon' };
+    return { text: `In ${diff} days`, tone: 'later' };
+};
