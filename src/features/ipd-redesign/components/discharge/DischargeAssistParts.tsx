@@ -131,7 +131,10 @@ export const MedicationSuggestionList: React.FC<{
             <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 flex items-center gap-1.5"><Mic className="h-3 w-3" /> Heard in your dictation</p>
             {items.map((m, i) => (
                 <div key={`${m.medicineName}-${i}`} className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="flex-1 min-w-[12rem] text-slate-800">{describeSuggestion(m)}{m.note ? <span className="text-slate-500"> — {m.note}</span> : null}</span>
+                    <span className="flex-1 min-w-[12rem] text-slate-800">{describeSuggestion(m)}{m.note ? <span className="text-slate-500"> — {m.note}</span> : null}
+                        {m.action === 'ADD' && m.nameCheck === 'CORRECTED' && <span className="block text-[11px] font-semibold text-amber-700">Heard "{m.heardAs}" — corrected. Check it is the medicine you meant.</span>}
+                        {m.action === 'ADD' && m.nameCheck === 'UNVERIFIED' && <span className="block text-[11px] font-semibold text-rose-700">Not on this patient's record — check the spelling before applying.</span>}
+                    </span>
                     <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => onDismiss(i)}>Ignore</Button>
                     <Button type="button" size="sm" className="h-8 text-xs bg-brand-600 hover:bg-brand-700 text-white" onClick={() => onApply(i)}>Apply</Button>
                 </div>
