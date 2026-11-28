@@ -71,6 +71,7 @@ export const ABDM_RECORD_TYPES: { code: string; label: string }[] = [
   { code: 'ImmunizationRecord', label: 'Immunisation records' },
   { code: 'WellnessRecord', label: 'Vitals and wellness records' },
   { code: 'HealthDocumentRecord', label: 'Other health documents' },
+  { code: 'Invoice', label: 'Bills and invoices' },
 ];
 
 export const abdmHiuStatusText: Record<AbdmHiuConsentStatus, string> = {

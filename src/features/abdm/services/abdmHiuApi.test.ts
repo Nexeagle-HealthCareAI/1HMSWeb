@@ -10,9 +10,9 @@ describe('abdmHiuApi', () => {
     expect(defaultAskDates(new Date('2026-11-17T08:00:00Z'))).toEqual({ from: '2024-11-17', to: '2026-11-17', eraseAt: '2026-12-17' });
   });
 
-  it('has words for every status and the seven ABDM record types', () => {
+  it('has words for every status and the eight ABDM record types', () => {
     expect(Object.keys(abdmHiuStatusText).sort()).toEqual(['DENIED', 'EXPIRED', 'FAILED', 'GRANTED', 'REQUESTED', 'REVOKED']);
-    expect(ABDM_RECORD_TYPES).toHaveLength(7);
+    expect(ABDM_RECORD_TYPES).toHaveLength(8);
   });
 
   it('escapes what it puts in a URL', () => {

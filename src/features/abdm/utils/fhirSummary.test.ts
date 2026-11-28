@@ -52,8 +52,33 @@ describe('fhirSummary', () => {
 
   it('copes with anything that is not a bundle', () => {
     for (const bad of [null, undefined, 'text', 7, [], {}, { entry: 'no' }, { entry: [{ resource: { resourceType: 'Patient' } }] }]) {
-      expect(summariseFhirBundle(bad)).toEqual({ title: 'Health record', sections: [] });
+      expect(summariseFhirBundle(bad)).toEqual({ title: 'Health record', sections: [], attachments: [] });
     }
+  });
+
+  it('lists the PDFs and images a record carries, and nothing else', () => {
+    const withFiles = {
+      resourceType: 'Bundle',
+      entry: [
+        { fullUrl: 'urn:uuid:c', resource: { resourceType: 'Composition', title: 'Prescription', section: [{ title: 'Prescription record', entry: [{ reference: 'urn:uuid:b' }] }] } },
+        { fullUrl: 'urn:uuid:b', resource: { resourceType: 'Binary', contentType: 'application/pdf', data: 'JVBERi0x' } },
+        { fullUrl: 'urn:uuid:d', resource: { resourceType: 'DocumentReference', type: { text: 'Scan' }, content: [
+          { attachment: { contentType: 'image/png', data: 'iVBORw0K', title: 'X-ray' } },
+          { attachment: { contentType: 'text/html', data: 'PHNjcmlwdD4=' } },
+        ] } },
+      ],
+    };
+    const s = summariseFhirBundle(withFiles);
+    expect(s.attachments).toEqual([
+      { title: 'Prescription', contentType: 'application/pdf', data: 'JVBERi0x' },
+      { title: 'X-ray', contentType: 'image/png', data: 'iVBORw0K' },
+    ]);
+    expect(s.sections[0].lines).toEqual(['Attached document']);
+  });
+
+  it('describes invoices and vaccines', () => {
+    expect(resourceLine({ resourceType: 'Invoice', lineItem: [{}, {}], totalGross: { value: 644.8 } })).toBe('Bill with 2 items, total INR 644.8');
+    expect(resourceLine({ resourceType: 'Immunization', vaccineCode: { text: 'BCG' }, occurrenceDateTime: '2025-12-01T00:00:00Z' })).toBe('BCG (2025-12-01)');
   });
 
   it('describes single resources', () => {

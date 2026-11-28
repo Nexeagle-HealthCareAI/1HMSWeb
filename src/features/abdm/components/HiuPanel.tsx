@@ -13,7 +13,7 @@ import {
   ABDM_PURPOSES, ABDM_RECORD_TYPES, abdmHiuApi, abdmHiuStatusText, defaultAskDates,
   type AbdmHiuConsent, type AbdmHiuConsentStatus, type AbdmReceivedRecord, type AbdmReceivedRecordSummary,
 } from '../services/abdmHiuApi';
-import { summariseFhirBundle } from '../utils/fhirSummary';
+import { openAttachment, summariseFhirBundle } from '../utils/fhirSummary';
 import { abdmUtc } from '../services/abdmApi';
 
 interface Props {
@@ -294,8 +294,31 @@ export const HiuPanel: React.FC<Props> = ({ hospitalId }) => {
                 </section>
               ))}
             </div>
-          ) : (
+          ) : summary && summary.attachments.length > 0 ? null : (
             <p className="text-sm text-muted-foreground">This record could not be shown as text. It was received and is stored, but its contents are in a form this screen does not read yet.</p>
+          )}
+          {summary && summary.attachments.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold mb-2">Documents in this record</h3>
+              <div className="flex flex-wrap gap-2">
+                {summary.attachments.map((a, i) => (
+                  <Button
+                    key={`${a.title}-${i}`}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!openAttachment(a)) {
+                        toast({ title: 'Could not open the document', description: 'Allow pop-ups for 1HMS and try again.', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-1.5" />
+                    {a.title}{a.contentType === 'application/pdf' ? ' (PDF)' : ''}
+                  </Button>
+                ))}
+              </div>
+            </section>
           )}
           <p className="text-xs text-muted-foreground border-t pt-3">
             Shown as sent by the other facility. Kept in 1HMS until {day(openRecord?.eraseAt)}.

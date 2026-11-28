@@ -8,6 +8,14 @@ export interface FhirSummarySection {
   lines: string[];
 }
 
+/** A file carried inside the record: the PDF copy of a structured record, or a scanned document. */
+export interface FhirAttachment {
+  title: string;
+  contentType: string;
+  /** Base64, as it came in the bundle. */
+  data: string;
+}
+
 export interface FhirSummary {
   title: string;
   date?: string;
@@ -15,7 +23,11 @@ export interface FhirSummary {
   facility?: string;
   patient?: string;
   sections: FhirSummarySection[];
+  attachments: FhirAttachment[];
 }
+
+/** Only these are offered to open: a browser shows them itself, and nothing in them runs. */
+export const VIEWABLE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
 type Json = Record<string, unknown>;
 
@@ -86,8 +98,19 @@ export const resourceLine = (resource: unknown): string | undefined => {
       return [str(resource.title), str(resource.description)].filter(Boolean).join(': ') || undefined;
     case 'DocumentReference':
       return str(resource.description) ?? conceptText(resource.type) ?? 'Attached document';
-    case 'Immunization':
-      return conceptText(resource.vaccineCode);
+    case 'Immunization': {
+      const vaccine = conceptText(resource.vaccineCode);
+      const when = str(resource.occurrenceDateTime);
+      return vaccine ? (when ? `${vaccine} (${when.slice(0, 10)})` : vaccine) : undefined;
+    }
+    case 'Invoice': {
+      const total = isObj(resource.totalGross) ? resource.totalGross.value : undefined;
+      const items = arr(resource.lineItem).length;
+      const amount = typeof total === 'number' || typeof total === 'string' ? `INR ${total}` : undefined;
+      return [`Bill${items ? ` with ${items} item${items === 1 ? '' : 's'}` : ''}`, amount].filter(Boolean).join(', total ');
+    }
+    case 'Binary':
+      return 'Attached document';
     case 'AllergyIntolerance':
     case 'Condition':
     case 'Procedure':
@@ -99,7 +122,7 @@ export const resourceLine = (resource: unknown): string | undefined => {
 };
 
 export const summariseFhirBundle = (bundle: unknown): FhirSummary => {
-  const empty: FhirSummary = { title: 'Health record', sections: [] };
+  const empty: FhirSummary = { title: 'Health record', sections: [], attachments: [] };
   if (!isObj(bundle)) return empty;
 
   const byUrl = new Map<string, Json>();
@@ -140,6 +163,24 @@ export const summariseFhirBundle = (bundle: unknown): FhirSummary => {
     }
   }
 
+  const attachments: FhirAttachment[] = [];
+  const addAttachment = (a: unknown, fallbackTitle: string) => {
+    if (!isObj(a)) return;
+    const contentType = str(a.contentType)?.toLowerCase();
+    const data = str(a.data);
+    if (!contentType || !data || !VIEWABLE_TYPES.includes(contentType)) return;
+    attachments.push({ title: str(a.title) ?? fallbackTitle, contentType, data });
+  };
+  for (const r of resources) {
+    if (r.resourceType === 'DocumentReference') {
+      for (const c of arr(r.content)) if (isObj(c)) addAttachment(c.attachment, conceptText(r.type) ?? 'Document');
+    } else if (r.resourceType === 'Binary') {
+      addAttachment(r, str(composition.title) ?? 'Document');
+    } else if (r.resourceType === 'DiagnosticReport') {
+      for (const form of arr(r.presentedForm)) addAttachment(form, conceptText(r.code) ?? 'Report');
+    }
+  }
+
   return {
     title: str(composition.title) ?? conceptText(composition.type) ?? empty.title,
     date: str(composition.date),
@@ -147,5 +188,20 @@ export const summariseFhirBundle = (bundle: unknown): FhirSummary => {
     facility: display(composition.custodian),
     patient: display(composition.subject),
     sections,
+    attachments,
   };
+};
+
+/** Opens an attached file in a new tab. Call it straight from the click: browsers block a window opened later. */
+export const openAttachment = (attachment: FhirAttachment): boolean => {
+  if (!VIEWABLE_TYPES.includes(attachment.contentType)) return false;
+  try {
+    const bytes = Uint8Array.from(atob(attachment.data.replace(/\s/g, '')), ch => ch.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: attachment.contentType }));
+    const opened = window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return opened !== null;
+  } catch {
+    return false;
+  }
 };
