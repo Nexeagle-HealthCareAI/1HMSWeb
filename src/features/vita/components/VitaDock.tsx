@@ -40,14 +40,13 @@ import type { GuidePayload } from '../guide/types';
 
 
 const LS_LOCALE = 'vita.locale';
-const LS_MODE = 'vita.mode';
 
 const T = {
   en: {
     title: 'Vita',
     subtitle: 'Your 1HMS guide',
     placeholder: 'Ask how to do something in 1HMS…',
-    hello: 'Hi! I can explain how any 1HMS screen works and take you there.',
+    hello: 'Hi! Ask me how to do anything in 1HMS. I can explain it, show you each step on the screen, or do the clicks with you.',
     try: 'Try asking',
     sources: 'From the guide',
     open: 'Open',
@@ -88,7 +87,7 @@ const T = {
     title: 'Vita',
     subtitle: 'आपका 1HMS गाइड',
     placeholder: '1HMS में कुछ भी कैसे करें, पूछें…',
-    hello: 'नमस्ते! मैं 1HMS की किसी भी स्क्रीन का तरीका बता सकती हूँ और वहाँ ले जा सकती हूँ।',
+    hello: 'नमस्ते! 1HMS में कुछ भी कैसे करना है, पूछिए। मैं बता सकती हूँ, स्क्रीन पर हर कदम दिखा सकती हूँ, या आपके साथ क्लिक कर सकती हूँ।',
     try: 'ऐसे पूछें',
     sources: 'गाइड से',
     open: 'खोलें',
@@ -241,10 +240,6 @@ const VitaDock: React.FC = () => {
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [locale, setLocaleState] = useState<VitaLocale>(() => (readLS(LS_LOCALE) === 'hi' ? 'hi' : 'en'));
   const [input, setInput] = useState('');
-  const [mode, setMode] = useState<'ask' | 'guide' | 'do'>(() => {
-    const m = readLS(LS_MODE);
-    return m === 'guide' || m === 'do' ? m : 'ask';
-  });
   const [guideOn, setGuideOn] = useState(false);
   const [doOn, setDoOn] = useState(false);
   const t: Strings = T[locale];
@@ -303,14 +298,30 @@ const VitaDock: React.FC = () => {
       live = false;
     };
   }, [open, client, token]);
-  useEffect(() => writeLS(LS_MODE, mode), [mode]);
 
+  // "Show me on screen" and "Do it with me" under an answer. There is no mode to pick first:
+  // Vita answers in words, and these two buttons take the same task to the screen.
   const showGuide = useCallback(
-    async (guideId: string, fallback?: GuidePayload) => {
+    async (guideId: string, fallback?: GuidePayload, drive = false) => {
       if (!client) return;
       try {
+        if (drive) {
+          // Vita clicking for the user is a choice made each session; Vita records it.
+          await client.setDoMode(true);
+          startGuide(await client.guide(guideId, locale, true));
+          return;
+        }
         startGuide(await client.guide(guideId, locale));
       } catch {
+        if (drive) {
+          // Vita may not click right now: showing the steps is still better than nothing.
+          try {
+            startGuide(await client.guide(guideId, locale));
+            return;
+          } catch {
+            /* fall through to the copy we already have */
+          }
+        }
         if (fallback) startGuide({ ...fallback, runId: undefined });
       }
     },
@@ -373,16 +384,15 @@ const VitaDock: React.FC = () => {
   const screen = screenContext(location.pathname);
   const suggestions = (screen && SUGGESTIONS[screen.screenId ?? '']) || DEFAULT_SUGGESTIONS;
 
-  const sendMode = mode === 'do' && doOn ? 'do' : guideOn && mode !== 'ask' ? 'guide' : undefined;
   const submit = (text = input) => {
     if (!text.trim() || chat.busy) return;
     setInput('');
-    void chat.send(text, screen, sendMode);
+    void chat.send(text, screen);
   };
   /** A tapped choice: its label is what the user "said"; Vita gets the ids. */
   const choose = (label: string, ref: VitaChoiceRef) => {
     if (chat.busy) return;
-    void chat.send(label, screen, sendMode, ref);
+    void chat.send(label, screen, undefined, ref);
   };
   const lastBot = [...chat.messages].reverse().find((m) => m.role === 'assistant')?.key;
 
@@ -475,40 +485,6 @@ const VitaDock: React.FC = () => {
             </HeaderBtn>
           </header>
 
-          {guideOn && view === 'chat' && (
-            <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 dark:border-gray-800">
-              <div className="flex rounded-full bg-gray-100 p-0.5 text-xs font-semibold dark:bg-gray-800" role="radiogroup" aria-label="Mode">
-                {(doOn ? (['ask', 'guide', 'do'] as const) : (['ask', 'guide'] as const)).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    role="radio"
-                    aria-checked={mode === m}
-                    onClick={() => setMode(m)}
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-full px-3 py-1',
-                      mode === m ? 'bg-white text-brand-700 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500',
-                    )}
-                  >
-                    {m === 'do' ? (
-                      <MousePointerClick className="h-3.5 w-3.5" />
-                    ) : m === 'guide' ? (
-                      <Compass className="h-3.5 w-3.5" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    )}
-                    {m === 'do' ? gt.doIt : m === 'guide' ? gt.guide : gt.ask}
-                  </button>
-                ))}
-              </div>
-              {mode !== 'ask' && (
-                <span className="min-w-0 flex-1 truncate text-[11px] text-gray-400" title={mode === 'do' ? gt.doHint : gt.modeHint}>
-                  {mode === 'do' ? gt.doHint : gt.modeHint}
-                </span>
-              )}
-            </div>
-          )}
-
           {chat.notice && (
             <div className="flex items-center justify-between gap-2 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
               <span>{chat.notice}</span>
@@ -575,9 +551,15 @@ const VitaDock: React.FC = () => {
                         }}
                         gt={gt}
                         onShowGuide={guideOn ? showGuide : undefined}
+                        canDo={doOn}
                         last={m.key === lastBot && !chat.busy}
                         onChoose={choose}
                         onStart={() => chat.startGuide(m.key)}
+                        onStartDoing={() => {
+                          if (!m.guide) return;
+                          chat.dismissGuide(m.key);
+                          void showGuide(m.guide.id, m.guide, true);
+                        }}
                       />
                     ),
                   )
@@ -662,12 +644,15 @@ const AssistantMessage: React.FC<{
   onOpen: (s: VitaScreenLink) => void;
   onRate: (key: string, r: 'up' | 'down', reason?: Reason, comment?: string) => void;
   gt: GuideStrings;
-  onShowGuide?: (guideId: string, fallback?: GuidePayload) => void;
+  onShowGuide?: (guideId: string, fallback?: GuidePayload, drive?: boolean) => void;
+  /** "Do it with me" is offered next to "Show me on screen" (it is on for this hospital). */
+  canDo?: boolean;
   /** The latest answer and Vita is not busy: its choices and Start can be used. */
   last?: boolean;
   onChoose?: (label: string, ref: VitaChoiceRef) => void;
   onStart?: () => void;
-}> = ({ m, t, permissions, onOpen, onRate, gt, onShowGuide, last, onChoose, onStart }) => {
+  onStartDoing?: () => void;
+}> = ({ m, t, permissions, onOpen, onRate, gt, onShowGuide, canDo, last, onChoose, onStart, onStartDoing }) => {
   const [askWhy, setAskWhy] = useState(false);
   const [comment, setComment] = useState('');
   const [thanked, setThanked] = useState(false);
@@ -718,6 +703,9 @@ const AssistantMessage: React.FC<{
             t={t}
             active={!!last}
             onStart={() => onStart?.()}
+            doLabel={canDo && onShowGuide && m.guide.source !== 'generated' ? gt.doIt : undefined}
+            doHint={gt.doHint}
+            onDo={() => onStartDoing?.()}
             onNotThis={() => onChoose?.(t.notThis, { kind: 'not_this', id: m.guide!.id })}
           />
         )}
@@ -727,14 +715,27 @@ const AssistantMessage: React.FC<{
         )}
 
         {onShowGuide && m.status === 'done' && (m.offer || m.guide) && !m.awaitingStart && (
-          <button
-            type="button"
-            data-testid="show-guide"
-            onClick={() => onShowGuide(m.offer?.guideId ?? m.guide!.id, m.guide)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"
-          >
-            <Compass className="h-3.5 w-3.5" /> {gt.showMe}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="show-guide"
+              onClick={() => onShowGuide(m.offer?.guideId ?? m.guide!.id, m.guide)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"
+            >
+              <Compass className="h-3.5 w-3.5" /> {gt.showMe}
+            </button>
+            {canDo && m.guide?.source !== 'generated' && (
+              <button
+                type="button"
+                data-testid="do-guide"
+                title={gt.doHint}
+                onClick={() => onShowGuide(m.offer?.guideId ?? m.guide!.id, m.guide, true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-2.5 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:bg-transparent dark:text-violet-300 dark:hover:bg-violet-900/30"
+              >
+                <MousePointerClick className="h-3.5 w-3.5" /> {gt.doIt}
+              </button>
+            )}
+          </div>
         )}
 
         {m.screen && canOpen(m.screen, permissions) && m.status !== 'error' && (
@@ -860,7 +861,11 @@ const GuidePreview: React.FC<{
   active: boolean;
   onStart: () => void;
   onNotThis: () => void;
-}> = ({ title, steps, t, active, onStart, onNotThis }) => (
+  /** "Do it with me", when Vita may do the clicks for this guide. */
+  doLabel?: string;
+  doHint?: string;
+  onDo?: () => void;
+}> = ({ title, steps, t, active, onStart, onNotThis, doLabel, doHint, onDo }) => (
   <div
     data-testid="vita-guide-preview"
     className="rounded-xl border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-900/20"
@@ -881,6 +886,17 @@ const GuidePreview: React.FC<{
       >
         {t.start}
       </button>
+      {doLabel && (
+        <button
+          type="button"
+          data-testid="vita-guide-do"
+          title={doHint}
+          onClick={onDo}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:bg-transparent dark:text-violet-300"
+        >
+          <MousePointerClick className="h-3.5 w-3.5" /> {doLabel}
+        </button>
+      )}
       {active && (
         <button
           type="button"
