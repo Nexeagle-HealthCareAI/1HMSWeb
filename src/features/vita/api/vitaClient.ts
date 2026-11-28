@@ -359,10 +359,14 @@ export class VitaClient {
 
   // ------------------------------------------------------------------ guide mode
 
-  /** A guide in the user's language, with a new runId ("Show me on screen"). */
-  guide(guideId: string, lang?: 'en' | 'hi' | 'hinglish'): Promise<GuidePayload> {
-    const q = lang ? `?lang=${lang}` : '';
-    return this.json(`/v1/guides/${encodeURIComponent(guideId)}${q}`);
+  /** A guide in the user's language, with a new runId ("Show me on screen"). With `drive`,
+   *  the "Do it with me" form: Vita does the safe steps (Do mode must be on for the session). */
+  guide(guideId: string, lang?: 'en' | 'hi' | 'hinglish', drive = false): Promise<GuidePayload> {
+    const q = new URLSearchParams();
+    if (lang) q.set('lang', lang);
+    if (drive) q.set('drive', 'true');
+    const qs = q.toString();
+    return this.json(`/v1/guides/${encodeURIComponent(guideId)}${qs ? `?${qs}` : ''}`);
   }
 
   /** Progress of a guide run: step ids and timings only, never what the user typed or saw. */

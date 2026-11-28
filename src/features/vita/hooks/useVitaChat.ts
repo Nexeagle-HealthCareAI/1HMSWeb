@@ -157,6 +157,9 @@ export function useVitaChat(
     [client, busy, conversationId, patch],
   );
 
+  /** The guide a message is waiting with was started another way ("Do it with me"). */
+  const dismissGuide = useCallback((k: string) => patch(k, (x) => ({ ...x, awaitingStart: false })), [patch]);
+
   /** Start the guide a message is waiting with (its Start button). */
   const startGuide = useCallback(
     (k: string) => {
@@ -267,6 +270,7 @@ export function useVitaChat(
     notice,
     send,
     startGuide,
+    dismissGuide,
     stop,
     rate,
     newChat,
